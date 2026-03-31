@@ -1,0 +1,139 @@
+{
+  "identity": {
+    "name": "E1 - The Anti-AI Designer",
+    "mission": "Create a dark, atmospheric, and immersive interface for Geist: the Sin-Eaters.",
+    "principles": [
+      "Fusion over Imitation: Mix Gothic Horror with Modern Dashboard functionality.",
+      "Emotion First: Every interaction should feel like a bargain with the dead.",
+      "Content is King: The story is the hero; the UI is the medium.",
+      "Contrast: Deep blacks vs. Spectral glows.",
+      "Negative Space: Let the darkness breathe."
+    ],
+    "anti_patterns": [
+      "No generic 'SaaS Blue' or 'Bootstrap' layouts.",
+      "No pure white backgrounds.",
+      "No 'friendly' rounded corners (use sharp or slightly rounded 4px).",
+      "No cheerful illustrations."
+    ]
+  },
+  "typography": {
+    "fonts": {
+      "headings": "Crimson Text, serif",
+      "body": "Manrope, sans-serif",
+      "mono": "JetBrains Mono, monospace"
+    },
+    "scale": {
+      "h1": "text-5xl md:text-7xl font-bold tracking-tight",
+      "h2": "text-4xl md:text-5xl font-semibold tracking-tight",
+      "h3": "text-2xl md:text-3xl font-medium",
+      "body": "text-base md:text-lg leading-relaxed",
+      "small": "text-sm tracking-wide uppercase opacity-70"
+    },
+    "usage": {
+      "headings": "Use 'Crimson Text' for all section titles, character names, and dramatic reveals.",
+      "body": "Use 'Manrope' for chat logs, descriptions, and general text.",
+      "mono": "Use 'JetBrains Mono' for dice results, attribute values, and system messages."
+    }
+  },
+  "colors": {
+    "theme": "dark",
+    "palette": {
+      "background": {
+        "default": "#09090b",
+        "paper": "#18181b",
+        "overlay": "rgba(9, 9, 11, 0.8)"
+      },
+      "text": {
+        "primary": "#e4e4e7",
+        "secondary": "#a1a1aa",
+        "muted": "#52525b"
+      },
+      "primary": {
+        "main": "#14b8a6",
+        "glow": "0 0 20px rgba(20, 184, 166, 0.5)",
+        "name": "Ectoplasm Teal"
+      },
+      "accent": {
+        "main": "#be123c",
+        "glow": "0 0 20px rgba(190, 18, 60, 0.5)",
+        "name": "Sacrificial Crimson"
+      },
+      "border": {
+        "default": "#27272a",
+        "active": "#14b8a6"
+      }
+    },
+    "gradients": {
+      "subtle": "linear-gradient(to bottom right, #18181b, #09090b)",
+      "glow": "radial-gradient(circle at center, rgba(20, 184, 166, 0.15), transparent 70%)"
+    }
+  },
+  "visual_enhancers": {
+    "borders": "1px solid rgba(255,255,255,0.1) with occasional 'tracing beam' effects.",
+    "shadows": "0 10px 30px -10px rgba(0,0,0,0.8)",
+    "glassmorphism": "backdrop-filter: blur(12px); background: rgba(9, 9, 11, 0.6); border: 1px solid rgba(255, 255, 255, 0.05);",
+    "textures": "Use subtle noise overlays (opacity 0.03) to simulate film grain or dust."
+  },
+  "component_styling": {
+    "buttons": {
+      "primary": "bg-teal-900/30 text-teal-200 border border-teal-500/50 hover:bg-teal-500/20 hover:shadow-[0_0_15px_rgba(20,184,166,0.3)] transition-all duration-300 font-mono tracking-wider uppercase text-sm px-6 py-2 rounded-sm",
+      "secondary": "bg-zinc-800 text-zinc-300 border border-zinc-700 hover:bg-zinc-700 transition-all duration-200 font-mono text-sm px-4 py-2 rounded-sm",
+      "ghost": "text-zinc-400 hover:text-white hover:bg-zinc-800/50 transition-colors"
+    },
+    "cards": {
+      "base": "bg-zinc-900/50 backdrop-blur-sm border border-zinc-800 p-6 rounded-md relative overflow-hidden group hover:border-zinc-700 transition-colors",
+      "interactive": "cursor-pointer hover:shadow-[0_0_30px_-10px_rgba(20,184,166,0.1)]"
+    },
+    "inputs": {
+      "base": "bg-zinc-950/50 border border-zinc-800 focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/30 text-zinc-200 placeholder:text-zinc-600 rounded-sm p-3 transition-all"
+    }
+  },
+  "layout_strategies": {
+    "dashboard": "Use a Bento Grid layout. Create asymmetry. Hero section (Chat) takes 60-70% width, Side panel (Character Sheet) takes 30-40%.",
+    "spacing": "Generous padding (p-6, p-8). Don't crowd the spirits.",
+    "containers": "Wrap main content in a max-w-[1600px] container. Center it."
+  },
+  "motion": {
+    "transitions": "transition-all duration-300 ease-out",
+    "micro_interactions": "Buttons should glow on hover. Cards should slightly lift (-translate-y-1).",
+    "entrance": "Staggered fade-in for chat messages and list items."
+  },
+  "image_urls": [
+    {
+      "category": "background",
+      "url": "https://images.unsplash.com/photo-1759206642747-7301e862dee6",
+      "description": "Dark wrought iron gate, good for login/hero background."
+    },
+    {
+      "category": "texture",
+      "url": "https://images.unsplash.com/photo-1643909510876-342f2030290d",
+      "description": "Green smoke/mist, good for overlays or 'magic' effects."
+    },
+    {
+      "category": "character_placeholder",
+      "url": "https://images.pexels.com/photos/5681403/pexels-photo-5681403.jpeg",
+      "description": "Eerie portrait, good for character sheet placeholder."
+    }
+  ],
+  "accessibility": {
+    "contrast": "Ensure text is light enough (zinc-200) against dark backgrounds. Avoid dark grey on black.",
+    "focus_states": "Visible teal ring on focus.",
+    "aria": "Use aria-labels for all icon buttons."
+  },
+  "instructions_to_main_agent": [
+    "1. INSTALL FONTS: Add 'Crimson Text', 'Manrope', and 'JetBrains Mono' via Google Fonts in index.html or CSS.",
+    "2. SETUP TAILWIND: Update tailwind.config.js with the custom colors (Ectoplasm Teal, Sacrificial Crimson).",
+    "3. BUILD LAYOUT: Create a Sidebar Layout. Sidebar for sessions/history, Main area for Chat, Right panel (collapsible) for Character Sheet.",
+    "4. IMPLEMENT CHAT: The chat interface is the 'Stage'. Make it look like a script or a journal. User distinct styles for AI (Storyteller) and User (Player).",
+    "5. DANGER: Do not use light mode. Lock the app to Dark Mode.",
+    "6. MICRO-ANIMATIONS: Use framer-motion for dice rolls and panel transitions.",
+    "7. DATA-TESTID: Add data-testid to all interactive elements."
+  ],
+  "UNIVERSAL_GUIDELINES": [
+    "No gradients for text.",
+    "Use glass-morphism with caution (ensure readability).",
+    "Avoid 'Inter' font.",
+    "Use 'sonner' for toasts.",
+    "Components must use named exports."
+  ]
+}

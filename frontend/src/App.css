@@ -1,0 +1,175 @@
+/* Main App styles - Geist: The Sin-Eaters */
+
+/* Layout */
+.app-container {
+    display: flex;
+    height: 100vh;
+    background-color: #09090b;
+    overflow: hidden;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 300px;
+    min-width: 300px;
+    background: linear-gradient(to bottom, #18181b, #09090b);
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow-y: auto;
+    transition: width 0.2s ease, min-width 0.2s ease;
+}
+
+.sidebar.collapsed {
+    width: 56px;
+    min-width: 56px;
+    overflow: hidden;
+}
+
+.sidebar.collapsed .sidebar-content {
+    display: none;
+}
+
+/* Main content */
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    height: 100vh;
+}
+
+/* Chat area */
+.chat-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    max-width: 900px;
+    margin: 0 auto;
+    width: 100%;
+    padding: 1.5rem;
+    height: 100%;
+    overflow: hidden;
+}
+
+.messages-area {
+    flex: 1;
+    overflow-y: auto;
+    padding-bottom: 1rem;
+}
+
+.input-area {
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    flex-shrink: 0;
+}
+
+/* Make the tabs content area scrollable */
+[data-radix-scroll-area-viewport] {
+    height: 100% !important;
+}
+
+/* Dice animations */
+@keyframes dice-bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+}
+
+.dice-animate {
+    animation: dice-bounce 0.3s ease-in-out;
+}
+
+/* Dice roll message */
+.message-roll {
+    background: linear-gradient(135deg, rgba(180, 83, 9, 0.1), rgba(180, 83, 9, 0.05));
+    border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+/* Stat dots */
+.stat-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid currentColor;
+    transition: all 0.2s;
+}
+
+.stat-dot.filled {
+    background-color: currentColor;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+    .character-panel {
+        width: 320px;
+        min-width: 320px;
+    }
+}
+
+@media (max-width: 1024px) {
+    .sidebar {
+        width: 60px;
+        min-width: 60px;
+    }
+    
+    .sidebar-content {
+        display: none;
+    }
+    
+    .sidebar.open {
+        width: 300px;
+        min-width: 300px;
+    }
+    
+    .sidebar.open .sidebar-content {
+        display: block;
+    }
+    
+    
+    /* On mobile, panel slides in from right */
+    .character-panel {
+        position: fixed;
+        right: -320px;
+        top: 0;
+        z-index: 45;
+        transition: right 0.3s ease;
+    }
+
+    .character-panel.open {
+        right: 0;
+    }
+
+    .sidebar {
+        position: fixed;
+        left: -300px;
+        top: 0;
+        z-index: 45;
+        transition: left 0.3s ease;
+    }
+
+    .sidebar.open {
+        left: 0;
+    }
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 280px;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+        z-index: 50;
+    }
+    
+    .sidebar.open {
+        transform: translateX(0);
+    }
+    
+    .chat-container {
+        padding: 1rem;
+    }
+}
