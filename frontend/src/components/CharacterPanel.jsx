@@ -699,8 +699,13 @@ export const CharacterPanel = ({
                 base = base.filter((m) => (m?.name || "") !== "Giant");
             }
 
-            const newMerits = [...base, { name: newMeritName, dots: newMeritDots }]
+            const newMerits = [...base, meritToAdd]
                 .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+            
+            handleChange("merits_list", newMerits);
+            setNewMeritName("");
+            setNewMeritDots(1);
+            setShowMeritDialog(false);
         }
     };
 

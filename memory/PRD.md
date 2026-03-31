@@ -63,6 +63,7 @@ A digital character sheet and dice roller for the Geist: The Sin-Eaters tabletop
 - Character sheet CRUD
 - Dice rolling mechanics
 - Campaign tracking
+- Merit adding (bug fixed Jan 2026)
 
 ### P1 (Backlog)
 - Export/import character data
