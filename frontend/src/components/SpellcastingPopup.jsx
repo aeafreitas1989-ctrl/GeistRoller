@@ -91,6 +91,7 @@ export const SpellcastingPopup = ({
     isRuling,
     isInferior,
     currentMana,
+    initialPractice,
     onSpendMana,
     onRollDice
 }) => {
@@ -107,7 +108,8 @@ export const SpellcastingPopup = ({
     // Reset when popup opens with new arcanum
     useEffect(() => {
         if (isOpen) {
-            setSelectedPractice("");
+            // Set initial practice if provided, otherwise reset
+            setSelectedPractice(initialPractice || "");
             setFactors({
                 casting: { advanced: false, level: 1 },
                 range: { advanced: false, level: 1 },
@@ -116,7 +118,7 @@ export const SpellcastingPopup = ({
                 scale: { advanced: false, level: 1 }
             });
         }
-    }, [isOpen, arcanum]);
+    }, [isOpen, arcanum, initialPractice]);
 
     // Get available practices based on arcanum dots
     const availablePractices = useMemo(() => {
@@ -274,7 +276,7 @@ export const SpellcastingPopup = ({
                             <SelectTrigger className="bg-zinc-900/50 border-zinc-700">
                                 <SelectValue placeholder="Select a Practice..." />
                             </SelectTrigger>
-                            <SelectContent className="bg-zinc-900 border-zinc-700">
+                            <SelectContent className="bg-zinc-900 border-zinc-700 z-[200]">
                                 {availablePractices.length === 0 ? (
                                     <div className="p-2 text-xs text-zinc-500">No practices available (need Arcanum dots)</div>
                                 ) : (

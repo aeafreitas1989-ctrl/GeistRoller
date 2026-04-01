@@ -178,6 +178,7 @@ class Character(BaseModel):
     # Mage-specific fields
     path: str = ""  # Acanthus, Mastigos, Moros, Obrimos, Thyrsus
     order: str = ""  # Adamantine Arrow, Guardians of the Veil, Mysterium, Silver Ladder, Free Council
+    obsession: str = ""  # Mage's Obsession (replaces Burden Aspiration)
     remembrance_trait_type: str = ""
     remembrance_trait: str = ""
     root: str = ""
@@ -259,6 +260,7 @@ class CharacterUpdate(BaseModel):
     geist_rank: Optional[int] = None
     path: Optional[str] = None  # Mage path
     order: Optional[str] = None  # Mage order
+    obsession: Optional[str] = None  # Mage obsession
     remembrance_trait_type: Optional[str] = None
     remembrance_trait: Optional[str] = None
     root: Optional[str] = None

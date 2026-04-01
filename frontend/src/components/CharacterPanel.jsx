@@ -45,7 +45,7 @@ import { DiceRollPopup } from "./DiceRollPopup";
 
 // Extracted data
 import {
-    HAUNTS, HAUNT_ENHANCEMENTS, KEYS, BURDENS, ARCHETYPES,
+    HAUNTS, HAUNT_ENHANCEMENTS, KEYS, BURDENS,
     INVENTORY_TYPES, AVAILABILITY_OPTIONS, WEAPON_SPECIAL_OPTIONS,
     ARMOR_COVERAGE_OPTIONS, PREMADE_ARMOR, PREMADE_EQUIPMENT,
     SYNERGY_TABLE, MERIT_LIST, CEREMONY_LIST,
@@ -124,9 +124,11 @@ export const CharacterPanel = ({
     // Spellcasting Popup State (Mage)
     const [spellcastingOpen, setSpellcastingOpen] = useState(false);
     const [spellcastingArcanum, setSpellcastingArcanum] = useState(null);
+    const [spellcastingPractice, setSpellcastingPractice] = useState(null);
 
-    const openSpellcastingPopup = (arcanum) => {
+    const openSpellcastingPopup = (arcanum, practice = null) => {
         setSpellcastingArcanum(arcanum);
+        setSpellcastingPractice(practice);
         setSpellcastingOpen(true);
     };
 
@@ -1035,41 +1037,13 @@ export const CharacterPanel = ({
                             </div>
                             <div className="grid grid-cols-2 gap-2">
                                 <div>
-                                    <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Root</label>
-                                    <Input value={getValue("root") || ""} onChange={(e) => handleChange("root", e.target.value)} className="input-geist h-8 text-sm mt-0.5" placeholder="Remembrance Root" data-testid="character-root-input" />
+                                    <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Virtue</label>
+                                    <Input value={getValue("virtue") || ""} onChange={(e) => handleChange("virtue", e.target.value)} className="input-geist h-8 text-sm mt-0.5" placeholder="e.g., Charitable, Honest" data-testid="character-virtue-input" />
                                 </div>
                                 <div>
-                                    <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Bloom</label>
-                                    <Input value={getValue("bloom") || ""} onChange={(e) => handleChange("bloom", e.target.value)} className="input-geist h-8 text-sm mt-0.5" placeholder="Remembrance Bloom" data-testid="character-bloom-input" />
+                                    <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Vice</label>
+                                    <Input value={getValue("vice") || ""} onChange={(e) => handleChange("vice", e.target.value)} className="input-geist h-8 text-sm mt-0.5" placeholder="e.g., Greedy, Violent" data-testid="character-vice-input" />
                                 </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-2">
-                                <div>
-                                    <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Krewe</label>
-                                    <Input value={getValue("krewe") || ""} onChange={(e) => handleChange("krewe", e.target.value)} className="input-geist h-8 text-sm mt-0.5" data-testid="character-krewe-input" />
-                                </div>
-                                <div>
-                                    <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Archetype</label>
-                                    <Select value={getValue("archetype") || ""} onValueChange={(v) => handleChange("archetype", v)}>
-                                        <SelectTrigger className="bg-zinc-900/50 border-zinc-800 h-8 text-sm mt-0.5" data-testid="character-archetype-select"><SelectValue placeholder="Select..." /></SelectTrigger>
-                                        <SelectContent className="bg-zinc-900 border-zinc-800">
-                                            {ARCHETYPES.map((a) => (<SelectItem key={a} value={a} className="text-zinc-200">{a}</SelectItem>))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Touchstones</label>
-                                {Array.from({ length: synergyData.touchstones }, (_, index) => (
-                                    <Input
-                                        key={index}
-                                        value={(getValue("touchstones") || [])[index] || ""}
-                                        onChange={(e) => handleTouchstoneChange(index, e.target.value)}
-                                        className="input-geist h-7 text-xs"
-                                        placeholder={`Touchstone ${index + 1}`}
-                                        data-testid={`touchstone-${index + 1}-input`}
-                                    />
-                                ))}
                             </div>
 
                             {/* Aspirations */}
@@ -1142,15 +1116,16 @@ export const CharacterPanel = ({
                                                 variant="ghost"
                                                 size="sm"
                                                 className="h-7 px-2 text-[10px] text-zinc-400 hover:text-zinc-200"
-                                                onClick={() => fulfillAspiration("aspiration_burden")}
+                                                onClick={() => fulfillAspiration(isMage ? "obsession" : "aspiration_burden")}
                                                 data-testid="aspiration-burden-progressed"
                                             >
-                                                BURDEN
+                                                {isMage ? "OBSESSION" : "BURDEN"}
                                             </Button>
                                             <Input
-                                                value={getValue("aspiration_burden") || ""}
-                                                onChange={(e) => handleChange("aspiration_burden", e.target.value)}
+                                                value={getValue(isMage ? "obsession" : "aspiration_burden") || ""}
+                                                onChange={(e) => handleChange(isMage ? "obsession" : "aspiration_burden", e.target.value)}
                                                 className="h-7 input-geist text-xs flex-1"
+                                                placeholder={isMage ? "Your Mage's Obsession" : ""}
                                             />
                                         </div>
                                     </div>
@@ -2623,8 +2598,8 @@ export const CharacterPanel = ({
                                             <span className="text-teal-400 ml-1 font-mono">{synergyData.traitMax}</span>
                                         </div>
                                         <div className="p-2 bg-zinc-900/50 rounded-sm">
-                                            <span className="text-zinc-500">Touchstones:</span>
-                                            <span className="text-teal-400 ml-1 font-mono">{synergyData.touchstones}</span>
+                                            <span className="text-zinc-500">Plasm/Turn:</span>
+                                            <span className="text-teal-400 ml-1 font-mono">{synergyData.perTurn}</span>
                                         </div>
                                     </div>
 
@@ -2677,7 +2652,7 @@ export const CharacterPanel = ({
                                                     const max = calculateWillpowerMax();
                                                     if (current < max) {
                                                         handleChange("willpower", Math.min(current + 1, max));
-                                                        toast.success("Willpower +1 (Rest/Bloom/Root)");
+                                                        toast.success("Willpower +1 (Rest/Virtue/Vice)");
                                                     }
                                                 }}
                                                 disabled={(getValue("willpower") || 0) >= calculateWillpowerMax()}
@@ -2700,7 +2675,7 @@ export const CharacterPanel = ({
                                             </Button>
                                         </div>
                                         <p className="text-[9px] text-zinc-600 mt-1 leading-relaxed">
-                                            +1: Sleep, fulfill Bloom/Root. Full: Bloom/Root at great cost, Grave Goods (1/chapter).
+                                            +1: Sleep, fulfill Virtue/Vice. Full: Virtue/Vice at great cost, Grave Goods (1/chapter).
                                         </p>
                                     </div>
 
@@ -2793,7 +2768,7 @@ export const CharacterPanel = ({
                                                                     {unlockedPractices.map((practice, idx) => (
                                                                         <button
                                                                             key={idx}
-                                                                            onClick={() => openSpellcastingPopup(arcanum)}
+                                                                            onClick={() => openSpellcastingPopup(arcanum, practice)}
                                                                             className="text-[8px] px-1 py-0.5 rounded bg-violet-900/30 text-violet-400 hover:bg-violet-800/50 hover:text-violet-300 transition-colors"
                                                                         >
                                                                             {practice}
@@ -3431,13 +3406,14 @@ export const CharacterPanel = ({
             {isMage && spellcastingArcanum && (
                 <SpellcastingPopup
                     isOpen={spellcastingOpen}
-                    onClose={() => { setSpellcastingOpen(false); setSpellcastingArcanum(null); }}
+                    onClose={() => { setSpellcastingOpen(false); setSpellcastingArcanum(null); setSpellcastingPractice(null); }}
                     arcanum={spellcastingArcanum}
                     arcanumDots={getNestedValue("arcana", spellcastingArcanum) || 0}
                     gnosis={getValue("gnosis") || 1}
                     isRuling={getValue("path") && PATH_ARCANA[getValue("path")]?.ruling?.includes(spellcastingArcanum)}
                     isInferior={getValue("path") && PATH_ARCANA[getValue("path")]?.inferior === spellcastingArcanum}
                     currentMana={getValue("mana") || 0}
+                    initialPractice={spellcastingPractice}
                     onSpendMana={(amount) => handleChange("mana", Math.max(0, (getValue("mana") || 0) - amount))}
                     onRollDice={(spellData) => {
                         // Could integrate with dice roller here
