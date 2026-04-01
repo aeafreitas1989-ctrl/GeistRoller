@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Sidebar } from "@/components/Sidebar";
 import { CharacterPanel } from "@/components/CharacterPanel";
 import { GameCardsPanel } from "@/components/GameCardsPanel";
@@ -21,6 +21,12 @@ export const StorytellerPage = () => {
     const [activeCharacter, setActiveCharacter] = useState(null);
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+    const diceRollerRef = useRef(null);
+
+    const triggerDiceRoll = (config) => {
+        diceRollerRef.current?.rollWithConfig(config);
+    };
 
     // Fetch sessions and campaigns on mount
     useEffect(() => {
@@ -381,6 +387,7 @@ export const StorytellerPage = () => {
                                 onCreateCharacter={createCharacter}
                                 onUpdateCharacter={updateCharacter}
                                 onDeleteCharacter={deleteCharacter}
+                                onTriggerDiceRoll={triggerDiceRoll}
                             />
                         </TabsContent>
                         <TabsContent value="cards" className="flex-1 mt-0 overflow-hidden">
@@ -424,7 +431,7 @@ export const StorytellerPage = () => {
             </div>
 
             {/* Floating Dice Roller */}
-            <DiceRoller />
+            <DiceRoller ref={diceRollerRef} />
         </div>
     );
 };

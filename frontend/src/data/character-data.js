@@ -818,6 +818,25 @@ export const ARCANA_PRACTICES = {
     5: ["Making", "Unmaking"]
 };
 
+// Yantras (bonus dice tools for spellcasting)
+export const YANTRAS = [
+    { name: "Dedicated Tool", bonus: 0, description: "Personal magical tool. Also -2 to Paradox pool.", reducesParadox: true },
+    { name: "Path Tool", bonus: 1, description: "A tool associated with the mage's Path (wand, coin, mirror, cup, staff)" },
+    { name: "Order Tool", bonus: 1, description: "A tool associated with the mage's Order" },
+    { name: "Mudra", bonus: 2, description: "Practiced magical gestures and body movements" },
+    { name: "High Speech", bonus: 2, description: "Chanting in the Supernal tongue (Atlantean)" },
+    { name: "Concentration", bonus: 2, description: "Focusing intently on the spell for the entire duration" },
+    { name: "Rote Skill Mudra", bonus: 0, variable: true, description: "Bonus equal to the Rote Skill dots used for this spell" },
+    { name: "Demesne", bonus: 2, description: "Casting within a controlled Supernal space" },
+    { name: "Location", bonus: 1, description: "A place symbolically linked to the spell's effect" },
+    { name: "Supernal Verge", bonus: 2, description: "Casting near a place where the Supernal bleeds through" },
+    { name: "Sacrament (common)", bonus: 1, description: "A common material sympathy (mass-produced item)" },
+    { name: "Sacrament (rare)", bonus: 2, description: "A rare material sympathy (hand-crafted item)" },
+    { name: "Sacrament (unique)", bonus: 3, description: "A unique material sympathy (one-of-a-kind)" },
+    { name: "Persona", bonus: 2, description: "Invoking the mage's Shadow Name" },
+    { name: "Sympathy", bonus: 2, description: "Using a sympathetic connection to the target" },
+];
+
 // Order Rote Skills
 export const ORDER_ROTE_SKILLS = {
     "Adamantine Arrow": ["athletics", "intimidation", "survival"],

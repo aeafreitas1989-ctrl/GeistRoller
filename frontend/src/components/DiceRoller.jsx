@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Dices, X, ChevronUp, ChevronDown } from "lucide-react";
+import { useState, forwardRef, useImperativeHandle, useRef, useEffect, useCallback } from "react";
+import { Dices, X, ChevronUp, ChevronDown, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -15,7 +15,7 @@ import { toast } from "sonner";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
-export const DiceRoller = () => {
+export const DiceRoller = forwardRef((props, ref) => {
     const [isOpen, setIsOpen] = useState(false);
     const [isMinimized, setIsMinimized] = useState(false);
     const [pool, setPool] = useState(3);
@@ -24,24 +24,26 @@ export const DiceRoller = () => {
     const [chance, setChance] = useState(false);
     const [isRolling, setIsRolling] = useState(false);
     const [result, setResult] = useState(null);
+    const [rollLabel, setRollLabel] = useState(null);
+    const [pendingParadox, setPendingParadox] = useState(null);
 
-    const rollDice = async () => {
+    // External roll trigger
+    const pendingRollRef = useRef(null);
+    const [triggerExternal, setTriggerExternal] = useState(0);
+
+    const performRoll = useCallback(async (rollPool, rollAgain, rollRote, rollChance) => {
         setIsRolling(true);
         setResult(null);
-
         try {
             const response = await axios.post(`${API}/dice/roll`, {
-                pool: chance ? 1 : pool,
-                again: parseInt(again),
-                rote,
-                chance,
+                pool: rollChance ? 1 : rollPool,
+                again: parseInt(rollAgain),
+                rote: rollRote,
+                chance: rollChance,
             });
-            
-            // Add delay for animation effect
             await new Promise(resolve => setTimeout(resolve, 500));
-            
             setResult(response.data);
-            
+
             if (response.data.is_dramatic_failure) {
                 toast.error("Dramatic Failure!", {
                     description: "The spirits turn against you...",
@@ -56,6 +58,66 @@ export const DiceRoller = () => {
         } finally {
             setIsRolling(false);
         }
+    }, []);
+
+    useImperativeHandle(ref, () => ({
+        rollWithConfig: (config) => {
+            pendingRollRef.current = config;
+            setTriggerExternal(prev => prev + 1);
+        }
+    }));
+
+    useEffect(() => {
+        if (pendingRollRef.current) {
+            const config = pendingRollRef.current;
+            pendingRollRef.current = null;
+
+            setPool(config.pool || 1);
+            setChance(config.chance || false);
+            setAgain(String(config.again || 10));
+            setRote(config.rote || false);
+            setRollLabel(config.label || null);
+            setIsOpen(true);
+            setIsMinimized(false);
+            setResult(null);
+
+            if (config.paradox) {
+                setPendingParadox(config.paradox);
+            } else {
+                setPendingParadox(null);
+            }
+
+            performRoll(
+                config.pool || 1,
+                config.again || 10,
+                config.rote || false,
+                config.chance || false
+            );
+        }
+    }, [triggerExternal, performRoll]);
+
+    const rollParadox = () => {
+        if (!pendingParadox) return;
+        const pConfig = pendingParadox;
+        setPool(pConfig.pool || 1);
+        setChance(pConfig.chance || false);
+        setAgain(String(pConfig.again || 10));
+        setRote(pConfig.rote || false);
+        setRollLabel(pConfig.label || "Paradox Roll");
+        setResult(null);
+        setPendingParadox(null);
+        performRoll(
+            pConfig.pool || 1,
+            pConfig.again || 10,
+            pConfig.rote || false,
+            pConfig.chance || false
+        );
+    };
+
+    const rollDice = () => {
+        setRollLabel(null);
+        setPendingParadox(null);
+        performRoll(pool, parseInt(again), rote, chance);
     };
 
     if (!isOpen) {
@@ -100,7 +162,7 @@ export const DiceRoller = () => {
                     <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => setIsOpen(false)}
+                        onClick={() => { setIsOpen(false); setPendingParadox(null); setRollLabel(null); }}
                         className="h-7 w-7 text-zinc-500 hover:text-zinc-300"
                         data-testid="close-dice-roller-btn"
                     >
@@ -111,6 +173,13 @@ export const DiceRoller = () => {
 
             {!isMinimized && (
                 <div className="p-4 space-y-4">
+                    {/* Roll Label */}
+                    {rollLabel && (
+                        <div className="px-2 py-1.5 bg-violet-900/30 border border-violet-500/30 rounded text-xs text-violet-300 text-center" data-testid="roll-label">
+                            {rollLabel}
+                        </div>
+                    )}
+
                     {/* Dice Pool */}
                     <div className="flex items-center justify-between">
                         <label className="text-sm text-zinc-400">Dice Pool</label>
@@ -259,8 +328,22 @@ export const DiceRoller = () => {
                             </div>
                         </div>
                     )}
+
+                    {/* Paradox Roll Button */}
+                    {pendingParadox && result && !isRolling && (
+                        <Button
+                            onClick={rollParadox}
+                            className="w-full h-10 bg-red-900/50 hover:bg-red-800/50 border border-red-500/50 text-red-300"
+                            data-testid="roll-paradox-btn"
+                        >
+                            <Zap className="w-4 h-4 mr-2" />
+                            Roll Paradox ({pendingParadox.chance ? "Chance Die" : `${pendingParadox.pool} dice`})
+                        </Button>
+                    )}
                 </div>
             )}
         </div>
     );
-};
+});
+
+DiceRoller.displayName = "DiceRoller";

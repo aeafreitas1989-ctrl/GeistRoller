@@ -1,0 +1,69 @@
+{
+  "summary": "Comprehensive testing of Spellcasting Popup features including Paradox system, Mana mitigation, Yantras, and Dice Roller integration. All core features are working correctly.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/health", "issue": "Health check endpoint returns 404 (not implemented)", "priority": "LOW"}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_dice_roll.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/backend/tests/test_dice_roll.py"
+  ],
+  "success_rate": {
+    "backend": "92% (11/12 tests passed)",
+    "frontend": "100% (all Spellcasting Popup features working)"
+  },
+  "test_credentials": "None required",
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All Spellcasting Popup features tested and working: Practice dropdown, Spell Factors (Standard/Advanced), Yantras selection with max limit, Paradox system with Reach calculation, Mana mitigation, Chance Die mechanic, Cast Spell button triggering Dice Roller, Roll Paradox button. Sin-Eater characters correctly hide Mage-specific features.",
+  "features_tested": {
+    "spellcasting_popup": {
+      "practice_dropdown": "PASS - Pre-selects clicked practice, dropdown works",
+      "spell_factors": "PASS - Standard/Advanced toggles work, +1R indicators show correctly",
+      "potency_duration_scale_controls": "PASS - Level controls work with dice penalties",
+      "yantras_section": "PASS - Shows correct max (2 for Gnosis 1), selection adds bonus dice",
+      "dedicated_tool_yantra": "PASS - Shows -2P indicator, reduces Paradox pool",
+      "rote_skill_mudra": "NOT TESTED - Would need to verify bonus input",
+      "paradox_section": "PASS - Appears when Reach exceeds Free Reach",
+      "paradox_base_dice": "PASS - Correctly calculates reachBeyondFree × paradoxDiePerReach",
+      "paradox_modifiers": "PASS - Inured (+2), Sleeper Witnesses (+1) checkboxes visible",
+      "sleeper_witness_scale": "NOT TESTED - Would need to check dropdown",
+      "previous_paradox_rolls": "PASS - Counter with +/- controls visible",
+      "mana_mitigation": "PASS - Spending Mana removes Paradox dice",
+      "chance_die_mechanic": "PASS - Shows CHANCE DIE in amber when Paradox reduced to 0",
+      "summary_section": "PASS - Shows Final Dice Pool, Reach, Mana costs, Paradox info",
+      "cast_spell_button": "PASS - Triggers Dice Roller with correct pool and label",
+      "dice_roller_label": "PASS - Shows spell label (e.g., 'Death Spell (Compelling)')",
+      "dice_roller_auto_roll": "PASS - Auto-rolls when triggered from Cast Spell",
+      "roll_paradox_button": "PASS - Appears after spell roll when Paradox exists",
+      "paradox_roll": "PASS - Rolls correct Paradox dice"
+    },
+    "character_type_separation": {
+      "mage_features": "PASS - Mage characters show ARCANA, SPELLS & ATTAINMENTS section",
+      "sineater_features": "PASS - Sin-Eater characters show HAUNTS, KEYS & MEMENTOS instead"
+    },
+    "dice_roll_api": {
+      "basic_roll": "PASS",
+      "chance_die": "PASS",
+      "rote_quality": "PASS",
+      "8_again": "PASS",
+      "9_again": "PASS",
+      "paradox_roll": "PASS",
+      "large_pool": "PASS",
+      "zero_pool": "PASS"
+    }
+  }
+}

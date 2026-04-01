@@ -74,6 +74,7 @@ export const CharacterPanel = ({
     onUpdateCharacter,
     onDeleteCharacter,
     onDiceRollResult,
+    onTriggerDiceRoll,
 }) => {
     const [expandedSections, setExpandedSections] = useState({
         header: false,
@@ -3416,8 +3417,9 @@ export const CharacterPanel = ({
                     initialPractice={spellcastingPractice}
                     onSpendMana={(amount) => handleChange("mana", Math.max(0, (getValue("mana") || 0) - amount))}
                     onRollDice={(spellData) => {
-                        // Could integrate with dice roller here
-                        toast.success(`Casting ${spellcastingArcanum} spell: ${spellData.pool} dice`);
+                        if (onTriggerDiceRoll) {
+                            onTriggerDiceRoll(spellData);
+                        }
                     }}
                 />
             )}
