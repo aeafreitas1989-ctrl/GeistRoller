@@ -74,6 +74,12 @@ A digital character sheet and dice roller for the Geist: The Sin-Eaters tabletop
   - Order (Adamantine Arrow, Guardians of the Veil, Mysterium, Silver Ladder, Free Council) instead of Innate Key
   - **Path-based Arcana**: Ruling Arcana (blue, auto 1-dot), Inferior Arcanum (red)
   - **Order Rote Skills**: Marked with amber indicator
+  - **Arcana Practices**: Tooltip showing unlocked practices by dot level
+    - 1 dot: Compelling, Knowing, Unveiling
+    - 2 dots: Ruling, Shielding, Veiling
+    - 3 dots: Fraying, Perfecting, Weaving
+    - 4 dots: Patterning, Unravelling
+    - 5 dots: Making, Unmaking
 
 ### P1 (Backlog)
 - Export/import character data

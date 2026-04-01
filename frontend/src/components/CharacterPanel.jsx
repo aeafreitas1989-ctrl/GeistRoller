@@ -52,7 +52,7 @@ import {
     ATTRIBUTE_LIST, SKILL_LIST, CEREMONY_DEFINITIONS,
     CEREMONY_SKILL_KEY_MAP, KEY_UNLOCK_ATTRIBUTES,
     ARCANA, MAGE_ATTAINMENTS, GNOSIS_TABLE, MAGE_PATHS, MAGE_ORDERS,
-    PATH_ARCANA, ORDER_ROTE_SKILLS,
+    PATH_ARCANA, ORDER_ROTE_SKILLS, ARCANA_PRACTICES,
 } from "../data/character-data";
 
 // Extracted sub-components
@@ -2757,14 +2757,57 @@ export const CharacterPanel = ({
                                                 if (isRuling) dotColor = "blue";
                                                 if (isInferior) dotColor = "red";
                                                 
+                                                // Get unlocked practices
+                                                const unlockedPractices = [];
+                                                for (let i = 1; i <= arcanumRating; i++) {
+                                                    if (ARCANA_PRACTICES[i]) {
+                                                        unlockedPractices.push(...ARCANA_PRACTICES[i]);
+                                                    }
+                                                }
+                                                
                                                 return (
                                                     <div key={arcanum} className="flex items-center justify-between group">
-                                                        <span className={`text-xs ${labelColor}`}>
-                                                            {arcanum}
-                                                            {isRuling && <span className="ml-1 text-[9px] text-blue-500">(R)</span>}
-                                                            {isInferior && <span className="ml-1 text-[9px] text-red-500">(I)</span>}
-                                                        </span>
-                                                        <StatDots value={arcanumRating} max={5} onChange={(v) => handleNestedChange("arcana", arcanum, v)} color={dotColor} size="small" testIdPrefix={`arcanum-${arcanum.toLowerCase()}`} />
+                                                        <TooltipProvider>
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <span className={`text-xs cursor-help ${labelColor}`}>
+                                                                        {arcanum}
+                                                                        {isRuling && <span className="ml-1 text-[9px] text-blue-500">(R)</span>}
+                                                                        {isInferior && <span className="ml-1 text-[9px] text-red-500">(I)</span>}
+                                                                    </span>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent className="bg-zinc-900 border-zinc-700 max-w-xs">
+                                                                    <div className="text-xs">
+                                                                        <p className="font-medium text-zinc-200 mb-1">{arcanum} Practices</p>
+                                                                        {arcanumRating === 0 ? (
+                                                                            <p className="text-zinc-500 italic">No dots - no practices unlocked</p>
+                                                                        ) : (
+                                                                            <div className="space-y-0.5">
+                                                                                {[1, 2, 3, 4, 5].map(level => {
+                                                                                    const practices = ARCANA_PRACTICES[level];
+                                                                                    const isUnlocked = arcanumRating >= level;
+                                                                                    return (
+                                                                                        <div key={level} className={isUnlocked ? "text-zinc-300" : "text-zinc-600"}>
+                                                                                            <span className="text-violet-400">{"●".repeat(level)}</span>
+                                                                                            <span className="ml-1">{practices.join(", ")}</span>
+                                                                                            {isUnlocked && <span className="ml-1 text-teal-400">✓</span>}
+                                                                                        </div>
+                                                                                    );
+                                                                                })}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        </TooltipProvider>
+                                                        <div className="flex items-center gap-2">
+                                                            {arcanumRating > 0 && (
+                                                                <span className="text-[9px] text-zinc-600 hidden group-hover:inline">
+                                                                    {unlockedPractices.slice(0, 3).join(", ")}{unlockedPractices.length > 3 ? "..." : ""}
+                                                                </span>
+                                                            )}
+                                                            <StatDots value={arcanumRating} max={5} onChange={(v) => handleNestedChange("arcana", arcanum, v)} color={dotColor} size="small" testIdPrefix={`arcanum-${arcanum.toLowerCase()}`} />
+                                                        </div>
                                                     </div>
                                                 );
                                             })}

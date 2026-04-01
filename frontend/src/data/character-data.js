@@ -809,6 +809,15 @@ export const MAGE_ORDERS = [
     "Free Council"
 ];
 
+// Mage Practices by Arcana dots
+export const ARCANA_PRACTICES = {
+    1: ["Compelling", "Knowing", "Unveiling"],
+    2: ["Ruling", "Shielding", "Veiling"],
+    3: ["Fraying", "Perfecting", "Weaving"],
+    4: ["Patterning", "Unravelling"],
+    5: ["Making", "Unmaking"]
+};
+
 // Order Rote Skills
 export const ORDER_ROTE_SKILLS = {
     "Adamantine Arrow": ["athletics", "intimidation", "survival"],
