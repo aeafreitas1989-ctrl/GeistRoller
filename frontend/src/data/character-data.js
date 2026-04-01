@@ -791,6 +791,15 @@ export const MAGE_PATHS = [
     "Thyrsus"
 ];
 
+// Path Arcana (Ruling and Inferior)
+export const PATH_ARCANA = {
+    "Acanthus": { ruling: ["Fate", "Time"], inferior: "Forces" },
+    "Mastigos": { ruling: ["Mind", "Space"], inferior: "Matter" },
+    "Moros": { ruling: ["Death", "Matter"], inferior: "Spirit" },
+    "Obrimos": { ruling: ["Forces", "Prime"], inferior: "Death" },
+    "Thyrsus": { ruling: ["Life", "Spirit"], inferior: "Mind" }
+};
+
 // Mage Orders
 export const MAGE_ORDERS = [
     "Adamantine Arrow",
@@ -799,3 +808,12 @@ export const MAGE_ORDERS = [
     "Silver Ladder",
     "Free Council"
 ];
+
+// Order Rote Skills
+export const ORDER_ROTE_SKILLS = {
+    "Adamantine Arrow": ["athletics", "intimidation", "survival"],
+    "Guardians of the Veil": ["investigation", "stealth", "subterfuge"],
+    "Mysterium": ["investigation", "occult", "survival"],
+    "Silver Ladder": ["expression", "persuasion", "subterfuge"],
+    "Free Council": ["crafts", "persuasion", "science"]
+};

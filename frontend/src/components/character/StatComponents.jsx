@@ -54,7 +54,9 @@ export const StatDots = ({
         crimson: "text-rose-500",
         zinc: "text-zinc-400",
         amber: "text-amber-500",
-        violet: "text-violet-500"
+        violet: "text-violet-500",
+        blue: "text-blue-500",
+        red: "text-red-500"
     };
     
     const sizeClasses = size === "small" ? "w-2.5 h-2.5" : "w-3 h-3";

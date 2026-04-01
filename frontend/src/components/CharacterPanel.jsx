@@ -52,6 +52,7 @@ import {
     ATTRIBUTE_LIST, SKILL_LIST, CEREMONY_DEFINITIONS,
     CEREMONY_SKILL_KEY_MAP, KEY_UNLOCK_ATTRIBUTES,
     ARCANA, MAGE_ATTAINMENTS, GNOSIS_TABLE, MAGE_PATHS, MAGE_ORDERS,
+    PATH_ARCANA, ORDER_ROTE_SKILLS,
 } from "../data/character-data";
 
 // Extracted sub-components
@@ -453,6 +454,27 @@ export const CharacterPanel = ({
         const currentConditions = activeCharacter?.conditions || [];
         const updated = [...currentConditions, { ...condition, id: Date.now().toString() }];
         await onUpdateCharacter({ conditions: updated });
+    };
+
+    // Handle Mage Path selection - auto-set Ruling Arcana to 1 dot
+    const handlePathChange = (newPath) => {
+        handleChange("path", newPath);
+        
+        if (newPath && PATH_ARCANA[newPath]) {
+            const pathData = PATH_ARCANA[newPath];
+            const currentArcana = getValue("arcana") || {};
+            const newArcana = { ...currentArcana };
+            
+            // Set ruling arcana to at least 1 dot
+            pathData.ruling.forEach(arcanum => {
+                if (!newArcana[arcanum] || newArcana[arcanum] < 1) {
+                    newArcana[arcanum] = 1;
+                }
+            });
+            
+            handleChange("arcana", newArcana);
+            toast.success(`Path set to ${newPath}. Ruling Arcana (${pathData.ruling.join(" & ")}) set to 1 dot.`);
+        }
     };
 
     const hasPendingChanges = Object.keys(pendingChanges).length > 0;
@@ -965,7 +987,7 @@ export const CharacterPanel = ({
                                         {isMage ? "Path" : "Burden"}
                                     </label>
                                     {isMage ? (
-                                        <Select value={getValue("path") || ""} onValueChange={(v) => handleChange("path", v)}>
+                                        <Select value={getValue("path") || ""} onValueChange={handlePathChange}>
                                             <SelectTrigger className="bg-zinc-900/50 border-zinc-800 h-8 text-sm mt-0.5" data-testid="character-path-select"><SelectValue placeholder="Select..." /></SelectTrigger>
                                             <SelectContent className="bg-zinc-900 border-zinc-800">
                                                 {MAGE_PATHS.map((p) => (<SelectItem key={p} value={p} className="text-zinc-200">{p}</SelectItem>))}
@@ -1398,21 +1420,42 @@ export const CharacterPanel = ({
                             <div className="grid grid-cols-3 gap-3 text-xs">
                                 <div>
                                     <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1 text-center">Mental <span className="text-rose-400">(-3)</span></p>
-                                    {["academics", "computer", "crafts", "investigation", "medicine", "occult", "politics", "science"].map((skill) => (
-                                        <StatRow key={skill} label={skill} value={getNestedValue("skills", skill)} max={5} onChange={(v) => handleNestedChange("skills", skill, v)} color="zinc" onLabelClick={() => openDicePopup('skill', skill)} />
-                                    ))}
+                                    {["academics", "computer", "crafts", "investigation", "medicine", "occult", "politics", "science"].map((skill) => {
+                                        const currentOrder = isMage ? getValue("order") : null;
+                                        const isRoteSkill = currentOrder && ORDER_ROTE_SKILLS[currentOrder]?.includes(skill);
+                                        return (
+                                            <div key={skill} className="relative">
+                                                {isRoteSkill && <span className="absolute -left-2 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-amber-500" title="Order Rote Skill" />}
+                                                <StatRow label={skill} value={getNestedValue("skills", skill)} max={5} onChange={(v) => handleNestedChange("skills", skill, v)} color={isRoteSkill ? "amber" : "zinc"} onLabelClick={() => openDicePopup('skill', skill)} />
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                                 <div>
                                     <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1 text-center">Physical <span className="text-amber-400">(-1)</span></p>
-                                    {["athletics", "brawl", "drive", "firearms", "larceny", "stealth", "survival", "weaponry"].map((skill) => (
-                                        <StatRow key={skill} label={skill} value={getNestedValue("skills", skill)} max={5} onChange={(v) => handleNestedChange("skills", skill, v)} color="zinc" onLabelClick={() => openDicePopup('skill', skill)} />
-                                    ))}
+                                    {["athletics", "brawl", "drive", "firearms", "larceny", "stealth", "survival", "weaponry"].map((skill) => {
+                                        const currentOrder = isMage ? getValue("order") : null;
+                                        const isRoteSkill = currentOrder && ORDER_ROTE_SKILLS[currentOrder]?.includes(skill);
+                                        return (
+                                            <div key={skill} className="relative">
+                                                {isRoteSkill && <span className="absolute -left-2 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-amber-500" title="Order Rote Skill" />}
+                                                <StatRow label={skill} value={getNestedValue("skills", skill)} max={5} onChange={(v) => handleNestedChange("skills", skill, v)} color={isRoteSkill ? "amber" : "zinc"} onLabelClick={() => openDicePopup('skill', skill)} />
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                                 <div>
                                     <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1 text-center">Social <span className="text-amber-400">(-1)</span></p>
-                                    {["animal_ken", "empathy", "expression", "intimidation", "persuasion", "socialize", "streetwise", "subterfuge"].map((skill) => (
-                                        <StatRow key={skill} label={skill} value={getNestedValue("skills", skill)} max={5} onChange={(v) => handleNestedChange("skills", skill, v)} color="zinc" onLabelClick={() => openDicePopup('skill', skill)} />
-                                    ))}
+                                    {["animal_ken", "empathy", "expression", "intimidation", "persuasion", "socialize", "streetwise", "subterfuge"].map((skill) => {
+                                        const currentOrder = isMage ? getValue("order") : null;
+                                        const isRoteSkill = currentOrder && ORDER_ROTE_SKILLS[currentOrder]?.includes(skill);
+                                        return (
+                                            <div key={skill} className="relative">
+                                                {isRoteSkill && <span className="absolute -left-2 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-amber-500" title="Order Rote Skill" />}
+                                                <StatRow label={skill} value={getNestedValue("skills", skill)} max={5} onChange={(v) => handleNestedChange("skills", skill, v)} color={isRoteSkill ? "amber" : "zinc"} onLabelClick={() => openDicePopup('skill', skill)} />
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                             </div>
                             <div className="p-2 bg-zinc-900/50 border border-zinc-800 rounded-sm">
@@ -2687,16 +2730,41 @@ export const CharacterPanel = ({
                                 <>
                                     {/* Arcana for Mages */}
                                     <div>
-                                        <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Arcana</p>
+                                        <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">
+                                            Arcana
+                                            {getValue("path") && (
+                                                <span className="ml-2 text-[9px] font-normal">
+                                                    <span className="text-blue-400">● Ruling</span>
+                                                    <span className="text-red-400 ml-2">● Inferior</span>
+                                                </span>
+                                            )}
+                                        </p>
                                         <div className="space-y-1">
                                             {ARCANA.map((arcanum) => {
                                                 const arcanumRating = getNestedValue("arcana", arcanum) || 0;
+                                                const currentPath = getValue("path");
+                                                const pathData = currentPath ? PATH_ARCANA[currentPath] : null;
+                                                const isRuling = pathData?.ruling?.includes(arcanum);
+                                                const isInferior = pathData?.inferior === arcanum;
+                                                
+                                                // Determine label color
+                                                let labelColor = arcanumRating > 0 ? 'text-zinc-400' : 'text-zinc-600';
+                                                if (isRuling) labelColor = 'text-blue-400 font-medium';
+                                                if (isInferior) labelColor = 'text-red-400';
+                                                
+                                                // Determine dot color
+                                                let dotColor = "violet";
+                                                if (isRuling) dotColor = "blue";
+                                                if (isInferior) dotColor = "red";
+                                                
                                                 return (
                                                     <div key={arcanum} className="flex items-center justify-between group">
-                                                        <span className={`text-xs ${arcanumRating > 0 ? 'text-zinc-400' : 'text-zinc-600'}`}>
+                                                        <span className={`text-xs ${labelColor}`}>
                                                             {arcanum}
+                                                            {isRuling && <span className="ml-1 text-[9px] text-blue-500">(R)</span>}
+                                                            {isInferior && <span className="ml-1 text-[9px] text-red-500">(I)</span>}
                                                         </span>
-                                                        <StatDots value={arcanumRating} max={5} onChange={(v) => handleNestedChange("arcana", arcanum, v)} color="violet" size="small" testIdPrefix={`arcanum-${arcanum.toLowerCase()}`} />
+                                                        <StatDots value={arcanumRating} max={5} onChange={(v) => handleNestedChange("arcana", arcanum, v)} color={dotColor} size="small" testIdPrefix={`arcanum-${arcanum.toLowerCase()}`} />
                                                     </div>
                                                 );
                                             })}
