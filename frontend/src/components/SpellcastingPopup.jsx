@@ -92,6 +92,9 @@ export const SpellcastingPopup = ({
     onSpendMana,
     onRollDice,
     orderRoteSkills,
+    spellType,
+    roteSkillDots,
+    isRoteOrderSkill,
 }) => {
     const [selectedPractice, setSelectedPractice] = useState("");
     const [factors, setFactors] = useState({
@@ -110,11 +113,6 @@ export const SpellcastingPopup = ({
 
     // Yantras state
     const [activeYantras, setActiveYantras] = useState(new Set());
-    const [roteSkillBonus, setRoteSkillBonus] = useState(0);
-    const [isOrderRoteSkill, setIsOrderRoteSkill] = useState(false);
-
-    // Spell type
-    const [isPraxis, setIsPraxis] = useState(false);
 
     // Reset when popup opens
     useEffect(() => {
@@ -132,9 +130,6 @@ export const SpellcastingPopup = ({
             setPreviousParadoxRolls(0);
             setManaMitigation(0);
             setActiveYantras(new Set());
-            setRoteSkillBonus(0);
-            setIsOrderRoteSkill(false);
-            setIsPraxis(false);
         }
     }, [isOpen, arcanum, initialPractice]);
 
@@ -175,15 +170,15 @@ export const SpellcastingPopup = ({
     const yantraBonus = useMemo(() => {
         return YANTRAS.reduce((sum, y) => {
             if (!activeYantras.has(y.name)) return sum;
-            if (y.variable) return sum + roteSkillBonus;
             return sum + y.bonus;
         }, 0);
-    }, [activeYantras, roteSkillBonus]);
+    }, [activeYantras]);
 
     // Dice pool
     const baseDicePool = gnosis + arcanumDots;
-    const orderSkillBonus = (activeYantras.has("Rote Skill Mudra") && isOrderRoteSkill) ? 1 : 0;
-    const finalDicePool = Math.max(0, baseDicePool + dicePenalty + yantraBonus + orderSkillBonus);
+    const roteBonus = spellType === "rote" ? (roteSkillDots || 0) : 0;
+    const orderSkillBonus = (spellType === "rote" && isRoteOrderSkill) ? 1 : 0;
+    const finalDicePool = Math.max(0, baseDicePool + dicePenalty + yantraBonus + roteBonus + orderSkillBonus);
 
     // Spell Mana cost
     const getManaCost = () => {
@@ -279,9 +274,9 @@ export const SpellcastingPopup = ({
 
         onRollDice({
             pool: finalDicePool,
-            label: `${arcanum} ${isPraxis ? "Praxis" : "Spell"} (${selectedPractice})`,
+            label: `${arcanum} ${spellType === "praxis" ? "Praxis" : spellType === "rote" ? "Rote" : "Spell"} (${selectedPractice})`,
             paradox: paradoxConfig,
-            exceptional_target: isPraxis ? 3 : 5,
+            exceptional_target: spellType === "praxis" ? 3 : 5,
         });
 
         onClose();
@@ -360,13 +355,15 @@ export const SpellcastingPopup = ({
                         <Sparkles className="w-5 h-5 text-violet-400" />
                         <div>
                             <h2 className="font-heading text-lg text-zinc-100" data-testid="spellcasting-title">
-                                {arcanum} Spellcasting
+                                {arcanum} {spellType === "rote" ? "Rote" : spellType === "praxis" ? "Praxis" : "Spellcasting"}
                             </h2>
                             <p className="text-xs text-zinc-500">
                                 {isRuling && <span className="text-blue-400">Ruling Arcanum</span>}
                                 {isInferior && <span className="text-red-400">Inferior Arcanum</span>}
                                 {!isRuling && !isInferior && <span className="text-zinc-400">Common Arcanum</span>}
                                 {" · "}{arcanumDots} dot{arcanumDots !== 1 && "s"} · Gnosis {gnosis}
+                                {spellType === "rote" && <span className="text-amber-400">{" · "}Rote Skill +{roteSkillDots}{isRoteOrderSkill ? " (Order +1)" : ""}</span>}
+                                {spellType === "praxis" && <span className="text-teal-400">{" · "}Exceptional on 3</span>}
                             </p>
                         </div>
                     </div>
@@ -463,51 +460,12 @@ export const SpellcastingPopup = ({
                                             {yantra.name}
                                         </span>
                                         <span className={`font-mono ${isActive ? "text-teal-400" : "text-zinc-600"}`}>
-                                            {yantra.variable ? `+${roteSkillBonus}` : yantra.bonus > 0 ? `+${yantra.bonus}` : "+0"}
+                                            {yantra.bonus > 0 ? `+${yantra.bonus}` : "+0"}
                                         </span>
                                     </div>
                                 );
                             })}
                         </div>
-                        {/* Rote Skill Mudra bonus input */}
-                        {activeYantras.has("Rote Skill Mudra") && (
-                            <div className="space-y-1.5 pl-2">
-                                <div className="flex items-center gap-2">
-                                    <span className="text-xs text-zinc-400">Rote Skill dots:</span>
-                                    <div className="flex items-center gap-1">
-                                        <Button variant="ghost" size="icon" className="h-5 w-5 text-zinc-400"
-                                            onClick={() => setRoteSkillBonus(Math.max(0, roteSkillBonus - 1))}
-                                            disabled={roteSkillBonus <= 0}
-                                        ><Minus className="w-3 h-3" /></Button>
-                                        <span className="text-sm font-mono text-violet-300 w-4 text-center">{roteSkillBonus}</span>
-                                        <Button variant="ghost" size="icon" className="h-5 w-5 text-zinc-400"
-                                            onClick={() => setRoteSkillBonus(Math.min(5, roteSkillBonus + 1))}
-                                            disabled={roteSkillBonus >= 5}
-                                        ><Plus className="w-3 h-3" /></Button>
-                                    </div>
-                                </div>
-                                {orderRoteSkills && orderRoteSkills.length > 0 && (
-                                    <label className="flex items-center gap-2 text-xs cursor-pointer" data-testid="order-rote-skill-toggle">
-                                        <Checkbox
-                                            checked={isOrderRoteSkill}
-                                            onCheckedChange={setIsOrderRoteSkill}
-                                            className="border-zinc-600 data-[state=checked]:bg-amber-600 h-3.5 w-3.5"
-                                        />
-                                        <span className="text-amber-300">Order Rote Skill (+1)</span>
-                                    </label>
-                                )}
-                            </div>
-                        )}
-
-                        {/* Praxis toggle */}
-                        <label className="flex items-center gap-2 text-xs cursor-pointer pl-2" data-testid="praxis-toggle">
-                            <Checkbox
-                                checked={isPraxis}
-                                onCheckedChange={setIsPraxis}
-                                className="border-zinc-600 data-[state=checked]:bg-teal-600 h-3.5 w-3.5"
-                            />
-                            <span className={isPraxis ? "text-teal-300" : "text-zinc-400"}>Praxis (Exceptional on 3 successes)</span>
-                        </label>
                     </div>
 
                     {/* Dice Pool Display */}
@@ -515,8 +473,9 @@ export const SpellcastingPopup = ({
                         <p className="text-xs text-zinc-500 uppercase mb-1">Spellcasting Dice Pool</p>
                         <p className="text-base font-mono text-violet-300">
                             Gnosis ({gnosis}) + {arcanum} ({arcanumDots})
-                            {yantraBonus > 0 && <span className="text-teal-400"> + Yantras ({yantraBonus})</span>}
+                            {roteBonus > 0 && <span className="text-amber-400"> + Rote Skill ({roteBonus})</span>}
                             {orderSkillBonus > 0 && <span className="text-amber-400"> + Order Skill ({orderSkillBonus})</span>}
+                            {yantraBonus > 0 && <span className="text-teal-400"> + Yantras ({yantraBonus})</span>}
                             {dicePenalty !== 0 && <span className="text-red-400"> {dicePenalty}</span>}
                             <span className="text-zinc-400"> = </span>
                             <span className="text-teal-400 font-bold text-lg">{finalDicePool}</span>

@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { Plus, Minus, Trash2, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Save, X, Info, Dices, Zap, Star, Pencil } from "lucide-react";
+import { Plus, Minus, Trash2, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Save, X, Info, Dices, Zap, Star, Pencil, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -126,10 +126,14 @@ export const CharacterPanel = ({
     const [spellcastingOpen, setSpellcastingOpen] = useState(false);
     const [spellcastingArcanum, setSpellcastingArcanum] = useState(null);
     const [spellcastingPractice, setSpellcastingPractice] = useState(null);
+    const [spellcastingType, setSpellcastingType] = useState(null);
+    const [spellcastingRoteSkill, setSpellcastingRoteSkill] = useState(null);
 
-    const openSpellcastingPopup = (arcanum, practice = null) => {
+    const openSpellcastingPopup = (arcanum, practice = null, spellType = null, roteSkill = null) => {
         setSpellcastingArcanum(arcanum);
         setSpellcastingPractice(practice);
+        setSpellcastingType(spellType);
+        setSpellcastingRoteSkill(roteSkill);
         setSpellcastingOpen(true);
     };
 
@@ -2882,6 +2886,15 @@ export const CharacterPanel = ({
                                                                 className="input-geist h-7 text-xs flex-1 mr-2"
                                                                 data-testid={`rote-${index}-spell`}
                                                             />
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => openSpellcastingPopup(rote.arcanum, null, "rote", rote.skill)}
+                                                                className="h-7 px-2 text-[10px] text-violet-400 hover:text-violet-300 hover:bg-violet-900/30"
+                                                                data-testid={`rote-${index}-cast`}
+                                                            >
+                                                                <Sparkles className="w-3 h-3 mr-1" /> Cast
+                                                            </Button>
                                                             <Button 
                                                                 variant="ghost" 
                                                                 size="sm" 
@@ -2975,6 +2988,15 @@ export const CharacterPanel = ({
                                                                 className="input-geist h-7 text-xs flex-1 mr-2"
                                                                 data-testid={`praxis-${index}-spell`}
                                                             />
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => openSpellcastingPopup(praxis.arcanum, null, "praxis")}
+                                                                className="h-7 px-2 text-[10px] text-teal-400 hover:text-teal-300 hover:bg-teal-900/30"
+                                                                data-testid={`praxis-${index}-cast`}
+                                                            >
+                                                                <Sparkles className="w-3 h-3 mr-1" /> Cast
+                                                            </Button>
                                                             <Button 
                                                                 variant="ghost" 
                                                                 size="sm" 
@@ -3470,7 +3492,7 @@ export const CharacterPanel = ({
             {isMage && spellcastingArcanum && (
                 <SpellcastingPopup
                     isOpen={spellcastingOpen}
-                    onClose={() => { setSpellcastingOpen(false); setSpellcastingArcanum(null); setSpellcastingPractice(null); }}
+                    onClose={() => { setSpellcastingOpen(false); setSpellcastingArcanum(null); setSpellcastingPractice(null); setSpellcastingType(null); setSpellcastingRoteSkill(null); }}
                     arcanum={spellcastingArcanum}
                     arcanumDots={getNestedValue("arcana", spellcastingArcanum) || 0}
                     gnosis={getValue("gnosis") || 1}
@@ -3479,6 +3501,9 @@ export const CharacterPanel = ({
                     currentMana={getValue("mana") || 0}
                     initialPractice={spellcastingPractice}
                     orderRoteSkills={isMage && getValue("order") ? ORDER_ROTE_SKILLS[getValue("order")] || [] : []}
+                    spellType={spellcastingType}
+                    roteSkillDots={spellcastingRoteSkill ? (getNestedValue("skills", spellcastingRoteSkill) || 0) : 0}
+                    isRoteOrderSkill={spellcastingRoteSkill && getValue("order") && (ORDER_ROTE_SKILLS[getValue("order")] || []).includes(spellcastingRoteSkill)}
                     onSpendMana={(amount) => handleChange("mana", Math.max(0, (getValue("mana") || 0) - amount))}
                     onRollDice={(spellData) => {
                         if (onTriggerDiceRoll) {
