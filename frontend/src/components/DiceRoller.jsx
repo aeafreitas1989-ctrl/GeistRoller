@@ -26,12 +26,13 @@ export const DiceRoller = forwardRef((props, ref) => {
     const [result, setResult] = useState(null);
     const [rollLabel, setRollLabel] = useState(null);
     const [pendingParadox, setPendingParadox] = useState(null);
+    const [exceptionalTarget, setExceptionalTarget] = useState(5);
 
     // External roll trigger
     const pendingRollRef = useRef(null);
     const [triggerExternal, setTriggerExternal] = useState(0);
 
-    const performRoll = useCallback(async (rollPool, rollAgain, rollRote, rollChance) => {
+    const performRoll = useCallback(async (rollPool, rollAgain, rollRote, rollChance, rollExceptionalTarget) => {
         setIsRolling(true);
         setResult(null);
         try {
@@ -40,6 +41,7 @@ export const DiceRoller = forwardRef((props, ref) => {
                 again: parseInt(rollAgain),
                 rote: rollRote,
                 chance: rollChance,
+                exceptional_target: rollExceptionalTarget || 5,
             });
             await new Promise(resolve => setTimeout(resolve, 500));
             setResult(response.data);
@@ -77,6 +79,7 @@ export const DiceRoller = forwardRef((props, ref) => {
             setAgain(String(config.again || 10));
             setRote(config.rote || false);
             setRollLabel(config.label || null);
+            setExceptionalTarget(config.exceptional_target || 5);
             setIsOpen(true);
             setIsMinimized(false);
             setResult(null);
@@ -91,7 +94,8 @@ export const DiceRoller = forwardRef((props, ref) => {
                 config.pool || 1,
                 config.again || 10,
                 config.rote || false,
-                config.chance || false
+                config.chance || false,
+                config.exceptional_target || 5
             );
         }
     }, [triggerExternal, performRoll]);
@@ -117,7 +121,8 @@ export const DiceRoller = forwardRef((props, ref) => {
     const rollDice = () => {
         setRollLabel(null);
         setPendingParadox(null);
-        performRoll(pool, parseInt(again), rote, chance);
+        setExceptionalTarget(5);
+        performRoll(pool, parseInt(again), rote, chance, 5);
     };
 
     if (!isOpen) {

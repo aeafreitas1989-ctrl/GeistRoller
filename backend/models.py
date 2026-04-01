@@ -357,6 +357,7 @@ class DiceRollRequest(BaseModel):
     again: int = 10
     rote: bool = False
     chance: bool = False
+    exceptional_target: int = 5
 
 class DiceRollResult(BaseModel):
     dice: List[int]

@@ -90,7 +90,8 @@ export const SpellcastingPopup = ({
     currentMana,
     initialPractice,
     onSpendMana,
-    onRollDice
+    onRollDice,
+    orderRoteSkills,
 }) => {
     const [selectedPractice, setSelectedPractice] = useState("");
     const [factors, setFactors] = useState({
@@ -110,6 +111,10 @@ export const SpellcastingPopup = ({
     // Yantras state
     const [activeYantras, setActiveYantras] = useState(new Set());
     const [roteSkillBonus, setRoteSkillBonus] = useState(0);
+    const [isOrderRoteSkill, setIsOrderRoteSkill] = useState(false);
+
+    // Spell type
+    const [isPraxis, setIsPraxis] = useState(false);
 
     // Reset when popup opens
     useEffect(() => {
@@ -128,6 +133,8 @@ export const SpellcastingPopup = ({
             setManaMitigation(0);
             setActiveYantras(new Set());
             setRoteSkillBonus(0);
+            setIsOrderRoteSkill(false);
+            setIsPraxis(false);
         }
     }, [isOpen, arcanum, initialPractice]);
 
@@ -175,7 +182,8 @@ export const SpellcastingPopup = ({
 
     // Dice pool
     const baseDicePool = gnosis + arcanumDots;
-    const finalDicePool = Math.max(0, baseDicePool + dicePenalty + yantraBonus);
+    const orderSkillBonus = (activeYantras.has("Rote Skill Mudra") && isOrderRoteSkill) ? 1 : 0;
+    const finalDicePool = Math.max(0, baseDicePool + dicePenalty + yantraBonus + orderSkillBonus);
 
     // Spell Mana cost
     const getManaCost = () => {
@@ -271,8 +279,9 @@ export const SpellcastingPopup = ({
 
         onRollDice({
             pool: finalDicePool,
-            label: `${arcanum} Spell (${selectedPractice})`,
+            label: `${arcanum} ${isPraxis ? "Praxis" : "Spell"} (${selectedPractice})`,
             paradox: paradoxConfig,
+            exceptional_target: isPraxis ? 3 : 5,
         });
 
         onClose();
@@ -462,21 +471,43 @@ export const SpellcastingPopup = ({
                         </div>
                         {/* Rote Skill Mudra bonus input */}
                         {activeYantras.has("Rote Skill Mudra") && (
-                            <div className="flex items-center gap-2 pl-2">
-                                <span className="text-xs text-zinc-400">Rote Skill dots:</span>
-                                <div className="flex items-center gap-1">
-                                    <Button variant="ghost" size="icon" className="h-5 w-5 text-zinc-400"
-                                        onClick={() => setRoteSkillBonus(Math.max(0, roteSkillBonus - 1))}
-                                        disabled={roteSkillBonus <= 0}
-                                    ><Minus className="w-3 h-3" /></Button>
-                                    <span className="text-sm font-mono text-violet-300 w-4 text-center">{roteSkillBonus}</span>
-                                    <Button variant="ghost" size="icon" className="h-5 w-5 text-zinc-400"
-                                        onClick={() => setRoteSkillBonus(Math.min(5, roteSkillBonus + 1))}
-                                        disabled={roteSkillBonus >= 5}
-                                    ><Plus className="w-3 h-3" /></Button>
+                            <div className="space-y-1.5 pl-2">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs text-zinc-400">Rote Skill dots:</span>
+                                    <div className="flex items-center gap-1">
+                                        <Button variant="ghost" size="icon" className="h-5 w-5 text-zinc-400"
+                                            onClick={() => setRoteSkillBonus(Math.max(0, roteSkillBonus - 1))}
+                                            disabled={roteSkillBonus <= 0}
+                                        ><Minus className="w-3 h-3" /></Button>
+                                        <span className="text-sm font-mono text-violet-300 w-4 text-center">{roteSkillBonus}</span>
+                                        <Button variant="ghost" size="icon" className="h-5 w-5 text-zinc-400"
+                                            onClick={() => setRoteSkillBonus(Math.min(5, roteSkillBonus + 1))}
+                                            disabled={roteSkillBonus >= 5}
+                                        ><Plus className="w-3 h-3" /></Button>
+                                    </div>
                                 </div>
+                                {orderRoteSkills && orderRoteSkills.length > 0 && (
+                                    <label className="flex items-center gap-2 text-xs cursor-pointer" data-testid="order-rote-skill-toggle">
+                                        <Checkbox
+                                            checked={isOrderRoteSkill}
+                                            onCheckedChange={setIsOrderRoteSkill}
+                                            className="border-zinc-600 data-[state=checked]:bg-amber-600 h-3.5 w-3.5"
+                                        />
+                                        <span className="text-amber-300">Order Rote Skill (+1)</span>
+                                    </label>
+                                )}
                             </div>
                         )}
+
+                        {/* Praxis toggle */}
+                        <label className="flex items-center gap-2 text-xs cursor-pointer pl-2" data-testid="praxis-toggle">
+                            <Checkbox
+                                checked={isPraxis}
+                                onCheckedChange={setIsPraxis}
+                                className="border-zinc-600 data-[state=checked]:bg-teal-600 h-3.5 w-3.5"
+                            />
+                            <span className={isPraxis ? "text-teal-300" : "text-zinc-400"}>Praxis (Exceptional on 3 successes)</span>
+                        </label>
                     </div>
 
                     {/* Dice Pool Display */}
@@ -485,6 +516,7 @@ export const SpellcastingPopup = ({
                         <p className="text-base font-mono text-violet-300">
                             Gnosis ({gnosis}) + {arcanum} ({arcanumDots})
                             {yantraBonus > 0 && <span className="text-teal-400"> + Yantras ({yantraBonus})</span>}
+                            {orderSkillBonus > 0 && <span className="text-amber-400"> + Order Skill ({orderSkillBonus})</span>}
                             {dicePenalty !== 0 && <span className="text-red-400"> {dicePenalty}</span>}
                             <span className="text-zinc-400"> = </span>
                             <span className="text-teal-400 font-bold text-lg">{finalDicePool}</span>

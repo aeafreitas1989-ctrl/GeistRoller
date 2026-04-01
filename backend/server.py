@@ -781,7 +781,7 @@ async def roll_dice(request: DiceRollRequest):
         beat_awarded = is_dramatic
     else:
         is_dramatic = False
-        is_exceptional = successes >= 5
+        is_exceptional = successes >= request.exceptional_target
         beat_awarded = False
 
     if is_dramatic:
