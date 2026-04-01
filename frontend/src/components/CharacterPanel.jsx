@@ -51,7 +51,7 @@ import {
     SYNERGY_TABLE, MERIT_LIST, CEREMONY_LIST,
     ATTRIBUTE_LIST, SKILL_LIST, CEREMONY_DEFINITIONS,
     CEREMONY_SKILL_KEY_MAP, KEY_UNLOCK_ATTRIBUTES,
-    ARCANA, MAGE_ATTAINMENTS, GNOSIS_TABLE,
+    ARCANA, MAGE_ATTAINMENTS, GNOSIS_TABLE, MAGE_PATHS, MAGE_ORDERS,
 } from "../data/character-data";
 
 // Extracted sub-components
@@ -961,22 +961,44 @@ export const CharacterPanel = ({
                             </div>
                             <div className="grid grid-cols-2 gap-2">
                                 <div>
-                                    <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Burden</label>
-                                    <Select value={getValue("burden") || ""} onValueChange={(v) => handleChange("burden", v)}>
-                                        <SelectTrigger className="bg-zinc-900/50 border-zinc-800 h-8 text-sm mt-0.5" data-testid="character-burden-select"><SelectValue placeholder="Select..." /></SelectTrigger>
-                                        <SelectContent className="bg-zinc-900 border-zinc-800">
-                                            {BURDENS.map((b) => (<SelectItem key={b} value={b} className="text-zinc-200">{b}</SelectItem>))}
-                                        </SelectContent>
-                                    </Select>
+                                    <label className="text-[10px] text-zinc-500 uppercase tracking-wider">
+                                        {isMage ? "Path" : "Burden"}
+                                    </label>
+                                    {isMage ? (
+                                        <Select value={getValue("path") || ""} onValueChange={(v) => handleChange("path", v)}>
+                                            <SelectTrigger className="bg-zinc-900/50 border-zinc-800 h-8 text-sm mt-0.5" data-testid="character-path-select"><SelectValue placeholder="Select..." /></SelectTrigger>
+                                            <SelectContent className="bg-zinc-900 border-zinc-800">
+                                                {MAGE_PATHS.map((p) => (<SelectItem key={p} value={p} className="text-zinc-200">{p}</SelectItem>))}
+                                            </SelectContent>
+                                        </Select>
+                                    ) : (
+                                        <Select value={getValue("burden") || ""} onValueChange={(v) => handleChange("burden", v)}>
+                                            <SelectTrigger className="bg-zinc-900/50 border-zinc-800 h-8 text-sm mt-0.5" data-testid="character-burden-select"><SelectValue placeholder="Select..." /></SelectTrigger>
+                                            <SelectContent className="bg-zinc-900 border-zinc-800">
+                                                {BURDENS.map((b) => (<SelectItem key={b} value={b} className="text-zinc-200">{b}</SelectItem>))}
+                                            </SelectContent>
+                                        </Select>
+                                    )}
                                 </div>
                                 <div>
-                                    <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Character's Innate Key</label>
-                                    <Select value={getValue("innate_key") || ""} onValueChange={(v) => handleChange("innate_key", v)}>
-                                        <SelectTrigger className="bg-zinc-900/50 border-zinc-800 h-8 text-sm mt-0.5" data-testid="character-innate-key-select"><SelectValue placeholder="Select..." /></SelectTrigger>
-                                        <SelectContent className="bg-zinc-900 border-zinc-800">
-                                            {KEYS.map((k) => (<SelectItem key={k} value={k} className="text-zinc-200">{k}</SelectItem>))}
-                                        </SelectContent>
-                                    </Select>
+                                    <label className="text-[10px] text-zinc-500 uppercase tracking-wider">
+                                        {isMage ? "Order" : "Character's Innate Key"}
+                                    </label>
+                                    {isMage ? (
+                                        <Select value={getValue("order") || ""} onValueChange={(v) => handleChange("order", v)}>
+                                            <SelectTrigger className="bg-zinc-900/50 border-zinc-800 h-8 text-sm mt-0.5" data-testid="character-order-select"><SelectValue placeholder="Select..." /></SelectTrigger>
+                                            <SelectContent className="bg-zinc-900 border-zinc-800">
+                                                {MAGE_ORDERS.map((o) => (<SelectItem key={o} value={o} className="text-zinc-200">{o}</SelectItem>))}
+                                            </SelectContent>
+                                        </Select>
+                                    ) : (
+                                        <Select value={getValue("innate_key") || ""} onValueChange={(v) => handleChange("innate_key", v)}>
+                                            <SelectTrigger className="bg-zinc-900/50 border-zinc-800 h-8 text-sm mt-0.5" data-testid="character-innate-key-select"><SelectValue placeholder="Select..." /></SelectTrigger>
+                                            <SelectContent className="bg-zinc-900 border-zinc-800">
+                                                {KEYS.map((k) => (<SelectItem key={k} value={k} className="text-zinc-200">{k}</SelectItem>))}
+                                            </SelectContent>
+                                        </Select>
+                                    )}
                                 </div>
                             </div>
                             <div className="grid grid-cols-2 gap-2">

@@ -175,6 +175,9 @@ class Character(BaseModel):
     innate_key: str = ""
     geist_innate_key: str = ""
     geist_rank: int = 1
+    # Mage-specific fields
+    path: str = ""  # Acanthus, Mastigos, Moros, Obrimos, Thyrsus
+    order: str = ""  # Adamantine Arrow, Guardians of the Veil, Mysterium, Silver Ladder, Free Council
     remembrance_trait_type: str = ""
     remembrance_trait: str = ""
     root: str = ""
@@ -254,6 +257,8 @@ class CharacterUpdate(BaseModel):
     innate_key: Optional[str] = None
     geist_innate_key: Optional[str] = None
     geist_rank: Optional[int] = None
+    path: Optional[str] = None  # Mage path
+    order: Optional[str] = None  # Mage order
     remembrance_trait_type: Optional[str] = None
     remembrance_trait: Optional[str] = None
     root: Optional[str] = None

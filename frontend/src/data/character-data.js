@@ -781,3 +781,21 @@ export const GNOSIS_TABLE = {
     9: { maxMana: 50, perTurn: 10, traitMax: 9, ritualInterval: "1 min", combinedSpells: 4, paradoxDie: 5, highestArcanum: 5, otherArcana: 5, yantras: 6 },
     10: { maxMana: 75, perTurn: 15, traitMax: 10, ritualInterval: "1 turn", combinedSpells: 5, paradoxDie: 5, highestArcanum: 5, otherArcana: 5, yantras: 7 }
 };
+
+// Mage Paths
+export const MAGE_PATHS = [
+    "Acanthus",
+    "Mastigos", 
+    "Moros",
+    "Obrimos",
+    "Thyrsus"
+];
+
+// Mage Orders
+export const MAGE_ORDERS = [
+    "Adamantine Arrow",
+    "Guardians of the Veil",
+    "Mysterium",
+    "Silver Ladder",
+    "Free Council"
+];

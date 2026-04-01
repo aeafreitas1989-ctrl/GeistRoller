@@ -70,6 +70,8 @@ A digital character sheet and dice roller for the Geist: The Sin-Eaters tabletop
   - Conditional section rendering
   - Gnosis & Resources (Gnosis, Nimbus, Mana)
   - Arcana, Spells & Attainments (10 Arcana, Rotes, Praxes, auto Attainments)
+  - Path (Acanthus, Mastigos, Moros, Obrimos, Thyrsus) instead of Burden
+  - Order (Adamantine Arrow, Guardians of the Veil, Mysterium, Silver Ladder, Free Council) instead of Innate Key
 
 ### P1 (Backlog)
 - Export/import character data
