@@ -1,99 +1,63 @@
-# Geist: The Sin-Eaters - Character Sheet & Dice Roller
+# Geist: The Sin-Eaters & Mage: The Awakening - Character Sheet & Dice Roller
 
 ## Overview
-A digital character sheet and dice roller for the Geist: The Sin-Eaters tabletop roleplaying game.
+A digital character sheet and dice roller for Chronicles of Darkness tabletop RPGs, supporting both Geist: The Sin-Eaters and Mage: The Awakening game lines.
 
 ## Core Requirements
-- Character sheet management for Sin-Eater characters
+- Character sheet management for Sin-Eater and Mage characters
 - Game cards (Conditions, Haunts, Keys, Ceremonies, Merits, Places & People)
 - Campaign tracking (Journal, World State, NPCs, Plot Threads)
 - Dice roller with Chronicles of Darkness mechanics
+- Mage spellcasting system with full mechanical support
 
 ## Architecture
-- **Frontend**: React.js with TailwindCSS
+- **Frontend**: React.js with TailwindCSS, shadcn/ui components
 - **Backend**: FastAPI (Python)
 - **Database**: MongoDB
 
-## What's Been Implemented (Jan 2026)
+## What's Been Implemented
 
 ### Core Features
-1. **Character Tab**
-   - Full character sheet with collapsible sections
-   - Character Info, Geist & Remembrance, Attributes & Skills
-   - Combat & Inventory, Synergy & Resources
-   - Haunts, Keys & Mementos, Merits & Ceremonies, Notes
-   - Beats/Experience tracking
+1. **Character Tab** - Full character sheet with collapsible sections, character type selection (Sin-Eater/Mage)
+2. **Cards Tab** - Case Files, Conditions, Haunts, Keys, Ceremonies, Merits, Places & People
+3. **Campaign Tab** - Journal, World State, Factions, NPCs, Plot Threads
+4. **Floating Dice Roller** - Adjustable pool, 10/9/8-again, rote, chance die, visual results
 
-2. **Cards Tab**
-   - Case File management
-   - Conditions tracking with add/remove/resolve
-   - Haunts with ratings
-   - Keys with unlocking system
-   - Ceremonies with activation
-   - Merits reference
-   - Places & People tracking
+### Mage: The Awakening Features
+- Character type selector with conditional UI rendering
+- Gnosis & Resources (Gnosis, Nimbus, Mana)
+- 10 Arcana with dots, Rotes, Praxes, auto Attainments (1-5 dot)
+- Path (Acanthus, Mastigos, Moros, Obrimos, Thyrsus) with auto Ruling/Inferior Arcana
+- Order (Adamantine Arrow, Guardians, Mysterium, Silver Ladder, Free Council) with Rote Skills
+- Arcana Practices system (clickable badges per Arcanum)
+- Virtue/Vice (replacing Root/Bloom), Obsession (replacing Burden Aspiration for Mages)
 
-3. **Campaign Tab**
-   - Campaign Journal (manual entries)
-   - World State tracking
-   - Factions management
-   - Recurring NPCs
-   - Plot Threads
+### Spellcasting Popup (Feb 2026)
+- Full spell factor system: Casting Time, Range, Potency, Duration, Scale (Standard/Advanced)
+- Reach tracking: Free Reach calculation, Advanced factor reach cost
+- **Paradox System**: Base paradox from Reach beyond free × Gnosis paradox dice
+  - Modifiers: Inured (+2), Sleeper Witnesses (+1 die, scale affects roll quality), Dedicated Tool (-2), Previous Rolls (+N cumulative)
+  - **Mana Mitigation**: Spend Mana to remove Paradox dice (-1 per Mana), respects per-turn Mana limit
+  - **Chance Die Rule**: If Paradox was ever triggered and Mana reduces pool to 0, rolls as Chance Die
+- **Yantras**: Selectable bonus dice tools (Dedicated Tool, Path/Order Tool, Mudra, High Speech, Concentration, Rote Skill Mudra, Demesne, Location, Supernal Verge, Sacraments, Persona, Sympathy), limited by Gnosis max yantras
+- **Dice Roller Integration**: Cast Spell triggers the global floating Dice Roller with correct pool, label, and auto-roll; Roll Paradox button appears after spell roll if paradox exists
 
-4. **Dice Roller (Floating)**
-   - Adjustable dice pool
-   - 10-again, 9-again, 8-again, no-again options
-   - Rote quality toggle
-   - Chance die option
-   - Visual dice results with success counting
+### Removed Features
+- AI chat interface, AI-powered storytelling, AI journal generation, AI session summary
 
-### Removed Features (AI/Storyteller)
-- AI chat interface
-- AI-powered storytelling
-- AI journal generation
-- AI session summary
+## Key DB Schema
+- `characters`: `{ id, character_type, name, virtue, vice, obsession, path, order, arcana: {}, rotes: [], praxes: [], skills: {}, gnosis, mana, ... }`
 
-## User Personas
-- **TTRPG Players**: Managing Sin-Eater characters during play
-- **Storytellers/GMs**: Tracking campaign world state
+## P0/P1/P2 Features Remaining
 
-## P0/P1/P2 Features
-
-### P0 (Done)
-- Character sheet CRUD
-- Dice rolling mechanics
-- Campaign tracking
-- Merit adding (bug fixed Jan 2026)
-- **Mage character template (Jan 2026)**
-  - Character type selector (Sin-Eater/Mage)
-  - Character type badge next to dropdown
-  - Conditional section rendering
-  - Gnosis & Resources (Gnosis, Nimbus, Mana)
-  - Arcana, Spells & Attainments (10 Arcana, Rotes, Praxes, auto Attainments)
-  - Path (Acanthus, Mastigos, Moros, Obrimos, Thyrsus) instead of Burden
-  - Order (Adamantine Arrow, Guardians of the Veil, Mysterium, Silver Ladder, Free Council) instead of Innate Key
-  - **Path-based Arcana**: Ruling Arcana (blue, auto 1-dot), Inferior Arcanum (red)
-  - **Order Rote Skills**: Marked with amber indicator
-  - **Arcana Practices**: Shown as clickable badges next to each Arcanum
-  - **Official Attainments** (with tooltips showing descriptions):
-    - 1-dot: Counterspell (per Arcanum)
-    - 2-dot: Lesser Utility + Mage Armor (Eyes of Dead, Conditional Duration, etc.)
-    - 3-dot: Targeted Summoning
-    - 4-dot: Greater Utility (Inviolate Soul, Imbue Item, etc.)
-    - 5-dot: Create Rote
-  - **Spellcasting Popup**: Full spellcasting system with dice pool, mana, reach, factors
-
-### P1 (Backlog)
+### P2 (Backlog)
+- Mage Armor activation tracking
+- Refactor CharacterPanel.jsx (3400+ lines → MageSheet, GeistSheet components)
 - Export/import character data
 - Multiple character management improvements
 - Print-friendly character sheet view
 
-### P2 (Future)
+### P3 (Future)
 - Krewe (group) management
 - Shared campaign viewing
 - Character portraits
-
-## Next Tasks
-- Address nested button HTML warnings in Sidebar
-- Consider adding character portrait support
-- Add data export functionality
