@@ -54,6 +54,7 @@ import {
     ARCANA, MAGE_ATTAINMENTS, GNOSIS_TABLE, MAGE_PATHS, MAGE_ORDERS,
     PATH_ARCANA, ORDER_ROTE_SKILLS, ARCANA_PRACTICES,
 } from "../data/character-data";
+import { SpellcastingPopup } from "./SpellcastingPopup";
 
 // Extracted sub-components
 import {
@@ -119,6 +120,15 @@ export const CharacterPanel = ({
     // Character Type Selection Dialog State
     const [showCharacterTypeDialog, setShowCharacterTypeDialog] = useState(false);
     const [showAddCharacterDialog, setShowAddCharacterDialog] = useState(false);
+
+    // Spellcasting Popup State (Mage)
+    const [spellcastingOpen, setSpellcastingOpen] = useState(false);
+    const [spellcastingArcanum, setSpellcastingArcanum] = useState(null);
+
+    const openSpellcastingPopup = (arcanum) => {
+        setSpellcastingArcanum(arcanum);
+        setSpellcastingOpen(true);
+    };
 
     // Dice Roll Popup State
     const [dicePopupOpen, setDicePopupOpen] = useState(false);
@@ -2766,48 +2776,33 @@ export const CharacterPanel = ({
                                                 }
                                                 
                                                 return (
-                                                    <div key={arcanum} className="flex items-center justify-between group">
-                                                        <TooltipProvider>
-                                                            <Tooltip>
-                                                                <TooltipTrigger asChild>
-                                                                    <span className={`text-xs cursor-help ${labelColor}`}>
-                                                                        {arcanum}
-                                                                        {isRuling && <span className="ml-1 text-[9px] text-blue-500">(R)</span>}
-                                                                        {isInferior && <span className="ml-1 text-[9px] text-red-500">(I)</span>}
-                                                                    </span>
-                                                                </TooltipTrigger>
-                                                                <TooltipContent className="bg-zinc-900 border-zinc-700 max-w-xs">
-                                                                    <div className="text-xs">
-                                                                        <p className="font-medium text-zinc-200 mb-1">{arcanum} Practices</p>
-                                                                        {arcanumRating === 0 ? (
-                                                                            <p className="text-zinc-500 italic">No dots - no practices unlocked</p>
-                                                                        ) : (
-                                                                            <div className="space-y-0.5">
-                                                                                {[1, 2, 3, 4, 5].map(level => {
-                                                                                    const practices = ARCANA_PRACTICES[level];
-                                                                                    const isUnlocked = arcanumRating >= level;
-                                                                                    return (
-                                                                                        <div key={level} className={isUnlocked ? "text-zinc-300" : "text-zinc-600"}>
-                                                                                            <span className="text-violet-400">{"●".repeat(level)}</span>
-                                                                                            <span className="ml-1">{practices.join(", ")}</span>
-                                                                                            {isUnlocked && <span className="ml-1 text-teal-400">✓</span>}
-                                                                                        </div>
-                                                                                    );
-                                                                                })}
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                </TooltipContent>
-                                                            </Tooltip>
-                                                        </TooltipProvider>
-                                                        <div className="flex items-center gap-2">
+                                                    <div key={arcanum} className="flex items-center justify-between group py-0.5">
+                                                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                                                            <button
+                                                                onClick={() => arcanumRating > 0 && openSpellcastingPopup(arcanum)}
+                                                                disabled={arcanumRating === 0}
+                                                                className={`text-xs shrink-0 ${labelColor} ${arcanumRating > 0 ? 'hover:text-violet-300 cursor-pointer' : 'cursor-default'}`}
+                                                            >
+                                                                {arcanum}
+                                                                {isRuling && <span className="ml-1 text-[9px] text-blue-500">(R)</span>}
+                                                                {isInferior && <span className="ml-1 text-[9px] text-red-500">(I)</span>}
+                                                            </button>
+                                                            {/* Show unlocked practices as clickable badges */}
                                                             {arcanumRating > 0 && (
-                                                                <span className="text-[9px] text-zinc-600 hidden group-hover:inline">
-                                                                    {unlockedPractices.slice(0, 3).join(", ")}{unlockedPractices.length > 3 ? "..." : ""}
-                                                                </span>
+                                                                <div className="flex flex-wrap gap-0.5 overflow-hidden">
+                                                                    {unlockedPractices.map((practice, idx) => (
+                                                                        <button
+                                                                            key={idx}
+                                                                            onClick={() => openSpellcastingPopup(arcanum)}
+                                                                            className="text-[8px] px-1 py-0.5 rounded bg-violet-900/30 text-violet-400 hover:bg-violet-800/50 hover:text-violet-300 transition-colors"
+                                                                        >
+                                                                            {practice}
+                                                                        </button>
+                                                                    ))}
+                                                                </div>
                                                             )}
-                                                            <StatDots value={arcanumRating} max={5} onChange={(v) => handleNestedChange("arcana", arcanum, v)} color={dotColor} size="small" testIdPrefix={`arcanum-${arcanum.toLowerCase()}`} />
                                                         </div>
+                                                        <StatDots value={arcanumRating} max={5} onChange={(v) => handleNestedChange("arcana", arcanum, v)} color={dotColor} size="small" testIdPrefix={`arcanum-${arcanum.toLowerCase()}`} />
                                                     </div>
                                                 );
                                             })}
@@ -3422,6 +3417,25 @@ export const CharacterPanel = ({
                     </div>
                 </DialogContent>
             </Dialog>
+
+            {/* Spellcasting Popup for Mages */}
+            {isMage && spellcastingArcanum && (
+                <SpellcastingPopup
+                    isOpen={spellcastingOpen}
+                    onClose={() => { setSpellcastingOpen(false); setSpellcastingArcanum(null); }}
+                    arcanum={spellcastingArcanum}
+                    arcanumDots={getNestedValue("arcana", spellcastingArcanum) || 0}
+                    gnosis={getValue("gnosis") || 1}
+                    isRuling={getValue("path") && PATH_ARCANA[getValue("path")]?.ruling?.includes(spellcastingArcanum)}
+                    isInferior={getValue("path") && PATH_ARCANA[getValue("path")]?.inferior === spellcastingArcanum}
+                    currentMana={getValue("mana") || 0}
+                    onSpendMana={(amount) => handleChange("mana", Math.max(0, (getValue("mana") || 0) - amount))}
+                    onRollDice={(spellData) => {
+                        // Could integrate with dice roller here
+                        toast.success(`Casting ${spellcastingArcanum} spell: ${spellData.pool} dice`);
+                    }}
+                />
+            )}
 
         </div>
     );

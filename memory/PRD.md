@@ -74,12 +74,15 @@ A digital character sheet and dice roller for the Geist: The Sin-Eaters tabletop
   - Order (Adamantine Arrow, Guardians of the Veil, Mysterium, Silver Ladder, Free Council) instead of Innate Key
   - **Path-based Arcana**: Ruling Arcana (blue, auto 1-dot), Inferior Arcanum (red)
   - **Order Rote Skills**: Marked with amber indicator
-  - **Arcana Practices**: Tooltip showing unlocked practices by dot level
-    - 1 dot: Compelling, Knowing, Unveiling
-    - 2 dots: Ruling, Shielding, Veiling
-    - 3 dots: Fraying, Perfecting, Weaving
-    - 4 dots: Patterning, Unravelling
-    - 5 dots: Making, Unmaking
+  - **Arcana Practices**: Shown as clickable badges next to each Arcanum
+  - **Spellcasting Popup**: Full spellcasting system with:
+    - Dice pool: Gnosis + Arcanum with modifiers
+    - Mana cost: 0 for Ruling, 1 for Common/Inferior
+    - Practice selection (filtered by available dots)
+    - Free Reach = Arcanum - Practice + 1
+    - Spell Factors (Casting Time, Range, Potency, Duration, Scale)
+    - Standard/Advanced toggles (+1 Reach each)
+    - Level controls with cumulative -2 dice penalties
 
 ### P1 (Backlog)
 - Export/import character data
