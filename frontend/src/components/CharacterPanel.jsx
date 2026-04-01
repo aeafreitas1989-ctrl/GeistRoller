@@ -51,6 +51,7 @@ import {
     SYNERGY_TABLE, MERIT_LIST, CEREMONY_LIST,
     ATTRIBUTE_LIST, SKILL_LIST, CEREMONY_DEFINITIONS,
     CEREMONY_SKILL_KEY_MAP, KEY_UNLOCK_ATTRIBUTES,
+    ARCANA, MAGE_ATTAINMENTS, GNOSIS_TABLE,
 } from "../data/character-data";
 
 // Extracted sub-components
@@ -113,6 +114,10 @@ export const CharacterPanel = ({
     // Ceremony Dialog State
     const [showCeremonyDialog, setShowCeremonyDialog] = useState(false);
     const [newCeremonyName, setNewCeremonyName] = useState("");
+
+    // Character Type Selection Dialog State
+    const [showCharacterTypeDialog, setShowCharacterTypeDialog] = useState(false);
+    const [showAddCharacterDialog, setShowAddCharacterDialog] = useState(false);
 
     // Dice Roll Popup State
     const [dicePopupOpen, setDicePopupOpen] = useState(false);
@@ -793,13 +798,45 @@ export const CharacterPanel = ({
             <div className="p-6" data-testid="character-panel">
                 <div className="text-center py-12">
                     <h3 className="font-heading text-xl text-zinc-400 mb-4">No Character</h3>
-                    <Button onClick={onCreateCharacter} className="btn-primary" data-testid="create-first-character-btn">
-                        <Plus className="w-4 h-4 mr-2" />Create Sin-Eater
-                    </Button>
+                    <Dialog open={showCharacterTypeDialog} onOpenChange={setShowCharacterTypeDialog}>
+                        <DialogTrigger asChild>
+                            <Button className="btn-primary" data-testid="create-first-character-btn">
+                                <Plus className="w-4 h-4 mr-2" />Create Character
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="bg-zinc-900 border-zinc-800">
+                            <DialogHeader>
+                                <DialogTitle className="text-zinc-100 font-heading">Choose Character Type</DialogTitle>
+                                <DialogDescription className="text-zinc-400">Select the type of character you want to create</DialogDescription>
+                            </DialogHeader>
+                            <div className="grid grid-cols-2 gap-4 py-4">
+                                <Button 
+                                    onClick={() => { onCreateCharacter("geist"); setShowCharacterTypeDialog(false); }}
+                                    className="h-24 flex flex-col gap-2 bg-teal-900/30 border border-teal-500/50 hover:bg-teal-800/50"
+                                    data-testid="create-geist-btn"
+                                >
+                                    <span className="text-lg font-heading text-teal-300">Sin-Eater</span>
+                                    <span className="text-xs text-zinc-400">Geist: The Sin-Eaters</span>
+                                </Button>
+                                <Button 
+                                    onClick={() => { onCreateCharacter("mage"); setShowCharacterTypeDialog(false); }}
+                                    className="h-24 flex flex-col gap-2 bg-violet-900/30 border border-violet-500/50 hover:bg-violet-800/50"
+                                    data-testid="create-mage-btn"
+                                >
+                                    <span className="text-lg font-heading text-violet-300">Mage</span>
+                                    <span className="text-xs text-zinc-400">Mage: The Awakening</span>
+                                </Button>
+                            </div>
+                        </DialogContent>
+                    </Dialog>
                 </div>
             </div>
         );
     }
+
+    // Determine character type
+    const characterType = activeCharacter.character_type || "geist";
+    const isMage = characterType === "mage";
 
     return (
         <div className="h-full flex flex-col" data-testid="character-panel">
@@ -814,7 +851,16 @@ export const CharacterPanel = ({
                     )}
                 </div>
                 
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-center">
+                    {/* Character Type Badge */}
+                    <span className={`px-2 py-1 text-[10px] font-mono uppercase tracking-wider rounded ${
+                        isMage 
+                            ? "bg-violet-900/50 text-violet-300 border border-violet-500/30" 
+                            : "bg-teal-900/50 text-teal-300 border border-teal-500/30"
+                    }`} data-testid="character-type-badge">
+                        {isMage ? "Mage" : "Sin-Eater"}
+                    </span>
+                    
                     <Select value={activeCharacter.id} onValueChange={(id) => {
                         const char = characters.find(c => c.id === id);
                         if (char) onSelectCharacter(char);
@@ -826,7 +872,38 @@ export const CharacterPanel = ({
                             {characters.map((char) => (<SelectItem key={char.id} value={char.id} className="text-zinc-200">{char.name}</SelectItem>))}
                         </SelectContent>
                     </Select>
-                    <Button variant="ghost" size="icon" onClick={onCreateCharacter} className="h-8 w-8 text-zinc-400 hover:text-teal-400" data-testid="add-character-button"><Plus className="w-4 h-4" /></Button>
+                    
+                    {/* Add Character Dialog */}
+                    <Dialog open={showAddCharacterDialog} onOpenChange={setShowAddCharacterDialog}>
+                        <DialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-400 hover:text-teal-400" data-testid="add-character-button"><Plus className="w-4 h-4" /></Button>
+                        </DialogTrigger>
+                        <DialogContent className="bg-zinc-900 border-zinc-800">
+                            <DialogHeader>
+                                <DialogTitle className="text-zinc-100 font-heading">Choose Character Type</DialogTitle>
+                                <DialogDescription className="text-zinc-400">Select the type of character you want to create</DialogDescription>
+                            </DialogHeader>
+                            <div className="grid grid-cols-2 gap-4 py-4">
+                                <Button 
+                                    onClick={() => { onCreateCharacter("geist"); setShowAddCharacterDialog(false); }}
+                                    className="h-24 flex flex-col gap-2 bg-teal-900/30 border border-teal-500/50 hover:bg-teal-800/50"
+                                    data-testid="create-geist-btn-dialog"
+                                >
+                                    <span className="text-lg font-heading text-teal-300">Sin-Eater</span>
+                                    <span className="text-xs text-zinc-400">Geist: The Sin-Eaters</span>
+                                </Button>
+                                <Button 
+                                    onClick={() => { onCreateCharacter("mage"); setShowAddCharacterDialog(false); }}
+                                    className="h-24 flex flex-col gap-2 bg-violet-900/30 border border-violet-500/50 hover:bg-violet-800/50"
+                                    data-testid="create-mage-btn-dialog"
+                                >
+                                    <span className="text-lg font-heading text-violet-300">Mage</span>
+                                    <span className="text-xs text-zinc-400">Mage: The Awakening</span>
+                                </Button>
+                            </div>
+                        </DialogContent>
+                    </Dialog>
+                    
                     <AlertDialog>
                         <AlertDialogTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-400 hover:text-red-400" data-testid="delete-character-button"><Trash2 className="w-4 h-4" /></Button>
@@ -1096,7 +1173,8 @@ export const CharacterPanel = ({
                         </CollapsibleContent>
                     </Collapsible>
 
-                    {/* Geist & Remembrance */}
+                    {/* Geist & Remembrance - Sin-Eaters only */}
+                    {!isMage && (
                     <Collapsible open={expandedSections.geist}>
                         <CollapsibleTrigger onClick={() => toggleSection("geist")} className="flex items-center justify-between w-full p-2 rounded-sm bg-cyan-900/20 border border-cyan-800 hover:bg-cyan-800/30" data-testid="section-toggle-geist">
                             <span className="text-xs font-mono uppercase tracking-wider text-cyan-400">Geist & Remembrance</span>
@@ -1261,6 +1339,7 @@ export const CharacterPanel = ({
                             </div>
                         </CollapsibleContent>
                     </Collapsible>
+                    )}
 
                     {/* Attributes & Skills */}
                     <Collapsible open={expandedSections.attributesSkills}>
@@ -2337,244 +2416,592 @@ export const CharacterPanel = ({
                         </CollapsibleContent>
                     </Collapsible>
 
-                    {/* Sin-Eater Stats */}
+                    {/* Synergy & Resources (Geist) / Gnosis & Resources (Mage) */}
                     <Collapsible open={expandedSections.sinEater}>
                         <CollapsibleTrigger onClick={() => toggleSection("sinEater")} className="flex items-center justify-between w-full p-2 rounded-sm bg-purple-900/20 border border-purple-500/30 hover:bg-purple-900/30" data-testid="section-toggle-synergy-resources">
-                            <span className="text-xs font-mono uppercase tracking-wider text-purple-400">Synergy & Resources</span>
+                            <span className="text-xs font-mono uppercase tracking-wider text-purple-400">
+                                {isMage ? "Gnosis & Resources" : "Synergy & Resources"}
+                            </span>
                             {expandedSections.sinEater ? <ChevronDown className="w-4 h-4 text-purple-500" /> : <ChevronRight className="w-4 h-4 text-purple-500" />}
                         </CollapsibleTrigger>
                         <CollapsibleContent className="pt-2 space-y-3">
-                            <div>
-                                <label className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1 block">Synergy</label>
-                                <SynergyTrack value={getValue("synergy") || 7} maxValue={getValue("synergy_max") || 10} onChangeValue={(v) => handleChange("synergy", v)} onChangeMax={(v) => handleChange("synergy_max", v)} />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-2 text-[10px]">
-                                <div className="p-2 bg-zinc-900/50 rounded-sm">
-                                    <span className="text-zinc-500">Trait Max:</span>
-                                    <span className="text-teal-400 ml-1 font-mono">{synergyData.traitMax}</span>
-                                </div>
-                                <div className="p-2 bg-zinc-900/50 rounded-sm">
-                                    <span className="text-zinc-500">Touchstones:</span>
-                                    <span className="text-teal-400 ml-1 font-mono">{synergyData.touchstones}</span>
-                                </div>
-                            </div>
-
-                            <div className="p-2 bg-violet-900/20 border border-violet-500/30 rounded-sm">
-                                <div className="flex items-center justify-between mb-1">
-                                    <span className="text-[10px] text-violet-400 uppercase tracking-wider">Liminal Aura</span>
-                                    <span className="text-xs font-mono text-violet-300">{synergyData.aura}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-[10px] text-zinc-500">Condition:</span>
-                                    <span className={`text-xs px-1.5 py-0.5 rounded ${
-                                        synergyData.auraCondition === "N/A" ? "bg-zinc-800 text-zinc-500" :
-                                        synergyData.auraCondition === "Anchor" ? "bg-amber-900/30 text-amber-400" :
-                                        synergyData.auraCondition === "Open" ? "bg-teal-900/30 text-teal-400" :
-                                        "bg-violet-900/30 text-violet-400"
-                                    }`}>{synergyData.auraCondition}</span>
-                                </div>
-                            </div>
-
-                            <div>
-                                <div className="flex items-center justify-between mb-1">
-                                    <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Health</label>
-                                    <span className="text-[10px] text-zinc-600 font-mono" data-testid="health-count">{filledHealth}/{maxHealth}</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    {isDeadTrack && (
-                                        <span className="text-[10px] text-rose-400 font-mono" data-testid="health-dead-label">DEAD</span>
-                                    )}
-                                    <HealthTrack boxes={healthBoxes} max={maxHealth} onBoxClick={handleHealthBoxClick} />
-                                </div>
-                                {woundPenalty < 0 && (
-                                    <p className="text-[10px] text-rose-400 mt-1" data-testid="health-wound-penalty">
-                                        Wound Penalty {woundPenalty}
-                                    </p>
-                                )}
-                            </div>
-
-                            <div>
-                                <div className="flex items-center justify-between mb-1">
-                                    <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Willpower</label>
-                                    <span className="text-[10px] text-zinc-600 font-mono">{getValue("willpower") || 0}/{calculateWillpowerMax()}</span>
-                                </div>
-                                <ResourceTrack current={getValue("willpower") || 0} max={calculateWillpowerMax()} onChange={(v) => handleChange("willpower", v)} color="amber" testIdPrefix="willpower" />
-                                <div className="flex flex-wrap gap-1 mt-2">
-                                    <Button
-                                        size="sm"
-                                        className="h-5 px-2 text-[9px] bg-amber-900/30 border border-amber-500/30 text-amber-300 hover:bg-amber-900/50"
-                                        onClick={() => {
-                                            const current = getValue("willpower") || 0;
-                                            const max = calculateWillpowerMax();
-                                            if (current < max) {
-                                                handleChange("willpower", Math.min(current + 1, max));
-                                                toast.success("Willpower +1 (Rest/Bloom/Root)");
-                                            }
-                                        }}
-                                        disabled={(getValue("willpower") || 0) >= calculateWillpowerMax()}
-                                        data-testid="wp-restore-one"
-                                    >
-                                        +1 WP
-                                    </Button>
-                                    <Button
-                                        size="sm"
-                                        className="h-5 px-2 text-[9px] bg-amber-900/30 border border-amber-500/30 text-amber-300 hover:bg-amber-900/50"
-                                        onClick={() => {
-                                            const max = calculateWillpowerMax();
-                                            handleChange("willpower", max);
-                                            toast.success("Willpower fully restored!");
-                                        }}
-                                        disabled={(getValue("willpower") || 0) >= calculateWillpowerMax()}
-                                        data-testid="wp-restore-full"
-                                    >
-                                        Full WP
-                                    </Button>
-                                </div>
-                                <p className="text-[9px] text-zinc-600 mt-1 leading-relaxed">
-                                    +1: Sleep, fulfill Bloom/Root. Full: Bloom/Root at great cost, Grave Goods (1/chapter).
-                                </p>
-                            </div>
-
-                            <div>
-                                <div className="flex items-center justify-between mb-1">
-                                    <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Plasm</label>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-[10px] text-zinc-600 font-mono">{getValue("plasm") || 0}/{synergyData.maxPlasm}</span>
-                                        <TooltipProvider>
-                                            <Tooltip>
-                                                <TooltipTrigger>
-                                                    <span className="text-[10px] px-1 py-0.5 bg-teal-900/30 text-teal-400 rounded font-mono">{synergyData.perTurn}/turn</span>
-                                                </TooltipTrigger>
-                                                <TooltipContent className="bg-zinc-900 border-zinc-700"><p className="text-xs">Max expenditure per turn</p></TooltipContent>
-                                            </Tooltip>
-                                        </TooltipProvider>
+                            {isMage ? (
+                                <>
+                                    {/* Gnosis for Mages */}
+                                    <div>
+                                        <label className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1 block">Gnosis</label>
+                                        <SynergyTrack value={getValue("gnosis") || 1} maxValue={10} onChangeValue={(v) => handleChange("gnosis", v)} onChangeMax={() => {}} />
                                     </div>
-                                </div>
-                                <ResourceTrack current={getValue("plasm") || 0} max={Math.min(synergyData.maxPlasm, 20)} onChange={(v) => handleChange("plasm", v)} color="teal" testIdPrefix="plasm" />
-                                {synergyData.maxPlasm > 20 && <p className="text-[10px] text-zinc-600 mt-1">Showing first 20 of {synergyData.maxPlasm} max</p>}
-                            </div>
+
+                                    {(() => {
+                                        const gnosisLevel = getValue("gnosis") || 1;
+                                        const gnosisData = GNOSIS_TABLE[gnosisLevel] || GNOSIS_TABLE[1];
+                                        return (
+                                            <div className="grid grid-cols-2 gap-2 text-[10px]">
+                                                <div className="p-2 bg-zinc-900/50 rounded-sm">
+                                                    <span className="text-zinc-500">Trait Max:</span>
+                                                    <span className="text-violet-400 ml-1 font-mono">{gnosisData.traitMax}</span>
+                                                </div>
+                                                <div className="p-2 bg-zinc-900/50 rounded-sm">
+                                                    <span className="text-zinc-500">Mana/Turn:</span>
+                                                    <span className="text-violet-400 ml-1 font-mono">{gnosisData.perTurn}</span>
+                                                </div>
+                                                <div className="p-2 bg-zinc-900/50 rounded-sm">
+                                                    <span className="text-zinc-500">Ritual Interval:</span>
+                                                    <span className="text-violet-400 ml-1 font-mono">{gnosisData.ritualInterval}</span>
+                                                </div>
+                                                <div className="p-2 bg-zinc-900/50 rounded-sm">
+                                                    <span className="text-zinc-500">Yantras:</span>
+                                                    <span className="text-violet-400 ml-1 font-mono">{gnosisData.yantras}</span>
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
+
+                                    {/* Nimbus for Mages */}
+                                    <div className="p-2 bg-violet-900/20 border border-violet-500/30 rounded-sm">
+                                        <label className="text-[10px] text-violet-400 uppercase tracking-wider block mb-1">Nimbus</label>
+                                        <Textarea 
+                                            value={getValue("nimbus") || ""} 
+                                            onChange={(e) => handleChange("nimbus", e.target.value)} 
+                                            className="input-geist text-xs min-h-[60px]" 
+                                            placeholder="Describe your Nimbus manifestation..."
+                                            data-testid="mage-nimbus-input"
+                                        />
+                                    </div>
+
+                                    {/* Health */}
+                                    <div>
+                                        <div className="flex items-center justify-between mb-1">
+                                            <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Health</label>
+                                            <span className="text-[10px] text-zinc-600 font-mono" data-testid="health-count">{filledHealth}/{maxHealth}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            {isDeadTrack && (
+                                                <span className="text-[10px] text-rose-400 font-mono" data-testid="health-dead-label">DEAD</span>
+                                            )}
+                                            <HealthTrack boxes={healthBoxes} max={maxHealth} onBoxClick={handleHealthBoxClick} />
+                                        </div>
+                                        {woundPenalty < 0 && (
+                                            <p className="text-[10px] text-rose-400 mt-1" data-testid="health-wound-penalty">
+                                                Wound Penalty {woundPenalty}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    {/* Willpower */}
+                                    <div>
+                                        <div className="flex items-center justify-between mb-1">
+                                            <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Willpower</label>
+                                            <span className="text-[10px] text-zinc-600 font-mono">{getValue("willpower") || 0}/{calculateWillpowerMax()}</span>
+                                        </div>
+                                        <ResourceTrack current={getValue("willpower") || 0} max={calculateWillpowerMax()} onChange={(v) => handleChange("willpower", v)} color="amber" testIdPrefix="willpower" />
+                                    </div>
+
+                                    {/* Mana for Mages */}
+                                    <div>
+                                        <div className="flex items-center justify-between mb-1">
+                                            <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Mana</label>
+                                            <div className="flex items-center gap-2">
+                                                {(() => {
+                                                    const gnosisLevel = getValue("gnosis") || 1;
+                                                    const gnosisData = GNOSIS_TABLE[gnosisLevel] || GNOSIS_TABLE[1];
+                                                    return (
+                                                        <>
+                                                            <span className="text-[10px] text-zinc-600 font-mono">{getValue("mana") || 0}/{gnosisData.maxMana}</span>
+                                                            <TooltipProvider>
+                                                                <Tooltip>
+                                                                    <TooltipTrigger>
+                                                                        <span className="text-[10px] px-1 py-0.5 bg-violet-900/30 text-violet-400 rounded font-mono">{gnosisData.perTurn}/turn</span>
+                                                                    </TooltipTrigger>
+                                                                    <TooltipContent className="bg-zinc-900 border-zinc-700"><p className="text-xs">Max expenditure per turn</p></TooltipContent>
+                                                                </Tooltip>
+                                                            </TooltipProvider>
+                                                        </>
+                                                    );
+                                                })()}
+                                            </div>
+                                        </div>
+                                        {(() => {
+                                            const gnosisLevel = getValue("gnosis") || 1;
+                                            const gnosisData = GNOSIS_TABLE[gnosisLevel] || GNOSIS_TABLE[1];
+                                            return (
+                                                <>
+                                                    <ResourceTrack current={getValue("mana") || 0} max={Math.min(gnosisData.maxMana, 20)} onChange={(v) => handleChange("mana", v)} color="violet" testIdPrefix="mana" />
+                                                    {gnosisData.maxMana > 20 && <p className="text-[10px] text-zinc-600 mt-1">Showing first 20 of {gnosisData.maxMana} max</p>}
+                                                </>
+                                            );
+                                        })()}
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    {/* Original Geist content */}
+                                    <div>
+                                        <label className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1 block">Synergy</label>
+                                        <SynergyTrack value={getValue("synergy") || 7} maxValue={getValue("synergy_max") || 10} onChangeValue={(v) => handleChange("synergy", v)} onChangeMax={(v) => handleChange("synergy_max", v)} />
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-2 text-[10px]">
+                                        <div className="p-2 bg-zinc-900/50 rounded-sm">
+                                            <span className="text-zinc-500">Trait Max:</span>
+                                            <span className="text-teal-400 ml-1 font-mono">{synergyData.traitMax}</span>
+                                        </div>
+                                        <div className="p-2 bg-zinc-900/50 rounded-sm">
+                                            <span className="text-zinc-500">Touchstones:</span>
+                                            <span className="text-teal-400 ml-1 font-mono">{synergyData.touchstones}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="p-2 bg-violet-900/20 border border-violet-500/30 rounded-sm">
+                                        <div className="flex items-center justify-between mb-1">
+                                            <span className="text-[10px] text-violet-400 uppercase tracking-wider">Liminal Aura</span>
+                                            <span className="text-xs font-mono text-violet-300">{synergyData.aura}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[10px] text-zinc-500">Condition:</span>
+                                            <span className={`text-xs px-1.5 py-0.5 rounded ${
+                                                synergyData.auraCondition === "N/A" ? "bg-zinc-800 text-zinc-500" :
+                                                synergyData.auraCondition === "Anchor" ? "bg-amber-900/30 text-amber-400" :
+                                                synergyData.auraCondition === "Open" ? "bg-teal-900/30 text-teal-400" :
+                                                "bg-violet-900/30 text-violet-400"
+                                            }`}>{synergyData.auraCondition}</span>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <div className="flex items-center justify-between mb-1">
+                                            <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Health</label>
+                                            <span className="text-[10px] text-zinc-600 font-mono" data-testid="health-count">{filledHealth}/{maxHealth}</span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            {isDeadTrack && (
+                                                <span className="text-[10px] text-rose-400 font-mono" data-testid="health-dead-label">DEAD</span>
+                                            )}
+                                            <HealthTrack boxes={healthBoxes} max={maxHealth} onBoxClick={handleHealthBoxClick} />
+                                        </div>
+                                        {woundPenalty < 0 && (
+                                            <p className="text-[10px] text-rose-400 mt-1" data-testid="health-wound-penalty">
+                                                Wound Penalty {woundPenalty}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    <div>
+                                        <div className="flex items-center justify-between mb-1">
+                                            <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Willpower</label>
+                                            <span className="text-[10px] text-zinc-600 font-mono">{getValue("willpower") || 0}/{calculateWillpowerMax()}</span>
+                                        </div>
+                                        <ResourceTrack current={getValue("willpower") || 0} max={calculateWillpowerMax()} onChange={(v) => handleChange("willpower", v)} color="amber" testIdPrefix="willpower" />
+                                        <div className="flex flex-wrap gap-1 mt-2">
+                                            <Button
+                                                size="sm"
+                                                className="h-5 px-2 text-[9px] bg-amber-900/30 border border-amber-500/30 text-amber-300 hover:bg-amber-900/50"
+                                                onClick={() => {
+                                                    const current = getValue("willpower") || 0;
+                                                    const max = calculateWillpowerMax();
+                                                    if (current < max) {
+                                                        handleChange("willpower", Math.min(current + 1, max));
+                                                        toast.success("Willpower +1 (Rest/Bloom/Root)");
+                                                    }
+                                                }}
+                                                disabled={(getValue("willpower") || 0) >= calculateWillpowerMax()}
+                                                data-testid="wp-restore-one"
+                                            >
+                                                +1 WP
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                className="h-5 px-2 text-[9px] bg-amber-900/30 border border-amber-500/30 text-amber-300 hover:bg-amber-900/50"
+                                                onClick={() => {
+                                                    const max = calculateWillpowerMax();
+                                                    handleChange("willpower", max);
+                                                    toast.success("Willpower fully restored!");
+                                                }}
+                                                disabled={(getValue("willpower") || 0) >= calculateWillpowerMax()}
+                                                data-testid="wp-restore-full"
+                                            >
+                                                Full WP
+                                            </Button>
+                                        </div>
+                                        <p className="text-[9px] text-zinc-600 mt-1 leading-relaxed">
+                                            +1: Sleep, fulfill Bloom/Root. Full: Bloom/Root at great cost, Grave Goods (1/chapter).
+                                        </p>
+                                    </div>
+
+                                    <div>
+                                        <div className="flex items-center justify-between mb-1">
+                                            <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Plasm</label>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[10px] text-zinc-600 font-mono">{getValue("plasm") || 0}/{synergyData.maxPlasm}</span>
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger>
+                                                            <span className="text-[10px] px-1 py-0.5 bg-teal-900/30 text-teal-400 rounded font-mono">{synergyData.perTurn}/turn</span>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent className="bg-zinc-900 border-zinc-700"><p className="text-xs">Max expenditure per turn</p></TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+                                            </div>
+                                        </div>
+                                        <ResourceTrack current={getValue("plasm") || 0} max={Math.min(synergyData.maxPlasm, 20)} onChange={(v) => handleChange("plasm", v)} color="teal" testIdPrefix="plasm" />
+                                        {synergyData.maxPlasm > 20 && <p className="text-[10px] text-zinc-600 mt-1">Showing first 20 of {synergyData.maxPlasm} max</p>}
+                                    </div>
+                                </>
+                            )}
                         </CollapsibleContent>
                     </Collapsible>
 
-                    {/* Powers (Haunts, Keys & Mementos) */}
+                    {/* Powers - Different for Mage vs Geist */}
                     <Collapsible open={expandedSections.powers}>
                         <CollapsibleTrigger onClick={() => toggleSection("powers")} className="flex items-center justify-between w-full p-2 rounded-sm bg-purple-900/20 border border-purple-500/30 hover:bg-purple-900/30" data-testid="section-toggle-powers">
-                            <span className="text-xs font-mono uppercase tracking-wider text-purple-400">Haunts, Keys & Mementos</span>
+                            <span className="text-xs font-mono uppercase tracking-wider text-purple-400">
+                                {isMage ? "Arcana, Spells & Attainments" : "Haunts, Keys & Mementos"}
+                            </span>
                             {expandedSections.powers ? <ChevronDown className="w-4 h-4 text-purple-500" /> : <ChevronRight className="w-4 h-4 text-purple-500" />}
                         </CollapsibleTrigger>
                         <CollapsibleContent className="pt-2 space-y-3">
-                            <div>
-                                <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Haunts</p>
-                                <div className="space-y-1">
-                                    {HAUNTS.map((haunt) => {
-                                        const hauntRating = getNestedValue("haunts", haunt) || 0;
-                                        return (
-                                            <div key={haunt} className="flex items-center justify-between group">
-                                                <button
-                                                    onClick={() => hauntRating > 0 && openHauntRollPopup(haunt)}
-                                                    className={`text-xs flex items-center gap-1 transition-colors ${
-                                                        hauntRating > 0 
-                                                            ? 'text-zinc-400 hover:text-teal-300 cursor-pointer' 
-                                                            : 'text-zinc-600 cursor-default'
-                                                    }`}
-                                                    disabled={hauntRating === 0}
-                                                    data-testid={`haunt-${haunt.toLowerCase().replace(/\s+/g, '-')}-label`}
-                                                >
-                                                    <Dices className={`w-2.5 h-2.5 transition-opacity ${hauntRating > 0 ? 'opacity-0 group-hover:opacity-100 text-teal-500' : 'opacity-0'}`} />
-                                                    {haunt}
-                                                </button>
-                                                <StatDots value={hauntRating} max={5} onChange={(v) => handleNestedChange("haunts", haunt, v)} color="teal" size="small" testIdPrefix={`haunt-${haunt.toLowerCase().replace(/\s+/g, '-')}`} />
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                            
-                            <div>
-                                <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">
-                                    Available Keys 
-                                    <span className="text-teal-400 ml-1">({allAvailableKeys.length})</span>
-                                </p>
-                                <div className="flex flex-wrap gap-1">
-                                    {KEYS.map((key) => {
-                                        const isCharacterKey = getValue("innate_key") === key;
-                                        const isGeistKey = getValue("geist_innate_key") === key;
-                                        const isMementoKey = (getValue("mementos") || []).some(m => m.key === key);
-                                        const isAvailable = allAvailableKeys.includes(key);
-                                        const isDoomed = doomedKeys.has(key);
-                                        const doomSource = doomedKeySources[key];
-
-                                        let label = key;
-                                        let badges = [];
-                                        if (isCharacterKey) badges.push("C");
-                                        if (isGeistKey) badges.push("G");
-                                        if (isMementoKey) badges.push("M");
-                                        if (isDoomed) badges.push("D");
-
-                                        return (
-                                            <TooltipProvider key={key}>
-                                                <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                        <span className={`px-2 py-0.5 text-[10px] rounded-sm border transition-all ${
-                                                            isDoomed
-                                                                ? "bg-rose-950/30 border-rose-500/50 text-rose-300"
-                                                                : isAvailable
-                                                                ? "bg-amber-900/30 border-amber-500/50 text-amber-300"
-                                                                : "bg-zinc-900 border-zinc-800 text-zinc-600"
-                                                        }`}>
-                                                            {key}
-                                                            {badges.length > 0 && (
-                                                                <span className="ml-1 text-[8px] text-amber-200">
-                                                                    [{badges.join("+")}]
-                                                                </span>
-                                                            )}
+                            {isMage ? (
+                                <>
+                                    {/* Arcana for Mages */}
+                                    <div>
+                                        <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Arcana</p>
+                                        <div className="space-y-1">
+                                            {ARCANA.map((arcanum) => {
+                                                const arcanumRating = getNestedValue("arcana", arcanum) || 0;
+                                                return (
+                                                    <div key={arcanum} className="flex items-center justify-between group">
+                                                        <span className={`text-xs ${arcanumRating > 0 ? 'text-zinc-400' : 'text-zinc-600'}`}>
+                                                            {arcanum}
                                                         </span>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent className="bg-zinc-900 border-zinc-700">
-                                                        <p className="text-xs">
-                                                            {isCharacterKey && "Character's Innate Key"}
-                                                            {isCharacterKey && (isGeistKey || isMementoKey) && " + "}
-                                                            {isGeistKey && "Geist's Innate Key"}
-                                                            {isGeistKey && isMementoKey && " + "}
-                                                            {isMementoKey && "From Memento"}
-                                                            {isDoomed && doomSource && `Doomed: ${doomSource}`}
-                                                            {isDoomed && !doomSource && "Doomed"}
-                                                            {!isAvailable && !isDoomed && "Not available"}
-                                                        </p>
-                                                    </TooltipContent>
-                                                </Tooltip>
-                                            </TooltipProvider>
-                                        );
-                                    })}
-                                </div>
-                            </div>
+                                                        <StatDots value={arcanumRating} max={5} onChange={(v) => handleNestedChange("arcana", arcanum, v)} color="violet" size="small" testIdPrefix={`arcanum-${arcanum.toLowerCase()}`} />
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
 
-                            {/* Mementos */}
-                            <div>
-                                <div className="flex items-center justify-between mb-1">
-                                    <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Mementos</p>
-                                    <Button size="sm" onClick={addMemento} className="h-5 px-2 text-[10px] btn-secondary" data-testid="add-memento-btn">
-                                        <Plus className="w-3 h-3 mr-1" /> Add
-                                    </Button>
-                                </div>
-                                <div className="space-y-2">
-                                    {mementos.length === 0 ? (
-                                        <p className="text-[10px] text-zinc-600 italic">No mementos yet</p>
-                                    ) : (
-                                        mementos.map((memento, index) => (
-                                            <MementoCard key={memento.id || index} memento={memento} index={index} onUpdate={(data) => updateMemento(index, data)} onDelete={() => deleteMemento(index)} />
-                                        ))
-                                    )}
-                                </div>
-                            </div>
+                                    {/* Rotes for Mages */}
+                                    <div>
+                                        <div className="flex items-center justify-between mb-1">
+                                            <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Rotes</p>
+                                            <Button 
+                                                size="sm" 
+                                                onClick={() => {
+                                                    const rotes = getValue("rotes") || [];
+                                                    handleChange("rotes", [...rotes, { spell: "", arcanum: "Death", dots: 1, skill: "occult" }]);
+                                                }} 
+                                                className="h-5 px-2 text-[10px] btn-secondary" 
+                                                data-testid="add-rote-btn"
+                                            >
+                                                <Plus className="w-3 h-3 mr-1" /> Add
+                                            </Button>
+                                        </div>
+                                        <div className="space-y-2">
+                                            {(getValue("rotes") || []).length === 0 ? (
+                                                <p className="text-[10px] text-zinc-600 italic">No rotes learned</p>
+                                            ) : (
+                                                (getValue("rotes") || []).map((rote, index) => (
+                                                    <div key={index} className="p-2 bg-zinc-900/30 border border-zinc-800 rounded-sm space-y-2">
+                                                        <div className="flex items-center justify-between">
+                                                            <Input
+                                                                value={rote.spell || ""}
+                                                                onChange={(e) => {
+                                                                    const rotes = [...(getValue("rotes") || [])];
+                                                                    rotes[index] = { ...rotes[index], spell: e.target.value };
+                                                                    handleChange("rotes", rotes);
+                                                                }}
+                                                                placeholder="Spell name"
+                                                                className="input-geist h-7 text-xs flex-1 mr-2"
+                                                                data-testid={`rote-${index}-spell`}
+                                                            />
+                                                            <Button 
+                                                                variant="ghost" 
+                                                                size="sm" 
+                                                                onClick={() => {
+                                                                    const rotes = (getValue("rotes") || []).filter((_, i) => i !== index);
+                                                                    handleChange("rotes", rotes);
+                                                                }}
+                                                                className="h-7 w-7 text-zinc-400 hover:text-red-400"
+                                                                data-testid={`rote-${index}-delete`}
+                                                            >
+                                                                <Trash2 className="w-3 h-3" />
+                                                            </Button>
+                                                        </div>
+                                                        <div className="grid grid-cols-3 gap-2">
+                                                            <Select value={rote.arcanum || "Death"} onValueChange={(v) => {
+                                                                const rotes = [...(getValue("rotes") || [])];
+                                                                rotes[index] = { ...rotes[index], arcanum: v };
+                                                                handleChange("rotes", rotes);
+                                                            }}>
+                                                                <SelectTrigger className="h-7 bg-zinc-900/50 border-zinc-800 text-xs" data-testid={`rote-${index}-arcanum`}>
+                                                                    <SelectValue />
+                                                                </SelectTrigger>
+                                                                <SelectContent className="bg-zinc-900 border-zinc-800">
+                                                                    {ARCANA.map(a => <SelectItem key={a} value={a} className="text-xs">{a}</SelectItem>)}
+                                                                </SelectContent>
+                                                            </Select>
+                                                            <div className="flex items-center justify-center">
+                                                                <StatDots 
+                                                                    value={rote.dots || 1} 
+                                                                    max={5} 
+                                                                    onChange={(v) => {
+                                                                        const rotes = [...(getValue("rotes") || [])];
+                                                                        rotes[index] = { ...rotes[index], dots: v };
+                                                                        handleChange("rotes", rotes);
+                                                                    }} 
+                                                                    color="violet" 
+                                                                    size="small" 
+                                                                    testIdPrefix={`rote-${index}-dots`} 
+                                                                />
+                                                            </div>
+                                                            <Select value={rote.skill || "occult"} onValueChange={(v) => {
+                                                                const rotes = [...(getValue("rotes") || [])];
+                                                                rotes[index] = { ...rotes[index], skill: v };
+                                                                handleChange("rotes", rotes);
+                                                            }}>
+                                                                <SelectTrigger className="h-7 bg-zinc-900/50 border-zinc-800 text-xs" data-testid={`rote-${index}-skill`}>
+                                                                    <SelectValue />
+                                                                </SelectTrigger>
+                                                                <SelectContent className="bg-zinc-900 border-zinc-800 max-h-[200px]">
+                                                                    {SKILL_LIST.map(s => <SelectItem key={s} value={s} className="text-xs capitalize">{formatLabel(s)}</SelectItem>)}
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Praxes for Mages */}
+                                    <div>
+                                        <div className="flex items-center justify-between mb-1">
+                                            <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Praxes</p>
+                                            <Button 
+                                                size="sm" 
+                                                onClick={() => {
+                                                    const praxes = getValue("praxes") || [];
+                                                    handleChange("praxes", [...praxes, { spell: "", arcanum: "Death", dots: 1 }]);
+                                                }} 
+                                                className="h-5 px-2 text-[10px] btn-secondary" 
+                                                data-testid="add-praxis-btn"
+                                            >
+                                                <Plus className="w-3 h-3 mr-1" /> Add
+                                            </Button>
+                                        </div>
+                                        <div className="space-y-2">
+                                            {(getValue("praxes") || []).length === 0 ? (
+                                                <p className="text-[10px] text-zinc-600 italic">No praxes learned</p>
+                                            ) : (
+                                                (getValue("praxes") || []).map((praxis, index) => (
+                                                    <div key={index} className="p-2 bg-zinc-900/30 border border-zinc-800 rounded-sm space-y-2">
+                                                        <div className="flex items-center justify-between">
+                                                            <Input
+                                                                value={praxis.spell || ""}
+                                                                onChange={(e) => {
+                                                                    const praxes = [...(getValue("praxes") || [])];
+                                                                    praxes[index] = { ...praxes[index], spell: e.target.value };
+                                                                    handleChange("praxes", praxes);
+                                                                }}
+                                                                placeholder="Spell name"
+                                                                className="input-geist h-7 text-xs flex-1 mr-2"
+                                                                data-testid={`praxis-${index}-spell`}
+                                                            />
+                                                            <Button 
+                                                                variant="ghost" 
+                                                                size="sm" 
+                                                                onClick={() => {
+                                                                    const praxes = (getValue("praxes") || []).filter((_, i) => i !== index);
+                                                                    handleChange("praxes", praxes);
+                                                                }}
+                                                                className="h-7 w-7 text-zinc-400 hover:text-red-400"
+                                                                data-testid={`praxis-${index}-delete`}
+                                                            >
+                                                                <Trash2 className="w-3 h-3" />
+                                                            </Button>
+                                                        </div>
+                                                        <div className="grid grid-cols-2 gap-2">
+                                                            <Select value={praxis.arcanum || "Death"} onValueChange={(v) => {
+                                                                const praxes = [...(getValue("praxes") || [])];
+                                                                praxes[index] = { ...praxes[index], arcanum: v };
+                                                                handleChange("praxes", praxes);
+                                                            }}>
+                                                                <SelectTrigger className="h-7 bg-zinc-900/50 border-zinc-800 text-xs" data-testid={`praxis-${index}-arcanum`}>
+                                                                    <SelectValue />
+                                                                </SelectTrigger>
+                                                                <SelectContent className="bg-zinc-900 border-zinc-800">
+                                                                    {ARCANA.map(a => <SelectItem key={a} value={a} className="text-xs">{a}</SelectItem>)}
+                                                                </SelectContent>
+                                                            </Select>
+                                                            <div className="flex items-center justify-center">
+                                                                <StatDots 
+                                                                    value={praxis.dots || 1} 
+                                                                    max={5} 
+                                                                    onChange={(v) => {
+                                                                        const praxes = [...(getValue("praxes") || [])];
+                                                                        praxes[index] = { ...praxes[index], dots: v };
+                                                                        handleChange("praxes", praxes);
+                                                                    }} 
+                                                                    color="violet" 
+                                                                    size="small" 
+                                                                    testIdPrefix={`praxis-${index}-dots`} 
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Attainments (auto-calculated from Arcana) */}
+                                    <div>
+                                        <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Attainments</p>
+                                        <div className="space-y-1">
+                                            {(() => {
+                                                const arcanaValues = getValue("arcana") || {};
+                                                const attainments = [];
+                                                ARCANA.forEach(arcanum => {
+                                                    const rating = arcanaValues[arcanum] || 0;
+                                                    for (let dot = 1; dot <= rating; dot++) {
+                                                        const attainment = MAGE_ATTAINMENTS[arcanum]?.[dot];
+                                                        if (attainment) {
+                                                            attainments.push({ arcanum, dot, name: attainment });
+                                                        }
+                                                    }
+                                                });
+                                                if (attainments.length === 0) {
+                                                    return <p className="text-[10px] text-zinc-600 italic">Gain Arcana dots to unlock attainments</p>;
+                                                }
+                                                return attainments.map((att, i) => (
+                                                    <div key={i} className="flex items-center gap-2 text-xs">
+                                                        <span className="text-violet-400 font-mono">{"●".repeat(att.dot)}</span>
+                                                        <span className="text-zinc-500">{att.arcanum}:</span>
+                                                        <span className="text-zinc-300">{att.name}</span>
+                                                    </div>
+                                                ));
+                                            })()}
+                                        </div>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    {/* Original Geist content */}
+                                    <div>
+                                        <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Haunts</p>
+                                        <div className="space-y-1">
+                                            {HAUNTS.map((haunt) => {
+                                                const hauntRating = getNestedValue("haunts", haunt) || 0;
+                                                return (
+                                                    <div key={haunt} className="flex items-center justify-between group">
+                                                        <button
+                                                            onClick={() => hauntRating > 0 && openHauntRollPopup(haunt)}
+                                                            className={`text-xs flex items-center gap-1 transition-colors ${
+                                                                hauntRating > 0 
+                                                                    ? 'text-zinc-400 hover:text-teal-300 cursor-pointer' 
+                                                                    : 'text-zinc-600 cursor-default'
+                                                            }`}
+                                                            disabled={hauntRating === 0}
+                                                            data-testid={`haunt-${haunt.toLowerCase().replace(/\s+/g, '-')}-label`}
+                                                        >
+                                                            <Dices className={`w-2.5 h-2.5 transition-opacity ${hauntRating > 0 ? 'opacity-0 group-hover:opacity-100 text-teal-500' : 'opacity-0'}`} />
+                                                            {haunt}
+                                                        </button>
+                                                        <StatDots value={hauntRating} max={5} onChange={(v) => handleNestedChange("haunts", haunt, v)} color="teal" size="small" testIdPrefix={`haunt-${haunt.toLowerCase().replace(/\s+/g, '-')}`} />
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                    
+                                    <div>
+                                        <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">
+                                            Available Keys 
+                                            <span className="text-teal-400 ml-1">({allAvailableKeys.length})</span>
+                                        </p>
+                                        <div className="flex flex-wrap gap-1">
+                                            {KEYS.map((key) => {
+                                                const isCharacterKey = getValue("innate_key") === key;
+                                                const isGeistKey = getValue("geist_innate_key") === key;
+                                                const isMementoKey = (getValue("mementos") || []).some(m => m.key === key);
+                                                const isAvailable = allAvailableKeys.includes(key);
+                                                const isDoomed = doomedKeys.has(key);
+                                                const doomSource = doomedKeySources[key];
+
+                                                let badges = [];
+                                                if (isCharacterKey) badges.push("C");
+                                                if (isGeistKey) badges.push("G");
+                                                if (isMementoKey) badges.push("M");
+                                                if (isDoomed) badges.push("D");
+
+                                                return (
+                                                    <TooltipProvider key={key}>
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <span className={`px-2 py-0.5 text-[10px] rounded-sm border transition-all ${
+                                                                    isDoomed
+                                                                        ? "bg-rose-950/30 border-rose-500/50 text-rose-300"
+                                                                        : isAvailable
+                                                                        ? "bg-amber-900/30 border-amber-500/50 text-amber-300"
+                                                                        : "bg-zinc-900 border-zinc-800 text-zinc-600"
+                                                                }`}>
+                                                                    {key}
+                                                                    {badges.length > 0 && (
+                                                                        <span className="ml-1 text-[8px] text-amber-200">
+                                                                            [{badges.join("+")}]
+                                                                        </span>
+                                                                    )}
+                                                                </span>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent className="bg-zinc-900 border-zinc-700">
+                                                                <p className="text-xs">
+                                                                    {isCharacterKey && "Character's Innate Key"}
+                                                                    {isCharacterKey && (isGeistKey || isMementoKey) && " + "}
+                                                                    {isGeistKey && "Geist's Innate Key"}
+                                                                    {isGeistKey && isMementoKey && " + "}
+                                                                    {isMementoKey && "From Memento"}
+                                                                    {isDoomed && doomSource && `Doomed: ${doomSource}`}
+                                                                    {isDoomed && !doomSource && "Doomed"}
+                                                                    {!isAvailable && !isDoomed && "Not available"}
+                                                                </p>
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                    </TooltipProvider>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    {/* Mementos */}
+                                    <div>
+                                        <div className="flex items-center justify-between mb-1">
+                                            <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Mementos</p>
+                                            <Button size="sm" onClick={addMemento} className="h-5 px-2 text-[10px] btn-secondary" data-testid="add-memento-btn">
+                                                <Plus className="w-3 h-3 mr-1" /> Add
+                                            </Button>
+                                        </div>
+                                        <div className="space-y-2">
+                                            {mementos.length === 0 ? (
+                                                <p className="text-[10px] text-zinc-600 italic">No mementos yet</p>
+                                            ) : (
+                                                mementos.map((memento, index) => (
+                                                    <MementoCard key={memento.id || index} memento={memento} index={index} onUpdate={(data) => updateMemento(index, data)} onDelete={() => deleteMemento(index)} />
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
+                                </>
+                            )}
                         </CollapsibleContent>
                     </Collapsible>
 
-                    {/* Merits */}
+                    {/* Merits (different title for Mage vs Geist) */}
                     <Collapsible open={expandedSections.merits}>
                         <CollapsibleTrigger onClick={() => toggleSection("merits")} className="flex items-center justify-between w-full p-2 rounded-sm bg-purple-900/20 border border-purple-500/30 hover:bg-purple-900/30" data-testid="section-toggle-merits">
-                            <span className="text-xs font-mono uppercase tracking-wider text-purple-400">Merits & Ceremonies</span>
+                            <span className="text-xs font-mono uppercase tracking-wider text-purple-400">
+                                {isMage ? "Merits" : "Merits & Ceremonies"}
+                            </span>
                             {expandedSections.merits ? <ChevronDown className="w-4 h-4 text-purple-500" /> : <ChevronRight className="w-4 h-4 text-purple-500" />}
                         </CollapsibleTrigger>
                         <CollapsibleContent className="pt-2 space-y-2">
@@ -2649,7 +3076,8 @@ export const CharacterPanel = ({
                                 </div>
                             </div>
                             
-                            {/* Ceremonies Section */}
+                            {/* Ceremonies Section - Geist only */}
+                            {!isMage && (
                             <div>
                                 <div className="flex items-center justify-between mb-1">
                                     <label className="text-[10px] text-violet-400 uppercase tracking-wider">Ceremonies</label>
@@ -2717,6 +3145,7 @@ export const CharacterPanel = ({
                                     )}
                                 </div>
                             </div>
+                            )}
                                                      
                         </CollapsibleContent>
                     </Collapsible>

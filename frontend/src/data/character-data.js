@@ -683,3 +683,101 @@ export const KEY_UNLOCK_ATTRIBUTES = {
     "Stillness": "composure",
 };
 
+
+
+// =====================
+// MAGE: THE AWAKENING DATA
+// =====================
+
+export const ARCANA = [
+    "Death", "Fate", "Forces", "Life", "Matter",
+    "Mind", "Prime", "Space", "Spirit", "Time"
+];
+
+// Attainments are automatically gained at specific Arcanum dot levels
+export const MAGE_ATTAINMENTS = {
+    "Death": {
+        1: "Deathsight",
+        2: "Soul Jar",
+        3: "Cold Embrace",
+        4: "Withstand Death",
+        5: "Open Avernian Gate"
+    },
+    "Fate": {
+        1: "Conditional Duration",
+        2: "Nimbus Tuning",
+        3: "Sever Oaths",
+        4: "Unbound Fate",
+        5: "Forge Destiny"
+    },
+    "Forces": {
+        1: "Kinetic Efficiency",
+        2: "Precise Force",
+        3: "Optimize Machine",
+        4: "Environmental Immunity",
+        5: "Control Weather"
+    },
+    "Life": {
+        1: "Improved Pattern Restoration",
+        2: "Mutable Body",
+        3: "Self-Healing",
+        4: "Body Mastery",
+        5: "Regeneration"
+    },
+    "Matter": {
+        1: "Matter Sight",
+        2: "Conjunctional Transmutation",
+        3: "Durability Control",
+        4: "Destroy Object",
+        5: "Self-Repairing Apparatus"
+    },
+    "Mind": {
+        1: "Mind's Eye",
+        2: "Memory Palace",
+        3: "Telepathy",
+        4: "Psychological Immunity",
+        5: "Network Mind"
+    },
+    "Prime": {
+        1: "Mage Sight",
+        2: "Imbue Item",
+        3: "Channel Mana",
+        4: "Supernal Sanctum",
+        5: "Apocalypse"
+    },
+    "Space": {
+        1: "Spatial Awareness",
+        2: "Break Boundary",
+        3: "Co-Location",
+        4: "Ban",
+        5: "Pocket Realm"
+    },
+    "Spirit": {
+        1: "Spirit Sight",
+        2: "Spirit Touch",
+        3: "Reaching",
+        4: "Spirit Gate",
+        5: "Spirit Dominion"
+    },
+    "Time": {
+        1: "Temporal Sympathy",
+        2: "Immediate Reaction",
+        3: "Prepared Spell",
+        4: "Time Lock",
+        5: "Prophecy"
+    }
+};
+
+// Gnosis table (similar to Synergy for Mages)
+export const GNOSIS_TABLE = {
+    1: { maxMana: 10, perTurn: 1, traitMax: 5, ritualInterval: "3 hours", combinedSpells: 1, paradoxDie: 1, highestArcanum: "3 or less", otherArcana: "2 or less", yantras: 2 },
+    2: { maxMana: 11, perTurn: 2, traitMax: 5, ritualInterval: "3 hours", combinedSpells: 1, paradoxDie: 1, highestArcanum: "3 or less", otherArcana: "2 or less", yantras: 2 },
+    3: { maxMana: 12, perTurn: 3, traitMax: 5, ritualInterval: "1 hour", combinedSpells: 2, paradoxDie: 2, highestArcanum: "4 or less", otherArcana: "3 or less", yantras: 3 },
+    4: { maxMana: 13, perTurn: 4, traitMax: 5, ritualInterval: "1 hour", combinedSpells: 2, paradoxDie: 2, highestArcanum: "4 or less", otherArcana: "3 or less", yantras: 3 },
+    5: { maxMana: 15, perTurn: 5, traitMax: 5, ritualInterval: "30 min", combinedSpells: 2, paradoxDie: 3, highestArcanum: "5 or less", otherArcana: "4 or less", yantras: 4 },
+    6: { maxMana: 20, perTurn: 6, traitMax: 6, ritualInterval: "30 min", combinedSpells: 3, paradoxDie: 3, highestArcanum: 5, otherArcana: 5, yantras: 4 },
+    7: { maxMana: 25, perTurn: 7, traitMax: 7, ritualInterval: "10 min", combinedSpells: 3, paradoxDie: 4, highestArcanum: 5, otherArcana: 5, yantras: 5 },
+    8: { maxMana: 30, perTurn: 8, traitMax: 8, ritualInterval: "10 min", combinedSpells: 3, paradoxDie: 4, highestArcanum: 5, otherArcana: 5, yantras: 5 },
+    9: { maxMana: 50, perTurn: 10, traitMax: 9, ritualInterval: "1 min", combinedSpells: 4, paradoxDie: 5, highestArcanum: 5, otherArcana: 5, yantras: 6 },
+    10: { maxMana: 75, perTurn: 15, traitMax: 10, ritualInterval: "1 turn", combinedSpells: 5, paradoxDie: 5, highestArcanum: 5, otherArcana: 5, yantras: 7 }
+};

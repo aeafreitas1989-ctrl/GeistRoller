@@ -53,7 +53,8 @@ export const StatDots = ({
         teal: "text-teal-500",
         crimson: "text-rose-500",
         zinc: "text-zinc-400",
-        amber: "text-amber-500"
+        amber: "text-amber-500",
+        violet: "text-violet-500"
     };
     
     const sizeClasses = size === "small" ? "w-2.5 h-2.5" : "w-3 h-3";
@@ -120,8 +121,11 @@ export const HealthTrack = ({ boxes = [], max, onBoxClick, testIdPrefix = "healt
 export const ResourceTrack = ({ current, max, onChange, color = "teal", testIdPrefix = "resource" }) => {
     const colorClasses = {
         teal: { active: "bg-teal-500/50 border-teal-500", inactive: "bg-zinc-900 border-zinc-700" },
-        amber: { active: "bg-amber-500/50 border-amber-500", inactive: "bg-zinc-900 border-zinc-700" }
+        amber: { active: "bg-amber-500/50 border-amber-500", inactive: "bg-zinc-900 border-zinc-700" },
+        violet: { active: "bg-violet-500/50 border-violet-500", inactive: "bg-zinc-900 border-zinc-700" }
     };
+    
+    const colorStyle = colorClasses[color] || colorClasses.teal;
     
     return (
         <div className="flex gap-0.5 flex-wrap">
@@ -130,7 +134,7 @@ export const ResourceTrack = ({ current, max, onChange, color = "teal", testIdPr
                     key={i}
                     onClick={() => onChange(i + 1 === current ? i : i + 1)}
                     className={`w-5 h-5 rounded-sm border transition-all ${
-                        i < current ? colorClasses[color].active : colorClasses[color].inactive
+                        i < current ? colorStyle.active : colorStyle.inactive
                     } hover:opacity-80`}
                     data-testid={`${testIdPrefix}-track-${i + 1}`}
                 />

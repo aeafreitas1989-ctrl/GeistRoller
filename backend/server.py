@@ -429,7 +429,10 @@ async def suggest_session_title(session_id: str, input: SessionTitleSuggestionRe
 
 @api_router.post("/characters", response_model=Character)
 async def create_character(input: CharacterCreate):
-    character = Character(name=input.name or "New Sin-Eater")
+    character = Character(
+        name=input.name or ("New Mage" if input.character_type == "mage" else "New Sin-Eater"),
+        character_type=input.character_type or "geist"
+    )
     await db.characters.insert_one(character.model_dump())
     result = character.model_dump()
     result.pop("_id", None)

@@ -1,0 +1,40 @@
+{
+  "summary": "Completed comprehensive testing of Mage character template implementation. All core features working correctly including character type selection, conditional rendering, section renaming, and Mage-specific content.",
+  "backend_issues": {
+    "critical_bugs": [],
+    "flaky_endpoints": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "passed_tests": [
+    "Character type badge shows 'MAGE' for mage characters and 'SIN-EATER' for geist characters",
+    "Create character dialog appears when clicking + button with both Mage and Sin-Eater options",
+    "Mage character correctly hides 'Geist & Remembrance' section",
+    "Sin-Eater character correctly shows 'Geist & Remembrance' section",
+    "Mage shows 'GNOSIS & RESOURCES' instead of 'Synergy & Resources'",
+    "Mage shows 'ARCANA, SPELLS & ATTAINMENTS' instead of 'Haunts Keys & Mementos'",
+    "Mage shows 'MERITS' instead of 'Merits & Ceremonies'",
+    "Mage Gnosis section includes Gnosis track (1-10 dots with current value)",
+    "Mage Gnosis section includes Nimbus fillable text field",
+    "Mage Gnosis section includes Mana resource track with current/max values",
+    "Mage Arcana section displays all 10 Arcana (Death, Fate, Forces, Life, Matter, Mind, Prime, Space, Spirit, Time)",
+    "Mage Arcana section includes dot ratings (1-5) for each Arcanum",
+    "Mage Arcana section includes Rotes section with Add button",
+    "Mage Arcana section includes Praxes section",
+    "Mage Arcana section includes Attainments area (auto-calculated)",
+    "Character type selection dialog works correctly for both character types",
+    "Conditional rendering works properly between Mage and Sin-Eater character types"
+  ],
+  "test_report_links": [],
+  "action_item_for_main_agent": "",
+  "updated_files": [],
+  "success_percentage": {
+    "frontend": "100%",
+    "backend": "N/A (frontend-only testing)"
+  },
+  "should_call_test_agent_after_fix": "false",
+  "should_main_agent_test_itself": "false"
+}

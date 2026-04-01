@@ -156,7 +156,16 @@ class Condition(BaseModel):
 class Character(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    character_type: str = "geist"  # "geist" or "mage"
     name: str = "New Sin-Eater"
+    # Mage-specific fields
+    gnosis: int = 1
+    mana: int = 10
+    nimbus: str = ""
+    arcana: Dict[str, int] = Field(default_factory=dict)  # e.g., {"Death": 2, "Spirit": 3}
+    rotes: List[Dict[str, Any]] = Field(default_factory=list)  # [{spell, arcanum, dots, skill}]
+    praxes: List[Dict[str, Any]] = Field(default_factory=list)  # [{spell, arcanum, dots}]
+    attainments: List[str] = Field(default_factory=list)  # auto-calculated from arcana
     concept: str = ""
     geist_name: str = ""
     geist_description: str = ""
@@ -223,9 +232,19 @@ class Character(BaseModel):
 
 class CharacterCreate(BaseModel):
     name: Optional[str] = "New Sin-Eater"
+    character_type: Optional[str] = "geist"  # "geist" or "mage"
 
 class CharacterUpdate(BaseModel):
+    character_type: Optional[str] = None
     name: Optional[str] = None
+    # Mage fields
+    gnosis: Optional[int] = None
+    mana: Optional[int] = None
+    nimbus: Optional[str] = None
+    arcana: Optional[Dict[str, int]] = None
+    rotes: Optional[List[Dict[str, Any]]] = None
+    praxes: Optional[List[Dict[str, Any]]] = None
+    attainments: Optional[List[str]] = None
     concept: Optional[str] = None
     geist_name: Optional[str] = None
     geist_description: Optional[str] = None

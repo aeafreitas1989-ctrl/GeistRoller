@@ -165,14 +165,18 @@ export const StorytellerPage = () => {
         }
     };
 
-    const createCharacter = async () => {
+    const createCharacter = async (characterType = "geist") => {
         try {
+            const defaultName = characterType === "mage" 
+                ? `Mage ${characters.filter(c => c.character_type === "mage").length + 1}`
+                : `Sin-Eater ${characters.filter(c => c.character_type !== "mage").length + 1}`;
             const response = await axios.post(`${API}/characters`, {
-                name: `Sin-Eater ${characters.length + 1}`
+                name: defaultName,
+                character_type: characterType
             });
             setCharacters([...characters, response.data]);
             setActiveCharacter(response.data);
-            toast.success("New character created");
+            toast.success(`New ${characterType === "mage" ? "Mage" : "Sin-Eater"} created`);
         } catch (error) {
             toast.error("Failed to create character");
         }
