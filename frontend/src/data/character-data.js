@@ -697,74 +697,74 @@ export const ARCANA = [
 // Attainments are automatically gained at specific Arcanum dot levels
 export const MAGE_ATTAINMENTS = {
     "Death": {
-        1: "Deathsight",
-        2: "Soul Jar",
-        3: "Cold Embrace",
-        4: "Withstand Death",
-        5: "Open Avernian Gate"
+        1: { name: "Counterspell (Death)", description: "Counter Death spells with Gnosis + Death in a Clash of Wills" },
+        2: { name: "Eyes of the Dead / Death Armor", description: "See ghosts in Twilight; Armor downgrades lethal kinetic damage to bashing" },
+        3: { name: "Targeted Summoning", description: "Summon Supernal beings with a secondary Arcanum" },
+        4: { name: "Inviolate Soul", description: "Reflexively protect your soul from tampering, possession, or aura manipulation" },
+        5: { name: "Create Rote", description: "Create permanent Rotes from spells you can cast" }
     },
     "Fate": {
-        1: "Conditional Duration",
-        2: "Nimbus Tuning",
-        3: "Sever Oaths",
-        4: "Unbound Fate",
-        5: "Forge Destiny"
+        1: { name: "Counterspell (Fate)", description: "Counter Fate spells with Gnosis + Fate in a Clash of Wills" },
+        2: { name: "Conditional Duration / Fate Armor", description: "Add conditional triggers to spell duration; Armor adds Fate to Defense" },
+        3: { name: "Targeted Summoning", description: "Summon Supernal beings with a secondary Arcanum" },
+        4: { name: "Unbound Fate", description: "Reflexively resist magical oaths, compulsions, or destiny alterations" },
+        5: { name: "Create Rote", description: "Create permanent Rotes from spells you can cast" }
     },
     "Forces": {
-        1: "Kinetic Efficiency",
-        2: "Precise Force",
-        3: "Optimize Machine",
-        4: "Environmental Immunity",
-        5: "Control Weather"
+        1: { name: "Counterspell (Forces)", description: "Counter Forces spells with Gnosis + Forces in a Clash of Wills" },
+        2: { name: "Precise Force / Forces Armor", description: "9-Again on calculated attacks, ignore 2 Durability; Armor = Forces rating as general armor" },
+        3: { name: "Targeted Summoning", description: "Summon Supernal beings with a secondary Arcanum" },
+        4: { name: "Environmental Immunity", description: "Spend 1 Mana to become immune to Environmental Tilts for the scene" },
+        5: { name: "Create Rote", description: "Create permanent Rotes from spells you can cast" }
     },
     "Life": {
-        1: "Improved Pattern Restoration",
-        2: "Mutable Body",
-        3: "Self-Healing",
-        4: "Body Mastery",
-        5: "Regeneration"
+        1: { name: "Counterspell (Life)", description: "Counter Life spells with Gnosis + Life in a Clash of Wills" },
+        2: { name: "Improved Pattern Restoration / Life Armor", description: "Heal bashing 1:1 Mana, lethal 2:1; Armor adds Life/2 to armor and Defense" },
+        3: { name: "Targeted Summoning", description: "Summon Supernal beings with a secondary Arcanum" },
+        4: { name: "Body Autonomy", description: "Reflexively resist supernatural body alterations, injuries, or Personal Tilts" },
+        5: { name: "Create Rote", description: "Create permanent Rotes from spells you can cast" }
     },
     "Matter": {
-        1: "Matter Sight",
-        2: "Conjunctional Transmutation",
-        3: "Durability Control",
-        4: "Destroy Object",
-        5: "Self-Repairing Apparatus"
+        1: { name: "Counterspell (Matter)", description: "Counter Matter spells with Gnosis + Matter in a Clash of Wills" },
+        2: { name: "Permanence / Matter Armor", description: "Spend 1 Mana for Advanced Duration on Matter spells; Armor = Matter rating, immune to AP" },
+        3: { name: "Targeted Summoning", description: "Summon Supernal beings with a secondary Arcanum" },
+        4: { name: "Durability Control", description: "Touch object, spend 1 Mana to raise/lower Durability by Matter dots for the scene" },
+        5: { name: "Create Rote", description: "Create permanent Rotes from spells you can cast" }
     },
     "Mind": {
-        1: "Mind's Eye",
-        2: "Memory Palace",
-        3: "Telepathy",
-        4: "Psychological Immunity",
-        5: "Network Mind"
+        1: { name: "Counterspell (Mind)", description: "Counter Mind spells with Gnosis + Mind in a Clash of Wills" },
+        2: { name: "Mind's Eye / Mind Armor", description: "See Goetia and projecting beings in Twilight; Armor adds Mind to Defense, can inflict Beaten Down" },
+        3: { name: "Targeted Summoning", description: "Summon Supernal beings with a secondary Arcanum" },
+        4: { name: "Intuitive Leap", description: "Spend 1 Mana when rolling 3+ successes on Social/Mental to make it exceptional" },
+        5: { name: "Create Rote", description: "Create permanent Rotes from spells you can cast" }
     },
     "Prime": {
-        1: "Mage Sight",
-        2: "Imbue Item",
-        3: "Channel Mana",
-        4: "Supernal Sanctum",
-        5: "Apocalypse"
+        1: { name: "Counterspell (Prime)", description: "Counter Prime spells with Gnosis + Prime in a Clash of Wills" },
+        2: { name: "Universal Counterspell / Prime Armor", description: "Counter ANY spell with Gnosis + Prime; Armor reduces supernatural damage by Prime dots" },
+        3: { name: "Targeted Summoning", description: "Summon Supernal beings with a secondary Arcanum" },
+        4: { name: "Imbue Item", description: "Create permanent Imbued Items with any spell you can cast" },
+        5: { name: "Create Rote", description: "Create permanent Rotes from spells you can cast" }
     },
     "Space": {
-        1: "Spatial Awareness",
-        2: "Break Boundary",
-        3: "Co-Location",
-        4: "Ban",
-        5: "Pocket Realm"
+        1: { name: "Counterspell (Space)", description: "Counter Space spells with Gnosis + Space in a Clash of Wills" },
+        2: { name: "Sympathetic Range / Space Armor", description: "Cast at sensory range via sympathy for 1 Mana; Armor adds Space to Defense, can redirect attacks" },
+        3: { name: "Targeted Summoning", description: "Summon Supernal beings with a secondary Arcanum" },
+        4: { name: "Everywhere", description: "Spend 1 Mana instead of Reach for Advanced Scale" },
+        5: { name: "Create Rote", description: "Create permanent Rotes from spells you can cast" }
     },
     "Spirit": {
-        1: "Spirit Sight",
-        2: "Spirit Touch",
-        3: "Reaching",
-        4: "Spirit Gate",
-        5: "Spirit Dominion"
+        1: { name: "Counterspell (Spirit)", description: "Counter Spirit spells with Gnosis + Spirit in a Clash of Wills" },
+        2: { name: "Spirit Eyes / Spirit Armor", description: "See spirits in Twilight; Armor downgrades lethal kinetic and ephemeral attacks to bashing" },
+        3: { name: "Targeted Summoning", description: "Summon Supernal beings with a secondary Arcanum" },
+        4: { name: "Honorary Rank", description: "Have honorary spirit Rank = Spirit dots; physical attacks are banes to weaker spirits" },
+        5: { name: "Create Rote", description: "Create permanent Rotes from spells you can cast" }
     },
     "Time": {
-        1: "Temporal Sympathy",
-        2: "Immediate Reaction",
-        3: "Prepared Spell",
-        4: "Time Lock",
-        5: "Prophecy"
+        1: { name: "Counterspell (Time)", description: "Counter Time spells with Gnosis + Time in a Clash of Wills" },
+        2: { name: "Temporal Sympathy / Time Armor", description: "Cast Time spells on subject's past for 1 Mana; Armor adds Time to Defense, can reduce Initiative" },
+        3: { name: "Targeted Summoning", description: "Summon Supernal beings with a secondary Arcanum" },
+        4: { name: "Time in a Bottle", description: "Spend 1 Mana instead of Reach for instant casting time" },
+        5: { name: "Create Rote", description: "Create permanent Rotes from spells you can cast" }
     }
 };
 

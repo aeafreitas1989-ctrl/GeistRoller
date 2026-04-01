@@ -75,14 +75,13 @@ A digital character sheet and dice roller for the Geist: The Sin-Eaters tabletop
   - **Path-based Arcana**: Ruling Arcana (blue, auto 1-dot), Inferior Arcanum (red)
   - **Order Rote Skills**: Marked with amber indicator
   - **Arcana Practices**: Shown as clickable badges next to each Arcanum
-  - **Spellcasting Popup**: Full spellcasting system with:
-    - Dice pool: Gnosis + Arcanum with modifiers
-    - Mana cost: 0 for Ruling, 1 for Common/Inferior
-    - Practice selection (filtered by available dots)
-    - Free Reach = Arcanum - Practice + 1
-    - Spell Factors (Casting Time, Range, Potency, Duration, Scale)
-    - Standard/Advanced toggles (+1 Reach each)
-    - Level controls with cumulative -2 dice penalties
+  - **Official Attainments** (with tooltips showing descriptions):
+    - 1-dot: Counterspell (per Arcanum)
+    - 2-dot: Lesser Utility + Mage Armor (Eyes of Dead, Conditional Duration, etc.)
+    - 3-dot: Targeted Summoning
+    - 4-dot: Greater Utility (Inviolate Soul, Imbue Item, etc.)
+    - 5-dot: Create Rote
+  - **Spellcasting Popup**: Full spellcasting system with dice pool, mana, reach, factors
 
 ### P1 (Backlog)
 - Export/import character data

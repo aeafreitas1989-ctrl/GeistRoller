@@ -2995,7 +2995,7 @@ export const CharacterPanel = ({
                                                     for (let dot = 1; dot <= rating; dot++) {
                                                         const attainment = MAGE_ATTAINMENTS[arcanum]?.[dot];
                                                         if (attainment) {
-                                                            attainments.push({ arcanum, dot, name: attainment });
+                                                            attainments.push({ arcanum, dot, ...attainment });
                                                         }
                                                     }
                                                 });
@@ -3003,11 +3003,20 @@ export const CharacterPanel = ({
                                                     return <p className="text-[10px] text-zinc-600 italic">Gain Arcana dots to unlock attainments</p>;
                                                 }
                                                 return attainments.map((att, i) => (
-                                                    <div key={i} className="flex items-center gap-2 text-xs">
-                                                        <span className="text-violet-400 font-mono">{"●".repeat(att.dot)}</span>
-                                                        <span className="text-zinc-500">{att.arcanum}:</span>
-                                                        <span className="text-zinc-300">{att.name}</span>
-                                                    </div>
+                                                    <TooltipProvider key={i}>
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <div className="flex items-start gap-2 text-xs cursor-help p-1 rounded hover:bg-zinc-800/50">
+                                                                    <span className="text-violet-400 font-mono shrink-0">{"●".repeat(att.dot)}</span>
+                                                                    <span className="text-zinc-500 shrink-0">{att.arcanum}:</span>
+                                                                    <span className="text-zinc-300">{att.name}</span>
+                                                                </div>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent className="bg-zinc-900 border-zinc-700 max-w-xs">
+                                                                <p className="text-xs text-zinc-300">{att.description}</p>
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                    </TooltipProvider>
                                                 ));
                                             })()}
                                         </div>
