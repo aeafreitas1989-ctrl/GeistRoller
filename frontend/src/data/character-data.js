@@ -694,6 +694,20 @@ export const ARCANA = [
     "Mind", "Prime", "Space", "Spirit", "Time"
 ];
 
+// Mage Armor effects (2-dot Attainment per Arcanum)
+export const MAGE_ARMOR_EFFECTS = {
+    "Death":  { short: "Downgrades lethal kinetic damage to bashing", armor: "Kinetic lethal → bashing" },
+    "Fate":   { short: "Adds Fate dots to Defense against attacks", armor: "+Fate to Defense" },
+    "Forces": { short: "Forces rating as general armor vs. energy attacks", armor: "+Forces general armor" },
+    "Life":   { short: "Adds half Life dots (round up) to armor and Defense", armor: "+Life/2 armor & Defense" },
+    "Matter": { short: "Matter rating as general armor, immune to Armor Piercing", armor: "+Matter general armor (ignore AP)" },
+    "Mind":   { short: "Adds Mind dots to Defense vs. mental/social attacks", armor: "+Mind to Defense" },
+    "Prime":  { short: "Reduces incoming supernatural damage by Prime dots", armor: "-Prime supernatural damage" },
+    "Space":  { short: "Adds Space dots to Defense, can redirect attacks", armor: "+Space to Defense" },
+    "Spirit": { short: "Downgrades lethal from spirits/ephemeral to bashing", armor: "Spirit lethal → bashing" },
+    "Time":   { short: "Adds Time dots to Defense, can reduce attacker Initiative", armor: "+Time to Defense" },
+};
+
 // Attainments are automatically gained at specific Arcanum dot levels
 export const MAGE_ATTAINMENTS = {
     "Death": {

@@ -52,7 +52,7 @@ import {
     ATTRIBUTE_LIST, SKILL_LIST, CEREMONY_DEFINITIONS,
     CEREMONY_SKILL_KEY_MAP, KEY_UNLOCK_ATTRIBUTES,
     ARCANA, MAGE_ATTAINMENTS, GNOSIS_TABLE, MAGE_PATHS, MAGE_ORDERS,
-    PATH_ARCANA, ORDER_ROTE_SKILLS, ARCANA_PRACTICES,
+    PATH_ARCANA, ORDER_ROTE_SKILLS, ARCANA_PRACTICES, MAGE_ARMOR_EFFECTS,
 } from "../data/character-data";
 import { SpellcastingPopup } from "./SpellcastingPopup";
 
@@ -1493,6 +1493,54 @@ export const CharacterPanel = ({
                                     <span className="font-mono text-teal-400" data-testid="armor-input">{equippedArmorGeneral}/{equippedArmorBallistic}</span>
                                 </div>
                             </div>
+
+                            {/* Mage Armor */}
+                            {isMage && (() => {
+                                const activeMageArmor = getValue("active_mage_armor") || null;
+                                const arcanaWithArmor = ARCANA.filter(a => (getNestedValue("arcana", a) || 0) >= 2);
+                                if (arcanaWithArmor.length === 0) return null;
+                                return (
+                                    <div className="mt-3 space-y-2" data-testid="mage-armor-section">
+                                        <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Mage Armor</label>
+                                        <div className="flex flex-wrap gap-1.5">
+                                            {arcanaWithArmor.map(a => {
+                                                const isActive = activeMageArmor === a;
+                                                const dots = getNestedValue("arcana", a) || 0;
+                                                const effect = MAGE_ARMOR_EFFECTS[a];
+                                                return (
+                                                    <TooltipProvider key={a}>
+                                                        <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <button
+                                                                onClick={() => handleChange("active_mage_armor", isActive ? null : a)}
+                                                                className={`px-2.5 py-1 text-xs rounded border transition-all ${
+                                                                    isActive
+                                                                        ? "bg-violet-600/40 border-violet-500 text-violet-200 shadow-[0_0_8px_rgba(139,92,246,0.3)]"
+                                                                        : "bg-zinc-800/50 border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-300"
+                                                                }`}
+                                                                data-testid={`mage-armor-${a.toLowerCase()}`}
+                                                            >
+                                                                {a} ({dots})
+                                                            </button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent side="top" className="bg-zinc-800 border-zinc-700 text-xs max-w-[220px]">
+                                                            <p className="font-medium text-violet-300">{a} Armor</p>
+                                                            <p className="text-zinc-400 mt-0.5">{effect?.short}</p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                    </TooltipProvider>
+                                                );
+                                            })}
+                                        </div>
+                                        {activeMageArmor && MAGE_ARMOR_EFFECTS[activeMageArmor] && (
+                                            <div className="p-2 bg-violet-900/20 border border-violet-500/30 rounded text-xs text-violet-300" data-testid="mage-armor-active-effect">
+                                                <span className="font-medium">{activeMageArmor} Armor active:</span>{" "}
+                                                {MAGE_ARMOR_EFFECTS[activeMageArmor].armor}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })()}
 
                             {/* Inventory (structured) */}
                             <div className="mt-2 space-y-2">
