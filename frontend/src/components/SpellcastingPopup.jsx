@@ -454,7 +454,7 @@ export const SpellcastingPopup = ({
                                             {yantra.name}
                                         </span>
                                         <span className={`font-mono ${isActive ? "text-teal-400" : "text-zinc-600"}`}>
-                                            {yantra.variable ? `+${roteSkillBonus}` : yantra.bonus > 0 ? `+${yantra.bonus}` : yantra.reducesParadox ? "-2P" : "+0"}
+                                            {yantra.variable ? `+${roteSkillBonus}` : yantra.bonus > 0 ? `+${yantra.bonus}` : "+0"}
                                         </span>
                                     </div>
                                 );

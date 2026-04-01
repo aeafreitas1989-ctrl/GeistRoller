@@ -820,7 +820,7 @@ export const ARCANA_PRACTICES = {
 
 // Yantras (bonus dice tools for spellcasting)
 export const YANTRAS = [
-    { name: "Dedicated Tool", bonus: 0, description: "Personal magical tool. Also -2 to Paradox pool.", reducesParadox: true },
+    { name: "Dedicated Tool", bonus: 1, description: "Personal magical tool. Also -2 to Paradox pool.", reducesParadox: true },
     { name: "Path Tool", bonus: 1, description: "A tool associated with the mage's Path (wand, coin, mirror, cup, staff)" },
     { name: "Order Tool", bonus: 1, description: "A tool associated with the mage's Order" },
     { name: "Mudra", bonus: 2, description: "Practiced magical gestures and body movements" },
