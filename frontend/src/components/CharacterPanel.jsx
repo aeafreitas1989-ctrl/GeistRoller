@@ -873,6 +873,24 @@ export const CharacterPanel = ({
     const characterType = activeCharacter.character_type || "geist";
     const isMage = characterType === "mage";
 
+    // Mage Armor bonuses for Defense and Armor stats
+    const activeMageArmorName = isMage ? (getValue("active_mage_armor") || null) : null;
+    const activeMageArmorDots = activeMageArmorName ? (getNestedValue("arcana", activeMageArmorName) || 0) : 0;
+
+    const mageArmorDefenseBonus = (() => {
+        if (!activeMageArmorName) return 0;
+        if (["Fate", "Mind", "Space", "Time"].includes(activeMageArmorName)) return activeMageArmorDots;
+        if (activeMageArmorName === "Life") return Math.ceil(activeMageArmorDots / 2);
+        return 0;
+    })();
+
+    const mageArmorGeneralBonus = (() => {
+        if (!activeMageArmorName) return 0;
+        if (["Forces", "Matter"].includes(activeMageArmorName)) return activeMageArmorDots;
+        if (activeMageArmorName === "Life") return Math.ceil(activeMageArmorDots / 2);
+        return 0;
+    })();
+
     return (
         <div className="h-full flex flex-col" data-testid="character-panel">
             {/* Header */}
@@ -1478,7 +1496,7 @@ export const CharacterPanel = ({
                                 </div>
                                 <div className="flex justify-between items-center p-2 bg-zinc-900/30 rounded-sm">
                                     <span className="text-zinc-500">Defense</span>
-                                    <span className="font-mono text-teal-400">{calculateDefense()}</span>
+                                    <span className="font-mono text-teal-400">{calculateDefense() + mageArmorDefenseBonus}</span>
                                 </div>
                                 <div className="flex justify-between items-center p-2 bg-zinc-900/30 rounded-sm">
                                     <span className="text-zinc-500">Initiative</span>
@@ -1490,7 +1508,7 @@ export const CharacterPanel = ({
                                 </div>
                                 <div className="flex justify-between items-center p-2 bg-zinc-900/30 rounded-sm">
                                     <span className="text-zinc-500">Armor</span>
-                                    <span className="font-mono text-teal-400" data-testid="armor-input">{equippedArmorGeneral}/{equippedArmorBallistic}</span>
+                                    <span className="font-mono text-teal-400" data-testid="armor-input">{equippedArmorGeneral + mageArmorGeneralBonus}/{equippedArmorBallistic}</span>
                                 </div>
                             </div>
 
