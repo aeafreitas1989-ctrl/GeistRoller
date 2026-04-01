@@ -1428,11 +1428,8 @@ export const CharacterPanel = ({
                                         const currentOrder = isMage ? getValue("order") : null;
                                         const isRoteSkill = currentOrder && ORDER_ROTE_SKILLS[currentOrder]?.includes(skill);
                                         return (
-                                            <div key={skill} className="flex items-center gap-1">
-                                                {isRoteSkill && <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" title="Order Rote Skill" />}
-                                                <div className="flex-1">
-                                                    <StatRow label={skill} value={getNestedValue("skills", skill)} max={5} onChange={(v) => handleNestedChange("skills", skill, v)} color={isRoteSkill ? "amber" : "zinc"} onLabelClick={() => openDicePopup('skill', skill)} />
-                                                </div>
+                                            <div key={skill}>
+                                                <StatRow label={skill} value={getNestedValue("skills", skill)} max={5} onChange={(v) => handleNestedChange("skills", skill, v)} color={isRoteSkill ? "amber" : "zinc"} onLabelClick={() => openDicePopup('skill', skill)} />
                                             </div>
                                         );
                                     })}
@@ -1443,11 +1440,8 @@ export const CharacterPanel = ({
                                         const currentOrder = isMage ? getValue("order") : null;
                                         const isRoteSkill = currentOrder && ORDER_ROTE_SKILLS[currentOrder]?.includes(skill);
                                         return (
-                                            <div key={skill} className="flex items-center gap-1">
-                                                {isRoteSkill && <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" title="Order Rote Skill" />}
-                                                <div className="flex-1">
-                                                    <StatRow label={skill} value={getNestedValue("skills", skill)} max={5} onChange={(v) => handleNestedChange("skills", skill, v)} color={isRoteSkill ? "amber" : "zinc"} onLabelClick={() => openDicePopup('skill', skill)} />
-                                                </div>
+                                            <div key={skill}>
+                                                <StatRow label={skill} value={getNestedValue("skills", skill)} max={5} onChange={(v) => handleNestedChange("skills", skill, v)} color={isRoteSkill ? "amber" : "zinc"} onLabelClick={() => openDicePopup('skill', skill)} />
                                             </div>
                                         );
                                     })}
@@ -1458,11 +1452,8 @@ export const CharacterPanel = ({
                                         const currentOrder = isMage ? getValue("order") : null;
                                         const isRoteSkill = currentOrder && ORDER_ROTE_SKILLS[currentOrder]?.includes(skill);
                                         return (
-                                            <div key={skill} className="flex items-center gap-1">
-                                                {isRoteSkill && <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" title="Order Rote Skill" />}
-                                                <div className="flex-1">
-                                                    <StatRow label={skill} value={getNestedValue("skills", skill)} max={5} onChange={(v) => handleNestedChange("skills", skill, v)} color={isRoteSkill ? "amber" : "zinc"} onLabelClick={() => openDicePopup('skill', skill)} />
-                                                </div>
+                                            <div key={skill}>
+                                                <StatRow label={skill} value={getNestedValue("skills", skill)} max={5} onChange={(v) => handleNestedChange("skills", skill, v)} color={isRoteSkill ? "amber" : "zinc"} onLabelClick={() => openDicePopup('skill', skill)} />
                                             </div>
                                         );
                                     })}

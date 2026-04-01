@@ -82,7 +82,7 @@ export const StatRow = ({ label, value, max, onChange, color, onLabelClick }) =>
     <div className="flex items-center justify-between py-0.5 group">
         <button 
             onClick={onLabelClick}
-            className="text-xs text-zinc-400 capitalize truncate hover:text-teal-300 transition-colors cursor-pointer flex items-center gap-1"
+            className={`text-xs capitalize truncate hover:text-teal-300 transition-colors cursor-pointer flex items-center gap-1 ${color === "amber" ? "text-amber-400" : "text-zinc-400"}`}
             data-testid={`stat-${label.replace(/_/g, '-')}-label`}
         >
             <Dices className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 text-teal-500 transition-opacity" />
