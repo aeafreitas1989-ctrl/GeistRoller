@@ -64,6 +64,12 @@ A digital character sheet and dice roller for the Geist: The Sin-Eaters tabletop
 - Dice rolling mechanics
 - Campaign tracking
 - Merit adding (bug fixed Jan 2026)
+- **Mage character template (Jan 2026)**
+  - Character type selector (Sin-Eater/Mage)
+  - Character type badge next to dropdown
+  - Conditional section rendering
+  - Gnosis & Resources (Gnosis, Nimbus, Mana)
+  - Arcana, Spells & Attainments (10 Arcana, Rotes, Praxes, auto Attainments)
 
 ### P1 (Backlog)
 - Export/import character data
