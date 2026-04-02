@@ -115,6 +115,9 @@ export const SpellcastingPopup = ({
     const [activeYantras, setActiveYantras] = useState(new Set());
     const [yantraValues, setYantraValues] = useState({});
 
+    // Primary factor state (default: potency)
+    const [primaryFactor, setPrimaryFactor] = useState("potency");
+
     // Reset when popup opens
     useEffect(() => {
         if (isOpen) {
@@ -132,6 +135,7 @@ export const SpellcastingPopup = ({
             setManaMitigation(0);
             setActiveYantras(new Set());
             setYantraValues({});
+            setPrimaryFactor("potency");
         }
     }, [isOpen, arcanum, initialPractice]);
 
@@ -149,18 +153,24 @@ export const SpellcastingPopup = ({
     const freeReach = selectedPractice ? Math.max(0, arcanumDots - practiceDots + 1) : 0;
     const advancedReachUsed = Object.values(factors).filter(f => f.advanced).length;
     const indefiniteReach = (factors.duration.advanced && factors.duration.level === 6) ? 1 : 0;
-    const totalReachUsed = advancedReachUsed + indefiniteReach;
+    const changePrimaryReach = primaryFactor !== "potency" ? 1 : 0;
+    const totalReachUsed = advancedReachUsed + indefiniteReach + changePrimaryReach;
     const reachRemaining = freeReach - totalReachUsed;
 
-    // Dice penalty from factor levels
+    // Primary factor gives free levels = arcanumDots - 1
+    const primaryFreeLevels = Math.max(0, arcanumDots - 1);
+
+    // Dice penalty from factor levels (accounting for primary free levels)
     const calculatePenalty = () => {
         let penalty = 0;
-        penalty += (factors.potency.level - 1) * -2;
+        const potencyPaid = Math.max(0, factors.potency.level - 1 - (primaryFactor === "potency" ? primaryFreeLevels : 0));
+        penalty += potencyPaid * -2;
         if (!factors.duration.advanced && factors.duration.level > 5) {
             penalty += (factors.duration.level - 5) * -2;
         }
         if (factors.duration.advanced) {
-            penalty += (factors.duration.level - 1) * -2;
+            const durationPaid = Math.max(0, factors.duration.level - 1 - (primaryFactor === "duration" ? primaryFreeLevels : 0));
+            penalty += durationPaid * -2;
         }
         penalty += (factors.scale.level - 1) * -2;
         return penalty;
@@ -313,6 +323,9 @@ export const SpellcastingPopup = ({
         const f = factors[factorName];
         const isRange = factorName === "range";
         const isCasting = factorName === "casting";
+        const hasPrimary = factorName === "potency" || factorName === "duration";
+        const isPrimary = hasPrimary && primaryFactor === factorName;
+        const freeLevelsFromPrimary = isPrimary ? primaryFreeLevels : 0;
 
         let description = "";
         if (isCasting) {
@@ -324,9 +337,27 @@ export const SpellcastingPopup = ({
             description = levels?.[f.level - 1]?.label || "";
         }
 
+        const paidLevels = hasLevels ? Math.max(0, f.level - 1 - freeLevelsFromPrimary) : 0;
+
         return (
-            <div key={factorName} className="grid grid-cols-[130px,60px,60px,60px,1fr] gap-2 items-center p-2 bg-zinc-800/30 rounded text-sm">
-                <span className="text-zinc-300">{label}</span>
+            <div key={factorName} className="grid grid-cols-[20px,120px,50px,50px,50px,1fr] gap-1.5 items-center p-2 bg-zinc-800/30 rounded text-sm">
+                {hasPrimary ? (
+                    <Checkbox
+                        checked={isPrimary}
+                        onCheckedChange={(checked) => {
+                            if (checked) setPrimaryFactor(factorName);
+                            else setPrimaryFactor("potency");
+                        }}
+                        className="border-zinc-600 data-[state=checked]:bg-teal-600 h-3.5 w-3.5"
+                        data-testid={`primary-${factorName}`}
+                    />
+                ) : (
+                    <span />
+                )}
+                <span className="text-zinc-300 text-xs">
+                    {label}
+                    {isPrimary && <span className="text-teal-400 text-[9px] ml-1">P</span>}
+                </span>
                 <div className="flex justify-center">
                     <Checkbox
                         checked={!f.advanced}
@@ -359,7 +390,8 @@ export const SpellcastingPopup = ({
                 <span className="text-xs text-zinc-400 truncate">
                     {description}
                     {f.advanced && <span className="text-amber-400 ml-1">(+1R)</span>}
-                    {hasLevels && f.level > 1 && <span className="text-red-400 ml-1">(-{(f.level - 1) * 2}d)</span>}
+                    {hasLevels && paidLevels > 0 && <span className="text-red-400 ml-1">(-{paidLevels * 2}d)</span>}
+                    {hasLevels && freeLevelsFromPrimary > 0 && f.level > 1 && <span className="text-teal-400 ml-1">(+{Math.min(freeLevelsFromPrimary, f.level - 1)}free)</span>}
                 </span>
             </div>
         );

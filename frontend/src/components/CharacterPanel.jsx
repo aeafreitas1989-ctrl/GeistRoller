@@ -3063,43 +3063,91 @@ export const CharacterPanel = ({
                                         </div>
                                     </div>
 
-                                    {/* Attainments (auto-calculated from Arcana) */}
+                                    {/* Attainments (reworked: buttons + named attainments) */}
                                     <div>
-                                        <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Attainments</p>
-                                        <div className="space-y-1">
-                                            {(() => {
-                                                const arcanaValues = getValue("arcana") || {};
-                                                const attainments = [];
-                                                ARCANA.forEach(arcanum => {
-                                                    const rating = arcanaValues[arcanum] || 0;
-                                                    for (let dot = 1; dot <= rating; dot++) {
-                                                        const attainment = MAGE_ATTAINMENTS[arcanum]?.[dot];
-                                                        if (attainment) {
-                                                            attainments.push({ arcanum, dot, ...attainment });
-                                                        }
+                                        <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-2">Attainments</p>
+                                        {(() => {
+                                            const arcanaValues = getValue("arcana") || {};
+                                            const arcanaWithDots = ARCANA.filter(a => (arcanaValues[a] || 0) >= 1);
+                                            const arcanaWith3 = ARCANA.filter(a => (arcanaValues[a] || 0) >= 3);
+                                            const namedAttainments = [];
+                                            ARCANA.forEach(arcanum => {
+                                                const rating = arcanaValues[arcanum] || 0;
+                                                for (let dot = 2; dot <= rating; dot++) {
+                                                    const att = MAGE_ATTAINMENTS[arcanum]?.[dot];
+                                                    if (att && !att.name.includes("Counterspell") && !att.name.includes("Targeted Summoning") && !att.name.includes("Armor") && !att.name.includes("Create Rote")) {
+                                                        namedAttainments.push({ arcanum, dot, ...att });
                                                     }
-                                                });
-                                                if (attainments.length === 0) {
-                                                    return <p className="text-[10px] text-zinc-600 italic">Gain Arcana dots to unlock attainments</p>;
                                                 }
-                                                return attainments.map((att, i) => (
-                                                    <TooltipProvider key={i}>
-                                                        <Tooltip>
-                                                            <TooltipTrigger asChild>
-                                                                <div className="flex items-start gap-2 text-xs cursor-help p-1 rounded hover:bg-zinc-800/50">
-                                                                    <span className="text-violet-400 font-mono shrink-0">{"●".repeat(att.dot)}</span>
-                                                                    <span className="text-zinc-500 shrink-0">{att.arcanum}:</span>
-                                                                    <span className="text-zinc-300">{att.name}</span>
-                                                                </div>
-                                                            </TooltipTrigger>
-                                                            <TooltipContent className="bg-zinc-900 border-zinc-700 max-w-xs">
-                                                                <p className="text-xs text-zinc-300">{att.description}</p>
-                                                            </TooltipContent>
-                                                        </Tooltip>
-                                                    </TooltipProvider>
-                                                ));
-                                            })()}
-                                        </div>
+                                            });
+                                            if (arcanaWithDots.length === 0) {
+                                                return <p className="text-[10px] text-zinc-600 italic">Gain Arcana dots to unlock attainments</p>;
+                                            }
+                                            return (
+                                                <div className="flex gap-4">
+                                                    <div className="space-y-1.5 shrink-0">
+                                                        <TooltipProvider>
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            const bestArcanum = arcanaWithDots.reduce((best, a) => (arcanaValues[a] || 0) > (arcanaValues[best] || 0) ? a : best, arcanaWithDots[0]);
+                                                                            if (onTriggerDiceRoll) onTriggerDiceRoll({ pool: (getValue("gnosis") || 1) + (arcanaValues[bestArcanum] || 0), label: `Counterspell (${arcanaWithDots.join(", ")})` });
+                                                                        }}
+                                                                        className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded border bg-violet-900/30 border-violet-500/40 text-violet-300 hover:bg-violet-800/40 transition-colors"
+                                                                        data-testid="counterspell-btn"
+                                                                    >
+                                                                        <Dices className="w-3 h-3" />
+                                                                        Counterspell
+                                                                    </button>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent className="bg-zinc-900 border-zinc-700 max-w-xs">
+                                                                    <p className="text-xs text-zinc-300">Counter spells of: {arcanaWithDots.join(", ")}. Roll Gnosis + Arcanum in a Clash of Wills.</p>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        </TooltipProvider>
+                                                        {arcanaWith3.length > 0 && (
+                                                            <TooltipProvider>
+                                                                <Tooltip>
+                                                                    <TooltipTrigger asChild>
+                                                                        <button
+                                                                            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded border bg-teal-900/30 border-teal-500/40 text-teal-300 hover:bg-teal-800/40 transition-colors"
+                                                                            data-testid="targeted-summoning-btn"
+                                                                        >
+                                                                            <Zap className="w-3 h-3" />
+                                                                            Targeted Summoning
+                                                                        </button>
+                                                                    </TooltipTrigger>
+                                                                    <TooltipContent className="bg-zinc-900 border-zinc-700 max-w-xs">
+                                                                        <p className="text-xs text-zinc-300">Summon Supernal beings with: {arcanaWith3.join(", ")}</p>
+                                                                    </TooltipContent>
+                                                                </Tooltip>
+                                                            </TooltipProvider>
+                                                        )}
+                                                    </div>
+                                                    {namedAttainments.length > 0 && (
+                                                        <div className="flex flex-wrap gap-1 flex-1 content-start">
+                                                            {namedAttainments.map((att, i) => (
+                                                                <TooltipProvider key={i}>
+                                                                    <Tooltip>
+                                                                        <TooltipTrigger asChild>
+                                                                            <span className="inline-flex items-center gap-1 px-2 py-1 text-[10px] rounded bg-zinc-800/50 border border-zinc-700/50 text-zinc-300 cursor-help">
+                                                                                <span className="text-violet-400 font-mono">{"●".repeat(att.dot)}</span>
+                                                                                {att.name.split(" / ")[0].replace(` ${att.arcanum}`, "").replace(" Armor", "")}
+                                                                            </span>
+                                                                        </TooltipTrigger>
+                                                                        <TooltipContent className="bg-zinc-900 border-zinc-700 max-w-xs">
+                                                                            <p className="text-xs font-medium text-violet-300">{att.arcanum} ({att.dot})</p>
+                                                                            <p className="text-xs text-zinc-300">{att.description}</p>
+                                                                        </TooltipContent>
+                                                                    </Tooltip>
+                                                                </TooltipProvider>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })()}
                                     </div>
                                 </>
                             ) : (
