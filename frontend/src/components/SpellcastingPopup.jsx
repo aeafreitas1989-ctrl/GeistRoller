@@ -113,6 +113,7 @@ export const SpellcastingPopup = ({
 
     // Yantras state
     const [activeYantras, setActiveYantras] = useState(new Set());
+    const [yantraValues, setYantraValues] = useState({});
 
     // Reset when popup opens
     useEffect(() => {
@@ -130,6 +131,7 @@ export const SpellcastingPopup = ({
             setPreviousParadoxRolls(0);
             setManaMitigation(0);
             setActiveYantras(new Set());
+            setYantraValues({});
         }
     }, [isOpen, arcanum, initialPractice]);
 
@@ -167,12 +169,16 @@ export const SpellcastingPopup = ({
 
     // Yantras calculation
     const hasDedicatedTool = activeYantras.has("Dedicated Tool");
+    const getYantraBonus = (yantra) => {
+        if (!yantra.variableBonus) return yantra.bonus;
+        return yantraValues[yantra.name] ?? yantra.bonus;
+    };
     const yantraBonus = useMemo(() => {
         return YANTRAS.reduce((sum, y) => {
             if (!activeYantras.has(y.name)) return sum;
-            return sum + y.bonus;
+            return sum + getYantraBonus(y);
         }, 0);
-    }, [activeYantras]);
+    }, [activeYantras, yantraValues]);
 
     // Dice pool
     const baseDicePool = gnosis + arcanumDots;
@@ -256,6 +262,22 @@ export const SpellcastingPopup = ({
             return next;
         });
     };
+
+    const adjustYantraValue = (name, delta) => {
+        const yantra = YANTRAS.find(y => y.name === name);
+        if (!yantra?.variableBonus || !activeYantras.has(name)) return;
+
+        setYantraValues(prev => {
+            const currentValue = prev[name] ?? yantra.bonus;
+            const nextValue = Math.max(
+                yantra.minBonus ?? yantra.bonus,
+                Math.min(yantra.maxBonus ?? yantra.bonus, currentValue + delta)
+            );
+            return { ...prev, [name]: nextValue };
+        });
+    };
+
+    const getYantraTestId = (name) => `yantra-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`;
 
     const handleCastSpell = () => {
         if (totalManaCost > 0 && currentMana < totalManaCost) return;
@@ -440,6 +462,9 @@ export const SpellcastingPopup = ({
                             {YANTRAS.map(yantra => {
                                 const isActive = activeYantras.has(yantra.name);
                                 const atMax = !isActive && activeYantras.size >= maxYantras;
+                                const currentBonus = getYantraBonus(yantra);
+                                const canDecrease = isActive && yantra.variableBonus && currentBonus > (yantra.minBonus ?? yantra.bonus);
+                                const canIncrease = isActive && yantra.variableBonus && currentBonus < (yantra.maxBonus ?? yantra.bonus);
                                 return (
                                     <div
                                         key={yantra.name}
@@ -448,7 +473,7 @@ export const SpellcastingPopup = ({
                                         } ${atMax ? "opacity-40 cursor-not-allowed" : ""}`}
                                         onClick={() => !atMax && toggleYantra(yantra.name)}
                                         title={yantra.description}
-                                        data-testid={`yantra-${yantra.name.toLowerCase().replace(/\s+/g, "-")}`}
+                                        data-testid={getYantraTestId(yantra.name)}
                                     >
                                         <Checkbox
                                             checked={isActive}
@@ -459,9 +484,35 @@ export const SpellcastingPopup = ({
                                         <span className={`flex-1 ${isActive ? "text-zinc-200" : "text-zinc-400"}`}>
                                             {yantra.name}
                                         </span>
-                                        <span className={`font-mono ${isActive ? "text-teal-400" : "text-zinc-600"}`}>
-                                            {yantra.bonus > 0 ? `+${yantra.bonus}` : "+0"}
-                                        </span>
+                                        {yantra.variableBonus ? (
+                                            <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-5 w-5 text-zinc-400"
+                                                    onClick={() => adjustYantraValue(yantra.name, -1)}
+                                                    disabled={!canDecrease}
+                                                >
+                                                    <Minus className="w-3 h-3" />
+                                                </Button>
+                                                <span className={`font-mono w-6 text-center ${isActive ? "text-teal-400" : "text-zinc-600"}`}>
+                                                    +{currentBonus}
+                                                </span>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-5 w-5 text-zinc-400"
+                                                    onClick={() => adjustYantraValue(yantra.name, 1)}
+                                                    disabled={!canIncrease}
+                                                >
+                                                    <Plus className="w-3 h-3" />
+                                                </Button>
+                                            </div>
+                                        ) : (
+                                            <span className={`font-mono ${isActive ? "text-teal-400" : "text-zinc-600"}`}>
+                                                {yantra.bonus > 0 ? `+${yantra.bonus}` : "+0"}
+                                            </span>
+                                        )}
                                     </div>
                                 );
                             })}

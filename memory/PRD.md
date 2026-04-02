@@ -39,7 +39,7 @@ A digital character sheet and dice roller for Chronicles of Darkness tabletop RP
   - Modifiers: Inured (+2), Sleeper Witnesses (+1 die, scale affects roll quality), Dedicated Tool (-2), Previous Rolls (+N cumulative)
   - **Mana Mitigation**: Spend Mana to remove Paradox dice (-1 per Mana), respects per-turn Mana limit
   - **Chance Die Rule**: If Paradox was ever triggered and Mana reduces pool to 0, rolls as Chance Die
-- **Yantras**: Selectable bonus dice tools (Dedicated Tool, Path/Order Tool, Mudra, High Speech, Concentration, Rote Skill Mudra, Demesne, Location, Supernal Verge, Sacraments, Persona, Sympathy), limited by Gnosis max yantras
+- **Yantras**: Selectable bonus dice tools (Dedicated Tool, Path/Order Tool, Mudra, High Speech, Concentration, Rote Skill Mudra, Demesne/Verge, Location, Sacrament (+1 to +3), Persona, Sympathy), limited by Gnosis max yantras
 - **Dice Roller Integration**: Cast Spell triggers the global floating Dice Roller with correct pool, label, and auto-roll; Roll Paradox button appears after spell roll if paradox exists
 
 ### Removed Features

@@ -2591,7 +2591,32 @@ export const CharacterPanel = ({
                                     {/* Health */}
                                     <div>
                                         <div className="flex items-center justify-between mb-1">
-                                            <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Health</label>
+                                            <div className="flex items-center gap-1.5">
+                                                <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Health</label>
+                                                {isMage && (
+                                                    <button
+                                                        onClick={() => {
+                                                            const currentMana = getValue("mana") || 0;
+                                                            if (currentMana < 3) return;
+                                                            const counts = getHealthCounts(healthBoxes);
+                                                            if (counts.lethal > 0) {
+                                                                counts.lethal -= 1;
+                                                            } else if (counts.bashing > 0) {
+                                                                counts.bashing -= 1;
+                                                            } else return;
+                                                            handleChange("mana", currentMana - 3);
+                                                            const updatedBoxes = buildHealthBoxes(counts, maxHealth);
+                                                            handleHealthBoxesChange(updatedBoxes);
+                                                        }}
+                                                        disabled={(getValue("mana") || 0) < 3 || (() => { const c = getHealthCounts(healthBoxes); return c.lethal + c.bashing === 0; })()}
+                                                        className="text-[9px] px-1.5 py-0.5 rounded bg-violet-900/30 text-violet-400 hover:bg-violet-800/40 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                                        title="Spend 3 Mana to heal 1 Lethal or Bashing"
+                                                        data-testid="pattern-restoration-btn"
+                                                    >
+                                                        Pattern Restoration
+                                                    </button>
+                                                )}
+                                            </div>
                                             <span className="text-[10px] text-zinc-600 font-mono" data-testid="health-count">{filledHealth}/{maxHealth}</span>
                                         </div>
                                         <div className="flex items-center gap-2">
@@ -2610,7 +2635,25 @@ export const CharacterPanel = ({
                                     {/* Willpower */}
                                     <div>
                                         <div className="flex items-center justify-between mb-1">
-                                            <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Willpower</label>
+                                            <div className="flex items-center gap-1.5">
+                                                <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Willpower</label>
+                                                <button
+                                                    onClick={() => {
+                                                        const current = getValue("willpower") || 0;
+                                                        const max = calculateWillpowerMax();
+                                                        if (current < max) handleChange("willpower", current + 1);
+                                                    }}
+                                                    disabled={(getValue("willpower") || 0) >= calculateWillpowerMax()}
+                                                    className="text-[9px] px-1.5 py-0.5 rounded bg-amber-900/30 text-amber-400 hover:bg-amber-800/40 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                                    data-testid="willpower-plus-btn"
+                                                >+1</button>
+                                                <button
+                                                    onClick={() => handleChange("willpower", calculateWillpowerMax())}
+                                                    disabled={(getValue("willpower") || 0) >= calculateWillpowerMax()}
+                                                    className="text-[9px] px-1.5 py-0.5 rounded bg-amber-900/30 text-amber-400 hover:bg-amber-800/40 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                                    data-testid="willpower-full-btn"
+                                                >Full</button>
+                                            </div>
                                             <span className="text-[10px] text-zinc-600 font-mono">{getValue("willpower") || 0}/{calculateWillpowerMax()}</span>
                                         </div>
                                         <ResourceTrack current={getValue("willpower") || 0} max={calculateWillpowerMax()} onChange={(v) => handleChange("willpower", v)} color="amber" testIdPrefix="willpower" />
@@ -2619,7 +2662,40 @@ export const CharacterPanel = ({
                                     {/* Mana for Mages */}
                                     <div>
                                         <div className="flex items-center justify-between mb-1">
-                                            <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Mana</label>
+                                            <div className="flex items-center gap-1.5">
+                                                <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Mana</label>
+                                                <button
+                                                    onClick={() => {
+                                                        const counts = getHealthCounts(healthBoxes);
+                                                        counts.lethal += 1;
+                                                        const totalAfter = counts.aggravated + counts.lethal + counts.bashing;
+                                                        if (totalAfter > maxHealth) {
+                                                            if (counts.bashing > 0) { counts.bashing -= 1; counts.lethal += 0; }
+                                                        }
+                                                        const updatedBoxes = buildHealthBoxes(counts, maxHealth);
+                                                        handleHealthBoxesChange(updatedBoxes);
+                                                        const gnosisLevel = getValue("gnosis") || 1;
+                                                        const gd = GNOSIS_TABLE[gnosisLevel] || GNOSIS_TABLE[1];
+                                                        const currentMana = getValue("mana") || 0;
+                                                        handleChange("mana", Math.min(gd.maxMana, currentMana + 3));
+                                                    }}
+                                                    className="text-[9px] px-1.5 py-0.5 rounded bg-red-900/30 text-red-400 hover:bg-red-800/40 transition-colors"
+                                                    title="Deal 1 Lethal damage, gain 3 Mana"
+                                                    data-testid="pattern-scourge-btn"
+                                                >Pattern Scourge</button>
+                                                <button
+                                                    onClick={() => {
+                                                        const gnosisLevel = getValue("gnosis") || 1;
+                                                        const gd = GNOSIS_TABLE[gnosisLevel] || GNOSIS_TABLE[1];
+                                                        const currentMana = getValue("mana") || 0;
+                                                        handleChange("mana", Math.min(gd.maxMana, currentMana + 1));
+                                                    }}
+                                                    disabled={(() => { const gl = getValue("gnosis") || 1; const gd = GNOSIS_TABLE[gl] || GNOSIS_TABLE[1]; return (getValue("mana") || 0) >= gd.maxMana; })()}
+                                                    className="text-[9px] px-1.5 py-0.5 rounded bg-violet-900/30 text-violet-400 hover:bg-violet-800/40 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                                    title="Gain 1 Mana from Hallow"
+                                                    data-testid="hallow-btn"
+                                                >Hallow</button>
+                                            </div>
                                             <div className="flex items-center gap-2">
                                                 {(() => {
                                                     const gnosisLevel = getValue("gnosis") || 1;
@@ -2872,84 +2948,59 @@ export const CharacterPanel = ({
                                             {(getValue("rotes") || []).length === 0 ? (
                                                 <p className="text-[10px] text-zinc-600 italic">No rotes learned</p>
                                             ) : (
-                                                (getValue("rotes") || []).map((rote, index) => (
-                                                    <div key={index} className="p-2 bg-zinc-900/30 border border-zinc-800 rounded-sm space-y-2">
-                                                        <div className="flex items-center justify-between">
-                                                            <Input
-                                                                value={rote.spell || ""}
-                                                                onChange={(e) => {
-                                                                    const rotes = [...(getValue("rotes") || [])];
-                                                                    rotes[index] = { ...rotes[index], spell: e.target.value };
-                                                                    handleChange("rotes", rotes);
-                                                                }}
-                                                                placeholder="Spell name"
-                                                                className="input-geist h-7 text-xs flex-1 mr-2"
-                                                                data-testid={`rote-${index}-spell`}
-                                                            />
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                onClick={() => openSpellcastingPopup(rote.arcanum, null, "rote", rote.skill)}
-                                                                className="h-7 px-2 text-[10px] text-violet-400 hover:text-violet-300 hover:bg-violet-900/30"
-                                                                data-testid={`rote-${index}-cast`}
-                                                            >
-                                                                <Sparkles className="w-3 h-3 mr-1" /> Cast
-                                                            </Button>
-                                                            <Button 
-                                                                variant="ghost" 
-                                                                size="sm" 
-                                                                onClick={() => {
-                                                                    const rotes = (getValue("rotes") || []).filter((_, i) => i !== index);
-                                                                    handleChange("rotes", rotes);
-                                                                }}
-                                                                className="h-7 w-7 text-zinc-400 hover:text-red-400"
-                                                                data-testid={`rote-${index}-delete`}
-                                                            >
-                                                                <Trash2 className="w-3 h-3" />
-                                                            </Button>
-                                                        </div>
-                                                        <div className="grid grid-cols-3 gap-2">
-                                                            <Select value={rote.arcanum || "Death"} onValueChange={(v) => {
+                                                (getValue("rotes") || []).map((rote, index) => {
+                                                    const currentOrder = getValue("order");
+                                                    const roteIsOrderSkill = currentOrder && (ORDER_ROTE_SKILLS[currentOrder] || []).includes(rote.skill);
+                                                    return (
+                                                    <div key={index} className="flex items-center gap-1.5 p-1.5 bg-zinc-900/30 border border-zinc-800 rounded-sm">
+                                                        <Input
+                                                            value={rote.spell || ""}
+                                                            onChange={(e) => {
                                                                 const rotes = [...(getValue("rotes") || [])];
-                                                                rotes[index] = { ...rotes[index], arcanum: v };
+                                                                rotes[index] = { ...rotes[index], spell: e.target.value };
                                                                 handleChange("rotes", rotes);
-                                                            }}>
-                                                                <SelectTrigger className="h-7 bg-zinc-900/50 border-zinc-800 text-xs" data-testid={`rote-${index}-arcanum`}>
-                                                                    <SelectValue />
-                                                                </SelectTrigger>
-                                                                <SelectContent className="bg-zinc-900 border-zinc-800">
-                                                                    {ARCANA.map(a => <SelectItem key={a} value={a} className="text-xs">{a}</SelectItem>)}
-                                                                </SelectContent>
-                                                            </Select>
-                                                            <div className="flex items-center justify-center">
-                                                                <StatDots 
-                                                                    value={rote.dots || 1} 
-                                                                    max={5} 
-                                                                    onChange={(v) => {
-                                                                        const rotes = [...(getValue("rotes") || [])];
-                                                                        rotes[index] = { ...rotes[index], dots: v };
-                                                                        handleChange("rotes", rotes);
-                                                                    }} 
-                                                                    color="violet" 
-                                                                    size="small" 
-                                                                    testIdPrefix={`rote-${index}-dots`} 
-                                                                />
-                                                            </div>
-                                                            <Select value={rote.skill || "occult"} onValueChange={(v) => {
-                                                                const rotes = [...(getValue("rotes") || [])];
-                                                                rotes[index] = { ...rotes[index], skill: v };
-                                                                handleChange("rotes", rotes);
-                                                            }}>
-                                                                <SelectTrigger className="h-7 bg-zinc-900/50 border-zinc-800 text-xs" data-testid={`rote-${index}-skill`}>
-                                                                    <SelectValue />
-                                                                </SelectTrigger>
-                                                                <SelectContent className="bg-zinc-900 border-zinc-800 max-h-[200px]">
-                                                                    {SKILL_LIST.map(s => <SelectItem key={s} value={s} className="text-xs capitalize">{formatLabel(s)}</SelectItem>)}
-                                                                </SelectContent>
-                                                            </Select>
-                                                        </div>
+                                                            }}
+                                                            placeholder="Spell"
+                                                            className="input-geist h-6 text-xs flex-1 min-w-0"
+                                                            data-testid={`rote-${index}-spell`}
+                                                        />
+                                                        <Select value={rote.arcanum || "Death"} onValueChange={(v) => {
+                                                            const rotes = [...(getValue("rotes") || [])];
+                                                            rotes[index] = { ...rotes[index], arcanum: v };
+                                                            handleChange("rotes", rotes);
+                                                        }}>
+                                                            <SelectTrigger className="h-6 w-[80px] bg-zinc-900/50 border-zinc-800 text-[10px] shrink-0" data-testid={`rote-${index}-arcanum`}>
+                                                                <SelectValue />
+                                                            </SelectTrigger>
+                                                            <SelectContent className="bg-zinc-900 border-zinc-800">
+                                                                {ARCANA.map(a => <SelectItem key={a} value={a} className="text-xs">{a}</SelectItem>)}
+                                                            </SelectContent>
+                                                        </Select>
+                                                        <StatDots value={rote.dots || 1} max={5} onChange={(v) => { const rotes = [...(getValue("rotes") || [])]; rotes[index] = { ...rotes[index], dots: v }; handleChange("rotes", rotes); }} color="violet" size="small" testIdPrefix={`rote-${index}-dots`} />
+                                                        <Select value={rote.skill || "occult"} onValueChange={(v) => {
+                                                            const rotes = [...(getValue("rotes") || [])];
+                                                            rotes[index] = { ...rotes[index], skill: v };
+                                                            handleChange("rotes", rotes);
+                                                        }}>
+                                                            <SelectTrigger className={`h-6 w-[90px] bg-zinc-900/50 border-zinc-800 text-[10px] shrink-0 ${roteIsOrderSkill ? "text-amber-400" : ""}`} data-testid={`rote-${index}-skill`}>
+                                                                <SelectValue />
+                                                            </SelectTrigger>
+                                                            <SelectContent className="bg-zinc-900 border-zinc-800 max-h-[200px]">
+                                                                {SKILL_LIST.map(s => {
+                                                                    const sIsOrder = currentOrder && (ORDER_ROTE_SKILLS[currentOrder] || []).includes(s);
+                                                                    return <SelectItem key={s} value={s} className={`text-xs capitalize ${sIsOrder ? "text-amber-400" : ""}`}>{formatLabel(s)}</SelectItem>;
+                                                                })}
+                                                            </SelectContent>
+                                                        </Select>
+                                                        <Button variant="ghost" size="sm" onClick={() => openSpellcastingPopup(rote.arcanum, null, "rote", rote.skill)} className="h-6 px-1.5 text-[10px] text-violet-400 hover:text-violet-300 shrink-0" data-testid={`rote-${index}-cast`}>
+                                                            <Sparkles className="w-3 h-3" />
+                                                        </Button>
+                                                        <Button variant="ghost" size="sm" onClick={() => { const rotes = (getValue("rotes") || []).filter((_, i) => i !== index); handleChange("rotes", rotes); }} className="h-6 w-6 text-zinc-400 hover:text-red-400 shrink-0" data-testid={`rote-${index}-delete`}>
+                                                            <Trash2 className="w-3 h-3" />
+                                                        </Button>
                                                     </div>
-                                                ))
+                                                    );
+                                                })
                                             )}
                                         </div>
                                     </div>
@@ -2975,69 +3026,37 @@ export const CharacterPanel = ({
                                                 <p className="text-[10px] text-zinc-600 italic">No praxes learned</p>
                                             ) : (
                                                 (getValue("praxes") || []).map((praxis, index) => (
-                                                    <div key={index} className="p-2 bg-zinc-900/30 border border-zinc-800 rounded-sm space-y-2">
-                                                        <div className="flex items-center justify-between">
-                                                            <Input
-                                                                value={praxis.spell || ""}
-                                                                onChange={(e) => {
-                                                                    const praxes = [...(getValue("praxes") || [])];
-                                                                    praxes[index] = { ...praxes[index], spell: e.target.value };
-                                                                    handleChange("praxes", praxes);
-                                                                }}
-                                                                placeholder="Spell name"
-                                                                className="input-geist h-7 text-xs flex-1 mr-2"
-                                                                data-testid={`praxis-${index}-spell`}
-                                                            />
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                onClick={() => openSpellcastingPopup(praxis.arcanum, null, "praxis")}
-                                                                className="h-7 px-2 text-[10px] text-teal-400 hover:text-teal-300 hover:bg-teal-900/30"
-                                                                data-testid={`praxis-${index}-cast`}
-                                                            >
-                                                                <Sparkles className="w-3 h-3 mr-1" /> Cast
-                                                            </Button>
-                                                            <Button 
-                                                                variant="ghost" 
-                                                                size="sm" 
-                                                                onClick={() => {
-                                                                    const praxes = (getValue("praxes") || []).filter((_, i) => i !== index);
-                                                                    handleChange("praxes", praxes);
-                                                                }}
-                                                                className="h-7 w-7 text-zinc-400 hover:text-red-400"
-                                                                data-testid={`praxis-${index}-delete`}
-                                                            >
-                                                                <Trash2 className="w-3 h-3" />
-                                                            </Button>
-                                                        </div>
-                                                        <div className="grid grid-cols-2 gap-2">
-                                                            <Select value={praxis.arcanum || "Death"} onValueChange={(v) => {
+                                                    <div key={index} className="flex items-center gap-1.5 p-1.5 bg-zinc-900/30 border border-zinc-800 rounded-sm">
+                                                        <Input
+                                                            value={praxis.spell || ""}
+                                                            onChange={(e) => {
                                                                 const praxes = [...(getValue("praxes") || [])];
-                                                                praxes[index] = { ...praxes[index], arcanum: v };
+                                                                praxes[index] = { ...praxes[index], spell: e.target.value };
                                                                 handleChange("praxes", praxes);
-                                                            }}>
-                                                                <SelectTrigger className="h-7 bg-zinc-900/50 border-zinc-800 text-xs" data-testid={`praxis-${index}-arcanum`}>
-                                                                    <SelectValue />
-                                                                </SelectTrigger>
-                                                                <SelectContent className="bg-zinc-900 border-zinc-800">
-                                                                    {ARCANA.map(a => <SelectItem key={a} value={a} className="text-xs">{a}</SelectItem>)}
-                                                                </SelectContent>
-                                                            </Select>
-                                                            <div className="flex items-center justify-center">
-                                                                <StatDots 
-                                                                    value={praxis.dots || 1} 
-                                                                    max={5} 
-                                                                    onChange={(v) => {
-                                                                        const praxes = [...(getValue("praxes") || [])];
-                                                                        praxes[index] = { ...praxes[index], dots: v };
-                                                                        handleChange("praxes", praxes);
-                                                                    }} 
-                                                                    color="violet" 
-                                                                    size="small" 
-                                                                    testIdPrefix={`praxis-${index}-dots`} 
-                                                                />
-                                                            </div>
-                                                        </div>
+                                                            }}
+                                                            placeholder="Spell"
+                                                            className="input-geist h-6 text-xs flex-1 min-w-0"
+                                                            data-testid={`praxis-${index}-spell`}
+                                                        />
+                                                        <Select value={praxis.arcanum || "Death"} onValueChange={(v) => {
+                                                            const praxes = [...(getValue("praxes") || [])];
+                                                            praxes[index] = { ...praxes[index], arcanum: v };
+                                                            handleChange("praxes", praxes);
+                                                        }}>
+                                                            <SelectTrigger className="h-6 w-[80px] bg-zinc-900/50 border-zinc-800 text-[10px] shrink-0" data-testid={`praxis-${index}-arcanum`}>
+                                                                <SelectValue />
+                                                            </SelectTrigger>
+                                                            <SelectContent className="bg-zinc-900 border-zinc-800">
+                                                                {ARCANA.map(a => <SelectItem key={a} value={a} className="text-xs">{a}</SelectItem>)}
+                                                            </SelectContent>
+                                                        </Select>
+                                                        <StatDots value={praxis.dots || 1} max={5} onChange={(v) => { const praxes = [...(getValue("praxes") || [])]; praxes[index] = { ...praxes[index], dots: v }; handleChange("praxes", praxes); }} color="violet" size="small" testIdPrefix={`praxis-${index}-dots`} />
+                                                        <Button variant="ghost" size="sm" onClick={() => openSpellcastingPopup(praxis.arcanum, null, "praxis")} className="h-6 px-1.5 text-[10px] text-teal-400 hover:text-teal-300 shrink-0" data-testid={`praxis-${index}-cast`}>
+                                                            <Sparkles className="w-3 h-3" />
+                                                        </Button>
+                                                        <Button variant="ghost" size="sm" onClick={() => { const praxes = (getValue("praxes") || []).filter((_, i) => i !== index); handleChange("praxes", praxes); }} className="h-6 w-6 text-zinc-400 hover:text-red-400 shrink-0" data-testid={`praxis-${index}-delete`}>
+                                                            <Trash2 className="w-3 h-3" />
+                                                        </Button>
                                                     </div>
                                                 ))
                                             )}
