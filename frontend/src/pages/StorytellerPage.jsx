@@ -4,9 +4,8 @@ import { CharacterPanel } from "@/components/CharacterPanel";
 import { GameCardsPanel } from "@/components/GameCardsPanel";
 import { CampaignPanel } from "@/components/CampaignPanel";
 import { DiceRoller } from "@/components/DiceRoller";
-import { Menu, Users, X, BookOpen, BookMarked } from "lucide-react";
+import { Menu, X, BookMarked } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import axios from "axios";
 import { toast } from "sonner";
 
@@ -349,84 +348,53 @@ export const StorytellerPage = () => {
                 </div>
             </div>
 
-            {/* Main Content - Character Sheet with Tabs */}
-            <div className="main-content flex items-stretch justify-center">
-                <div className="w-full max-w-4xl h-full flex flex-col">
-                    <Tabs defaultValue="character" className="h-full flex flex-col">
-                        <TabsList className="w-full rounded-none border-b border-zinc-800 bg-zinc-950/50 p-0 shrink-0">
-                            <TabsTrigger 
-                                value="character" 
-                                className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-teal-500 data-[state=active]:bg-transparent py-4 font-mono text-sm uppercase tracking-wider"
-                                data-testid="tab-character-sheet"
-                            >
-                                <Users className="w-4 h-4 mr-2" />
-                                Character
-                            </TabsTrigger>
-                            <TabsTrigger 
-                                value="cards" 
-                                className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-teal-500 data-[state=active]:bg-transparent py-4 font-mono text-sm uppercase tracking-wider"
-                                data-testid="tab-game-cards"
-                            >
-                                <BookOpen className="w-4 h-4 mr-2" />
-                                Cards
-                            </TabsTrigger>
-                            <TabsTrigger 
-                                value="campaign" 
-                                className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-purple-500 data-[state=active]:bg-transparent py-4 font-mono text-sm uppercase tracking-wider"
-                                data-testid="tab-campaign"
-                            >
-                                <BookMarked className="w-4 h-4 mr-2" />
-                                Campaign
-                            </TabsTrigger>
-                        </TabsList>
-                        <TabsContent value="character" className="flex-1 mt-0 overflow-hidden">
-                            <CharacterPanel
-                                characters={characters}
-                                activeCharacter={activeCharacter}
-                                onSelectCharacter={setActiveCharacter}
-                                onCreateCharacter={createCharacter}
-                                onUpdateCharacter={updateCharacter}
-                                onDeleteCharacter={deleteCharacter}
-                                onTriggerDiceRoll={triggerDiceRoll}
-                            />
-                        </TabsContent>
-                        <TabsContent value="cards" className="flex-1 mt-0 overflow-hidden">
-                            <GameCardsPanel
-                                session={activeSession}
-                                activeCharacter={activeCharacter}
-                                activeConditions={activeCharacter?.conditions || []}
-                                haunts={activeCharacter?.haunts || {}}
-                                keys={activeCharacter?.keys || []}
-                                onAddCondition={addCondition}
-                                onRemoveCondition={removeCondition}
-                                onResolveCondition={resolveCondition}
-                                onUpdateCondition={updateCondition}
-                                onUpdateHaunt={updateHaunt}
-                                onToggleKey={toggleKey}
-                                onUpdatePlacesPeople={updatePlacesPeople}
-                            />
-                        </TabsContent>
-                        <TabsContent value="campaign" className="flex-1 mt-0 overflow-hidden">
-                            {activeCampaign ? (
-                                <CampaignPanel
-                                    campaign={activeCampaign}
-                                    onUpdateCampaign={updateCampaign}
-                                    activeSession={activeSession}
-                                    isGeneratingJournal={false}
+            {/* Main Content - Character and Cards always visible */}
+            <div className="main-content overflow-y-auto">
+                <div className="w-full max-w-7xl mx-auto min-h-full flex flex-col">
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-0 flex-1 min-h-0">
+                        <section className="min-h-0 border-b xl:border-b-0 xl:border-r border-zinc-800">
+                            <div className="px-4 py-3 border-b border-zinc-800 bg-zinc-950/50">
+                                <h2 className="font-mono text-sm uppercase tracking-wider text-zinc-400">
+                                    Character
+                                </h2>
+                            </div>
+                            <div className="h-[calc(100vh-57px)] xl:h-full overflow-hidden">
+                                <CharacterPanel
+                                    characters={characters}
+                                    activeCharacter={activeCharacter}
+                                    onSelectCharacter={setActiveCharacter}
+                                    onCreateCharacter={createCharacter}
+                                    onUpdateCharacter={updateCharacter}
+                                    onDeleteCharacter={deleteCharacter}
+                                    onTriggerDiceRoll={triggerDiceRoll}
                                 />
-                            ) : (
-                                <div className="h-full flex items-center justify-center text-center p-8">
-                                    <div>
-                                        <BookMarked className="w-16 h-16 text-zinc-700 mx-auto mb-4" />
-                                        <h3 className="font-heading text-xl text-zinc-400 mb-2">No Campaign Selected</h3>
-                                        <p className="text-zinc-600 max-w-md">
-                                            Create a new campaign or select a session that belongs to a campaign to view campaign details.
-                                        </p>
-                                    </div>
-                                </div>
-                            )}
-                        </TabsContent>
-                    </Tabs>
+                            </div>
+                        </section>
+
+                        <section className="min-h-0">
+                            <div className="px-4 py-3 border-b border-zinc-800 bg-zinc-950/50">
+                                <h2 className="font-mono text-sm uppercase tracking-wider text-zinc-400">
+                                    Cards
+                                </h2>
+                            </div>
+                            <div className="h-[calc(100vh-57px)] xl:h-full overflow-hidden">
+                                <GameCardsPanel
+                                    session={activeSession}
+                                    activeCharacter={activeCharacter}
+                                    activeConditions={activeCharacter?.conditions || []}
+                                    haunts={activeCharacter?.haunts || {}}
+                                    keys={activeCharacter?.keys || []}
+                                    onAddCondition={addCondition}
+                                    onRemoveCondition={removeCondition}
+                                    onResolveCondition={resolveCondition}
+                                    onUpdateCondition={updateCondition}
+                                    onUpdateHaunt={updateHaunt}
+                                    onToggleKey={toggleKey}
+                                    onUpdatePlacesPeople={updatePlacesPeople}
+                                />
+                            </div>
+                        </section>
+                    </div>
                 </div>
             </div>
 

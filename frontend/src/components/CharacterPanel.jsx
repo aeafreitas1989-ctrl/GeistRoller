@@ -95,6 +95,7 @@ export const CharacterPanel = ({
     const [showMeritDialog, setShowMeritDialog] = useState(false);
     const [newMeritName, setNewMeritName] = useState("");
     const [newMeritDots, setNewMeritDots] = useState(1);
+    const [newMeritSpecialty, setNewMeritSpecialty] = useState("");
     const [newSpecialty, setNewSpecialty] = useState("");
     const [inventoryAddOpen, setInventoryAddOpen] = useState(false);
     
@@ -719,12 +720,16 @@ export const CharacterPanel = ({
     const sheetHasSmallFramed = (meritsList || []).some((m) => (m?.name || "") === "Small-Framed");
     const effectiveSize = 5 + (sheetHasGiant ? 1 : 0) + (sheetHasSmallFramed ? -1 : 0);
     const sortedMeritsList = [...meritsList].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+    const selectedMeritDef = MERIT_LIST.find((m) => m.name === newMeritName);
     const addMerit = () => {
         if (newMeritName) {
             const meritToAdd = {
                 id: Date.now(),
                 name: newMeritName,
                 dots: newMeritDots,
+                ...(selectedMeritDef?.hasSpecialty
+                    ? { specialty: newMeritSpecialty.trim() }
+                    : {}),
                 ...(newMeritName === "Professional Training"
                     ? { assetSkills: ["__none__", "__none__", "__none__"] }
                     : {}),
@@ -733,10 +738,31 @@ export const CharacterPanel = ({
             let base = [...meritsList];
 
             // Prevent duplicates by name
-            const alreadyHas = base.some((m) => (m?.name || "") === newMeritName);
-            if (alreadyHas) {
-                toast.error("That Merit is already on the sheet.");
-                return;
+            const selectedMeritDefForDuplicate = MERIT_LIST.find((m) => m.name === newMeritName);
+
+            if (selectedMeritDefForDuplicate?.hasSpecialty) {
+                const specialtyKey = newMeritSpecialty.trim().toLowerCase();
+                if (!specialtyKey) {
+                    toast.error("This Merit needs a label.");
+                    return;
+                }
+
+                const alreadyHas = base.some(
+                    (m) =>
+                        (m?.name || "") === newMeritName &&
+                        (m?.specialty || "").trim().toLowerCase() === specialtyKey
+                );
+
+                if (alreadyHas) {
+                    toast.error("That Merit with the same label is already on the sheet.");
+                    return;
+                }
+            } else {
+                const alreadyHas = base.some((m) => (m?.name || "") === newMeritName);
+                if (alreadyHas) {
+                    toast.error("That Merit is already on the sheet.");
+                    return;
+                }
             }
 
             // Enforce mutual exclusion
@@ -753,6 +779,7 @@ export const CharacterPanel = ({
             handleChange("merits_list", newMerits);
             setNewMeritName("");
             setNewMeritDots(1);
+            setNewMeritSpecialty("");
             setShowMeritDialog(false);
         }
     };
@@ -1425,7 +1452,7 @@ export const CharacterPanel = ({
                                 isMage={isMage}
                                 meritsList={meritsList} sortedMeritsList={sortedMeritsList} deleteMerit={deleteMerit} updateMerit={updateMerit}
                                 showMeritDialog={showMeritDialog} setShowMeritDialog={setShowMeritDialog}
-                                newMeritName={newMeritName} setNewMeritName={setNewMeritName} newMeritDots={newMeritDots} setNewMeritDots={setNewMeritDots}
+                                newMeritName={newMeritName} setNewMeritName={setNewMeritName} newMeritDots={newMeritDots} setNewMeritDots={setNewMeritDots} newMeritSpecialty={newMeritSpecialty} setNewMeritSpecialty={setNewMeritSpecialty}
                                 addMerit={addMerit} openDicePopup={openDicePopup}
                                 selectedMerit={selectedMerit} minDotsForMerit={minDotsForMerit} maxDotsForMerit={maxDotsForMerit} isFixedDotMerit={isFixedDotMerit} getMeritDotDisplay={getMeritDotDisplay}
                                 ceremoniesList={ceremoniesList} sortedCeremoniesList={sortedCeremoniesList}

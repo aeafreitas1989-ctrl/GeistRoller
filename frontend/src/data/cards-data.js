@@ -296,6 +296,36 @@ export const MERIT_DEFINITIONS = {
     "Retribution": { category: "Geist", maxDots: 5, description: "When pursuing retribution for harm to someone you care about, gain bonuses: +2 to tracking, +1 damage on all-out attacks, Armor 2/0, apply target's Condition/Tilt to them." },
     "Supernatural Membership": { category: "Geist", maxDots: 5, description: "Your krewe has living members with exceptional abilities. Create characters with Supernatural Merit dots equal to twice the krewe's rating." },
     
+    // Mage Merits
+    "Adamant Hand": { category: "Mage", maxDots: 2, description: "Use a chosen combat Skill with 3+ dots as a reflexive Order tool Yantra for instant spells. May be purchased multiple times for different styles." },
+    "Artifact": { category: "Mage", maxDots: 10, description: "A Supernal item with its own Mana, effective Gnosis, Arcana, and magical effects. Not limited to 5 dots." },
+    "Astral Adept": { category: "Mage", maxDots: 3, description: "Enter the Astral Realms without a place of power by performing a personal ceremony and spending Willpower." },
+    "Between the Ticks": { category: "Mage", maxDots: 2, description: "Once per scene, trade 1 Initiative for 1 die on an action, or 1 die on an action for 1 Initiative." },
+    "Cabal Theme": { category: "Mage", maxDots: 1, description: "All cabal members with this Merit count as having +1 Shadow Name for persona Yantras." },
+    "Consilium/Order Status": { category: "Mage", maxDots: 5, description: "Status in a Consilium or Order Caucus, granting influence, protections, and access to magical requisitions." },
+    "Destiny": { category: "Mage", maxDots: 5, description: "Gain a pool of Destiny each chapter to grant rote quality or rerolls, balanced by an inescapable Doom." },
+    "Dream": { category: "Mage", maxDots: 5, description: "Once per chapter, ask prophetic yes-or-no questions through dreams after extended sleep or meditation." },
+    "Egregore": { category: "Mage", maxDots: 5, description: "Mysterium initiation into deeper communal magical practice and Order secrets." },
+    "Enhanced Item": { category: "Mage", maxDots: 10, description: "An item permanently enhanced by indefinite spells, with extra dots above 5 counting as half-dots for spell storage." },
+    "Familiar": { category: "Mage", maxDots: 4, description: "A bonded Rank 1 or Rank 2 ephemeral Familiar such as a ghost, spirit, or Goetia." },
+    "Fast Spells": { category: "Mage", maxDots: 2, description: "Targets cannot apply Defense against your Aimed Spells unless a power specifically allows it." },
+    "Grimoire": { category: "Mage", maxDots: 5, description: "A book of rotes; each dot contains two rotes and can grant rote quality when casting from it." },
+    "Hallow": { category: "Mage", maxDots: 5, description: "A magical site that produces Mana daily and stores it as tass if unharvested." },
+    "High Speech": { category: "Mage", maxDots: 1, description: "Allows the character to use High Speech as a Yantra." },
+    "Imbued Item": { category: "Mage", maxDots: 10, description: "An item that stores a triggered spell and Mana to cast it. Extra dots can add battery capacity." },
+    "Infamous Mentor": { category: "Mage", maxDots: 5, description: "A Mentor with major reputation whose standing can be leveraged for social influence and access." },
+    "Lex Magica": { category: "Mage", maxDots: 2, description: "Official Silver Ladder authority grants social protection and a Status-based Yantra for enforcing magical law." },
+    "Mana Sensitivity": { category: "Mage", maxDots: 1, description: "Hallows and stored Mana trigger Peripheral Mage Sight even without active spells." },
+    "Masque": { category: "Mage", maxDots: 5, description: "A Guardian persona with alternate traits, symbolism, ethics, and capabilities that improve by dot rating." },
+    "Mystery Cult Influence": { category: "Mage", maxDots: 5, description: "Influence over a Mystery Cult without being one of its subordinate members." },
+    "Occultation": { category: "Mage", maxDots: 3, description: "Mystically hides aura, Nimbus, and sympathetic traces, making the character harder to discern or target." },
+    "Potent Nimbus": { category: "Mage", maxDots: 2, description: "Your Nimbus has stronger effects and is easier to flare effectively." },
+    "Potent Resonance": { category: "Mage", maxDots: 2, description: "Those scrutinizing your Signature Nimbus are also affected by your Immediate Nimbus." },
+    "Prelacy": { category: "Mage", maxDots: 4, description: "A Seer's bond to an Exarch grants symbolic authority, magical benefits, and an expanding supernatural mandate." },
+    "Sanctum": { category: "Mage", maxDots: 5, description: "A secure magical refuge that improves spell control within its boundaries." },
+    "Shadow Name": { category: "Mage", maxDots: 3, description: "A powerful magical identity that serves as a persona Yantra and protects the mage's mundane identity." },
+    "Techne": { category: "Mage", maxDots: 2, description: "A chosen Free Council cultural or scientific focus counts as an Order tool and can enhance teamwork spellcasting." },
+
     // Social Merits
     "Allies": { category: "Social", maxDots: 5, description: "Allies help your character. Each instance represents one type of ally. Favors up to the Allies rating can be requested without penalty." },
     "Alternate Identity": { category: "Social", maxDots: 3, description: "Your character has established an alternate identity. The dot rating determines its robustness against scrutiny." },
@@ -347,10 +377,11 @@ export const MERIT_DEFINITIONS = {
     "Street Fighting": { category: "Fighting", maxDots: 5, description: "Style Merit for street combat. Duck and weave, knock wind out, kick while down." },
 };
 
-export const MERIT_CATEGORIES = ["Geist", "Social", "Mental", "Physical", "Fighting"];
+export const MERIT_CATEGORIES = ["Geist", "Mage", "Social", "Mental", "Physical", "Fighting"];
 
 export const MERIT_CATEGORY_COLORS = {
     "Geist": "bg-teal-900/50 border-teal-500/50 text-teal-300",
+    "Mage": "bg-indigo-900/50 border-indigo-500/50 text-indigo-300",
     "Social": "bg-pink-900/60 border-pink-500/60 text-pink-300",
     "Mental": "bg-blue-900/40 border-blue-500/40 text-blue-300",
     "Physical": "bg-amber-900/40 border-amber-500/40 text-amber-300",

@@ -72,7 +72,9 @@ export const MeritCard = ({ merit, index, onDelete, onUpdate, onRollPerception }
         <div className="bg-zinc-800/50 border border-zinc-700 rounded-sm p-2 relative group space-y-2">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    <span className="text-xs text-zinc-300">{merit.name}</span>
+                    <span className="text-xs text-zinc-300">
+    {merit.specialty ? `${merit.specialty} — ${merit.name}` : merit.name}
+</span>
                     <StatDots
                         value={merit.dots || 0}
                         max={5}

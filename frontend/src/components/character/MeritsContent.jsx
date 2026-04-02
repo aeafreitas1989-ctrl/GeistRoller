@@ -11,7 +11,9 @@ export const MeritsContent = ({
     isMage,
     meritsList, sortedMeritsList, deleteMerit, updateMerit,
     showMeritDialog, setShowMeritDialog,
-    newMeritName, setNewMeritName, newMeritDots, setNewMeritDots,
+    newMeritName, setNewMeritName,
+    newMeritDots, setNewMeritDots,
+    newMeritSpecialty, setNewMeritSpecialty,
     addMerit, openDicePopup,
     selectedMerit, minDotsForMerit, maxDotsForMerit, isFixedDotMerit, getMeritDotDisplay,
     ceremoniesList, sortedCeremoniesList,
@@ -35,6 +37,7 @@ export const MeritsContent = ({
                             </DialogHeader>
                             <Select value={newMeritName} onValueChange={(v) => {
                                 setNewMeritName(v);
+                                setNewMeritSpecialty("");
                                 const merit = MERIT_LIST.find(m => m.name === v);
                                 if (merit) {
                                     const min = merit.minDots || 1;
@@ -58,7 +61,24 @@ export const MeritsContent = ({
                                 </SelectContent>
                             </Select>
                             <div className="space-y-2">
-                                <Input value={newMeritName} onChange={(e) => setNewMeritName(e.target.value)} placeholder="Or enter custom merit name" className="input-geist" data-testid="custom-merit-name-input" />
+                                <Input
+                                    value={newMeritName}
+                                    onChange={(e) => setNewMeritName(e.target.value)}
+                                    placeholder="Or enter custom merit name"
+                                    className="input-geist"
+                                    data-testid="custom-merit-name-input"
+                                />
+
+                                {selectedMerit?.hasSpecialty && (
+                                    <Input
+                                        value={newMeritSpecialty}
+                                        onChange={(e) => setNewMeritSpecialty(e.target.value)}
+                                        placeholder={selectedMerit.specialtyPlaceholder || "Label"}
+                                        className="input-geist"
+                                        data-testid="merit-specialty-input"
+                                    />
+                                )}
+
                                 {!isFixedDotMerit && (
                                     <div className="flex items-center justify-between">
                                         <label className="text-sm text-zinc-400">Rating ({minDotsForMerit} to {maxDotsForMerit}):</label>
@@ -69,7 +89,14 @@ export const MeritsContent = ({
                                     <p className="text-xs text-zinc-500">This merit has a fixed rating of {maxDotsForMerit} dot{maxDotsForMerit > 1 ? 's' : ''}.</p>
                                 )}
                             </div>
-                            <Button onClick={addMerit} className="w-full btn-primary" disabled={!newMeritName} data-testid="add-merit-btn">Add Merit</Button>
+                            <Button
+                                onClick={addMerit}
+                                className="w-full btn-primary"
+                                disabled={!newMeritName || (selectedMerit?.hasSpecialty && !newMeritSpecialty.trim())}
+                                data-testid="add-merit-btn"
+                            >
+                                Add Merit
+                            </Button>
                         </DialogContent>
                     </Dialog>
                 </div>
