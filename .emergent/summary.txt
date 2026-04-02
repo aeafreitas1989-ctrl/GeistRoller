@@ -1,0 +1,126 @@
+<analysis>**original_problem_statement**: 
+Remove the AI part of the app. The app will now be a glorified Character Sheet with a dice roller. Keep Character, Cards and Campaign tabs visible. Introduce a comprehensive Mage: The Awakening character template alongside the existing Geist: The Sin-Eaters template. PRODUCT REQUIREMENTS: Manage complex Mage spellcasting rules (Factors, Reach, Paradox, Mana mitigation, Yantras, Rotes, Praxes, Mage Armor) and resource tracking.
+
+**User's preferred language**: English (INSTRUCT next agent to respond in English only)
+
+**what currently exists?** 
+A fully functional React + FastAPI + MongoDB TTRPG character sheet app supporting both Geist: The Sin-Eaters and Mage: The Awakening templates. It features a global floating dice roller, dynamic conditional UI rendering based on character type, specialized attribute trackers, auto-calculating derived stats, an advanced interactive Spellcasting Popup, a Paradox system with Mana mitigation, Mage Armor stat integration, integrated Yantras, clickable Rotes/Praxes, and 1-click resource modifiers.
+
+**Last working item**:
+    - **Last item agent was working**: The agent had just started the session, formulated a plan to tackle the pending Attainments Rework and CharacterPanel.jsx Refactor, and submitted this plan to the user via the  tool. The session ended while waiting for the user's response.
+    - **Status**: BLOCKED (Waiting for user response to )
+    - **Agent Testing Done**: N
+    - **Which testing method agent to use?** Frontend testing agent/screenshot tool
+    - **User Testing Done**: N
+
+**All Pending/In progress Issue list**:
+  - Issue 1: Finish Attainments Rework and Verify Primary Factor
+     - Attempted fixes: The previous fork agent added the Primary checkbox and free level math to , but this still needs visual verification to ensure it renders correctly. The Attainments UI rework in  has not been started.
+     - Next debug checklist: 
+       - Check  for correct rendering of  with the new Primary logic. 
+       - Modify  (around line 3066) to replace the mapped attainments list with the hardcoded two-column Attainments layout requested by the user.
+     - Why fix this issue and what will be achieved with the fix? It fulfills the user's latest explicit prompt requirement before moving to the major refactoring.
+     - Status: BLOCKED (Waiting on user response from  tool)
+     - Is recurring issue? N
+     - Should Test frontend/backend/both after fix? Frontend
+     - Blocked on other issue: None
+
+**In progress Task List**:
+  - Task 1: Refactor 
+     - Where to resume:  is currently over 3,500 lines. The user explicitly requested to refactor it.
+     - What will be achieved with this? Splitting the file into , , and smaller generic components to maintain readability, reduce React render overhead, and fix linter/context window issues.
+     - Status: NOT STARTED
+     - Should Test frontend/backend/both after fix? Frontend (Testing Agent v3 fork strongly recommended)
+     - Blocked on something: Needs the Attainments UI rework (Issue 1) to be completed first.
+
+**Upcoming and Future Tasks**
+    Upcoming Tasks:
+    - Add data export/import functionality for characters (P2)
+    
+    Future Tasks:
+    - Add storyteller/campaign management features for TTRPG session tracking (P3)
+
+**Completed work in this session**
+- List of all completed tasks with file and method name: None (Agent only executed  before fork ended).
+- Recently completed:
+  - Connected Spellcasting Popup to global DiceRoller (DONE)
+  - Added Paradox system with Mana mitigation and Chance Die mechanics (DONE)
+  - Added Yantras section to Spellcasting Popup (DONE)
+  - Added Mage Armor activation toggle, dynamic Defense, and general Armor bonuses (DONE)
+  - Styled Order Rote Skills (orange text) and applied automatic +1 Dice and +1 Order Skill bonus in popup (DONE)
+  - Implemented Exceptional Success on 3 successes for Praxes (backend + frontend) (DONE)
+  - Reworked Rotes/Praxes into single-line displays with inline Cast buttons (DONE)
+  - Added Mage Resource quick-actions (DONE)
+
+**Earlier issues found/mentioned but not fixed**
+None
+
+**Known issue recurrence from previous fork**
+  - Issue recurrence in previous fork: N/A
+  - Recurrence count: 0
+  - Status: RESOLVED
+
+**Code Architecture**
+
+
+**Key Technical Concepts**
+React (Frontend), Tailwind CSS (Styling), FastAPI (Backend), MongoDB (Database), TTRPG complex logic conditional rendering (state-heavy).
+
+**key DB schema**
+  - : 
+
+**changes in tech stack**
+  - None
+
+**All files of reference** 
+  -  (Target for immediate refactoring, heavily edited)
+  -  (Complex spell math, updated with Primary factors)
+  - 
+  - 
+  - 
+  - 
+
+**Areas that need refactoring**: 
+-  - EXTREMELY BLOATED (>3500 lines). Extract Mage and Geist specific sections into separate components immediately after finishing the Attainment UI tweaks.
+
+**key api endpoints**
+-  (Accepts  parameter)
+- 
+
+**Critical Info for New Agent**
+- **Testing Trap:** The frontend auto-selects the first character in the list on page load (which is usually a Geist). If you are using the screenshot tool to test Mage features, you **must** use the custom shadcn dropdown to select a Mage character (e.g., Samhain or Mage 2) first, otherwise, you will constantly see the Geist character sheet where Mage features are hidden.
+- **Refactoring Strategy:** Ensure you extract  and  carefully, passing down  and the  /  utility functions as props to avoid breaking the extensive two-way data binding.
+
+**documents and test reports created in this job**
+  - 
+  -  (From previous run)
+
+**Last 10 User Messages and any pending HUMAN messages** 
+ - *User*: First, rework the Attainments. Instead of a list, you can join all Counterspells as a button to roll. Same for Targeted Summoning. These two remain as a button on the left side. On the right side we get Eyes of the Dead, Precise Force and Permanence. Also, on the Spellcasting pop-up, I need a Primary box in front of Potency and of Duration. When checked, the relevant Factor gains free levels equal to Arcana -1. Also add a Change Primary Factor button, which costs 1 Reach. Then Refactor CharacterPanel.jsx (IN PROGRESS - Waiting on ask_human response)
+ 
+*(Note: Agent sent proposed plan via  and is awaiting the user's confirmation before executing).*
+
+**Project Health Check:**
+- Broken: None known, but  changes from the previous fork need visual verification.
+- Mocked: None
+
+**3rd Party Integrations** 
+- None (Removed by user previously)
+
+**Testing status**
+  - Testing agent used after significant changes: NO (Not in this specific fork yet)
+  - Troubleshoot agent used after agent stuck in loop: NO
+  - Test files created: None this session
+  - Known regressions: None
+
+**Credentials to test flow:**
+NA
+
+**What agent forgot to execute**
+The agent did not forget anything; it appropriately paused to wait for the user's response to the  tool regarding the implementation plan for the Attainments rework and  refactor. 
+
+**Debugging checklist for current issue**
+    Issue: Attainments layout rework & Primary Factor verification
+    Frontend files to check: 
+    -  (Check  for new primary factor checkboxes)
+    -  (Line ~3066: Remove the  over attainments and hardcode the requested Left/Right UI layout for Counterspell, Targeted Summoning, Eyes of the Dead, Precise Force, Permanence).</analysis>
