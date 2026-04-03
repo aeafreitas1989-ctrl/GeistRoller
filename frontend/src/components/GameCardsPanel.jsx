@@ -157,6 +157,8 @@ export const GameCardsPanel = ({
 
     const placesPeople = activeCharacter?.places_people || [];
     const sortedPlacesPeople = [...placesPeople].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+    const characterType = activeCharacter?.character_type || "geist";
+    const isMage = characterType === "mage";
 
     // Get character's merits with dots > 0
     const characterMerits = useMemo(() => {
@@ -481,133 +483,134 @@ export const GameCardsPanel = ({
                         </CollapsibleContent>
                     </Collapsible>
 
-                    <Collapsible
-                        open={openSections.haunts}
-                        onOpenChange={() => toggleSection("haunts")}
-                        className="bg-zinc-900/40 border border-zinc-800 rounded-sm"
-                        data-testid="cards-section-haunts"
-                    >
-                        <CollapsibleTrigger className="w-full flex items-center justify-between p-3" data-testid="cards-section-haunts-toggle">
-                            <div className="flex items-center gap-2">
-                                <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">Haunts</span>
-                                <span className="text-[10px] text-zinc-500">{hauntCount}</span>
-                            </div>
-                            {openSections.haunts ? (
-                                <ChevronDown className="w-4 h-4 text-zinc-500" />
-                            ) : (
-                                <ChevronRight className="w-4 h-4 text-zinc-500" />
-                            )}
-                        </CollapsibleTrigger>
-                        <CollapsibleContent className="px-3 pb-3">
-                            <div className="space-y-3">
-                                {Object.entries(HAUNT_DEFINITIONS).map(([name, def]) => (
-                                    (() => {
-                                        const conditionName = name.replace(/^The\s+/, "").trim();
-                                        const idx = (activeConditions || []).findIndex((c) => (c?.name || "") === conditionName);
-                                        const cond = idx >= 0 ? activeConditions[idx] : null;
-                                        return (
-                                    <HauntCard
-                                        key={name}
-                                        name={name}
-                                        rating={haunts[name] || 0}
-                                        definition={def}
-                                        onRatingChange={onUpdateHaunt}
-                                        activeCondition={cond}
-                                        conditionIndex={idx >= 0 ? idx : null}
-                                        onUpdateCondition={onUpdateCondition}
-                                        onRemoveCondition={onRemoveCondition}
-                                    />
-                                        );
-                                    })()
-                                ))}
-                            </div>
-                        </CollapsibleContent>
-                    </Collapsible>
-
-                    <Collapsible
-                        open={openSections.keys}
-                        onOpenChange={() => toggleSection("keys")}
-                        className="bg-zinc-900/40 border border-zinc-800 rounded-sm"
-                        data-testid="cards-section-keys"
-                    >
-                        <CollapsibleTrigger className="w-full flex items-center justify-between p-3" data-testid="cards-section-keys-toggle">
-                            <div className="flex items-center gap-2">
-                                <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">Keys</span>
-                                <span className="text-[10px] text-zinc-500">{availableKeys.length}</span>
-                            </div>
-                            {openSections.keys ? (
-                                <ChevronDown className="w-4 h-4 text-zinc-500" />
-                            ) : (
-                                <ChevronRight className="w-4 h-4 text-zinc-500" />
-                            )}
-                        </CollapsibleTrigger>
-                        <CollapsibleContent className="px-3 pb-3">
-                            <div className="space-y-3">
-                                <div className="p-3 rounded-sm bg-zinc-900/50 border border-zinc-800 mb-4">
-                                    <p className="text-xs text-zinc-400">
-                                        <span className="text-amber-400 font-mono">Unlocking:</span> Adds Unlock Attribute to dice pool & grants free Plasm.
-                                        <span className="text-rose-400 ml-1">Risk of Doom</span> unless you spend 1 Willpower or get Exceptional Success.
-                                    </p>
-                                </div>
-                                {Object.entries(KEY_DEFINITIONS)
-                                    .filter(([name]) => availableKeys.includes(name))
-                                    .map(([name, def]) => {
-                                        const source = keySourceMap[name] || {};
-                                        const locked = source.isCharacterKey || source.isGeistKey || source.isMementoKey || source.isDoomed;
-                                        const badges = [];
-                                        if (source.isCharacterKey) badges.push("C");
-                                        if (source.isGeistKey) badges.push("G");
-                                        if (source.isMementoKey) badges.push("M");
-                                        if (source.isDoomed) badges.push("D");
-                                        return (
-                                            <KeyCard
+                    {!isMage && (
+                        <>
+                            {/* Haunts Section */}
+                            <Collapsible
+                                open={openSections.haunts}
+                                onOpenChange={() => toggleSection("haunts")}
+                                className="bg-zinc-900/40 border border-zinc-800 rounded-sm"
+                                data-testid="cards-section-haunts"
+                            >
+                                <CollapsibleTrigger className="w-full flex items-center justify-between p-3" data-testid="cards-section-haunts-toggle">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">Haunts</span>
+                                        <span className="text-[10px] text-zinc-500">{hauntCount}</span>
+                                    </div>
+                                    {openSections.haunts ? (
+                                        <ChevronDown className="w-4 h-4 text-zinc-500" />
+                                    ) : (
+                                        <ChevronRight className="w-4 h-4 text-zinc-500" />
+                                    )}
+                                </CollapsibleTrigger>
+                                <CollapsibleContent className="px-3 pb-3">
+                                    <div className="space-y-2" data-testid="haunts-list">
+                                        {Object.entries(HAUNT_DEFINITIONS).map(([name, definition]) => (
+                                            <HauntCard
                                                 key={name}
                                                 name={name}
-                                                active={availableKeys.includes(name)}
-                                                definition={def}
-                                                onToggle={onToggleKey}
-                                                locked={locked}
-                                                sourceBadges={badges}
-                                                isDoomed={source.isDoomed}
-                                                doomSource={source.doomSource}
+                                                rating={haunts[name] || 0}
+                                                definition={definition}
+                                                onUpdateRating={onUpdateHaunt}
                                             />
-                                        );
-                                    })}
-                            </div>
-                        </CollapsibleContent>
-                    </Collapsible>
+                                        ))}
+                                    </div>
+                                </CollapsibleContent>
+                            </Collapsible>
+                        </>
+                    )}
 
-                    {/* Ceremonies Section */}
-                    <Collapsible
-                        open={openSections.ceremonies}
-                        onOpenChange={() => toggleSection("ceremonies")}
-                        className="bg-zinc-900/40 border border-zinc-800 rounded-sm"
-                        data-testid="cards-section-ceremonies"
-                    >
-                        <CollapsibleTrigger className="w-full flex items-center justify-between p-3" data-testid="cards-section-ceremonies-toggle">
-                            <div className="flex items-center gap-2">
-                                <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">Ceremonies</span>
-                                <span className="text-[10px] text-zinc-500">{Object.keys(CEREMONY_DEFINITIONS).length}</span>
-                            </div>
-                            {openSections.ceremonies ? (
-                                <ChevronDown className="w-4 h-4 text-zinc-500" />
-                            ) : (
-                                <ChevronRight className="w-4 h-4 text-zinc-500" />
-                            )}
-                        </CollapsibleTrigger>
-                        <CollapsibleContent className="px-3 pb-3">
-                            <div className="space-y-2" data-testid="ceremonies-list">
-                                {Object.entries(CEREMONY_DEFINITIONS).map(([name, ceremony]) => (
-                                    <CeremonyCard
-                                        key={name}
-                                        name={name}
-                                        ceremony={ceremony}
-                                        onActivate={handleCeremonyActivate}
-                                    />
-                                ))}
-                            </div>
-                        </CollapsibleContent>
-                    </Collapsible>
+                    {!isMage && (
+                        <>
+                            {/* Keys Section */}
+                            <Collapsible
+                                open={openSections.keys}
+                                onOpenChange={() => toggleSection("keys")}
+                                className="bg-zinc-900/40 border border-zinc-800 rounded-sm"
+                                data-testid="cards-section-keys"
+                            >
+                                <CollapsibleTrigger className="w-full flex items-center justify-between p-3" data-testid="cards-section-keys-toggle">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">Keys</span>
+                                        <span className="text-[10px] text-zinc-500">{availableKeys.length}</span>
+                                    </div>
+                                    {openSections.keys ? (
+                                        <ChevronDown className="w-4 h-4 text-zinc-500" />
+                                    ) : (
+                                        <ChevronRight className="w-4 h-4 text-zinc-500" />
+                                    )}
+                                </CollapsibleTrigger>
+                                <CollapsibleContent className="px-3 pb-3">
+                                    <div className="space-y-2" data-testid="keys-list">
+                                        <div className="text-[11px] text-zinc-500 mb-2">
+                                            Keys are unlocked from character creation, Geist, Mementos, and manual selection. 
+                                            Doomed Keys are hidden here and unavailable in dice pools unless the doom effect says otherwise.
+                                        </div>
+                                        {Object.entries(KEY_DEFINITIONS)
+                                            .filter(([name]) => availableKeys.includes(name))
+                                            .map(([name, def]) => {
+                                                const source = keySourceMap[name] || {};
+                                                const locked = source.isCharacterKey || source.isGeistKey || source.isMementoKey || source.isDoomed;
+                                                const badges = [];
+                                                if (source.isCharacterKey) badges.push("C");
+                                                if (source.isGeistKey) badges.push("G");
+                                                if (source.isMementoKey) badges.push("M");
+                                                if (source.isDoomed) badges.push("D");
+                                                return (
+                                                    <KeyCard
+                                                        key={name}
+                                                        name={name}
+                                                        active={availableKeys.includes(name)}
+                                                        definition={def}
+                                                        onToggle={onToggleKey}
+                                                        locked={locked}
+                                                        sourceBadges={badges}
+                                                        isDoomed={source.isDoomed}
+                                                        doomSource={source.doomSource}
+                                                    />
+                                                );
+                                            })}
+                                    </div>
+                                </CollapsibleContent>
+                            </Collapsible>
+                        </>
+                    )}
+
+                    {!isMage && (
+                        <>
+                            {/* Ceremonies Section */}
+                            <Collapsible
+                                open={openSections.ceremonies}
+                                onOpenChange={() => toggleSection("ceremonies")}
+                                className="bg-zinc-900/40 border border-zinc-800 rounded-sm"
+                                data-testid="cards-section-ceremonies"
+                            >
+                                <CollapsibleTrigger className="w-full flex items-center justify-between p-3" data-testid="cards-section-ceremonies-toggle">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">Ceremonies</span>
+                                        <span className="text-[10px] text-zinc-500">{Object.keys(CEREMONY_DEFINITIONS).length}</span>
+                                    </div>
+                                    {openSections.ceremonies ? (
+                                        <ChevronDown className="w-4 h-4 text-zinc-500" />
+                                    ) : (
+                                        <ChevronRight className="w-4 h-4 text-zinc-500" />
+                                    )}
+                                </CollapsibleTrigger>
+                                <CollapsibleContent className="px-3 pb-3">
+                                    <div className="space-y-2" data-testid="ceremonies-list">
+                                        {Object.entries(CEREMONY_DEFINITIONS).map(([name, ceremony]) => (
+                                            <CeremonyCard
+                                                key={name}
+                                                name={name}
+                                                ceremony={ceremony}
+                                                onActivate={handleCeremonyActivate}
+                                            />
+                                        ))}
+                                    </div>
+                                </CollapsibleContent>
+                            </Collapsible>
+                        </>
+                    )}
 
                     {/* Merits Section */}
                     <Collapsible

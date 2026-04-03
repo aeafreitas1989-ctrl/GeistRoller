@@ -298,6 +298,7 @@ export const MERIT_DEFINITIONS = {
     
     // Mage Merits
     "Adamant Hand": { category: "Mage", maxDots: 2, description: "Use a chosen combat Skill with 3+ dots as a reflexive Order tool Yantra for instant spells. May be purchased multiple times for different styles." },
+    "Advanced Library": { category: "Mage", maxDots: 5, description: "Gain the Informed Condition about a highly secretive supernatural topic. Each Dot represents a distinct topic, and each topic can only be used once per story." },
     "Artifact": { category: "Mage", maxDots: 10, description: "A Supernal item with its own Mana, effective Gnosis, Arcana, and magical effects. Not limited to 5 dots." },
     "Astral Adept": { category: "Mage", maxDots: 3, description: "Enter the Astral Realms without a place of power by performing a personal ceremony and spending Willpower." },
     "Between the Ticks": { category: "Mage", maxDots: 2, description: "Once per scene, trade 1 Initiative for 1 die on an action, or 1 die on an action for 1 Initiative." },
@@ -324,7 +325,7 @@ export const MERIT_DEFINITIONS = {
     "Prelacy": { category: "Mage", maxDots: 4, description: "A Seer's bond to an Exarch grants symbolic authority, magical benefits, and an expanding supernatural mandate." },
     "Sanctum": { category: "Mage", maxDots: 5, description: "A secure magical refuge that improves spell control within its boundaries." },
     "Shadow Name": { category: "Mage", maxDots: 3, description: "A powerful magical identity that serves as a persona Yantra and protects the mage's mundane identity." },
-    "Techne": { category: "Mage", maxDots: 2, description: "A chosen Free Council cultural or scientific focus counts as an Order tool and can enhance teamwork spellcasting." },
+    "Techné": { category: "Mage", maxDots: 2, description: "A chosen Free Council cultural or scientific focus counts as an Order tool and can enhance teamwork spellcasting." },
 
     // Social Merits
     "Allies": { category: "Social", maxDots: 5, description: "Allies help your character. Each instance represents one type of ally. Favors up to the Allies rating can be requested without penalty." },
