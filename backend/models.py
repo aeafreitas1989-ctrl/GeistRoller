@@ -215,6 +215,7 @@ class Character(BaseModel):
     keys: List[str] = Field(default_factory=list)
     mementos: List[Dict[str, Any]] = Field(default_factory=list)
     conditions: List[Dict[str, Any]] = Field(default_factory=list)
+    active_spells: List[Dict[str, Any]] = Field(default_factory=list)
     places_people: List[Dict[str, Any]] = Field(default_factory=list)
     size: int = 5
     health: int = 7
@@ -286,6 +287,7 @@ class CharacterUpdate(BaseModel):
     keys: Optional[List[str]] = None
     mementos: Optional[List[Dict[str, Any]]] = None
     conditions: Optional[List[Dict[str, Any]]] = None
+    active_spells: Optional[List[Dict[str, Any]]] = None
     places_people: Optional[List[Dict[str, Any]]] = None
     size: Optional[int] = None
     health: Optional[int] = None

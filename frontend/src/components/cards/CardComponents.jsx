@@ -597,3 +597,32 @@ export const KeyCard = ({ name, active, definition, onToggle, locked = false, so
     );
 };
 
+export const ActiveSpellCard = ({ spell }) => {
+    return (
+        <div className="bg-violet-950/20 border border-violet-500/30 rounded-sm p-3 space-y-2">
+            <div className="flex items-start justify-between gap-2">
+                <div>
+                    <div className="flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-violet-400" />
+                        <h4 className="text-sm font-heading text-violet-200">{spell.name || "Unnamed Spell"}</h4>
+                    </div>
+                    <p className="text-[11px] text-zinc-500 mt-1">
+                        {spell.arcanum} · {spell.practice}
+                    </p>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                <div className="rounded-sm bg-zinc-900/50 border border-zinc-800 p-2">
+                    <span className="text-zinc-500">Potency:</span> <span className="text-zinc-200">{spell.potency}</span>
+                </div>
+                <div className="rounded-sm bg-zinc-900/50 border border-zinc-800 p-2">
+                    <span className="text-zinc-500">Duration:</span> <span className="text-zinc-200">{spell.duration}</span>
+                </div>
+                <div className="rounded-sm bg-zinc-900/50 border border-zinc-800 p-2 sm:col-span-2">
+                    <span className="text-zinc-500">Scale:</span> <span className="text-zinc-200">{spell.scale}</span>
+                </div>
+            </div>
+        </div>
+    );
+};

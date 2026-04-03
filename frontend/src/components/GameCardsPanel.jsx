@@ -39,7 +39,7 @@ import {
     PLACE_STATUS_OPTIONS, PERSON_STATUS_OPTIONS, PERSON_RELATIONSHIP_OPTIONS,
 } from "../data/cards-data";
 import {
-    MeritCard, CeremonyCard, PlacePersonCard, ConditionCard, HauntCard, KeyCard,
+    MeritCard, CeremonyCard, PlacePersonCard, ConditionCard, HauntCard, KeyCard, ActiveSpellCard,
 } from "./cards/CardComponents";
 
 export const GameCardsPanel = ({ 
@@ -55,6 +55,7 @@ export const GameCardsPanel = ({
     onUpdateHaunt,
     onToggleKey,
     onUpdatePlacesPeople,
+    onRelinquishActiveSpell,
     onGenerateCaseTruth,
     sessionSummary,
 }) => {
@@ -78,6 +79,7 @@ export const GameCardsPanel = ({
         haunts: false,
         keys: false,
         ceremonies: false,
+        activeSpells: false,
         merits: false,
         places: false,
     });
@@ -159,6 +161,7 @@ export const GameCardsPanel = ({
     const sortedPlacesPeople = [...placesPeople].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
     const characterType = activeCharacter?.character_type || "geist";
     const isMage = characterType === "mage";
+    const activeSpells = [...(activeCharacter?.active_spells || [])].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
 
     // Get character's merits with dots > 0
     const characterMerits = useMemo(() => {
@@ -610,6 +613,44 @@ export const GameCardsPanel = ({
                                 </CollapsibleContent>
                             </Collapsible>
                         </>
+                    )}
+
+                    {isMage && (
+                        <Collapsible
+                            open={openSections.activeSpells}
+                            onOpenChange={() => toggleSection("activeSpells")}
+                            className="bg-zinc-900/40 border border-zinc-800 rounded-sm"
+                            data-testid="cards-section-active-spells"
+                        >
+                            <CollapsibleTrigger className="w-full flex items-center justify-between p-3" data-testid="cards-section-active-spells-toggle">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">Active Spells</span>
+                                    <span className="text-[10px] text-zinc-500">{activeSpells.length}</span>
+                                </div>
+                                {openSections.activeSpells ? (
+                                    <ChevronDown className="w-4 h-4 text-zinc-500" />
+                                ) : (
+                                    <ChevronRight className="w-4 h-4 text-zinc-500" />
+                                )}
+                            </CollapsibleTrigger>
+                            <CollapsibleContent className="px-3 pb-3">
+                                {activeSpells.length === 0 ? (
+                                    <div className="text-center py-6">
+                                        <p className="text-zinc-500 text-sm">No active spells</p>
+                                        <p className="text-zinc-600 text-xs mt-1">Spells cast with Advanced Duration appear here</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2" data-testid="active-spells-list">
+                                        {activeSpells.map((spell) => (
+                                            <ActiveSpellCard
+                                                key={spell.id || `${spell.name}-${spell.arcanum}-${spell.practice}`}
+                                                spell={spell}
+                                            />
+                                        ))}
+                                    </div>
+                                )}
+                            </CollapsibleContent>
+                        </Collapsible>
                     )}
 
                     {/* Merits Section */}

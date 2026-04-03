@@ -191,6 +191,18 @@ export const StorytellerPage = () => {
         await updateCharacter({ places_people: placesPeople });
     };
 
+    const addActiveSpell = async (spell) => {
+        const currentActiveSpells = activeCharacter?.active_spells || [];
+        await updateCharacter({ active_spells: [...currentActiveSpells, spell] });
+    };
+
+    const relinquishActiveSpell = async (spellId) => {
+        const currentActiveSpells = activeCharacter?.active_spells || [];
+        await updateCharacter({
+            active_spells: currentActiveSpells.filter((spell) => spell.id !== spellId),
+        });
+    };
+
     const updateCharacter = async (updates) => {
         if (!activeCharacter) return;
 
@@ -367,6 +379,7 @@ export const StorytellerPage = () => {
                                     onUpdateCharacter={updateCharacter}
                                     onDeleteCharacter={deleteCharacter}
                                     onTriggerDiceRoll={triggerDiceRoll}
+                                    onCreateActiveSpell={addActiveSpell}
                                 />
                             </div>
                         </section>
@@ -391,6 +404,7 @@ export const StorytellerPage = () => {
                                     onUpdateHaunt={updateHaunt}
                                     onToggleKey={toggleKey}
                                     onUpdatePlacesPeople={updatePlacesPeople}
+                                    onRelinquishActiveSpell={relinquishActiveSpell}
                                 />
                             </div>
                         </section>

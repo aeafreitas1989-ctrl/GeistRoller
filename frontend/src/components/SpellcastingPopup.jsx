@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { X, Minus, Plus, Sparkles, Zap, Shield, Eye, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { GNOSIS_TABLE, YANTRAS } from "@/data/character-data";
@@ -91,12 +92,15 @@ export const SpellcastingPopup = ({
     initialPractice,
     onSpendMana,
     onRollDice,
+    onCreateActiveSpell,
+    activeSpellCount = 0,
     orderRoteSkills,
     spellType,
     roteSkillDots,
     isRoteOrderSkill,
 }) => {
     const [selectedPractice, setSelectedPractice] = useState("");
+    const [spellName, setSpellName] = useState("");
     const [factors, setFactors] = useState({
         casting: { advanced: false, level: 1 },
         range: { advanced: false, level: 1 },
@@ -122,6 +126,7 @@ export const SpellcastingPopup = ({
     useEffect(() => {
         if (isOpen) {
             setSelectedPractice(initialPractice || "");
+            setSpellName("");
             setFactors({
                 casting: { advanced: false, level: 1 },
                 range: { advanced: false, level: 1 },
@@ -153,6 +158,13 @@ export const SpellcastingPopup = ({
     const freeReach = selectedPractice ? Math.max(0, arcanumDots - practiceDots + 1) : 0;
     const advancedReachUsed = Object.values(factors).filter(f => f.advanced).length;
     const indefiniteReach = (factors.duration.advanced && factors.duration.level === 6) ? 1 : 0;
+
+    // If this spell is being cast with Advanced Duration, it becomes an Active Spell.
+    // Every Active Spell beyond Gnosis costs 1 extra Reach.
+    const activeSpellReachSurcharge = factors.duration.advanced
+        ? Math.max(0, activeSpellCount - gnosis + 1)
+        : 0;
+
     const changePrimaryReach = primaryFactor !== "potency" ? 1 : 0;
     const totalReachUsed = advancedReachUsed + indefiniteReach + changePrimaryReach;
     const reachRemaining = freeReach - totalReachUsed;
@@ -273,6 +285,22 @@ export const SpellcastingPopup = ({
         });
     };
 
+    const getFactorDescription = (factorName) => {
+        const factor = factors[factorName];
+        if (!factor) return "";
+
+        if (factorName === "casting") {
+            return factor.advanced ? "Instant" : getCastingTime(gnosis);
+        }
+
+        if (factorName === "range") {
+            return factor.advanced ? "Sensory Range" : "Touch / Self";
+        }
+
+        const levels = FACTOR_LEVELS[factorName]?.[factor.advanced ? "advanced" : "standard"];
+        return levels?.[factor.level - 1]?.label || "";
+    };
+
     const adjustYantraValue = (name, delta) => {
         const yantra = YANTRAS.find(y => y.name === name);
         if (!yantra?.variableBonus || !activeYantras.has(name)) return;
@@ -289,8 +317,25 @@ export const SpellcastingPopup = ({
 
     const getYantraTestId = (name) => `yantra-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`;
 
+    const getFactorDescription = (factorName) => {
+        const factor = factors[factorName];
+        if (!factor) return "";
+
+        if (factorName === "casting") {
+            return factor.advanced ? "Instant" : getCastingTime(gnosis);
+        }
+
+        if (factorName === "range") {
+            return factor.advanced ? "Sensory Range" : "Touch / Self";
+        }
+
+        const levels = FACTOR_LEVELS[factorName]?.[factor.advanced ? "advanced" : "standard"];
+        return levels?.[factor.level - 1]?.label || "";
+    };
+
     const handleCastSpell = () => {
         if (totalManaCost > 0 && currentMana < totalManaCost) return;
+        if (factors.duration.advanced && !spellName.trim()) return;
 
         if (totalManaCost > 0) {
             onSpendMana(totalManaCost);
@@ -310,6 +355,18 @@ export const SpellcastingPopup = ({
             paradox: paradoxConfig,
             exceptional_target: spellType === "praxis" ? 3 : 5,
         });
+
+        if (factors.duration.advanced && onCreateActiveSpell) {
+            onCreateActiveSpell({
+                id: Date.now(),
+                name: spellName.trim(),
+                arcanum,
+                practice: selectedPractice,
+                potency: getFactorDescription("potency"),
+                duration: getFactorDescription("duration"),
+                scale: getFactorDescription("scale"),
+            });
+        }
 
         onClose();
     };
@@ -427,6 +484,23 @@ export const SpellcastingPopup = ({
                 </div>
 
                 <div className="p-4 space-y-4">
+                    {/* Spell Name */}
+                    <div>
+                        <label className="text-xs text-zinc-500 uppercase block mb-1">Name</label>
+                        <Input
+                            value={spellName}
+                            onChange={(e) => setSpellName(e.target.value)}
+                            placeholder="Spell name"
+                            className="bg-zinc-900/50 border-zinc-700"
+                            data-testid="spell-name-input"
+                        />
+                        {factors.duration.advanced && !spellName.trim() && (
+                            <p className="text-[11px] text-amber-400 mt-1">
+                                Advanced Duration spells need a name to become an Active Spell card.
+                            </p>
+                        )}
+                    </div>
+
                     {/* Practice Selection */}
                     <div>
                         <label className="text-xs text-zinc-500 uppercase block mb-1">Practice</label>
@@ -451,14 +525,27 @@ export const SpellcastingPopup = ({
 
                     {/* Reach Display */}
                     {selectedPractice && (
-                        <div className="flex items-center justify-between p-2 bg-zinc-800/50 rounded text-sm">
-                            <span className="text-zinc-400">
-                                Free Reach: <span className="text-teal-400 font-mono">{freeReach}</span>
-                                <span className="text-zinc-600 ml-1">({arcanumDots} - {practiceDots} + 1)</span>
-                            </span>
-                            <span className={`font-mono ${reachRemaining >= 0 ? "text-teal-400" : "text-red-400"}`}>
-                                {reachRemaining >= 0 ? `${reachRemaining} remaining` : `${Math.abs(reachRemaining)} over`}
-                            </span>
+                        <div className="p-2 bg-zinc-800/50 rounded text-sm space-y-1">
+                            <div className="flex items-center justify-between">
+                                <span className="text-zinc-400">
+                                    Free Reach: <span className="text-teal-400 font-mono">{freeReach}</span>
+                                    <span className="text-zinc-600 ml-1">({arcanumDots} - {practiceDots} + 1)</span>
+                                </span>
+                                <span className={`font-mono ${reachRemaining >= 0 ? "text-teal-400" : "text-red-400"}`}>
+                                    {reachRemaining >= 0 ? `${reachRemaining} remaining` : `${Math.abs(reachRemaining)} over`}
+                                </span>
+                            </div>
+
+                            {activeSpellReachSurcharge > 0 && (
+                                <div className="flex items-center justify-between text-xs">
+                                    <span className="text-zinc-500">
+                                        Active Spell surcharge
+                                    </span>
+                                    <span className="font-mono text-amber-400">
+                                        +{activeSpellReachSurcharge} Reach
+                                    </span>
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -747,6 +834,12 @@ export const SpellcastingPopup = ({
                                 {totalReachUsed} / {freeReach}
                             </span>
                         </div>
+                        {activeSpellReachSurcharge > 0 && (
+                            <div className="flex justify-between text-sm">
+                                <span className="text-zinc-400">Active Spell surcharge:</span>
+                                <span className="font-mono text-amber-400">{activeSpellReachSurcharge}</span>
+                            </div>
+                        )}
                         <div className="flex justify-between text-sm">
                             <span className="text-zinc-400">Spell Mana:</span>
                             <span className="font-mono text-violet-400">{manaCost}</span>
@@ -781,7 +874,7 @@ export const SpellcastingPopup = ({
                     </Button>
                     <Button
                         onClick={handleCastSpell}
-                        disabled={!selectedPractice || (totalManaCost > currentMana)}
+                        disabled={!selectedPractice || totalManaCost > currentMana || (factors.duration.advanced && !spellName.trim())}
                         className="bg-violet-600 hover:bg-violet-500 text-white"
                         data-testid="cast-spell-btn"
                     >

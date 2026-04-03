@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, ChevronRight, X, Dices, Eye, Plus, Minus, Star, Book, Info } from "lucide-react";
+import { ChevronDown, ChevronRight, X, Dices, Eye, Plus, Minus, Star, Book, Info, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -188,4 +188,3 @@ export const CeremonyCard = ({ ceremony, index, onDelete, onRoll }) => {
     </div>
   );
 };
-

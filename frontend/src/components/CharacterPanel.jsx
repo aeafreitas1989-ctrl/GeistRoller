@@ -264,6 +264,20 @@ export const CharacterPanel = ({
         setDicePopupOpen(true);
     };
     
+    const addActiveSpell = async (spell) => {
+        const currentActiveSpells = activeCharacter?.active_spells || [];
+        await onUpdateCharacter({
+            active_spells: [...currentActiveSpells, spell],
+        });
+    };
+
+    const relinquishActiveSpell = async (spellId) => {
+        const currentActiveSpells = activeCharacter?.active_spells || [];
+        await onUpdateCharacter({
+            active_spells: currentActiveSpells.filter((spell) => spell.id !== spellId),
+        });
+    };
+
     const toggleSection = (section) => {
         setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }));
     };
@@ -282,6 +296,13 @@ export const CharacterPanel = ({
             onUpdateCharacter(pendingChanges);
             setPendingChanges({});
         }
+    };
+
+    const addActiveSpell = async (spell) => {
+        const currentActiveSpells = activeCharacter?.active_spells || [];
+        await onUpdateCharacter({
+            active_spells: [...currentActiveSpells, spell],
+        });
     };
 
     const getValue = (field) => pendingChanges[field] ?? activeCharacter?.[field];
@@ -1616,6 +1637,8 @@ export const CharacterPanel = ({
                     isInferior={getValue("path") && PATH_ARCANA[getValue("path")]?.inferior === spellcastingArcanum}
                     currentMana={getValue("mana") || 0}
                     initialPractice={spellcastingPractice}
+                    onCreateActiveSpell={addActiveSpell}
+                    activeSpellCount={(activeCharacter?.active_spells || []).length}
                     orderRoteSkills={isMage && getValue("order") ? ORDER_ROTE_SKILLS[getValue("order")] || [] : []}
                     spellType={spellcastingType}
                     roteSkillDots={spellcastingRoteSkill ? (getNestedValue("skills", spellcastingRoteSkill) || 0) : 0}
