@@ -43,7 +43,6 @@ import {
 } from "./cards/CardComponents";
 
 export const GameCardsPanel = ({ 
-    session,
     activeCharacter,
     activeConditions = [], 
     haunts = {},
@@ -59,7 +58,6 @@ export const GameCardsPanel = ({
     onRelinquishActiveSpell,
     onRelinquishActiveSpellSafely,
     onGenerateCaseTruth,
-    sessionSummary,
 }) => {
     const [showAddCondition, setShowAddCondition] = useState(false);
     const [customConditionName, setCustomConditionName] = useState("");
@@ -90,9 +88,6 @@ export const GameCardsPanel = ({
     const [ceremonyRollResult, setCeremonyRollResult] = useState(null);
     const [rollingCeremony, setRollingCeremony] = useState(false);
     const [generatingCaseTruth, setGeneratingCaseTruth] = useState(false);
-   
-    console.log("GameCardsPanel session:", session);
-    console.log("GameCardsPanel case_truth:", session?.case_truth);
 
     const handleCeremonyActivate = async (name, ceremony) => {
     setSelectedCeremony({ name, ...ceremony });
@@ -214,11 +209,11 @@ export const GameCardsPanel = ({
     };
 
     const handleGenerateCaseTruth = async () => {
-        if (!session?.id || !onGenerateCaseTruth || generatingCaseTruth) return;
+        if (!activeCharacter?.id || !onGenerateCaseTruth || generatingCaseTruth) return;
 
         try {
             setGeneratingCaseTruth(true);
-            await onGenerateCaseTruth(session.id);
+            await onGenerateCaseTruth(activeCharacter.id);
         } finally {
             setGeneratingCaseTruth(false);
         }
@@ -302,7 +297,7 @@ export const GameCardsPanel = ({
                         <CollapsibleContent className="px-3 pb-3 space-y-3">
                             <Button
                                 onClick={handleGenerateCaseTruth}
-                                disabled={!session?.id || generatingCaseTruth}
+                                disabled={!activeCharacter?.id || generatingCaseTruth}
                                 className="w-full btn-primary"
                                 data-testid="generate-case-file-btn"
                             >
@@ -310,60 +305,11 @@ export const GameCardsPanel = ({
                             </Button>
 
                             <pre className="text-sm text-zinc-300 whitespace-pre-wrap">
-                                {session?.case_truth?.trim() || "No case file has been generated for this session yet."}
+                                {activeCharacter?.case_truth?.trim() || "No case file has been generated for this character yet."}
                             </pre>
                         </CollapsibleContent>
                     </Collapsible>
                     {/* Session Summary Card */}
-                    {sessionSummary && (
-                        <Collapsible
-                            open={openSections.sessionSummary}
-                            onOpenChange={() => toggleSection("sessionSummary")}
-                            className="bg-sky-950/30 border border-sky-500/30 rounded-sm"
-                            data-testid="cards-section-session-summary"
-                        >
-                            <CollapsibleTrigger className="w-full flex items-center justify-between p-3" data-testid="cards-section-session-summary-toggle">
-                                <div className="flex items-center gap-2">
-                                    <BookOpen className="w-4 h-4 text-sky-400" />
-                                    <span className="text-xs font-mono uppercase tracking-wider text-sky-300">Session Summary</span>
-                                </div>
-                                {openSections.sessionSummary ? (
-                                    <ChevronDown className="w-4 h-4 text-sky-400" />
-                                ) : (
-                                    <ChevronRight className="w-4 h-4 text-sky-400" />
-                                )}
-                            </CollapsibleTrigger>
-                            <CollapsibleContent className="px-3 pb-3">
-                                <div className="space-y-3">
-                                    {sessionSummary.scene && (
-                                        <div data-testid="session-summary-scene">
-                                            <div className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-1">Scene</div>
-                                            <p className="text-sm text-zinc-300">{sessionSummary.scene}</p>
-                                        </div>
-                                    )}
-                                    {sessionSummary.npcs && (
-                                        <div data-testid="session-summary-npcs">
-                                            <div className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-1">NPCs Present</div>
-                                            <p className="text-sm text-zinc-300">{sessionSummary.npcs}</p>
-                                        </div>
-                                    )}
-                                    {sessionSummary.threats && (
-                                        <div data-testid="session-summary-threats">
-                                            <div className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-1">Threats</div>
-                                            <p className="text-sm text-rose-300/80">{sessionSummary.threats}</p>
-                                        </div>
-                                    )}
-                                    {sessionSummary.story && (
-                                        <div data-testid="session-summary-story">
-                                            <div className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-1">Story So Far</div>
-                                            <p className="text-sm text-zinc-400 italic">{sessionSummary.story}</p>
-                                        </div>
-                                    )}
-                                </div>
-                            </CollapsibleContent>
-                        </Collapsible>
-                    )}
-
                     <Collapsible
                         open={openSections.conditions}
                         onOpenChange={() => toggleSection("conditions")}

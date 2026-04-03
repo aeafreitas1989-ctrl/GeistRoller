@@ -8,29 +8,6 @@
     overflow: hidden;
 }
 
-/* Sidebar */
-.sidebar {
-    width: 300px;
-    min-width: 300px;
-    background: linear-gradient(to bottom, #18181b, #09090b);
-    border-right: 1px solid rgba(255, 255, 255, 0.05);
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    overflow-y: auto;
-    transition: width 0.2s ease, min-width 0.2s ease;
-}
-
-.sidebar.collapsed {
-    width: 56px;
-    min-width: 56px;
-    overflow: hidden;
-}
-
-.sidebar.collapsed .sidebar-content {
-    display: none;
-}
-
 /* Main content */
 .main-content {
     flex: 1;
@@ -107,25 +84,7 @@
     }
 }
 
-@media (max-width: 1024px) {
-    .sidebar {
-        width: 60px;
-        min-width: 60px;
-    }
-    
-    .sidebar-content {
-        display: none;
-    }
-    
-    .sidebar.open {
-        width: 300px;
-        min-width: 300px;
-    }
-    
-    .sidebar.open .sidebar-content {
-        display: block;
-    }
-    
+@media (max-width: 1024px) {  
     
     /* On mobile, panel slides in from right */
     .character-panel {
@@ -139,36 +98,9 @@
     .character-panel.open {
         right: 0;
     }
-
-    .sidebar {
-        position: fixed;
-        left: -300px;
-        top: 0;
-        z-index: 45;
-        transition: left 0.3s ease;
-    }
-
-    .sidebar.open {
-        left: 0;
-    }
 }
 
-@media (max-width: 768px) {
-    .sidebar {
-        position: fixed;
-        left: 0;
-        top: 0;
-        bottom: 0;
-        width: 280px;
-        transform: translateX(-100%);
-        transition: transform 0.3s ease;
-        z-index: 50;
-    }
-    
-    .sidebar.open {
-        transform: translateX(0);
-    }
-    
+@media (max-width: 768px) {  
     .chat-container {
         padding: 1rem;
     }
