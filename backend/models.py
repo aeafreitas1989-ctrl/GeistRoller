@@ -221,6 +221,7 @@ class Character(BaseModel):
     health: int = 7
     health_boxes: List[str] = Field(default_factory=list)
     willpower: int = 5
+    willpower_max_modifier: int = 0
     armor: int = 0
     beats: int = 0
     experience: int = 0
@@ -293,6 +294,7 @@ class CharacterUpdate(BaseModel):
     health: Optional[int] = None
     health_boxes: Optional[List[str]] = None
     willpower: Optional[int] = None
+    willpower_max_modifier: Optional[int] = None
     armor: Optional[int] = None
     beats: Optional[int] = None
     experience: Optional[int] = None

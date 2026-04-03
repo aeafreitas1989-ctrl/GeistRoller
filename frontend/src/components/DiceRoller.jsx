@@ -1,4 +1,4 @@
-import { useState, forwardRef, useImperativeHandle, useRef, useEffect, useCallback } from "react";
+import { useState, forwardRef, useImperativeHandle, useRef, useEffect, useCallback, useMemo } from "react";
 import { Dices, X, ChevronUp, ChevronDown, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,12 +27,20 @@ export const DiceRoller = forwardRef((props, ref) => {
     const [rollLabel, setRollLabel] = useState(null);
     const [pendingParadox, setPendingParadox] = useState(null);
     const [exceptionalTarget, setExceptionalTarget] = useState(5);
+    const [lastRollConfig, setLastRollConfig] = useState(null);
 
     // External roll trigger
     const pendingRollRef = useRef(null);
     const [triggerExternal, setTriggerExternal] = useState(0);
 
-    const performRoll = useCallback(async (rollPool, rollAgain, rollRote, rollChance, rollExceptionalTarget) => {
+    const performRoll = useCallback(async (
+        rollPool,
+        rollAgain,
+        rollRote,
+        rollChance,
+        rollExceptionalTarget,
+        options = {}
+    ) => {
         setIsRolling(true);
         setResult(null);
         try {
@@ -54,6 +62,10 @@ export const DiceRoller = forwardRef((props, ref) => {
                 toast.success("Exceptional Success!", {
                     description: `${response.data.successes} successes!`,
                 });
+            }
+
+            if (typeof options.onResult === "function") {
+                options.onResult(response.data);
             }
         } catch (error) {
             toast.error("Failed to roll dice");
@@ -80,6 +92,7 @@ export const DiceRoller = forwardRef((props, ref) => {
             setRote(config.rote || false);
             setRollLabel(config.label || null);
             setExceptionalTarget(config.exceptional_target || 5);
+            setLastRollConfig(config);
             setIsOpen(true);
             setIsMinimized(false);
             setResult(null);
@@ -95,7 +108,8 @@ export const DiceRoller = forwardRef((props, ref) => {
                 config.again || 10,
                 config.rote || false,
                 config.chance || false,
-                config.exceptional_target || 5
+                config.exceptional_target || 5,
+                { onResult: config.onResult }
             );
         }
     }, [triggerExternal, performRoll]);
@@ -122,8 +136,111 @@ export const DiceRoller = forwardRef((props, ref) => {
         setRollLabel(null);
         setPendingParadox(null);
         setExceptionalTarget(5);
+
+        setLastRollConfig({
+            pool,
+            again: parseInt(again),
+            rote,
+            chance,
+            exceptional_target: 5,
+            label: null,
+            dicePoolBreakdown: chance ? "Chance Die" : `${pool} dice`,
+            spellSummary: "",
+        });
+
         performRoll(pool, parseInt(again), rote, chance, 5);
     };
+
+    const formatOutcomeLine = (rollResult) => {
+        const successes = rollResult?.successes || 0;
+
+        if (rollResult?.is_dramatic_failure) {
+            return `${successes} Success${successes === 1 ? "" : "es"} = Dramatic Failure`;
+        }
+
+        if (rollResult?.is_exceptional) {
+            return `${successes} Success${successes === 1 ? "" : "es"} = Exceptional Success`;
+        }
+
+        if (successes > 0) {
+            return `${successes} Success${successes === 1 ? "" : "es"} = Success`;
+        }
+
+        return "0 Successes = Failure";
+    };
+
+    const formatDiceRows = (rollResult) => {
+        if (!rollResult) return "";
+
+        const firstRow = Array.isArray(rollResult.dice) ? rollResult.dice.map(String) : [];
+        if (!firstRow.length) return "";
+
+        const extraRows = [];
+
+        // Supports several possible backend shapes safely
+        if (Array.isArray(rollResult.rerolls)) {
+            if (rollResult.rerolls.every((row) => Array.isArray(row))) {
+                rollResult.rerolls.forEach((row) => {
+                    extraRows.push(row.map((value) => (value === null || value === undefined ? "" : String(value))));
+                });
+            } else {
+                extraRows.push(rollResult.rerolls.map((value) => (value === null || value === undefined ? "" : String(value))));
+            }
+        } else if (Array.isArray(rollResult.exploded_dice)) {
+            if (rollResult.exploded_dice.every((row) => Array.isArray(row))) {
+                rollResult.exploded_dice.forEach((row) => {
+                    extraRows.push(row.map((value) => (value === null || value === undefined ? "" : String(value))));
+                });
+            } else {
+                extraRows.push(rollResult.exploded_dice.map((value) => (value === null || value === undefined ? "" : String(value))));
+            }
+        }
+
+        const rows = [firstRow, ...extraRows];
+        const width = Math.max(...rows.map((row) => row.length), 0);
+
+        const normalizedRows = rows.map((row) => {
+            const copy = [...row];
+            while (copy.length < width) copy.push("");
+            return copy;
+        });
+
+        return normalizedRows
+            .map((row) =>
+                row
+                    .map((cell) => (cell ? cell.padStart(2, " ") : "  "))
+                    .join(" ")
+                    .replace(/\s+$/, "")
+            )
+            .join("\n");
+    };
+
+    const formattedRollTranscript = useMemo(() => {
+        if (!result) return "";
+
+        const poolSize = lastRollConfig?.chance ? 1 : (lastRollConfig?.pool ?? pool);
+        const againValue = lastRollConfig?.chance
+            ? "Chance"
+            : (lastRollConfig?.again ?? again) === 11
+            ? "No Again"
+            : `${lastRollConfig?.again ?? again}!`;
+
+        const poolBreakdown =
+            lastRollConfig?.dicePoolBreakdown ||
+            lastRollConfig?.label ||
+            (lastRollConfig?.chance ? "Chance Die" : `${poolSize} dice`);
+
+        const spellSummary = lastRollConfig?.spellSummary || "";
+        const outcomeLine = formatOutcomeLine(result);
+        const diceRows = formatDiceRows(result);
+
+        return [
+            `Rolled ${poolBreakdown} = ${poolSize} dice [${againValue}]`,
+            ...(spellSummary ? [spellSummary] : []),
+            outcomeLine,
+            ...(diceRows ? [diceRows] : []),
+        ].join("\n");
+    }, [result, lastRollConfig, pool, again]);
 
     if (!isOpen) {
         return (
@@ -167,7 +284,7 @@ export const DiceRoller = forwardRef((props, ref) => {
                     <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => { setIsOpen(false); setPendingParadox(null); setRollLabel(null); }}
+                        onClick={() => { setIsOpen(false); setPendingParadox(null); setRollLabel(null); setLastRollConfig(null); }}
                         className="h-7 w-7 text-zinc-500 hover:text-zinc-300"
                         data-testid="close-dice-roller-btn"
                     >
@@ -331,6 +448,35 @@ export const DiceRoller = forwardRef((props, ref) => {
                                 </p>
                                 <p className="text-xs text-zinc-500 mt-1">{result.description}</p>
                             </div>
+                        </div>
+                    )}
+
+                    {formattedRollTranscript && (
+                        <div className="p-3 rounded-sm border bg-zinc-950/50 border-zinc-800 space-y-2">
+                            <div className="flex items-center justify-between">
+                                <p className="text-xs uppercase text-zinc-500">Copyable Roll Summary</p>
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 px-2 text-[10px] border-zinc-700 text-zinc-300"
+                                    onClick={async () => {
+                                        try {
+                                            await navigator.clipboard.writeText(formattedRollTranscript);
+                                            toast.success("Roll summary copied");
+                                        } catch {
+                                            toast.error("Failed to copy roll summary");
+                                        }
+                                    }}
+                                    data-testid="copy-roll-summary"
+                                >
+                                    Copy
+                                </Button>
+                            </div>
+
+                            <pre className="whitespace-pre-wrap break-words text-xs text-zinc-200 font-mono leading-relaxed">
+{formattedRollTranscript}
+                            </pre>
                         </div>
                     )}
 

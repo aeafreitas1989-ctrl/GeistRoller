@@ -8,6 +8,7 @@ export const MageGnosisContent = ({
     healthBoxes, maxHealth, filledHealth, isDeadTrack, woundPenalty,
     handleHealthBoxClick, handleHealthBoxesChange,
     calculateWillpowerMax,
+    onRebuyWillpowerDot,
 }) => {
     return (
         <>
@@ -117,6 +118,14 @@ export const MageGnosisContent = ({
                             className="text-[9px] px-1.5 py-0.5 rounded bg-amber-900/30 text-amber-400 hover:bg-amber-800/40 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                             data-testid="willpower-full-btn"
                         >Full</button>
+                        <button
+                            onClick={onRebuyWillpowerDot}
+                            disabled={(getValue("experience") || 0) < 1 || (getValue("willpower_max_modifier") || 0) >= 0}
+                            className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-900/30 text-emerald-400 hover:bg-emerald-800/40 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            data-testid="willpower-rebuy-btn"
+                        >
+                            Rebuy (1 XP)
+                        </button>
                     </div>
                     <span className="text-[10px] text-zinc-600 font-mono">{getValue("willpower") || 0}/{calculateWillpowerMax()}</span>
                 </div>

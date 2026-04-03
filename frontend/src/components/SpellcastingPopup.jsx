@@ -98,6 +98,7 @@ export const SpellcastingPopup = ({
     spellType,
     roteSkillDots,
     isRoteOrderSkill,
+    defaultPrimaryFactor = null,
 }) => {
     const [selectedPractice, setSelectedPractice] = useState("");
     const [spellName, setSpellName] = useState("");
@@ -120,7 +121,9 @@ export const SpellcastingPopup = ({
     const [yantraValues, setYantraValues] = useState({});
 
     // Primary factor state (default: potency)
-    const [primaryFactor, setPrimaryFactor] = useState("potency");
+    const [primaryFactor, setPrimaryFactor] = useState(defaultPrimaryFactor);
+    const [overridePrimaryFactor, setOverridePrimaryFactor] = useState(false);
+    const [spellReach, setSpellReach] = useState(0);
 
     // Reset when popup opens
     useEffect(() => {
@@ -140,9 +143,11 @@ export const SpellcastingPopup = ({
             setManaMitigation(0);
             setActiveYantras(new Set());
             setYantraValues({});
-            setPrimaryFactor("potency");
+            setPrimaryFactor(defaultPrimaryFactor);
+            setOverridePrimaryFactor(false);
+            setSpellReach(0);
         }
-    }, [isOpen, arcanum, initialPractice]);
+    }, [isOpen, arcanum, initialPractice, defaultPrimaryFactor]);
 
     // Gnosis-derived data
     const gnosisData = GNOSIS_TABLE[gnosis] || GNOSIS_TABLE[1];
@@ -159,14 +164,13 @@ export const SpellcastingPopup = ({
     const advancedReachUsed = Object.values(factors).filter(f => f.advanced).length;
     const indefiniteReach = (factors.duration.advanced && factors.duration.level === 6) ? 1 : 0;
 
-    // If this spell is being cast with Advanced Duration, it becomes an Active Spell.
-    // Every Active Spell beyond Gnosis costs 1 extra Reach.
-    const activeSpellReachSurcharge = factors.duration.advanced
-        ? Math.max(0, activeSpellCount - gnosis + 1)
-        : 0;
+    // Current Active Spells increase the Reach cost of any spell cast.
+    // At Active Spells = Gnosis, the next spell costs +1 Reach.
+    // Each Active Spell above Gnosis adds another +1 Reach.
+    const activeSpellReachSurcharge = Math.max(0, activeSpellCount - gnosis + 1);
 
-    const changePrimaryReach = primaryFactor !== "potency" ? 1 : 0;
-    const totalReachUsed = advancedReachUsed + indefiniteReach + changePrimaryReach;
+    const changePrimaryReach = overridePrimaryFactor ? 1 : 0;
+    const totalReachUsed = advancedReachUsed + indefiniteReach + changePrimaryReach + activeSpellReachSurcharge + spellReach;
     const reachRemaining = freeReach - totalReachUsed;
 
     // Primary factor gives free levels = arcanumDots - 1
@@ -290,15 +294,21 @@ export const SpellcastingPopup = ({
         if (!factor) return "";
 
         if (factorName === "casting") {
-            return factor.advanced ? "Instant" : getCastingTime(gnosis);
+            return factor.advanced ? "Instant" : `${getCastingTime(gnosis)} Ritual`;
         }
 
         if (factorName === "range") {
-            return factor.advanced ? "Sensory Range" : "Touch / Self";
+            return factor.advanced ? "Sensory Range" : "Touch Range / Self";
         }
 
         const levels = FACTOR_LEVELS[factorName]?.[factor.advanced ? "advanced" : "standard"];
-        return levels?.[factor.level - 1]?.label || "";
+        const baseDescription = levels?.[factor.level - 1]?.label || "";
+
+        if (factorName === "scale") {
+            return `up to ${baseDescription}`;
+        }
+
+        return baseDescription;
     };
 
     const adjustYantraValue = (name, delta) => {
@@ -317,22 +327,6 @@ export const SpellcastingPopup = ({
 
     const getYantraTestId = (name) => `yantra-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`;
 
-    const getFactorDescription = (factorName) => {
-        const factor = factors[factorName];
-        if (!factor) return "";
-
-        if (factorName === "casting") {
-            return factor.advanced ? "Instant" : getCastingTime(gnosis);
-        }
-
-        if (factorName === "range") {
-            return factor.advanced ? "Sensory Range" : "Touch / Self";
-        }
-
-        const levels = FACTOR_LEVELS[factorName]?.[factor.advanced ? "advanced" : "standard"];
-        return levels?.[factor.level - 1]?.label || "";
-    };
-
     const handleCastSpell = () => {
         if (totalManaCost > 0 && currentMana < totalManaCost) return;
         if (factors.duration.advanced && !spellName.trim()) return;
@@ -349,15 +343,8 @@ export const SpellcastingPopup = ({
             label: `Paradox (${paradoxIsChanceDie ? "Chance Die" : finalParadoxPool + " dice"})`,
         } : null;
 
-        onRollDice({
-            pool: finalDicePool,
-            label: `${arcanum} ${spellType === "praxis" ? "Praxis" : spellType === "rote" ? "Rote" : "Spell"} (${selectedPractice})`,
-            paradox: paradoxConfig,
-            exceptional_target: spellType === "praxis" ? 3 : 5,
-        });
-
-        if (factors.duration.advanced && onCreateActiveSpell) {
-            onCreateActiveSpell({
+        const activeSpellData = factors.duration.advanced && onCreateActiveSpell
+            ? {
                 id: Date.now(),
                 name: spellName.trim(),
                 arcanum,
@@ -365,8 +352,57 @@ export const SpellcastingPopup = ({
                 potency: getFactorDescription("potency"),
                 duration: getFactorDescription("duration"),
                 scale: getFactorDescription("scale"),
-            });
-        }
+            }
+            : null;
+
+        const dicePoolParts = [
+            `Gnosis ${gnosis}`,
+            `${arcanum} ${arcanumDots}`,
+            ...(roteBonus > 0 ? [`Rote Skill ${roteBonus}`] : []),
+            ...(orderSkillBonus > 0 ? [`Order Skill ${orderSkillBonus}`] : []),
+            ...(yantraBonus > 0 ? [`Yantras ${yantraBonus}`] : []),
+            ...(dicePenalty !== 0 ? [`${dicePenalty}`] : []),
+        ];
+
+        const spellSummary = [
+            getFactorDescription("casting"),
+            getFactorDescription("range"),
+            getFactorDescription("potency"),
+            getFactorDescription("duration"),
+            getFactorDescription("scale"),
+        ].join("; ");
+
+        const dicePoolBreakdownParts = [
+            `Gnosis ${gnosis}`,
+            `${arcanum} ${arcanumDots}`,
+            ...(roteBonus > 0 ? [`Rote Skill ${roteBonus}`] : []),
+            ...(orderSkillBonus > 0 ? [`Order Skill ${orderSkillBonus}`] : []),
+            ...(yantraBonus > 0 ? [`Yantras ${yantraBonus}`] : []),
+            ...(dicePenalty !== 0 ? [`${dicePenalty}`] : []),
+        ];
+
+        const transcriptSpellSummary = [
+            getFactorDescription("casting"),
+            getFactorDescription("range"),
+            getFactorDescription("potency"),
+            getFactorDescription("duration"),
+            getFactorDescription("scale"),
+        ].join("; ");
+
+        onRollDice({
+            pool: finalDicePool,
+            label: `${arcanum} ${spellType === "praxis" ? "Praxis" : spellType === "rote" ? "Rote" : "Spell"} (${selectedPractice})`,
+            paradox: paradoxConfig,
+            exceptional_target: spellType === "praxis" ? 3 : 5,
+            dicePoolBreakdown: dicePoolBreakdownParts.join(" + "),
+            spellSummary,
+            onResult: (rollResult) => {
+                const spellSucceeded = (rollResult?.successes || 0) >= 1;
+                if (spellSucceeded && activeSpellData) {
+                    onCreateActiveSpell(activeSpellData);
+                }
+            },
+        });
 
         onClose();
     };
@@ -386,12 +422,13 @@ export const SpellcastingPopup = ({
 
         let description = "";
         if (isCasting) {
-            description = f.advanced ? "Instant" : castingTimeStandard;
+            description = f.advanced ? "Instant" : `${castingTimeStandard} Ritual`;
         } else if (isRange) {
-            description = f.advanced ? "Sensory Range" : "Touch / Self";
+            description = f.advanced ? "Sensory Range" : "Touch Range / Self";
         } else {
             const levels = FACTOR_LEVELS[factorName]?.[f.advanced ? "advanced" : "standard"];
-            description = levels?.[f.level - 1]?.label || "";
+            const baseDescription = levels?.[f.level - 1]?.label || "";
+            description = factorName === "scale" ? `up to ${baseDescription}` : baseDescription;
         }
 
         const paidLevels = hasLevels ? Math.max(0, f.level - 1 - freeLevelsFromPrimary) : 0;
@@ -401,9 +438,11 @@ export const SpellcastingPopup = ({
                 {hasPrimary ? (
                     <Checkbox
                         checked={isPrimary}
+                        disabled={isPrimary}
                         onCheckedChange={(checked) => {
-                            if (checked) setPrimaryFactor(factorName);
-                            else setPrimaryFactor("potency");
+                            if (checked) {
+                                setPrimaryFactor(factorName);
+                            }
                         }}
                         className="border-zinc-600 data-[state=checked]:bg-teal-600 h-3.5 w-3.5"
                         data-testid={`primary-${factorName}`}
@@ -525,7 +564,7 @@ export const SpellcastingPopup = ({
 
                     {/* Reach Display */}
                     {selectedPractice && (
-                        <div className="p-2 bg-zinc-800/50 rounded text-sm space-y-1">
+                        <div className="p-2 bg-zinc-800/50 rounded text-sm space-y-1.5">
                             <div className="flex items-center justify-between">
                                 <span className="text-zinc-400">
                                     Free Reach: <span className="text-teal-400 font-mono">{freeReach}</span>
@@ -536,16 +575,107 @@ export const SpellcastingPopup = ({
                                 </span>
                             </div>
 
-                            {activeSpellReachSurcharge > 0 && (
-                                <div className="flex items-center justify-between text-xs">
-                                    <span className="text-zinc-500">
-                                        Active Spell surcharge
-                                    </span>
-                                    <span className="font-mono text-amber-400">
-                                        +{activeSpellReachSurcharge} Reach
-                                    </span>
+                            {(advancedReachUsed > 0 || indefiniteReach > 0 || changePrimaryReach > 0 || activeSpellReachSurcharge > 0 || spellReach > 0) && (
+                                <div className="pt-1 border-t border-zinc-700/50 space-y-1 text-xs">
+                                    {advancedReachUsed > 0 && (
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-zinc-500">Advanced Factors</span>
+                                            <span className="font-mono text-amber-400">+{advancedReachUsed} Reach</span>
+                                        </div>
+                                    )}
+
+                                    {indefiniteReach > 0 && (
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-zinc-500">Indefinite Duration</span>
+                                            <span className="font-mono text-amber-400">+{indefiniteReach} Reach</span>
+                                        </div>
+                                    )}
+
+                                    {changePrimaryReach > 0 && (
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-zinc-500">Override Primary Factor </span>
+                                            <span className="font-mono text-amber-400">+{changePrimaryReach} Reach</span>
+                                        </div>
+                                    )}
+
+                                    {spellReach > 0 && (
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-zinc-500">Spell Reach</span>
+                                            <span className="font-mono text-amber-400">+{spellReach} Reach</span>
+                                        </div>
+                                    )}
+
+                                    {activeSpellReachSurcharge > 0 && (
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-zinc-500">Active Spell surcharge</span>
+                                            <span className="font-mono text-amber-400">+{activeSpellReachSurcharge} Reach</span>
+                                        </div>
+                                    )}
+
+                                    <div className="flex items-center justify-between pt-1 border-t border-zinc-700/50">
+                                        <span className="text-zinc-400">Total Reach Used</span>
+                                        <span className="font-mono text-zinc-200">{totalReachUsed}</span>
+                                    </div>
                                 </div>
                             )}
+                        </div>
+                    )}
+
+                    {/* Spell Reach */}
+                    {selectedPractice && (
+                        <div className="p-2 bg-zinc-800/30 rounded space-y-1.5">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-xs text-zinc-500 uppercase">Spell Reach</p>
+                                    <p className="text-[11px] text-zinc-600">
+                                        Extra Reach required by this spell's own options
+                                    </p>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-6 w-6 text-zinc-400"
+                                        onClick={() => setSpellReach(Math.max(0, spellReach - 1))}
+                                        disabled={spellReach <= 0}
+                                        data-testid="spell-reach-decrease"
+                                    >
+                                        <Minus className="w-3 h-3" />
+                                    </Button>
+                                    <span className="font-mono text-amber-400 w-8 text-center">
+                                        {spellReach}
+                                    </span>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-6 w-6 text-zinc-400"
+                                        onClick={() => setSpellReach(spellReach + 1)}
+                                        data-testid="spell-reach-increase"
+                                    >
+                                        <Plus className="w-3 h-3" />
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Primary Factor Override */}
+                    {selectedPractice && (
+                        <div className="p-2 bg-zinc-800/30 rounded space-y-1.5">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-xs text-zinc-500 uppercase">Primary Factor Override</p>
+                                    <p className="text-[11px] text-zinc-600">
+                                        Spend 1 Reach to override the spell's normal primary factor
+                                    </p>
+                                </div>
+                                <Checkbox
+                                    checked={overridePrimaryFactor}
+                                    onCheckedChange={setOverridePrimaryFactor}
+                                    className="border-zinc-600 data-[state=checked]:bg-amber-600"
+                                    data-testid="override-primary-factor"
+                                />
+                            </div>
                         </div>
                     )}
 

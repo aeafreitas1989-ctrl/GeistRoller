@@ -271,7 +271,7 @@ export const CharacterPanel = ({
         });
     };
 
-    const relinquishActiveSpell = async (spellId) => {
+    const dispelActiveSpell = async (spellId) => {
         const currentActiveSpells = activeCharacter?.active_spells || [];
         await onUpdateCharacter({
             active_spells: currentActiveSpells.filter((spell) => spell.id !== spellId),
@@ -296,13 +296,6 @@ export const CharacterPanel = ({
             onUpdateCharacter(pendingChanges);
             setPendingChanges({});
         }
-    };
-
-    const addActiveSpell = async (spell) => {
-        const currentActiveSpells = activeCharacter?.active_spells || [];
-        await onUpdateCharacter({
-            active_spells: [...currentActiveSpells, spell],
-        });
     };
 
     const getValue = (field) => pendingChanges[field] ?? activeCharacter?.[field];
@@ -407,6 +400,44 @@ export const CharacterPanel = ({
             delete next.willpower;
             return next;
         });
+        return true;
+    };
+
+    const rebuyWillpowerDot = async () => {
+        const currentXP = getValue("experience") || 0;
+        const currentModifier = getValue("willpower_max_modifier") || 0;
+
+        if (currentXP < 1) {
+            toast.error("Not enough Experience");
+            return false;
+        }
+
+        if (currentModifier >= 0) {
+            toast.error("Willpower is already at Resolve + Composure");
+            return false;
+        }
+
+        const nextModifier = Math.min(0, currentModifier + 1);
+        const currentWillpower = getValue("willpower") || 0;
+        const resolve = getNestedValue("attributes", "resolve") || 1;
+        const composure = getNestedValue("attributes", "composure") || 1;
+        const nextMaxWillpower = Math.max(0, resolve + composure + nextModifier);
+
+        await onUpdateCharacter({
+            experience: currentXP - 1,
+            willpower_max_modifier: nextModifier,
+            willpower: Math.min(currentWillpower + 1, nextMaxWillpower),
+        });
+
+        setPendingChanges((prev) => {
+            const next = { ...prev };
+            delete next.experience;
+            delete next.willpower_max_modifier;
+            delete next.willpower;
+            return next;
+        });
+
+        toast.success("Willpower dot re-bought for 1 Experience");
         return true;
     };
 
@@ -606,7 +637,8 @@ export const CharacterPanel = ({
     const calculateWillpowerMax = () => {
         const resolve = getNestedValue("attributes", "resolve") || 1;
         const composure = getNestedValue("attributes", "composure") || 1;
-        return resolve + composure;
+        const modifier = getValue("willpower_max_modifier") || 0;
+        return Math.max(0, resolve + composure + modifier);
     };
 
     const geistRank = parseInt(getValue("geist_rank"), 10) || 1;
@@ -1418,6 +1450,7 @@ export const CharacterPanel = ({
                                     healthBoxes={healthBoxes} maxHealth={maxHealth} filledHealth={filledHealth} isDeadTrack={isDeadTrack} woundPenalty={woundPenalty}
                                     handleHealthBoxClick={handleHealthBoxClick} handleHealthBoxesChange={handleHealthBoxesChange}
                                     calculateWillpowerMax={calculateWillpowerMax}
+                                    onRebuyWillpowerDot={rebuyWillpowerDot}
                                 />
                             ) : (
                                 <GeistSynergyContent

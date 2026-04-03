@@ -597,31 +597,70 @@ export const KeyCard = ({ name, active, definition, onToggle, locked = false, so
     );
 };
 
-export const ActiveSpellCard = ({ spell }) => {
+export const ActiveSpellCard = ({ spell, onDispel, onRelinquish, onRelinquishSafely }) => {
     return (
-        <div className="bg-violet-950/20 border border-violet-500/30 rounded-sm p-3 space-y-2">
+        <div className="bg-zinc-950 border border-zinc-800 rounded-md p-3 space-y-2">
             <div className="flex items-start justify-between gap-2">
                 <div>
-                    <div className="flex items-center gap-2">
-                        <Sparkles className="w-4 h-4 text-violet-400" />
-                        <h4 className="text-sm font-heading text-violet-200">{spell.name || "Unnamed Spell"}</h4>
-                    </div>
-                    <p className="text-[11px] text-zinc-500 mt-1">
-                        {spell.arcanum} · {spell.practice}
+                    <h4 className="text-sm font-medium text-zinc-100">{spell.name}</h4>
+                    <p className="text-xs text-zinc-400">
+                        {spell.arcanum} • {spell.practice}
                     </p>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                 <div className="rounded-sm bg-zinc-900/50 border border-zinc-800 p-2">
-                    <span className="text-zinc-500">Potency:</span> <span className="text-zinc-200">{spell.potency}</span>
+                    <span className="text-zinc-500">Potency:</span>{" "}
+                    <span className="text-zinc-200">{spell.potency}</span>
                 </div>
                 <div className="rounded-sm bg-zinc-900/50 border border-zinc-800 p-2">
-                    <span className="text-zinc-500">Duration:</span> <span className="text-zinc-200">{spell.duration}</span>
+                    <span className="text-zinc-500">Duration:</span>{" "}
+                    <span className="text-zinc-200">{spell.duration}</span>
                 </div>
                 <div className="rounded-sm bg-zinc-900/50 border border-zinc-800 p-2 sm:col-span-2">
-                    <span className="text-zinc-500">Scale:</span> <span className="text-zinc-200">{spell.scale}</span>
+                    <span className="text-zinc-500">Scale:</span>{" "}
+                    <span className="text-zinc-200">{spell.scale}</span>
                 </div>
+            </div>
+
+            <div className="flex flex-wrap gap-1 pt-1">
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-[10px] text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60"
+                    onClick={() => onDispel?.(spell.id)}
+                    data-testid={`active-spell-dispel-${spell.id}`}
+                >
+                    Dispel
+                </Button>
+
+                {onRelinquish && (
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 text-[10px] text-amber-400/80 hover:text-amber-300 hover:bg-amber-950/20"
+                        onClick={() => onRelinquish(spell.id)}
+                        data-testid={`active-spell-relinquish-${spell.id}`}
+                    >
+                        Relinquish
+                    </Button>
+                )}
+
+                {onRelinquishSafely && (
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 text-[10px] text-rose-400/80 hover:text-rose-300 hover:bg-rose-950/20"
+                        onClick={() => onRelinquishSafely(spell.id)}
+                        data-testid={`active-spell-relinquish-safely-${spell.id}`}
+                    >
+                        Relinquish Safely
+                    </Button>
+                )}
             </div>
         </div>
     );

@@ -196,10 +196,37 @@ export const StorytellerPage = () => {
         await updateCharacter({ active_spells: [...currentActiveSpells, spell] });
     };
 
-    const relinquishActiveSpell = async (spellId) => {
+    const dispelActiveSpell = async (spellId) => {
         const currentActiveSpells = activeCharacter?.active_spells || [];
         await updateCharacter({
             active_spells: currentActiveSpells.filter((spell) => spell.id !== spellId),
+        });
+    };
+
+    const relinquishActiveSpell = async (spellId) => {
+        const currentActiveSpells = activeCharacter?.active_spells || [];
+        const currentWillpower = activeCharacter?.willpower || 0;
+
+        await updateCharacter({
+            active_spells: currentActiveSpells.filter((spell) => spell.id !== spellId),
+            willpower: Math.max(0, currentWillpower - 1),
+        });
+    };
+
+    const relinquishActiveSpellSafely = async (spellId) => {
+        const currentActiveSpells = activeCharacter?.active_spells || [];
+        const currentWillpower = activeCharacter?.willpower || 0;
+        const currentModifier = activeCharacter?.willpower_max_modifier || 0;
+
+        const resolve = activeCharacter?.attributes?.resolve || 1;
+        const composure = activeCharacter?.attributes?.composure || 1;
+        const nextModifier = currentModifier - 1;
+        const nextMaxWillpower = Math.max(0, resolve + composure + nextModifier);
+
+        await updateCharacter({
+            active_spells: currentActiveSpells.filter((spell) => spell.id !== spellId),
+            willpower_max_modifier: nextModifier,
+            willpower: Math.min(currentWillpower, nextMaxWillpower),
         });
     };
 
@@ -404,7 +431,9 @@ export const StorytellerPage = () => {
                                     onUpdateHaunt={updateHaunt}
                                     onToggleKey={toggleKey}
                                     onUpdatePlacesPeople={updatePlacesPeople}
+                                    onDispelActiveSpell={dispelActiveSpell}
                                     onRelinquishActiveSpell={relinquishActiveSpell}
+                                    onRelinquishActiveSpellSafely={relinquishActiveSpellSafely}
                                 />
                             </div>
                         </section>

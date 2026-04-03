@@ -55,7 +55,9 @@ export const GameCardsPanel = ({
     onUpdateHaunt,
     onToggleKey,
     onUpdatePlacesPeople,
+    onDispelActiveSpell,
     onRelinquishActiveSpell,
+    onRelinquishActiveSpellSafely,
     onGenerateCaseTruth,
     sessionSummary,
 }) => {
@@ -645,6 +647,9 @@ export const GameCardsPanel = ({
                                             <ActiveSpellCard
                                                 key={spell.id || `${spell.name}-${spell.arcanum}-${spell.practice}`}
                                                 spell={spell}
+                                                onDispel={onDispelActiveSpell}
+                                                onRelinquish={onRelinquishActiveSpell}
+                                                onRelinquishSafely={onRelinquishActiveSpellSafely}
                                             />
                                         ))}
                                     </div>
