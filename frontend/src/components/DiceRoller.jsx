@@ -243,15 +243,7 @@ export const DiceRoller = forwardRef((props, ref) => {
     }, [result, lastRollConfig, pool, again]);
 
     if (!isOpen) {
-        return (
-            <Button
-                onClick={() => setIsOpen(true)}
-                className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-teal-900/50 border border-teal-500/50 hover:bg-teal-800/50 shadow-ectoplasm z-[60]"
-                data-testid="open-dice-roller-btn"
-            >
-                <Dices className="w-6 h-6 text-teal-300" />
-            </Button>
-        );
+        return null;
     }
 
     return (

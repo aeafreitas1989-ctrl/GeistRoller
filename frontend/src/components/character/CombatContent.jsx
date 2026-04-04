@@ -12,6 +12,7 @@ import {
     AVAILABILITY_OPTIONS, WEAPON_SPECIAL_OPTIONS, ARMOR_COVERAGE_OPTIONS,
     PREMADE_ARMOR, PREMADE_EQUIPMENT,
 } from "../../data/character-data";
+import { HealthTrack, getHealthCounts, buildHealthBoxes } from "./StatComponents";
 
 export const CombatContent = ({
     getValue, getNestedValue, handleChange,
@@ -24,6 +25,13 @@ export const CombatContent = ({
     inventoryAddOpen, setInventoryAddOpen,
     editingInventoryIndex, setEditingInventoryIndex,
     invType, setInvType, invPremade, setInvPremade, invDraft, setInvDraft,
+    healthBoxes, maxHealth, filledHealth, isDeadTrack, woundPenalty,
+    handleHealthBoxClick, onHealHealthState,
+    handleHealthBoxesChange,
+    onStartCombat,
+    showCombat = true,
+    showMageArmor = true,
+    showInventory = true,
 }) => {
     return (
         <>
@@ -46,10 +54,18 @@ export const CombatContent = ({
                     <span className="text-zinc-500">Speed</span>
                     <span className="font-mono text-teal-400">{calculateSpeed()}</span>
                 </div>
-                <div className="flex justify-between items-center p-2 bg-zinc-900/30 rounded-sm">
+                <div className="col-span-2 flex justify-between items-center p-2 bg-zinc-900/30 rounded-sm">
                     <span className="text-zinc-500">Armor</span>
                     <span className="font-mono text-teal-400" data-testid="armor-input">{equippedArmorGeneral + mageArmorGeneralBonus}/{equippedArmorBallistic}</span>
                 </div>
+                <Button
+                    type="button"
+                    onClick={onOpenCombatCard}
+                    className="col-span-2 btn-primary"
+                    data-testid="combat-start-btn"
+                >
+                    Start Combat
+                </Button>
             </div>
 
             {/* Mage Armor */}
@@ -100,8 +116,10 @@ export const CombatContent = ({
                 );
             })()}
 
-            {/* Inventory (structured) */}
-            <div className="mt-2 space-y-2">
+            {showInventory && (
+                <>
+                    {/* Inventory (structured) */}
+                    <div className="mt-2 space-y-2">
                 <div className="flex items-center justify-between">
                     <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Inventory</label>
                     <div className="flex items-center gap-2">
@@ -581,7 +599,10 @@ export const CombatContent = ({
                         ))}
                     </div>
                 )}
-            </div>
+                    </div>
+                </>
+            )}
         </>
     );
 };
+

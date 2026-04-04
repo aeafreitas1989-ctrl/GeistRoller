@@ -79,6 +79,7 @@ export const CharacterPanel = ({
     onDeleteCharacter,
     onDiceRollResult,
     onTriggerDiceRoll,
+    onStartCombat,
 }) => {
     const [expandedSections, setExpandedSections] = useState({
         header: false,
@@ -87,6 +88,7 @@ export const CharacterPanel = ({
         skills: false,
         merits: false,
         combat: false,
+        inventory: false,
         sinEater: false,
         powers: false,
         notes: false,
@@ -745,6 +747,25 @@ export const CharacterPanel = ({
             } else if (counts.aggravated > 0) {
                 counts.aggravated -= 1;
             }
+        }
+
+        const updatedBoxes = buildHealthBoxes(counts, maxHealth);
+        await handleHealthBoxesChange(updatedBoxes);
+    };
+
+    const healHealthState = async (stateToHeal) => {
+        const counts = getHealthCounts(healthBoxes);
+
+        if (stateToHeal === "bashing" && counts.bashing > 0) {
+            counts.bashing -= 1;
+        }
+
+        if (stateToHeal === "lethal" && counts.lethal > 0) {
+            counts.lethal -= 1;
+        }
+
+        if (stateToHeal === "aggravated" && counts.aggravated > 0) {
+            counts.aggravated -= 1;
         }
 
         const updatedBoxes = buildHealthBoxes(counts, maxHealth);
@@ -1431,6 +1452,60 @@ export const CharacterPanel = ({
                                 inventoryAddOpen={inventoryAddOpen} setInventoryAddOpen={setInventoryAddOpen}
                                 editingInventoryIndex={editingInventoryIndex} setEditingInventoryIndex={setEditingInventoryIndex}
                                 invType={invType} setInvType={setInvType} invPremade={invPremade} setInvPremade={setInvPremade} invDraft={invDraft} setInvDraft={setInvDraft}
+                                healthBoxes={healthBoxes}
+                                maxHealth={maxHealth}
+                                filledHealth={filledHealth}
+                                isDeadTrack={isDeadTrack}
+                                woundPenalty={woundPenalty}
+                                handleHealthBoxClick={handleHealthBoxClick}
+                                handleHealthBoxesChange={handleHealthBoxesChange}
+                                onHealHealthState={healHealthState}
+                                onStartCombat={onStartCombat}
+                                showCombat={true}
+                                showMageArmor={true}
+                                showInventory={false}
+                            />
+                        </CollapsibleContent>
+                    </Collapsible>
+
+                    <Collapsible open={expandedSections.inventory}>
+                        <CollapsibleTrigger
+                            onClick={() => toggleSection("inventory")}
+                            className="flex items-center justify-between w-full p-2 rounded-sm bg-orange-900/20 border border-orange-800 hover:bg-orange-800/30"
+                            data-testid="section-toggle-inventory"
+                        >
+                            <span className="text-xs font-mono uppercase tracking-wider text-orange-400">Inventory</span>
+                            {expandedSections.inventory ? (
+                                <ChevronDown className="w-4 h-4 text-orange-500" />
+                            ) : (
+                                <ChevronRight className="w-4 h-4 text-orange-500" />
+                            )}
+                        </CollapsibleTrigger>
+
+                        <CollapsibleContent className="pt-2">
+                            <CombatContent
+                                getValue={getValue} getNestedValue={getNestedValue} handleChange={handleChange}
+                                isMage={isMage}
+                                meritsList={meritsList}
+                                calculateDefense={calculateDefense} calculateInitiative={calculateInitiative} calculateSpeed={calculateSpeed}
+                                mageArmorDefenseBonus={mageArmorDefenseBonus} mageArmorGeneralBonus={mageArmorGeneralBonus}
+                                equippedArmorGeneral={equippedArmorGeneral} equippedArmorBallistic={equippedArmorBallistic}
+                                inventoryItems={inventoryItems} updateInventoryItem={updateInventoryItem} updateInventoryItemNested={updateInventoryItemNested} removeInventoryItem={removeInventoryItem} addInventoryItem={addInventoryItem}
+                                inventoryAddOpen={inventoryAddOpen} setInventoryAddOpen={setInventoryAddOpen}
+                                editingInventoryIndex={editingInventoryIndex} setEditingInventoryIndex={setEditingInventoryIndex}
+                                invType={invType} setInvType={setInvType} invPremade={invPremade} setInvPremade={setInvPremade} invDraft={invDraft} setInvDraft={setInvDraft}
+                                healthBoxes={healthBoxes}
+                                maxHealth={maxHealth}
+                                filledHealth={filledHealth}
+                                isDeadTrack={isDeadTrack}
+                                woundPenalty={woundPenalty}
+                                handleHealthBoxClick={handleHealthBoxClick}
+                                handleHealthBoxesChange={handleHealthBoxesChange}
+                                onHealHealthState={healHealthState}
+                                onStartCombat={onStartCombat}
+                                showCombat={false}
+                                showMageArmor={false}
+                                showInventory={true}
                             />
                         </CollapsibleContent>
                     </Collapsible>

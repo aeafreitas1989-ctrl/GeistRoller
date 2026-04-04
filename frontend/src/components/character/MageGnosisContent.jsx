@@ -18,6 +18,16 @@ export const MageGnosisContent = ({
                 <SynergyTrack value={getValue("gnosis") || 1} maxValue={10} onChangeValue={(v) => handleChange("gnosis", v)} onChangeMax={() => {}} />
             </div>
 
+            <div>
+                <label className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1 block">Wisdom</label>
+                <SynergyTrack
+                    value={getValue("wisdom") ?? 7}
+                    maxValue={10}
+                    onChangeValue={(v) => handleChange("wisdom", v)}
+                    onChangeMax={() => {}}
+                />
+            </div>
+
             {(() => {
                 const gnosisLevel = getValue("gnosis") || 1;
                 const gnosisData = GNOSIS_TABLE[gnosisLevel] || GNOSIS_TABLE[1];
@@ -53,48 +63,6 @@ export const MageGnosisContent = ({
                     placeholder="Describe your Nimbus manifestation..."
                     data-testid="mage-nimbus-input"
                 />
-            </div>
-
-            {/* Health */}
-            <div>
-                <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-1.5">
-                        <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Health</label>
-                        <button
-                            onClick={() => {
-                                const currentMana = getValue("mana") || 0;
-                                if (currentMana < 3) return;
-                                const counts = getHealthCounts(healthBoxes);
-                                if (counts.lethal > 0) {
-                                    counts.lethal -= 1;
-                                } else if (counts.bashing > 0) {
-                                    counts.bashing -= 1;
-                                } else return;
-                                handleChange("mana", currentMana - 3);
-                                const updatedBoxes = buildHealthBoxes(counts, maxHealth);
-                                handleHealthBoxesChange(updatedBoxes);
-                            }}
-                            disabled={(getValue("mana") || 0) < 3 || (() => { const c = getHealthCounts(healthBoxes); return c.lethal + c.bashing === 0; })()}
-                            className="text-[9px] px-1.5 py-0.5 rounded bg-violet-900/30 text-violet-400 hover:bg-violet-800/40 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                            title="Spend 3 Mana to heal 1 Lethal or Bashing"
-                            data-testid="pattern-restoration-btn"
-                        >
-                            Pattern Restoration
-                        </button>
-                    </div>
-                    <span className="text-[10px] text-zinc-600 font-mono" data-testid="health-count">{filledHealth}/{maxHealth}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                    {isDeadTrack && (
-                        <span className="text-[10px] text-rose-400 font-mono" data-testid="health-dead-label">DEAD</span>
-                    )}
-                    <HealthTrack boxes={healthBoxes} max={maxHealth} onBoxClick={handleHealthBoxClick} />
-                </div>
-                {woundPenalty < 0 && (
-                    <p className="text-[10px] text-rose-400 mt-1" data-testid="health-wound-penalty">
-                        Wound Penalty {woundPenalty}
-                    </p>
-                )}
             </div>
 
             {/* Willpower */}

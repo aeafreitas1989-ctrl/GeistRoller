@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { X, Plus, Info, Pencil, Flame, Skull, Droplets, Wind, Bug, Mountain, Sparkles, Ghost, Zap, ChevronDown, ChevronRight, Star, Dices, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -661,6 +661,313 @@ export const ActiveSpellCard = ({ spell, onDispel, onRelinquish, onRelinquishSaf
                         Relinquish Safely
                     </Button>
                 )}
+            </div>
+        </div>
+    );
+};
+
+export const CombatTrackerCard = ({
+    activeCharacter,
+    normalDefense,
+    initiativeModifier,
+    speed,
+    armorGeneral,
+    armorBallistic,
+    activeMageArmorName,
+    activeMageArmorDots,
+    onTriggerDiceRoll,
+    onApplyIncomingDamage,
+    onEndCombat,
+}) => {
+    const [currentDefense, setCurrentDefense] = useState(normalDefense);
+    const [initiativeRoll, setInitiativeRoll] = useState(null);
+    const [attackAttribute, setAttackAttribute] = useState("strength");
+    const [attackSkill, setAttackSkill] = useState("brawl");
+    const [targetDefense, setTargetDefense] = useState("0");
+    const [attackModifier, setAttackModifier] = useState("0");
+    const [incomingDamage, setIncomingDamage] = useState("1");
+    const [incomingType, setIncomingType] = useState("bashing");
+    const [incomingSource, setIncomingSource] = useState("general");
+
+    const formatLabel = (value) => value.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
+    const getValue = (parent, field) => activeCharacter?.[parent]?.[field] || 0;
+
+    const rollInitiative = () => {
+        const die = Math.floor(Math.random() * 10) + 1;
+        setInitiativeRoll({ die, modifier: initiativeModifier, total: die + initiativeModifier });
+    };
+
+    useEffect(() => {
+        setCurrentDefense(normalDefense);
+        setAttackAttribute("strength");
+        setAttackSkill("brawl");
+        setTargetDefense("0");
+        setAttackModifier("0");
+        setIncomingDamage("1");
+        setIncomingType("bashing");
+        setIncomingSource("general");
+        rollInitiative();
+    }, [activeCharacter?.id, normalDefense, initiativeModifier]);
+
+    const attackPool = Math.max(
+        0,
+        (getValue("attributes", attackAttribute) || 0) +
+        (getValue("skills", attackSkill) || 0) +
+        (parseInt(attackModifier, 10) || 0) -
+        (parseInt(targetDefense, 10) || 0)
+    );
+
+    return (
+        <div className="space-y-3" data-testid="combat-tracker-card">
+            <div className="grid grid-cols-3 gap-2 text-xs">
+                <button
+                    type="button"
+                    onClick={() => setCurrentDefense((prev) => Math.max(0, prev - 1))}
+                    className="rounded-sm border p-2 text-left transition-all bg-zinc-900/50 border-zinc-800 hover:border-zinc-600"
+                    data-testid="combat-card-defense-btn"
+                >
+                    <div className="flex items-center justify-between">
+                        <span className="text-zinc-500">Defense</span>
+                        <span className="font-mono text-teal-400">{currentDefense}</span>
+                    </div>
+                </button>
+
+                <button
+                    type="button"
+                    onClick={() => {
+                        if (!onTriggerDiceRoll || currentDefense <= 0) return;
+                        onTriggerDiceRoll({
+                            pool: currentDefense * 2,
+                            label: `Dodge (${currentDefense} Defense × 2)`,
+                            dicePoolBreakdown: `Dodge ${currentDefense} × 2`,
+                            exceptional_target: 5,
+                        });
+                    }}
+                    disabled={currentDefense <= 0}
+                    className="rounded-sm border p-2 text-left transition-all bg-zinc-900/50 border-zinc-800 hover:border-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                    data-testid="combat-card-dodge-btn"
+                >
+                    <div className="flex items-center justify-between">
+                        <span className="text-zinc-500">Dodge</span>
+                        <span className="font-mono text-teal-400">{currentDefense * 2}</span>
+                    </div>
+                </button>
+
+                <button
+                    type="button"
+                    onClick={rollInitiative}
+                    className="rounded-sm border p-2 text-left transition-all bg-zinc-900/50 border-zinc-800 hover:border-zinc-600"
+                    data-testid="combat-card-initiative-btn"
+                >
+                    <div className="flex items-center justify-between">
+                        <span className="text-zinc-500">Initiative</span>
+                        <span className="font-mono text-teal-400">{initiativeRoll?.total ?? initiativeModifier}</span>
+                    </div>
+                </button>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 text-xs">
+                <div className="rounded-sm border p-2 bg-zinc-900/30 border-zinc-800">
+                    <div className="flex items-center justify-between">
+                        <span className="text-zinc-500">Speed</span>
+                        <span className="font-mono text-teal-400">{speed}</span>
+                    </div>
+                </div>
+                <div className="rounded-sm border p-2 bg-zinc-900/30 border-zinc-800">
+                    <div className="flex items-center justify-between">
+                        <span className="text-zinc-500">Armor</span>
+                        <span className="font-mono text-teal-400">{armorGeneral}/{armorBallistic}</span>
+                    </div>
+                </div>
+                <div className="rounded-sm border p-2 bg-zinc-900/30 border-zinc-800">
+                    <div className="flex items-center justify-between">
+                        <span className="text-zinc-500">Current Init</span>
+                        <span className="font-mono text-teal-400">{initiativeRoll?.total ?? initiativeModifier}</span>
+                    </div>
+                    {initiativeRoll && (
+                        <div className="mt-1 text-[10px] text-zinc-600">d10 {initiativeRoll.die} + {initiativeRoll.modifier}</div>
+                    )}
+                </div>
+            </div>
+
+            {activeMageArmorName && (
+                <div className="rounded-sm border p-2 bg-violet-900/20 border-violet-500/30 text-xs text-violet-200">
+                    Mage Armor active: <span className="font-medium">{activeMageArmorName}</span> ({activeMageArmorDots})
+                </div>
+            )}
+
+            <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+                <div className="rounded-sm border p-3 bg-zinc-900/30 border-zinc-800 space-y-3">
+                    <div className="flex items-center gap-2 text-sm font-medium text-amber-300">
+                        <Zap className="w-4 h-4" />
+                        Outgoing Attack
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                        <div>
+                            <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Attribute</label>
+                            <Select value={attackAttribute} onValueChange={setAttackAttribute}>
+                                <SelectTrigger className="bg-zinc-900/50 border-zinc-800 h-7 text-xs">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="bg-zinc-900 border-zinc-800">
+                                    {["strength", "dexterity"].map((value) => (
+                                        <SelectItem key={value} value={value} className="text-zinc-200 text-xs">
+                                            {formatLabel(value)} ({getValue("attributes", value) || 0})
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div>
+                            <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Skill</label>
+                            <Select value={attackSkill} onValueChange={setAttackSkill}>
+                                <SelectTrigger className="bg-zinc-900/50 border-zinc-800 h-7 text-xs">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="bg-zinc-900 border-zinc-800">
+                                    {["athletics", "brawl", "firearms", "weaponry"].map((value) => (
+                                        <SelectItem key={value} value={value} className="text-zinc-200 text-xs">
+                                            {formatLabel(value)} ({getValue("skills", value) || 0})
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                        <div>
+                            <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Target Defense</label>
+                            <Input
+                                type="number"
+                                min={0}
+                                max={10}
+                                value={targetDefense}
+                                onChange={(e) => setTargetDefense(e.target.value)}
+                                className="input-geist h-7 text-xs"
+                                data-testid="combat-card-target-defense"
+                            />
+                        </div>
+                        <div>
+                            <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Modifier</label>
+                            <Input
+                                type="number"
+                                value={attackModifier}
+                                onChange={(e) => setAttackModifier(e.target.value)}
+                                className="input-geist h-7 text-xs"
+                                data-testid="combat-card-attack-modifier"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="flex items-center justify-between rounded-sm border px-3 py-2 bg-zinc-950/50 border-zinc-800">
+                        <span className="text-zinc-500 text-xs">Pool</span>
+                        <span className="font-mono text-amber-300 text-sm">{attackPool}</span>
+                    </div>
+
+                    <Button
+                        size="sm"
+                        className="w-full btn-secondary text-xs h-7"
+                        onClick={() => {
+                            if (!onTriggerDiceRoll) return;
+                            onTriggerDiceRoll({
+                                pool: attackPool <= 0 ? 1 : attackPool,
+                                chance: attackPool <= 0,
+                                label: `${formatLabel(attackAttribute)} + ${formatLabel(attackSkill)} Attack`,
+                                dicePoolBreakdown: `${formatLabel(attackAttribute)} ${getValue("attributes", attackAttribute) || 0} + ${formatLabel(attackSkill)} ${getValue("skills", attackSkill) || 0} + Modifier ${parseInt(attackModifier, 10) || 0} - Target Defense ${parseInt(targetDefense, 10) || 0}`,
+                                exceptional_target: 5,
+                            });
+                        }}
+                        data-testid="combat-card-outgoing-attack-btn"
+                    >
+                        Roll Attack
+                    </Button>
+                </div>
+
+                <div className="rounded-sm border p-3 bg-zinc-900/30 border-zinc-800 space-y-3">
+                    <div className="flex items-center gap-2 text-sm font-medium text-rose-300">
+                        <Skull className="w-4 h-4" />
+                        Incoming Damage
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                        <div>
+                            <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Amount</label>
+                            <Input
+                                type="number"
+                                min={0}
+                                value={incomingDamage}
+                                onChange={(e) => setIncomingDamage(e.target.value)}
+                                className="input-geist h-7 text-xs"
+                                data-testid="combat-card-incoming-damage"
+                            />
+                        </div>
+                        <div>
+                            <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Type</label>
+                            <Select value={incomingType} onValueChange={setIncomingType}>
+                                <SelectTrigger className="bg-zinc-900/50 border-zinc-800 h-7 text-xs">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="bg-zinc-900 border-zinc-800">
+                                    {["bashing", "lethal", "aggravated"].map((value) => (
+                                        <SelectItem key={value} value={value} className="text-zinc-200 text-xs">
+                                            {formatLabel(value)}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Source</label>
+                        <Select value={incomingSource} onValueChange={setIncomingSource}>
+                            <SelectTrigger className="bg-zinc-900/50 border-zinc-800 h-7 text-xs">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="bg-zinc-900 border-zinc-800">
+                                <SelectItem value="general" className="text-zinc-200 text-xs">Mundane / General</SelectItem>
+                                <SelectItem value="ballistic" className="text-zinc-200 text-xs">Ballistic</SelectItem>
+                                <SelectItem value="supernatural" className="text-zinc-200 text-xs">Supernatural</SelectItem>
+                                <SelectItem value="spirit" className="text-zinc-200 text-xs">Spirit / Ephemeral</SelectItem>
+                                <SelectItem value="energy" className="text-zinc-200 text-xs">Energy</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <Button
+                        size="sm"
+                        className="w-full btn-secondary text-xs h-7"
+                        onClick={() => onApplyIncomingDamage?.({
+                            amount: Math.max(0, parseInt(incomingDamage, 10) || 0),
+                            damageType: incomingType,
+                            sourceProfile: incomingSource,
+                        })}
+                        data-testid="combat-card-apply-damage-btn"
+                    >
+                        Apply Damage
+                    </Button>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 pt-1">
+                <Button
+                    size="sm"
+                    className="w-full btn-secondary text-xs h-7"
+                    onClick={() => setCurrentDefense(normalDefense)}
+                    data-testid="combat-card-end-turn-btn"
+                >
+                    End Turn
+                </Button>
+                <Button
+                    size="sm"
+                    className="w-full btn-secondary text-xs h-7"
+                    onClick={onEndCombat}
+                    data-testid="combat-card-end-combat-btn"
+                >
+                    End Combat
+                </Button>
             </div>
         </div>
     );

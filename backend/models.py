@@ -160,6 +160,7 @@ class Character(BaseModel):
     name: str = "New Sin-Eater"
     # Mage-specific fields
     gnosis: int = 1
+    wisdom: int = 7
     mana: int = 10
     nimbus: str = ""
     arcana: Dict[str, int] = Field(default_factory=dict)  # e.g., {"Death": 2, "Spirit": 3}
@@ -237,7 +238,7 @@ class Character(BaseModel):
     updated_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 class CharacterCreate(BaseModel):
-    name: Optional[str] = "New Sin-Eater"
+    name: Optional[str] = "New Character"
     character_type: Optional[str] = "geist"  # "geist" or "mage"
 
 class CharacterUpdate(BaseModel):
@@ -245,6 +246,7 @@ class CharacterUpdate(BaseModel):
     name: Optional[str] = None
     # Mage fields
     gnosis: Optional[int] = None
+    wisdom: Optional[int] = None
     mana: Optional[int] = None
     nimbus: Optional[str] = None
     arcana: Optional[Dict[str, int]] = None

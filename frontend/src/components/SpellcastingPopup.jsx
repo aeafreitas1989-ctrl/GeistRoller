@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { GNOSIS_TABLE, YANTRAS } from "@/data/character-data";
+import { toast } from "sonner";
 
 // Practice dot requirements
 const PRACTICE_DOTS = {
@@ -89,10 +90,12 @@ export const SpellcastingPopup = ({
     isRuling,
     isInferior,
     currentMana,
+    currentWisdom = 7,
     initialPractice,
     onSpendMana,
     onRollDice,
     onCreateActiveSpell,
+    onResolveParadoxContainment,
     activeSpellCount = 0,
     orderRoteSkills,
     spellType,
@@ -115,6 +118,7 @@ export const SpellcastingPopup = ({
     const [sleeperWitnesses, setSleeperWitnesses] = useState("none");
     const [previousParadoxRolls, setPreviousParadoxRolls] = useState(0);
     const [manaMitigation, setManaMitigation] = useState(0);
+    const [paradoxMode, setParadoxMode] = useState("");
 
     // Yantras state
     const [activeYantras, setActiveYantras] = useState(new Set());
@@ -141,6 +145,7 @@ export const SpellcastingPopup = ({
             setSleeperWitnesses("none");
             setPreviousParadoxRolls(0);
             setManaMitigation(0);
+            setParadoxMode("");
             setActiveYantras(new Set());
             setYantraValues({});
             setPrimaryFactor(defaultPrimaryFactor);
@@ -330,18 +335,11 @@ export const SpellcastingPopup = ({
     const handleCastSpell = () => {
         if (totalManaCost > 0 && currentMana < totalManaCost) return;
         if (factors.duration.advanced && !spellName.trim()) return;
+        if (paradoxTriggered && !paradoxMode) return;
 
         if (totalManaCost > 0) {
             onSpendMana(totalManaCost);
         }
-
-        const paradoxConfig = paradoxTriggered ? {
-            pool: paradoxIsChanceDie ? 1 : finalParadoxPool,
-            chance: paradoxIsChanceDie,
-            again: paradoxRollQuality.again,
-            rote: paradoxRollQuality.rote,
-            label: `Paradox (${paradoxIsChanceDie ? "Chance Die" : finalParadoxPool + " dice"})`,
-        } : null;
 
         const activeSpellData = factors.duration.advanced && onCreateActiveSpell
             ? {
@@ -355,15 +353,6 @@ export const SpellcastingPopup = ({
             }
             : null;
 
-        const dicePoolParts = [
-            `Gnosis ${gnosis}`,
-            `${arcanum} ${arcanumDots}`,
-            ...(roteBonus > 0 ? [`Rote Skill ${roteBonus}`] : []),
-            ...(orderSkillBonus > 0 ? [`Order Skill ${orderSkillBonus}`] : []),
-            ...(yantraBonus > 0 ? [`Yantras ${yantraBonus}`] : []),
-            ...(dicePenalty !== 0 ? [`${dicePenalty}`] : []),
-        ];
-
         const spellSummary = [
             getFactorDescription("casting"),
             getFactorDescription("range"),
@@ -372,39 +361,107 @@ export const SpellcastingPopup = ({
             getFactorDescription("scale"),
         ].join("; ");
 
-        const dicePoolBreakdownParts = [
-            `Gnosis ${gnosis}`,
-            `${arcanum} ${arcanumDots}`,
-            ...(roteBonus > 0 ? [`Rote Skill ${roteBonus}`] : []),
-            ...(orderSkillBonus > 0 ? [`Order Skill ${orderSkillBonus}`] : []),
-            ...(yantraBonus > 0 ? [`Yantras ${yantraBonus}`] : []),
-            ...(dicePenalty !== 0 ? [`${dicePenalty}`] : []),
-        ];
+        const castLabel = `${arcanum} ${spellType === "praxis" ? "Praxis" : spellType === "rote" ? "Rote" : "Spell"} (${selectedPractice})`;
 
-        const transcriptSpellSummary = [
-            getFactorDescription("casting"),
-            getFactorDescription("range"),
-            getFactorDescription("potency"),
-            getFactorDescription("duration"),
-            getFactorDescription("scale"),
-        ].join("; ");
+        const buildSpellRollConfig = (poolModifier = 0) => {
+            const adjustedPool = Math.max(0, finalDicePool + poolModifier);
 
-        onRollDice({
-            pool: finalDicePool,
-            label: `${arcanum} ${spellType === "praxis" ? "Praxis" : spellType === "rote" ? "Rote" : "Spell"} (${selectedPractice})`,
-            paradox: paradoxConfig,
-            exceptional_target: spellType === "praxis" ? 3 : 5,
-            dicePoolBreakdown: dicePoolBreakdownParts.join(" + "),
-            spellSummary,
-            onResult: (rollResult) => {
-                const spellSucceeded = (rollResult?.successes || 0) >= 1;
-                if (spellSucceeded && activeSpellData) {
-                    onCreateActiveSpell(activeSpellData);
-                }
-            },
-        });
+            const dicePoolBreakdownParts = [
+                `Gnosis ${gnosis}`,
+                `${arcanum} ${arcanumDots}`,
+                ...(roteBonus > 0 ? [`Rote Skill ${roteBonus}`] : []),
+                ...(orderSkillBonus > 0 ? [`Order Skill ${orderSkillBonus}`] : []),
+                ...(yantraBonus > 0 ? [`Yantras ${yantraBonus}`] : []),
+                ...(dicePenalty !== 0 ? [`${dicePenalty}`] : []),
+                ...(poolModifier < 0 ? [`Release Penalty ${poolModifier}`] : []),
+            ];
 
-        onClose();
+            return {
+                pool: adjustedPool <= 0 ? 1 : adjustedPool,
+                chance: adjustedPool <= 0,
+                label: castLabel,
+                exceptional_target: spellType === "praxis" ? 3 : 5,
+                dicePoolBreakdown: dicePoolBreakdownParts.join(" + "),
+                spellSummary,
+                onResult: (rollResult) => {
+                    const spellSucceeded = (rollResult?.successes || 0) >= 1;
+                    if (spellSucceeded && activeSpellData) {
+                        onCreateActiveSpell(activeSpellData);
+                    }
+                },
+            };
+        };
+
+        const paradoxConfig = paradoxTriggered ? {
+            pool: paradoxIsChanceDie ? 1 : finalParadoxPool,
+            chance: paradoxIsChanceDie,
+            again: paradoxRollQuality.again,
+            rote: paradoxRollQuality.rote,
+            label: `Paradox (${paradoxIsChanceDie ? "Chance Die" : `${finalParadoxPool} dice`})`,
+        } : null;
+
+        const rollSpell = (poolModifier = 0) => {
+            onRollDice(buildSpellRollConfig(poolModifier));
+        };
+
+        if (!paradoxConfig) {
+            rollSpell(0);
+            onClose();
+            return;
+        }
+
+        if (paradoxMode === "release") {
+            onRollDice({
+                ...paradoxConfig,
+                onResult: (paradoxResult) => {
+                    const penalty = paradoxResult?.successes || 0;
+
+                    if (penalty > 0) {
+                        toast.info(
+                            `Release: ${penalty} Paradox success${penalty === 1 ? "" : "es"} = -${penalty} die${penalty === 1 ? "" : "s"} to the spell.`
+                        );
+                    }
+
+                    rollSpell(-penalty);
+                },
+            });
+
+            onClose();
+            return;
+        }
+
+        if (paradoxMode === "contain") {
+            onRollDice({
+                ...paradoxConfig,
+                onResult: (paradoxResult) => {
+                    const paradoxSuccesses = paradoxResult?.successes || 0;
+
+                    onRollDice({
+                        pool: currentWisdom > 0 ? currentWisdom : 1,
+                        chance: currentWisdom <= 0,
+                        label: `Contain Paradox (Wisdom ${currentWisdom})`,
+                        dicePoolBreakdown: currentWisdom <= 0 ? "Wisdom chance die" : `Wisdom ${currentWisdom}`,
+                        onResult: async (wisdomResult) => {
+                            const wisdomSuccesses = wisdomResult?.successes || 0;
+                            const cancelled = Math.min(paradoxSuccesses, wisdomSuccesses);
+                            const remaining = Math.max(0, paradoxSuccesses - wisdomSuccesses);
+
+                            if (onResolveParadoxContainment) {
+                                await onResolveParadoxContainment({ cancelled, remaining });
+                            }
+
+                            toast.info(
+                                `Contain: ${cancelled} cancelled, ${remaining} remaining${cancelled > 0 ? `, ${cancelled} Bashing dealt` : ""}.`
+                            );
+
+                            rollSpell(0);
+                        },
+                    });
+                },
+            });
+
+            onClose();
+        }
     };
 
     if (!isOpen) return null;
@@ -947,6 +1004,49 @@ export const SpellcastingPopup = ({
                                             </div>
                                         )}
                                     </div>
+                                    {paradoxTriggered && (
+                                        <div className="p-2 bg-zinc-900/50 rounded space-y-2" data-testid="paradox-mode-section">
+                                            <p className="text-xs text-zinc-300 font-medium">Resolve Paradox before the spell roll</p>
+
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <Button
+                                                    type="button"
+                                                    variant={paradoxMode === "release" ? "default" : "outline"}
+                                                    onClick={() => setParadoxMode("release")}
+                                                    className={paradoxMode === "release"
+                                                        ? "bg-red-600 hover:bg-red-500 text-white"
+                                                        : "border-zinc-700 text-zinc-300"}
+                                                    data-testid="paradox-mode-release"
+                                                >
+                                                    Release
+                                                </Button>
+
+                                                <Button
+                                                    type="button"
+                                                    variant={paradoxMode === "contain" ? "default" : "outline"}
+                                                    onClick={() => setParadoxMode("contain")}
+                                                    className={paradoxMode === "contain"
+                                                        ? "bg-amber-600 hover:bg-amber-500 text-black"
+                                                        : "border-zinc-700 text-zinc-300"}
+                                                    data-testid="paradox-mode-contain"
+                                                >
+                                                    Contain
+                                                </Button>
+                                            </div>
+
+                                            {paradoxMode === "release" && (
+                                                <p className="text-[11px] text-zinc-500">
+                                                    Roll Paradox first. Each Paradox success gives -1 die to the spell.
+                                                </p>
+                                            )}
+
+                                            {paradoxMode === "contain" && (
+                                                <p className="text-[11px] text-zinc-500">
+                                                    Roll Paradox vs Wisdom. Each Wisdom success cancels one Paradox success and deals 1 Bashing. Any Paradox success left gives Paradox Taint.
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
                                 </>
                             )}
                         </div>
@@ -1004,7 +1104,12 @@ export const SpellcastingPopup = ({
                     </Button>
                     <Button
                         onClick={handleCastSpell}
-                        disabled={!selectedPractice || totalManaCost > currentMana || (factors.duration.advanced && !spellName.trim())}
+                        disabled={
+                            !selectedPractice ||
+                            totalManaCost > currentMana ||
+                            (factors.duration.advanced && !spellName.trim()) ||
+                            (paradoxTriggered && !paradoxMode)
+                        }
                         className="bg-violet-600 hover:bg-violet-500 text-white"
                         data-testid="cast-spell-btn"
                     >

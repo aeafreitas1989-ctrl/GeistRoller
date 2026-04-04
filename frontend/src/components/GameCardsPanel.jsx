@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Pencil, X, Plus, Info, Flame, Skull, Droplets, Wind, Bug, Mountain, Sparkles, Ghost, Zap, ChevronDown, ChevronRight, ChevronUp, ChevronLeft, Star, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,7 +39,7 @@ import {
     PLACE_STATUS_OPTIONS, PERSON_STATUS_OPTIONS, PERSON_RELATIONSHIP_OPTIONS,
 } from "../data/cards-data";
 import {
-    MeritCard, CeremonyCard, PlacePersonCard, ConditionCard, HauntCard, KeyCard, ActiveSpellCard,
+    MeritCard, CeremonyCard, PlacePersonCard, ConditionCard, HauntCard, KeyCard, ActiveSpellCard, CombatTrackerCard,
 } from "./cards/CardComponents";
 
 export const GameCardsPanel = ({ 
@@ -58,6 +58,10 @@ export const GameCardsPanel = ({
     onRelinquishActiveSpell,
     onRelinquishActiveSpellSafely,
     onGenerateCaseTruth,
+    combatCardOpen = false,
+    onEndCombat,
+    onTriggerDiceRoll,
+    onApplyIncomingDamage,
 }) => {
     const [showAddCondition, setShowAddCondition] = useState(false);
     const [customConditionName, setCustomConditionName] = useState("");
@@ -82,6 +86,7 @@ export const GameCardsPanel = ({
         activeSpells: false,
         merits: false,
         places: false,
+        combat: false,
     });
     const [showCeremonyRollDialog, setShowCeremonyRollDialog] = useState(false);
     const [selectedCeremony, setSelectedCeremony] = useState(null);
@@ -159,6 +164,32 @@ export const GameCardsPanel = ({
     const characterType = activeCharacter?.character_type || "geist";
     const isMage = characterType === "mage";
     const activeSpells = [...(activeCharacter?.active_spells || [])].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+    const meritsList = activeCharacter?.merits_list || [];
+    const dexterity = activeCharacter?.attributes?.dexterity || 1;
+    const wits = activeCharacter?.attributes?.wits || 1;
+    const athletics = activeCharacter?.skills?.athletics || 0;
+    const composure = activeCharacter?.attributes?.composure || 1;
+    const strength = activeCharacter?.attributes?.strength || 1;
+    const activeMageArmorName = isMage ? (activeCharacter?.active_mage_armor || null) : null;
+    const activeMageArmorDots = activeMageArmorName ? (activeCharacter?.arcana?.[activeMageArmorName] || 0) : 0;
+    const mageArmorDefenseBonus = (() => {
+        if (!activeMageArmorName) return 0;
+        if (["Fate", "Mind", "Space", "Time"].includes(activeMageArmorName)) return activeMageArmorDots;
+        if (activeMageArmorName === "Life") return Math.ceil(activeMageArmorDots / 2);
+        return 0;
+    })();
+    const mageArmorGeneralBonus = (() => {
+        if (!activeMageArmorName) return 0;
+        if (["Forces", "Matter"].includes(activeMageArmorName)) return activeMageArmorDots;
+        if (activeMageArmorName === "Life") return Math.ceil(activeMageArmorDots / 2);
+        return 0;
+    })();
+    const equippedArmor = (activeCharacter?.inventory_items || []).find((it) => it?.type === "armor" && !!it?.equipped) || null;
+    const armorGeneral = (equippedArmor?.armor?.general ?? 0) + mageArmorGeneralBonus;
+    const armorBallistic = equippedArmor?.armor?.ballistic ?? 0;
+    const normalDefense = Math.min(dexterity, wits) + athletics + mageArmorDefenseBonus;
+    const initiativeModifier = dexterity + composure;
+    const speed = strength + dexterity + 5;
 
     // Get character's merits with dots > 0
     const characterMerits = useMemo(() => {
@@ -220,6 +251,12 @@ export const GameCardsPanel = ({
     };
 
     const hauntCount = Object.values(haunts).filter((v) => v > 0).length;
+
+    useEffect(() => {
+        if (combatCardOpen) {
+            setOpenSections((prev) => ({ ...prev, combat: true }));
+        }
+    }, [combatCardOpen]);
 
     const characterKey = activeCharacter?.innate_key;
     const geistKey = activeCharacter?.geist_innate_key;
@@ -309,6 +346,42 @@ export const GameCardsPanel = ({
                             </pre>
                         </CollapsibleContent>
                     </Collapsible>
+                    {combatCardOpen && (
+                        <Collapsible
+                            open={openSections.combat}
+                            onOpenChange={() => toggleSection("combat")}
+                            className="bg-zinc-900/40 border border-zinc-800 rounded-sm"
+                            data-testid="cards-section-combat"
+                        >
+                            <CollapsibleTrigger className="w-full flex items-center justify-between p-3" data-testid="cards-section-combat-toggle">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">Combat</span>
+                                    <span className="text-[10px] text-zinc-500">1</span>
+                                </div>
+                                {openSections.combat ? (
+                                    <ChevronDown className="w-4 h-4 text-zinc-500" />
+                                ) : (
+                                    <ChevronRight className="w-4 h-4 text-zinc-500" />
+                                )}
+                            </CollapsibleTrigger>
+                            <CollapsibleContent className="px-3 pb-3">
+                                <CombatTrackerCard
+                                    activeCharacter={activeCharacter}
+                                    normalDefense={normalDefense}
+                                    initiativeModifier={initiativeModifier}
+                                    speed={speed}
+                                    armorGeneral={armorGeneral}
+                                    armorBallistic={armorBallistic}
+                                    activeMageArmorName={activeMageArmorName}
+                                    activeMageArmorDots={activeMageArmorDots}
+                                    onTriggerDiceRoll={onTriggerDiceRoll}
+                                    onApplyIncomingDamage={onApplyIncomingDamage}
+                                    onEndCombat={onEndCombat}
+                                />
+                            </CollapsibleContent>
+                        </Collapsible>
+                    )}
+
                     {/* Session Summary Card */}
                     <Collapsible
                         open={openSections.conditions}
@@ -849,5 +922,4 @@ export const GameCardsPanel = ({
             </Dialog>
         </div>
     );
-
 };

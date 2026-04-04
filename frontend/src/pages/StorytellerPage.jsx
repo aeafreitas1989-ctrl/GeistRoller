@@ -4,18 +4,134 @@ import { GameCardsPanel } from "@/components/GameCardsPanel";
 import { DiceRoller } from "@/components/DiceRoller";
 import axios from "axios";
 import { toast } from "sonner";
+import { normalizeHealthBoxes, getHealthCounts, buildHealthBoxes } from "@/components/character/StatComponents";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 export const StorytellerPage = () => {
     const [characters, setCharacters] = useState([]);
     const [activeCharacter, setActiveCharacter] = useState(null);
+    const [combatCardOpen, setCombatCardOpen] = useState(false);
 
     const diceRollerRef = useRef(null);
     const lastCharacterStorageKey = "geistroller-last-active-character-id";
 
     const triggerDiceRoll = (config) => {
         diceRollerRef.current?.rollWithConfig(config);
+    };
+
+
+    const applyIncomingCombatDamage = async ({ amount, damageType, sourceProfile }) => {
+        if (!activeCharacter || !amount || amount <= 0) return;
+
+        const meritsList = activeCharacter?.merits_list || [];
+        const hasGiant = meritsList.some((m) => (m?.name || "") === "Giant");
+        const hasSmallFramed = meritsList.some((m) => (m?.name || "") === "Small-Framed");
+        const size = 5 + (hasGiant ? 1 : 0) + (hasSmallFramed ? -1 : 0);
+        const stamina = activeCharacter?.attributes?.stamina || 0;
+        const maxHealth = stamina + size;
+
+        const inventoryItems = activeCharacter?.inventory_items || [];
+        const equippedArmor = inventoryItems.find((it) => it?.type === "armor" && !!it?.equipped) || null;
+        const equippedArmorGeneral = equippedArmor?.armor?.general ?? 0;
+        const equippedArmorBallistic = equippedArmor?.armor?.ballistic ?? 0;
+
+        const activeMageArmorName = activeCharacter?.character_type === "mage"
+            ? (activeCharacter?.active_mage_armor || null)
+            : null;
+        const activeMageArmorDots = activeMageArmorName
+            ? (activeCharacter?.arcana?.[activeMageArmorName] || 0)
+            : 0;
+
+        const mageArmorGeneralBonus = (() => {
+            if (!activeMageArmorName) return 0;
+            if (["Forces", "Matter"].includes(activeMageArmorName)) return activeMageArmorDots;
+            if (activeMageArmorName === "Life") return Math.ceil(activeMageArmorDots / 2);
+            return 0;
+        })();
+
+        let finalType = damageType;
+        let remaining = amount;
+
+        if (activeMageArmorName === "Death" && finalType === "lethal" && ["general", "ballistic"].includes(sourceProfile)) {
+            finalType = "bashing";
+        }
+
+        if (activeMageArmorName === "Spirit" && finalType === "lethal" && sourceProfile === "spirit") {
+            finalType = "bashing";
+        }
+
+        if (activeMageArmorName === "Prime" && sourceProfile === "supernatural") {
+            remaining = Math.max(0, remaining - activeMageArmorDots);
+        }
+
+        if (finalType !== "aggravated") {
+            const armorValue = sourceProfile === "ballistic"
+                ? equippedArmorBallistic
+                : equippedArmorGeneral + mageArmorGeneralBonus;
+            remaining = Math.max(0, remaining - armorValue);
+        }
+
+        if (remaining <= 0) {
+            toast.info("Incoming damage was fully absorbed.");
+            return;
+        }
+
+        const startingBoxes = normalizeHealthBoxes(
+            activeCharacter?.health_boxes,
+            maxHealth,
+            activeCharacter?.health || 0
+        );
+        const counts = getHealthCounts(startingBoxes);
+
+        for (let i = 0; i < remaining; i += 1) {
+            const total = counts.aggravated + counts.lethal + counts.bashing;
+
+            if (finalType === "bashing") {
+                if (total < maxHealth) {
+                    counts.bashing += 1;
+                } else if (counts.bashing > 0) {
+                    counts.bashing -= 1;
+                    counts.lethal += 1;
+                } else if (counts.lethal > 0) {
+                    counts.lethal -= 1;
+                    counts.aggravated += 1;
+                }
+            }
+
+            if (finalType === "lethal") {
+                if (total < maxHealth) {
+                    counts.lethal += 1;
+                } else if (counts.bashing > 0) {
+                    counts.bashing -= 1;
+                    counts.lethal += 1;
+                } else if (counts.lethal > 0) {
+                    counts.lethal -= 1;
+                    counts.aggravated += 1;
+                }
+            }
+
+            if (finalType === "aggravated") {
+                if (total < maxHealth) {
+                    counts.aggravated += 1;
+                } else if (counts.bashing > 0) {
+                    counts.bashing -= 1;
+                    counts.aggravated += 1;
+                } else if (counts.lethal > 0) {
+                    counts.lethal -= 1;
+                    counts.aggravated += 1;
+                }
+            }
+        }
+
+        const updatedBoxes = buildHealthBoxes(counts, maxHealth);
+        const filled = updatedBoxes.filter((state) => state !== "empty").length;
+        await updateCharacter({
+            health_boxes: updatedBoxes,
+            health: filled,
+        });
+
+        toast.info(`${remaining} ${finalType} damage applied.`);
     };
 
     // Fetch sessions and campaigns on mount
@@ -235,6 +351,7 @@ export const StorytellerPage = () => {
                                     onDeleteCharacter={deleteCharacter}
                                     onTriggerDiceRoll={triggerDiceRoll}
                                     onCreateActiveSpell={addActiveSpell}
+                                    onStartCombat={() => setCombatCardOpen(true)}
                                 />
                             </div>
                         </section>
@@ -261,6 +378,10 @@ export const StorytellerPage = () => {
                                     onDispelActiveSpell={dispelActiveSpell}
                                     onRelinquishActiveSpell={relinquishActiveSpell}
                                     onRelinquishActiveSpellSafely={relinquishActiveSpellSafely}
+                                    combatCardOpen={combatCardOpen}
+                                    onEndCombat={() => setCombatCardOpen(false)}
+                                    onTriggerDiceRoll={triggerDiceRoll}
+                                    onApplyIncomingDamage={applyIncomingCombatDamage}
                                 />
                             </div>
                         </section>

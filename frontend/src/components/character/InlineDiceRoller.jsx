@@ -28,12 +28,15 @@ export const InlineDiceRoller = ({
     currentPlasm = 0,
     preset = null,
     forceExpanded = false,
+    isMage = false,
+    onOpenSpellcasting,
 }) => {
     const [rollType, setRollType] = useState("attr-attr");
     const [primaryAttr, setPrimaryAttr] = useState("wits");
     const [secondaryAttr, setSecondaryAttr] = useState("composure");
     const [skill, setSkill] = useState("investigation");
     const [haunt, setHaunt] = useState(HAUNTS[0]);
+    const [spellArcanum, setSpellArcanum] = useState("");
     const [key, setKey] = useState("__none__");
     const [useSpecialty, setUseSpecialty] = useState(false);
     const [useRemembrance, setUseRemembrance] = useState(false);
@@ -137,6 +140,12 @@ export const InlineDiceRoller = ({
     const characterInnateKey = getValue("innate_key") || "";
     const geistInnateKey = getValue("geist_innate_key") || "";
     const mementos = getValue("mementos") || [];
+    const arcana = getValue("arcana") || {};
+    const availableArcana = useMemo(() => {
+        return Object.entries(arcana)
+            .filter(([, dots]) => (dots || 0) > 0)
+            .map(([name]) => name);
+    }, [arcana]);
     const meritsList = getValue("merits_list") || [];
     const trainedObserver = (meritsList || []).find((m) => m?.name === "Trained Observer");
     const trainedObserverDots = trainedObserver?.dots || 0;
@@ -192,6 +201,19 @@ export const InlineDiceRoller = ({
     useEffect(() => {
         setSelectedEnhancements([]);
     }, [haunt]);
+
+    useEffect(() => {
+        if (!isMage) return;
+
+        if (availableArcana.length === 0) {
+            setSpellArcanum("");
+            return;
+        }
+
+        if (!availableArcana.includes(spellArcanum)) {
+            setSpellArcanum(availableArcana[0]);
+        }
+    }, [isMage, availableArcana, spellArcanum]);
 
     // Calculate total enhancement cost
     const enhancementCost = selectedEnhancements.reduce((sum, enhName) => {
@@ -252,6 +274,17 @@ export const InlineDiceRoller = ({
         : Math.max(0, basePool + modifierBonus + willpowerBonus + woundPenalty);
 
     const rollDice = async () => {
+        if (rollType === "spellcasting") {
+            if (!spellArcanum) {
+                toast.error("Choose an Arcanum first");
+                return;
+            }
+
+            if (typeof onOpenSpellcasting === "function") {
+                onOpenSpellcasting(spellArcanum);
+            }
+            return;
+        }
         // Handle Willpower spending (for +3 bonus OR avoiding doom)
         const needsWillpowerForBonus = spendWillpower;
         const needsWillpowerForDoom = rollType === "haunt" && key !== "__none__" && avoidDoom;
@@ -397,7 +430,11 @@ export const InlineDiceRoller = ({
                             <SelectContent className="bg-zinc-900 border-zinc-700">
                                 <SelectItem value="attr-attr" className="text-xs">Attribute + Attribute</SelectItem>
                                 <SelectItem value="attr-skill" className="text-xs">Attribute + Skill</SelectItem>
-                                <SelectItem value="haunt" className="text-xs">Haunt Activation</SelectItem>
+                                {isMage ? (
+                                    <SelectItem value="spellcasting" className="text-xs">Spellcasting</SelectItem>
+                                ) : (
+                                    <SelectItem value="haunt" className="text-xs">Haunt Activation</SelectItem>
+                                )}
                                 <SelectItem value="chance" className="text-xs">Chance Die</SelectItem>
                             </SelectContent>
                         </Select>
@@ -696,7 +733,45 @@ export const InlineDiceRoller = ({
                             </div>
                         </div>
                     )}
+                    {rollType === "spellcasting" && (
+                        <div className="space-y-2">
+                            <div>
+                                <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Arcanum</label>
+                                <Select value={spellArcanum} onValueChange={setSpellArcanum}>
+                                    <SelectTrigger className="h-7 bg-zinc-900/50 border-zinc-700 text-xs" data-testid="dice-spell-arcanum-select">
+                                        <SelectValue placeholder="Select Arcanum" />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-zinc-900 border-zinc-700">
+                                        {availableArcana.length === 0 ? (
+                                            <div className="p-2 text-xs text-zinc-500">No Arcana rated above 0</div>
+                                        ) : (
+                                            availableArcana.map((name) => (
+                                                <SelectItem key={name} value={name} className="text-xs">
+                                                    {name} ({getNestedValue("arcana", name) || 0})
+                                                </SelectItem>
+                                            ))
+                                        )}
+                                    </SelectContent>
+                                </Select>
+                            </div>
 
+                            <Button
+                                onClick={rollDice}
+                                disabled={!spellArcanum}
+                                className="btn-primary h-7 px-3 text-xs w-full"
+                                data-testid="inline-spellcasting-open-btn"
+                            >
+                                Open Spellcasting
+                            </Button>
+
+                            <p className="text-[10px] text-zinc-500">
+                                Opens the Mage spellcasting popup for the selected Arcanum.
+                            </p>
+                        </div>
+                    )}
+
+                    {rollType !== "spellcasting" && (
+                        <>
                     {rollType === "chance" && (
                         <div className="text-[10px] text-zinc-500">
                             Chance die: roll 1d10 with no rerolls. 10 = success, 2-9 = failure, 1 = dramatic failure + Beat.
@@ -732,7 +807,8 @@ export const InlineDiceRoller = ({
                             {isRolling ? "..." : "Roll"}
                         </Button>
                     </div>
-
+                        </>
+                    )}
                     {result && (
                         <div className={`p-2 rounded-sm border ${
                             result.is_dramatic_failure ? "bg-rose-950/30 border-rose-500/30" :
