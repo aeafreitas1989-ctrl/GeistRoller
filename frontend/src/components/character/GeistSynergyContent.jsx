@@ -1,13 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
-import { SynergyTrack, HealthTrack, ResourceTrack } from "./StatComponents";
+import { SynergyTrack, ResourceTrack } from "./StatComponents";
 
 export const GeistSynergyContent = ({
     getValue, handleChange,
     currentSynergy, synergyData,
-    healthBoxes, maxHealth, filledHealth, isDeadTrack, woundPenalty,
-    handleHealthBoxClick,
     calculateWillpowerMax,
 }) => {
     return (
@@ -43,24 +41,6 @@ export const GeistSynergyContent = ({
                         "bg-violet-900/30 text-violet-400"
                     }`}>{synergyData.auraCondition}</span>
                 </div>
-            </div>
-
-            <div>
-                <div className="flex items-center justify-between mb-1">
-                    <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Health</label>
-                    <span className="text-[10px] text-zinc-600 font-mono" data-testid="health-count">{filledHealth}/{maxHealth}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                    {isDeadTrack && (
-                        <span className="text-[10px] text-rose-400 font-mono" data-testid="health-dead-label">DEAD</span>
-                    )}
-                    <HealthTrack boxes={healthBoxes} max={maxHealth} onBoxClick={handleHealthBoxClick} />
-                </div>
-                {woundPenalty < 0 && (
-                    <p className="text-[10px] text-rose-400 mt-1" data-testid="health-wound-penalty">
-                        Wound Penalty {woundPenalty}
-                    </p>
-                )}
             </div>
 
             <div>

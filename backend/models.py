@@ -163,6 +163,10 @@ class Character(BaseModel):
     wisdom: int = 7
     mana: int = 10
     nimbus: str = ""
+    nimbus_long-term: str = ""
+    nimbus_immediate: str = ""
+    nimbus_signature: str = ""
+    nimbus_tilt: str = ""
     arcana: Dict[str, int] = Field(default_factory=dict)  # e.g., {"Death": 2, "Spirit": 3}
     rotes: List[Dict[str, Any]] = Field(default_factory=list)  # [{spell, arcanum, dots, skill}]
     praxes: List[Dict[str, Any]] = Field(default_factory=list)  # [{spell, arcanum, dots}]
@@ -249,6 +253,10 @@ class CharacterUpdate(BaseModel):
     wisdom: Optional[int] = None
     mana: Optional[int] = None
     nimbus: Optional[str] = None
+    nimbus_long-term: Optional[str] = None
+    nimbus_immediate: Optional[str] = None
+    nimbus_signature: Optional[str] = None
+    nimbus_tilt: Optional[str] = None
     arcana: Optional[Dict[str, int]] = None
     rotes: Optional[List[Dict[str, Any]]] = None
     praxes: Optional[List[Dict[str, Any]]] = None

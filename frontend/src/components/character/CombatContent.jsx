@@ -35,7 +35,102 @@ export const CombatContent = ({
 }) => {
     return (
         <>
-            <div className="grid grid-cols-2 gap-2 text-xs">
+            {showCombat && (
+                <div className="space-y-3">
+                    <div>
+                        <div className="flex items-center justify-between mb-1">
+                            <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Health</label>
+                            <span className="text-[10px] text-zinc-600 font-mono" data-testid="health-count">
+                                {filledHealth}/{maxHealth}
+                            </span>
+                        </div>
+
+                        <div className="flex items-center justify-between gap-3 w-full">
+                            <div className="flex items-center gap-2">
+                                {isDeadTrack && (
+                                    <span className="text-[10px] text-rose-400 font-mono" data-testid="health-dead-label">
+                                        DEAD
+                                    </span>
+                                )}
+                                <HealthTrack boxes={healthBoxes} max={maxHealth} onBoxClick={handleHealthBoxClick} />
+                            </div>
+
+                            <div className="flex items-center gap-2 flex-wrap justify-end">
+                                <span className="text-[10px] text-zinc-500 uppercase tracking-wider">Heal</span>
+
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="h-6 px-2 text-[10px] bg-purple-900/50 border-purple-500/50 text-purple-200 hover:bg-purple-900/70"
+                                    onClick={() => onHealHealthState("aggravated")}
+                                    data-testid="heal-aggravated-btn"
+                                >
+                                    *
+                                </Button>
+
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="h-6 px-2 text-[10px] bg-rose-900/50 border-rose-500/50 text-rose-300 hover:bg-rose-900/70"
+                                    onClick={() => onHealHealthState("lethal")}
+                                    data-testid="heal-lethal-btn"
+                                >
+                                    X
+                                </Button>
+
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="h-6 px-2 text-[10px] bg-amber-900/50 border-amber-500/50 text-amber-300 hover:bg-amber-900/70"
+                                    onClick={() => onHealHealthState("bashing")}
+                                    data-testid="heal-bashing-btn"
+                                >
+                                    /
+                                </Button>
+
+                                {isMage && (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="h-6 px-2 text-[10px] bg-violet-900/30 border-violet-500/30 text-violet-400 hover:bg-violet-800/40"
+                                        onClick={() => {
+                                            const currentMana = getValue("mana") || 0;
+                                            if (currentMana < 3) return;
+
+                                            const counts = getHealthCounts(healthBoxes);
+                                            if (counts.lethal > 0) {
+                                                counts.lethal -= 1;
+                                            } else if (counts.bashing > 0) {
+                                                counts.bashing -= 1;
+                                            } else {
+                                                return;
+                                            }
+
+                                            handleChange("mana", currentMana - 3);
+                                            const updatedBoxes = buildHealthBoxes(counts, maxHealth);
+                                            handleHealthBoxesChange(updatedBoxes);
+                                        }}
+                                        disabled={(getValue("mana") || 0) < 3 || (() => {
+                                            const c = getHealthCounts(healthBoxes);
+                                            return c.lethal + c.bashing === 0;
+                                        })()}
+                                        title="Spend 3 Mana to heal 1 Lethal or Bashing"
+                                        data-testid="pattern-restoration-btn"
+                                    >
+                                        Pattern Restoration
+                                    </Button>
+                                )}
+                            </div>
+                        </div>
+
+                        {woundPenalty < 0 && (
+                            <p className="text-[10px] text-rose-400 mt-1" data-testid="health-wound-penalty">
+                                Wound Penalty {woundPenalty}
+                            </p>
+                        )}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-xs">
                 <div className="flex justify-between items-center p-2 bg-zinc-900/30 rounded-sm">
                     <span className="text-zinc-500">Size</span>
                     <span className="font-mono text-teal-400" data-testid="size-input">
@@ -58,18 +153,20 @@ export const CombatContent = ({
                     <span className="text-zinc-500">Armor</span>
                     <span className="font-mono text-teal-400" data-testid="armor-input">{equippedArmorGeneral + mageArmorGeneralBonus}/{equippedArmorBallistic}</span>
                 </div>
-                <Button
+                                <Button
                     type="button"
-                    onClick={onOpenCombatCard}
+                    onClick={onStartCombat}
                     className="col-span-2 btn-primary"
                     data-testid="combat-start-btn"
                 >
                     Start Combat
                 </Button>
             </div>
+        </div>
+        )}
 
             {/* Mage Armor */}
-            {isMage && (() => {
+            {showMageArmor && isMage && (() => {
                 const activeMageArmor = getValue("active_mage_armor") || null;
                 const arcanaWithArmor = ARCANA.filter(a => (getNestedValue("arcana", a) || 0) >= 2);
                 if (arcanaWithArmor.length === 0) return null;
@@ -165,6 +262,7 @@ export const CombatContent = ({
                                                 <SelectItem value="weapon" className="text-xs">Weapon</SelectItem>
                                                 <SelectItem value="armor" className="text-xs">Armor</SelectItem>
                                                 <SelectItem value="equipment" className="text-xs">Equipment</SelectItem>
+                                                <SelectItem value="yantra" className="text-xs">Yantra</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
@@ -473,6 +571,69 @@ export const CombatContent = ({
                                     </div>
                                 )}
 
+                                {/* Yantra fields */}
+                                {invType === "yantra" && (
+                                    <div className="space-y-2 pt-2 border-t border-zinc-800">
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div>
+                                                <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Yantra Type</label>
+                                                <Select
+                                                    value={invDraft.yantra?.kind || "tool"}
+                                                    onValueChange={(v) =>
+                                                        setInvDraft((prev) => ({
+                                                            ...prev,
+                                                            yantra: { ...(prev.yantra || {}), kind: v },
+                                                        }))
+                                                    }
+                                                >
+                                                    <SelectTrigger className="h-7 bg-zinc-900/50 border-zinc-700 text-xs">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent className="bg-zinc-900 border-zinc-700">
+                                                        <SelectItem value="tool" className="text-xs">Tool</SelectItem>
+                                                        <SelectItem value="sacrament" className="text-xs">Sacrament</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+
+                                            <div>
+                                                <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Bonus</label>
+                                                <Input
+                                                    type="number"
+                                                    min={0}
+                                                    max={5}
+                                                    value={invDraft.yantra?.bonus ?? 1}
+                                                    onChange={(e) =>
+                                                        setInvDraft((prev) => ({
+                                                            ...prev,
+                                                            yantra: {
+                                                                ...(prev.yantra || {}),
+                                                                bonus: Math.max(0, Math.min(5, parseInt(e.target.value, 10) || 0)),
+                                                            },
+                                                        }))
+                                                    }
+                                                    className="h-7 input-geist text-xs"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Notes</label>
+                                            <Textarea
+                                                value={invDraft.yantra?.notes || ""}
+                                                onChange={(e) =>
+                                                    setInvDraft((prev) => ({
+                                                        ...prev,
+                                                        yantra: { ...(prev.yantra || {}), notes: e.target.value },
+                                                    }))
+                                                }
+                                                className="input-geist mt-0.5 min-h-[60px] text-xs"
+                                                placeholder="Yantra notes..."
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+
                                 <Button onClick={addInventoryItem} className="btn-primary h-7 px-3 text-xs w-full flex items-center justify-center gap-2" data-testid="inventory-add-item">
                                     <Plus className="w-4 h-4" /> Add Item
                                 </Button>
@@ -533,6 +694,36 @@ export const CombatContent = ({
                                                 <Input type="number" value={it.equipment?.structure ?? 1} onChange={(e) => updateInventoryItemNested(idx, "equipment", { structure: parseInt(e.target.value, 10) || 0 })} className="h-7 input-geist text-xs" placeholder="Str." />
                                             </div>
                                         )}
+                                        {it.type === "yantra" && (
+                                            <div className="col-span-2 grid grid-cols-2 gap-2">
+                                                <Select
+                                                    value={it.yantra?.kind || "tool"}
+                                                    onValueChange={(v) => updateInventoryItemNested(idx, "yantra", { kind: v })}
+                                                >
+                                                    <SelectTrigger className="h-7 bg-zinc-900/50 border-zinc-700 text-xs">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent className="bg-zinc-900 border-zinc-700">
+                                                        <SelectItem value="tool" className="text-xs">Tool</SelectItem>
+                                                        <SelectItem value="sacrament" className="text-xs">Sacrament</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+
+                                                <Input
+                                                    type="number"
+                                                    min={0}
+                                                    max={5}
+                                                    value={it.yantra?.bonus ?? 1}
+                                                    onChange={(e) =>
+                                                        updateInventoryItemNested(idx, "yantra", {
+                                                            bonus: Math.max(0, Math.min(5, parseInt(e.target.value, 10) || 0)),
+                                                        })
+                                                    }
+                                                    className="h-7 input-geist text-xs"
+                                                    placeholder="Bonus"
+                                                />
+                                            </div>
+                                        )}
                                         <div className="col-span-2 flex justify-end gap-2">
                                             <Button variant="ghost" size="sm" className="h-7 px-2 text-zinc-400 hover:text-zinc-200" onClick={() => setEditingInventoryIndex(null)} data-testid={`inventory-cancel-edit-${idx}`}>
                                                 Done
@@ -545,6 +736,7 @@ export const CombatContent = ({
                                             {(() => {
                                                 if (it.type === "weapon") return `Damage +${it.weapon?.damage ?? 1}`;
                                                 if (it.type === "armor") return `Rating ${it.armor?.general ?? 1}/${it.armor?.ballistic ?? 0}`;
+                                                if (it.type === "yantra")  return `${it.yantra?.kind === "sacrament" ? "Sacrament" : "Tool"} +${it.yantra?.bonus ?? 1}`;
                                                 return `Bonus +${it.equipment?.bonus ?? 0}`;
                                             })()}
                                         </div>
@@ -573,7 +765,6 @@ export const CombatContent = ({
                                         </div>
                                     </div>
                                 )}
-
                                 {it.type === "weapon" && (
                                     <div className="mt-2 grid grid-cols-3 gap-1 text-[12px] text-zinc-500">
                                         <span>Damage {it.weapon?.damage ?? 1}</span>
@@ -593,6 +784,18 @@ export const CombatContent = ({
                                         <span>Durability {it.equipment?.durability ?? 0}</span>
                                         <span>Structure {it.equipment?.structure ?? 1}</span>
                                         <span>Size {it.equipment?.size ?? 1}</span>
+                                    </div>
+                                )}
+                                {it.type === "yantra" && (
+                                    <div className="mt-2 grid grid-cols-2 gap-1 text-[12px] text-zinc-500">
+                                        <span>Type {it.yantra?.kind === "sacrament" ? "Sacrament" : "Tool"}</span>
+                                        <span>Bonus +{it.yantra?.bonus ?? 1}</span>
+                                    </div>
+                                )}
+
+                                {it.type === "yantra" && it.yantra?.notes && (
+                                    <div className="mt-1 text-[11px] text-zinc-500">
+                                        {it.yantra.notes}
                                     </div>
                                 )}
                             </div>

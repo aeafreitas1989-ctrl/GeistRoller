@@ -119,6 +119,7 @@ export const CharacterPanel = ({
             coverage: { head: false, torso: false, arms: false, legs: false },
         },
         equipment: { bonus: 0, durability: 0, size: 1, structure: 1, effect: "" },
+        yantra: { kind: "tool", bonus: 1, notes: "" },
     });
 
     // Ceremony Dialog State
@@ -381,6 +382,7 @@ export const CharacterPanel = ({
                 coverage: { head: false, torso: false, arms: false, legs: false },
             },
             equipment: { bonus: 0, durability: 0, size: 1, structure: 1, effect: "" },
+            yantra: {kind: "tool", bonus: 1, notes:""}
         }));
         setInventoryAddOpen(false);
     };
@@ -1434,10 +1436,38 @@ export const CharacterPanel = ({
                         </CollapsibleContent>
                     </Collapsible>
 
+                    {/* Synergy & Resources (Geist) / Gnosis & Resources (Mage) */}
+                    <Collapsible open={expandedSections.sinEater}>
+                        <CollapsibleTrigger onClick={() => toggleSection("sinEater")} className="flex items-center justify-between w-full p-2 rounded-sm bg-purple-900/20 border border-purple-500/30 hover:bg-purple-900/30" data-testid="section-toggle-synergy-resources">
+                            <span className="text-xs font-mono uppercase tracking-wider text-purple-400">
+                                {isMage ? "Gnosis & Resources" : "Synergy & Resources"}
+                            </span>
+                            {expandedSections.sinEater ? <ChevronDown className="w-4 h-4 text-purple-500" /> : <ChevronRight className="w-4 h-4 text-purple-500" />}
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="pt-2 space-y-3">
+                            {isMage ? (
+                                <MageGnosisContent
+                                    getValue={getValue} handleChange={handleChange} getNestedValue={getNestedValue}
+                                    healthBoxes={healthBoxes} maxHealth={maxHealth} filledHealth={filledHealth} isDeadTrack={isDeadTrack} woundPenalty={woundPenalty}
+                                    handleHealthBoxClick={handleHealthBoxClick} handleHealthBoxesChange={handleHealthBoxesChange}
+                                    calculateWillpowerMax={calculateWillpowerMax}
+                                    onRebuyWillpowerDot={rebuyWillpowerDot}
+                                    onTriggerDiceRoll={onTriggerDiceRoll}
+                                />
+                            ) : (
+                                <GeistSynergyContent
+                                    getValue={getValue} handleChange={handleChange}
+                                    currentSynergy={currentSynergy} synergyData={synergyData}
+                                    calculateWillpowerMax={calculateWillpowerMax}
+                                />
+                            )}
+                        </CollapsibleContent>
+                    </Collapsible>
+
                     {/* Combat Stats */}
                     <Collapsible open={expandedSections.combat}>
                         <CollapsibleTrigger onClick={() => toggleSection("combat")} className="flex items-center justify-between w-full p-2 rounded-sm bg-red-900/50 border border-red-800 hover:bg-red-800/50" data-testid="section-toggle-combat">
-                            <span className="text-xs font-mono uppercase tracking-wider text-red-400">Combat & Inventory</span>
+                            <span className="text-xs font-mono uppercase tracking-wider text-red-400">Combat</span>
                             {expandedSections.combat ? <ChevronDown className="w-4 h-4 text-red-500" /> : <ChevronRight className="w-4 h-4 text-red-500" />}
                         </CollapsibleTrigger>
                         <CollapsibleContent className="pt-2">
@@ -1509,36 +1539,6 @@ export const CharacterPanel = ({
                             />
                         </CollapsibleContent>
                     </Collapsible>
-
-                    {/* Synergy & Resources (Geist) / Gnosis & Resources (Mage) */}
-                    <Collapsible open={expandedSections.sinEater}>
-                        <CollapsibleTrigger onClick={() => toggleSection("sinEater")} className="flex items-center justify-between w-full p-2 rounded-sm bg-purple-900/20 border border-purple-500/30 hover:bg-purple-900/30" data-testid="section-toggle-synergy-resources">
-                            <span className="text-xs font-mono uppercase tracking-wider text-purple-400">
-                                {isMage ? "Gnosis & Resources" : "Synergy & Resources"}
-                            </span>
-                            {expandedSections.sinEater ? <ChevronDown className="w-4 h-4 text-purple-500" /> : <ChevronRight className="w-4 h-4 text-purple-500" />}
-                        </CollapsibleTrigger>
-                        <CollapsibleContent className="pt-2 space-y-3">
-                            {isMage ? (
-                                <MageGnosisContent
-                                    getValue={getValue} handleChange={handleChange} getNestedValue={getNestedValue}
-                                    healthBoxes={healthBoxes} maxHealth={maxHealth} filledHealth={filledHealth} isDeadTrack={isDeadTrack} woundPenalty={woundPenalty}
-                                    handleHealthBoxClick={handleHealthBoxClick} handleHealthBoxesChange={handleHealthBoxesChange}
-                                    calculateWillpowerMax={calculateWillpowerMax}
-                                    onRebuyWillpowerDot={rebuyWillpowerDot}
-                                />
-                            ) : (
-                                <GeistSynergyContent
-                                    getValue={getValue} handleChange={handleChange}
-                                    currentSynergy={currentSynergy} synergyData={synergyData}
-                                    healthBoxes={healthBoxes} maxHealth={maxHealth} filledHealth={filledHealth} isDeadTrack={isDeadTrack} woundPenalty={woundPenalty}
-                                    handleHealthBoxClick={handleHealthBoxClick}
-                                    calculateWillpowerMax={calculateWillpowerMax}
-                                />
-                            )}
-                        </CollapsibleContent>
-                    </Collapsible>
-
 
                     {/* Powers - Different for Mage vs Geist */}
                     <Collapsible open={expandedSections.powers}>

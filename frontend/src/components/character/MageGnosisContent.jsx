@@ -9,6 +9,7 @@ export const MageGnosisContent = ({
     handleHealthBoxClick, handleHealthBoxesChange,
     calculateWillpowerMax,
     onRebuyWillpowerDot,
+    onTriggerDiceRoll,
 }) => {
     return (
         <>
@@ -52,18 +53,6 @@ export const MageGnosisContent = ({
                     </div>
                 );
             })()}
-
-            {/* Nimbus for Mages */}
-            <div className="p-2 bg-violet-900/20 border border-violet-500/30 rounded-sm">
-                <label className="text-[10px] text-violet-400 uppercase tracking-wider block mb-1">Nimbus</label>
-                <Textarea 
-                    value={getValue("nimbus") || ""} 
-                    onChange={(e) => handleChange("nimbus", e.target.value)} 
-                    className="input-geist text-xs min-h-[60px]" 
-                    placeholder="Describe your Nimbus manifestation..."
-                    data-testid="mage-nimbus-input"
-                />
-            </div>
 
             {/* Willpower */}
             <div>
@@ -167,6 +156,83 @@ export const MageGnosisContent = ({
                         </>
                     );
                 })()}
+            </div>
+                        {/* Nimbus for Mages */}
+            <div className="p-2 bg-violet-900/20 border border-violet-500/30 rounded-sm space-y-2">
+                <div className="flex items-center justify-between">
+                    <label className="text-[10px] text-violet-400 uppercase tracking-wider">Nimbus</label>
+                    <button
+                        onClick={() => {
+                            const currentMana = getValue("mana") || 0;
+                            if (currentMana < 1) return;
+
+                            const gnosis = getValue("gnosis") || 1;
+                            const potentNimbusDots =
+                                ((getValue("merits_list") || []).find((m) => (m?.name || "") === "Potent Nimbus")?.dots || 0);
+                            const pool = gnosis + (potentNimbusDots * 2);
+
+                            handleChange("mana", currentMana - 1);
+
+                            if (onTriggerDiceRoll) {
+                                onTriggerDiceRoll({
+                                    pool,
+                                    label: "Nimbus Flare",
+                                    dicePoolBreakdown: `Gnosis ${gnosis}${potentNimbusDots > 0 ? ` + Potent Nimbus ${potentNimbusDots * 2}` : ""}`,
+                                    exceptional_target: 5,
+                                });
+                            }
+                        }}
+                        disabled={(getValue("mana") || 0) < 1}
+                        className="text-[9px] px-1.5 py-0.5 rounded bg-violet-900/30 text-violet-400 hover:bg-violet-800/40 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                        data-testid="nimbus-flare-btn"
+                    >
+                        Flare!
+                    </button>
+                </div>
+
+                <div>
+                    <label className="text-[10px] text-zinc-500 uppercase tracking-wider block mb-1">Long-Term</label>
+                    <Textarea
+                        value={getValue("nimbus_long_term") || ""}
+                        onChange={(e) => handleChange("nimbus_long_term", e.target.value)}
+                        className="input-geist text-xs min-h-[50px]"
+                        placeholder="Long-term Nimbus..."
+                        data-testid="mage-nimbus-long-term"
+                    />
+                </div>
+
+                <div>
+                    <label className="text-[10px] text-zinc-500 uppercase tracking-wider block mb-1">Immediate</label>
+                    <Textarea
+                        value={getValue("nimbus_immediate") || ""}
+                        onChange={(e) => handleChange("nimbus_immediate", e.target.value)}
+                        className="input-geist text-xs min-h-[50px]"
+                        placeholder="Immediate Nimbus..."
+                        data-testid="mage-nimbus-immediate"
+                    />
+                </div>
+
+                <div>
+                    <label className="text-[10px] text-zinc-500 uppercase tracking-wider block mb-1">Nimbus Tilt</label>
+                    <Textarea
+                        value={getValue("nimbus_tilt") || ""}
+                        onChange={(e) => handleChange("nimbus_tilt", e.target.value)}
+                        className="input-geist text-xs min-h-[40px]"
+                        placeholder="Nimbus Tilt..."
+                        data-testid="mage-nimbus-tilt"
+                    />
+                </div>
+
+                <div>
+                    <label className="text-[10px] text-zinc-500 uppercase tracking-wider block mb-1">Signature</label>
+                    <Textarea
+                        value={getValue("nimbus_signature") || ""}
+                        onChange={(e) => handleChange("nimbus_signature", e.target.value)}
+                        className="input-geist text-xs min-h-[50px]"
+                        placeholder="Signature Nimbus..."
+                        data-testid="mage-nimbus-signature"
+                    />
+                </div>
             </div>
         </>
     );

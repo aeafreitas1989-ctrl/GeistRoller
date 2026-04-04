@@ -761,7 +761,7 @@ export const CombatTrackerCard = ({
                 >
                     <div className="flex items-center justify-between">
                         <span className="text-zinc-500">Initiative</span>
-                        <span className="font-mono text-teal-400">{initiativeRoll?.total ?? initiativeModifier}</span>
+                        <span className="font-mono text-teal-400">{initiativeModifier}</span>
                     </div>
                 </button>
             </div>
@@ -784,9 +784,6 @@ export const CombatTrackerCard = ({
                         <span className="text-zinc-500">Current Init</span>
                         <span className="font-mono text-teal-400">{initiativeRoll?.total ?? initiativeModifier}</span>
                     </div>
-                    {initiativeRoll && (
-                        <div className="mt-1 text-[10px] text-zinc-600">d10 {initiativeRoll.die} + {initiativeRoll.modifier}</div>
-                    )}
                 </div>
             </div>
 

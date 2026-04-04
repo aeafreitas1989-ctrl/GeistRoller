@@ -9,9 +9,46 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import axios from "axios";
 import { toast } from "sonner";
 import { HAUNTS, HAUNT_ENHANCEMENTS, ATTRIBUTE_LIST, SKILL_LIST, KEY_UNLOCK_ATTRIBUTES } from "../../data/character-data";
+const MENTAL_SKILLS = new Set([
+    "academics",
+    "computer",
+    "crafts",
+    "investigation",
+    "medicine",
+    "occult",
+    "politics",
+    "science",
+]);
+
+const PHYSICAL_AND_SOCIAL_SKILLS = new Set([
+    "athletics",
+    "brawl",
+    "drive",
+    "firearms",
+    "larceny",
+    "stealth",
+    "survival",
+    "weaponry",
+    "animal_ken",
+    "empathy",
+    "expression",
+    "intimidation",
+    "persuasion",
+    "socialize",
+    "streetwise",
+    "subterfuge",
+]);
+
 import { formatLabel } from "./StatComponents";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
+const getUntrainedSkillPenalty = (skillKey, dots) => {
+    if ((dots || 0) > 0) return 0;
+    if (MENTAL_SKILLS.has(skillKey)) return -3;
+    if (PHYSICAL_AND_SOCIAL_SKILLS.has(skillKey)) return -1;
+    return 0;
+};
 
 export const InlineDiceRoller = ({
     getValue,
@@ -94,14 +131,19 @@ export const InlineDiceRoller = ({
                 const left = parts[0];
                 const right = parts[1];
 
-                if (ATTRIBUTE_LIST.includes(left) && ATTRIBUTE_LIST.includes(right)) {
-                    setRollType("attr-attr");
+                if (ATTRIBUTE_LIST.includes(left) && SKILL_LIST.includes(right)) {
+                    setRollType("attr-skill");
                     setPrimaryAttr(left);
-                    setSecondaryAttr(right);
+                    setSkill(right);
 
+                    const skillDots = getNestedValue("skills", right) || 0;
+                    const specialtyBonus = inferredSpecialty ? 1 : 0;
+                    const untrainedPenalty = getUntrainedSkillPenalty(right, skillDots);
                     const basePool =
                         (getNestedValue("attributes", left) || 0) +
-                        (getNestedValue("attributes", right) || 0);
+                        skillDots +
+                        specialtyBonus +
+                        untrainedPenalty;
 
                     setDiceModifier((preset.pool || basePool) - basePool);
                     return;
@@ -225,6 +267,7 @@ export const InlineDiceRoller = ({
     const primaryAttrValue = attributeValue(primaryAttr);
     const secondaryAttrValue = attributeValue(secondaryAttr);
     const selectedSkillValue = skillValue(skill);
+    const untrainedSkillPenalty = getUntrainedSkillPenalty(skill, selectedSkillValue);
     const remembranceBonus = useRemembrance ? geistRank : 0;
     const willpowerBonus = spendWillpower ? 3 : 0;
     const manualMod =
@@ -252,6 +295,7 @@ export const InlineDiceRoller = ({
             return (
                 primaryAttrValue +
                 selectedSkillValue +
+                untrainedSkillPenalty +
                 (useSpecialty ? 1 : 0) +
                 remembranceBonus +
                 smallFramedStealthBonus
@@ -354,6 +398,9 @@ export const InlineDiceRoller = ({
                 }
             } else if (rollType === "attr-skill") {
                 rollDescription = `${formatLabel(primaryAttr)} + ${formatLabel(skill)}`;
+                if (untrainedSkillPenalty !== 0) {
+                    rollDescription += ` (untrained ${untrainedSkillPenalty})`;
+                }
             } else if (rollType === "attr-attr") {
                 rollDescription = `${formatLabel(primaryAttr)} + ${formatLabel(secondaryAttr)}`;
             } else {
