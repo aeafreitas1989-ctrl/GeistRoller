@@ -11,7 +11,6 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 export const StorytellerPage = () => {
     const [characters, setCharacters] = useState([]);
     const [activeCharacter, setActiveCharacter] = useState(null);
-    const [combatCardOpen, setCombatCardOpen] = useState(false);
 
     const diceRollerRef = useRef(null);
     const lastCharacterStorageKey = "geistroller-last-active-character-id";
@@ -133,6 +132,85 @@ export const StorytellerPage = () => {
 
         toast.info(`${remaining} ${finalType} damage applied.`);
     };
+
+    const meritsList = activeCharacter?.merits_list || [];
+    const hasGiant = meritsList.some((m) => (m?.name || "") === "Giant");
+    const hasSmallFramed = meritsList.some((m) => (m?.name || "") === "Small-Framed");
+    const combatSize = 5 + (hasGiant ? 1 : 0) + (hasSmallFramed ? -1 : 0);
+    const combatStamina = activeCharacter?.attributes?.stamina || 0;
+    const combatMaxHealth = combatStamina + combatSize;
+
+    const combatHealthBoxes = normalizeHealthBoxes(
+        activeCharacter?.health_boxes,
+        combatMaxHealth,
+        activeCharacter?.health || 0
+    );
+
+    const combatFilledHealth = combatHealthBoxes.filter((state) => state !== "empty").length;
+    const combatIsDeadTrack =
+        combatHealthBoxes.length > 0 &&
+        combatHealthBoxes.every((state) => state === "aggravated");
+
+    const combatWoundPenalty =
+        combatFilledHealth >= combatMaxHealth
+            ? -3
+            : combatFilledHealth >= combatMaxHealth - 1
+            ? -2
+            : combatFilledHealth >= combatMaxHealth - 2
+            ? -1
+            : 0;
+
+    const healCombatHealthState = async (stateToHeal) => {
+        if (!activeCharacter) return;
+
+        const counts = getHealthCounts(combatHealthBoxes);
+
+        if (stateToHeal === "bashing" && counts.bashing > 0) counts.bashing -= 1;
+        if (stateToHeal === "lethal" && counts.lethal > 0) counts.lethal -= 1;
+        if (stateToHeal === "aggravated" && counts.aggravated > 0) counts.aggravated -= 1;
+
+        const updatedBoxes = buildHealthBoxes(counts, combatMaxHealth);
+        const filled = updatedBoxes.filter((state) => state !== "empty").length;
+
+        await updateCharacter({
+            health_boxes: updatedBoxes,
+            health: filled,
+        });
+    };
+
+    const handlePatternRestoration = async () => {
+        if (!activeCharacter || activeCharacter.character_type !== "mage") return;
+
+        const currentMana = activeCharacter?.mana || 0;
+        if (currentMana < 3) return;
+
+        const counts = getHealthCounts(combatHealthBoxes);
+
+        if (counts.lethal > 0) {
+            counts.lethal -= 1;
+        } else if (counts.bashing > 0) {
+            counts.bashing -= 1;
+        } else {
+            return;
+        }
+
+        const updatedBoxes = buildHealthBoxes(counts, combatMaxHealth);
+        const filled = updatedBoxes.filter((state) => state !== "empty").length;
+
+        await updateCharacter({
+            mana: currentMana - 3,
+            health_boxes: updatedBoxes,
+            health: filled,
+        });
+    };
+
+    const patternRestorationDisabled =
+        activeCharacter?.character_type !== "mage" ||
+        (activeCharacter?.mana || 0) < 3 ||
+        (() => {
+            const c = getHealthCounts(combatHealthBoxes);
+            return c.lethal + c.bashing === 0;
+        })();
 
     // Fetch sessions and campaigns on mount
     useEffect(() => {
@@ -351,7 +429,6 @@ export const StorytellerPage = () => {
                                     onDeleteCharacter={deleteCharacter}
                                     onTriggerDiceRoll={triggerDiceRoll}
                                     onCreateActiveSpell={addActiveSpell}
-                                    onStartCombat={() => setCombatCardOpen(true)}
                                 />
                             </div>
                         </section>
@@ -378,10 +455,18 @@ export const StorytellerPage = () => {
                                     onDispelActiveSpell={dispelActiveSpell}
                                     onRelinquishActiveSpell={relinquishActiveSpell}
                                     onRelinquishActiveSpellSafely={relinquishActiveSpellSafely}
-                                    combatCardOpen={combatCardOpen}
-                                    onEndCombat={() => setCombatCardOpen(false)}
                                     onTriggerDiceRoll={triggerDiceRoll}
                                     onApplyIncomingDamage={applyIncomingCombatDamage}
+                                    onUpdateCharacter={updateCharacter}
+                                    healthBoxes={combatHealthBoxes}
+                                    maxHealth={combatMaxHealth}
+                                    filledHealth={combatFilledHealth}
+                                    isDeadTrack={combatIsDeadTrack}
+                                    woundPenalty={combatWoundPenalty}
+                                    onHealHealthState={healCombatHealthState}
+                                    onPatternRestoration={handlePatternRestoration}
+                                    patternRestorationDisabled={patternRestorationDisabled}
+                                    isMage={activeCharacter?.character_type === "mage"}
                                 />
                             </div>
                         </section>

@@ -221,6 +221,7 @@ class Character(BaseModel):
     mementos: List[Dict[str, Any]] = Field(default_factory=list)
     conditions: List[Dict[str, Any]] = Field(default_factory=list)
     active_spells: List[Dict[str, Any]] = Field(default_factory=list)
+    active_mage_armor: Optional[str] = None
     places_people: List[Dict[str, Any]] = Field(default_factory=list)
     size: int = 5
     health: int = 7
@@ -299,6 +300,7 @@ class CharacterUpdate(BaseModel):
     mementos: Optional[List[Dict[str, Any]]] = None
     conditions: Optional[List[Dict[str, Any]]] = None
     active_spells: Optional[List[Dict[str, Any]]] = None
+    active_mage_armor: Optional[str] = None
     places_people: Optional[List[Dict[str, Any]]] = None
     size: Optional[int] = None
     health: Optional[int] = None

@@ -13,6 +13,7 @@ import {
     PERSON_RELATIONSHIP_OPTIONS, PERSON_RELATIONSHIP_STYLES,
     HAUNT_DEFINITIONS, KEY_DEFINITIONS,
 } from "../../data/cards-data";
+import { HealthTrack } from "../character/StatComponents";
 
 export const MeritCard = ({ merit, definition }) => {
     const [expanded, setExpanded] = useState(false);
@@ -677,12 +678,21 @@ export const CombatTrackerCard = ({
     activeMageArmorDots,
     onTriggerDiceRoll,
     onApplyIncomingDamage,
-    onEndCombat,
+    onUpdateCharacter,
+    healthBoxes,
+    maxHealth,
+    filledHealth,
+    isDeadTrack,
+    woundPenalty,
+    onHealHealthState,
+    onPatternRestoration,
+    patternRestorationDisabled,
+    isMage,
 }) => {
     const [currentDefense, setCurrentDefense] = useState(normalDefense);
     const [initiativeRoll, setInitiativeRoll] = useState(null);
-    const [attackAttribute, setAttackAttribute] = useState("strength");
-    const [attackSkill, setAttackSkill] = useState("brawl");
+    const [selectedWeaponKey, setSelectedWeaponKey] = useState("__unarmed__");
+    const [attackMode, setAttackMode] = useState("unarmed");
     const [targetDefense, setTargetDefense] = useState("0");
     const [attackModifier, setAttackModifier] = useState("0");
     const [incomingDamage, setIncomingDamage] = useState("1");
@@ -691,16 +701,84 @@ export const CombatTrackerCard = ({
 
     const formatLabel = (value) => value.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
     const getValue = (parent, field) => activeCharacter?.[parent]?.[field] || 0;
+    const meritsList = activeCharacter?.merits_list || [];
+    const hasGiant = meritsList.some((m) => (m?.name || "") === "Giant");
+    const hasSmallFramed = meritsList.some((m) => (m?.name || "") === "Small-Framed");
+    const size = 5 + (hasGiant ? 1 : 0) + (hasSmallFramed ? -1 : 0);
+
+    const equippedArmor =
+        (activeCharacter?.inventory_items || []).find((it) => it?.type === "armor" && !!it?.equipped) || null;
+    const equippedArmorName = equippedArmor?.name || null;
+
+    const armorSourceParts = [];
+    if (equippedArmorName) armorSourceParts.push(equippedArmorName);
+    if (activeMageArmorName && ["Death", "Forces", "Matter", "Life"].includes(activeMageArmorName)) {
+        armorSourceParts.push(`${activeMageArmorName} Armor`);
+    }
+    const armorSourceLabel = armorSourceParts.length > 0 ? armorSourceParts.join(" + ") : null;
+
+    const arcanaWithArmor =
+        activeCharacter?.character_type === "mage"
+            ? Object.entries(activeCharacter?.arcana || {})
+                .filter(([, dots]) => (dots || 0) >= 2)
+                .map(([name]) => name)
+            : [];
+    const inventoryItems = activeCharacter?.inventory_items || [];
+
+    const equippedWeaponOptions = inventoryItems
+        .map((it, idx) => ({ it, idx }))
+        .filter(({ it }) => it?.type === "weapon" && !!it?.equipped)
+        .map(({ it, idx }) => ({
+            key: String(idx),
+            idx,
+            label: it?.name || `Weapon ${idx + 1}`,
+            weapon: it?.weapon || {},
+        }));
+
+    const selectedWeaponOption =
+        selectedWeaponKey === "__unarmed__"
+            ? null
+            : equippedWeaponOptions.find((w) => w.key === selectedWeaponKey) || null;
+
+    const selectedWeapon = selectedWeaponOption?.weapon || null;
+    const selectedWeaponName = selectedWeaponOption?.label || "Unarmed";
+    const selectedWeaponIndex = selectedWeaponOption?.idx ?? -1;
+
+    const canThrowSelectedWeapon =
+        !!selectedWeapon &&
+        (selectedWeapon.kind ?? "melee") === "melee" &&
+        (selectedWeapon.size ?? 1) === 1;
 
     const rollInitiative = () => {
         const die = Math.floor(Math.random() * 10) + 1;
         setInitiativeRoll({ die, modifier: initiativeModifier, total: die + initiativeModifier });
     };
 
+    const handleToggleMageArmor = async (arcanum) => {
+        if (!onUpdateCharacter || !activeCharacter) return;
+
+        const isActive = activeMageArmorName === arcanum;
+
+        // Turning an active armor off costs nothing
+        if (isActive) {
+            await onUpdateCharacter({ active_mage_armor: null });
+            return;
+        }
+
+        // Activating any Mage Armor costs 1 Mana
+        const currentMana = activeCharacter?.mana || 0;
+        if (currentMana < 1) return;
+
+        await onUpdateCharacter({
+            mana: currentMana - 1,
+            active_mage_armor: arcanum,
+        });
+    };
+
     useEffect(() => {
         setCurrentDefense(normalDefense);
-        setAttackAttribute("strength");
-        setAttackSkill("brawl");
+        setSelectedWeaponKey("__unarmed__");
+        setAttackMode("unarmed");
         setTargetDefense("0");
         setAttackModifier("0");
         setIncomingDamage("1");
@@ -709,89 +787,184 @@ export const CombatTrackerCard = ({
         rollInitiative();
     }, [activeCharacter?.id, normalDefense, initiativeModifier]);
 
+    useEffect(() => {
+        if (!selectedWeaponOption) {
+            setAttackMode("unarmed");
+            return;
+        }
+
+        const kind = selectedWeapon?.kind ?? "melee";
+        if (kind === "ranged") {
+            setAttackMode("ranged");
+            return;
+        }
+
+        if (attackMode !== "thrown") {
+            setAttackMode("melee");
+        }
+    }, [selectedWeaponOption, selectedWeaponKey]);
+
+    const attackProfile = (() => {
+        if (!selectedWeaponOption) {
+            return {
+                label: "Unarmed",
+                attribute: "strength",
+                skill: "brawl",
+                appliesDefense: true,
+                unequipAfterAttack: false,
+            };
+        }
+
+        if ((selectedWeapon.kind ?? "melee") === "ranged") {
+            return {
+                label: selectedWeaponName,
+                attribute: "dexterity",
+                skill: "firearms",
+                appliesDefense: false,
+                unequipAfterAttack: false,
+            };
+        }
+
+        if (attackMode === "thrown" && canThrowSelectedWeapon) {
+            return {
+                label: `${selectedWeaponName} (Thrown)`,
+                attribute: "dexterity",
+                skill: "athletics",
+                appliesDefense: true,
+                unequipAfterAttack: true,
+            };
+        }
+
+        return {
+            label: selectedWeaponName,
+            attribute: "strength",
+            skill: "weaponry",
+            appliesDefense: true,
+            unequipAfterAttack: false,
+        };
+    })();
+
+    const attackAttributeValue = getValue("attributes", attackProfile.attribute) || 0;
+    const attackSkillValue = getValue("skills", attackProfile.skill) || 0;
+    const attackUntrainedPenalty = attackSkillValue > 0 ? 0 : -1;
+    const defensePenalty = attackProfile.appliesDefense ? (parseInt(targetDefense, 10) || 0) : 0;
+    const modifierValue = parseInt(attackModifier, 10) || 0;
+
     const attackPool = Math.max(
         0,
-        (getValue("attributes", attackAttribute) || 0) +
-        (getValue("skills", attackSkill) || 0) +
-        (parseInt(attackModifier, 10) || 0) -
-        (parseInt(targetDefense, 10) || 0)
+        attackAttributeValue +
+        attackSkillValue +
+        attackUntrainedPenalty +
+        modifierValue -
+        defensePenalty
     );
 
     return (
         <div className="space-y-3" data-testid="combat-tracker-card">
-            <div className="grid grid-cols-3 gap-2 text-xs">
-                <button
-                    type="button"
-                    onClick={() => setCurrentDefense((prev) => Math.max(0, prev - 1))}
-                    className="rounded-sm border p-2 text-left transition-all bg-zinc-900/50 border-zinc-800 hover:border-zinc-600"
-                    data-testid="combat-card-defense-btn"
-                >
-                    <div className="flex items-center justify-between">
-                        <span className="text-zinc-500">Defense</span>
-                        <span className="font-mono text-teal-400">{currentDefense}</span>
-                    </div>
-                </button>
+            <div className="space-y-2">
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                    <button
+                        type="button"
+                        onClick={() => setCurrentDefense((prev) => Math.max(0, prev - 1))}
+                        className="rounded-sm border p-2 text-left transition-all bg-zinc-900/50 border-zinc-800 hover:border-zinc-600"
+                        data-testid="combat-card-defense-btn"
+                    >
+                        <div className="flex items-center justify-between">
+                            <span className="text-zinc-500">Defense</span>
+                            <span className="font-mono text-teal-400">{currentDefense}</span>
+                        </div>
+                    </button>
 
-                <button
-                    type="button"
-                    onClick={() => {
-                        if (!onTriggerDiceRoll || currentDefense <= 0) return;
-                        onTriggerDiceRoll({
-                            pool: currentDefense * 2,
-                            label: `Dodge (${currentDefense} Defense × 2)`,
-                            dicePoolBreakdown: `Dodge ${currentDefense} × 2`,
-                            exceptional_target: 5,
-                        });
-                    }}
-                    disabled={currentDefense <= 0}
-                    className="rounded-sm border p-2 text-left transition-all bg-zinc-900/50 border-zinc-800 hover:border-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed"
-                    data-testid="combat-card-dodge-btn"
-                >
-                    <div className="flex items-center justify-between">
-                        <span className="text-zinc-500">Dodge</span>
-                        <span className="font-mono text-teal-400">{currentDefense * 2}</span>
-                    </div>
-                </button>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            if (!onTriggerDiceRoll || currentDefense <= 0) return;
+                            onTriggerDiceRoll({
+                                pool: currentDefense * 2,
+                                label: `Dodge (${currentDefense} Defense × 2)`,
+                                dicePoolBreakdown: `Dodge ${currentDefense} × 2`,
+                                exceptional_target: 5,
+                            });
+                        }}
+                        disabled={currentDefense <= 0}
+                        className="rounded-sm border p-2 text-left transition-all bg-zinc-900/50 border-zinc-800 hover:border-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                        data-testid="combat-card-dodge-btn"
+                    >
+                        <div className="flex items-center justify-between">
+                            <span className="text-zinc-500">Dodge</span>
+                            <span className="font-mono text-teal-400">{currentDefense * 2}</span>
+                        </div>
+                    </button>
 
-                <button
-                    type="button"
-                    onClick={rollInitiative}
-                    className="rounded-sm border p-2 text-left transition-all bg-zinc-900/50 border-zinc-800 hover:border-zinc-600"
-                    data-testid="combat-card-initiative-btn"
-                >
-                    <div className="flex items-center justify-between">
-                        <span className="text-zinc-500">Initiative</span>
-                        <span className="font-mono text-teal-400">{initiativeModifier}</span>
-                    </div>
-                </button>
-            </div>
+                    <button
+                        type="button"
+                        onClick={rollInitiative}
+                        className="rounded-sm border p-2 text-left transition-all bg-zinc-900/50 border-zinc-800 hover:border-zinc-600"
+                        data-testid="combat-card-initiative-btn"
+                    >
+                        <div className="flex items-center justify-between">
+                            <span className="text-zinc-500">Initiative</span>
+                            <span className="font-mono text-teal-400">{initiativeModifier}</span>
+                        </div>
+                    </button>
+                </div>
 
-            <div className="grid grid-cols-3 gap-2 text-xs">
-                <div className="rounded-sm border p-2 bg-zinc-900/30 border-zinc-800">
-                    <div className="flex items-center justify-between">
-                        <span className="text-zinc-500">Speed</span>
-                        <span className="font-mono text-teal-400">{speed}</span>
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div className="rounded-sm border p-2 bg-zinc-900/30 border-zinc-800">
+                        <div className="flex items-center justify-between">
+                            <span className="text-zinc-500">Size</span>
+                            <span className="font-mono text-teal-400">{size}</span>
+                        </div>
+                    </div>
+
+                    <div className="rounded-sm border p-2 bg-zinc-900/30 border-zinc-800">
+                        <div className="flex items-center justify-between">
+                            <span className="text-zinc-500">Speed</span>
+                            <span className="font-mono text-teal-400">{speed}</span>
+                        </div>
+                    </div>
+
+                    <div className="rounded-sm border p-2 bg-zinc-900/30 border-zinc-800">
+                        <div className="flex items-center justify-between">
+                            <span className="text-zinc-500">Current Init</span>
+                            <span className="font-mono text-teal-400">{initiativeRoll?.total ?? "x"}</span>
+                        </div>
                     </div>
                 </div>
-                <div className="rounded-sm border p-2 bg-zinc-900/30 border-zinc-800">
+
+                <div className="rounded-sm border p-2 bg-zinc-900/30 border-zinc-800 text-xs">
                     <div className="flex items-center justify-between">
-                        <span className="text-zinc-500">Armor</span>
+                        <span className="text-zinc-500">
+                            {armorSourceLabel ? `Armor (${armorSourceLabel})` : "Armor"}
+                        </span>
                         <span className="font-mono text-teal-400">{armorGeneral}/{armorBallistic}</span>
                     </div>
                 </div>
-                <div className="rounded-sm border p-2 bg-zinc-900/30 border-zinc-800">
-                    <div className="flex items-center justify-between">
-                        <span className="text-zinc-500">Current Init</span>
-                        <span className="font-mono text-teal-400">{initiativeRoll?.total ?? initiativeModifier}</span>
-                    </div>
-                </div>
-            </div>
 
-            {activeMageArmorName && (
-                <div className="rounded-sm border p-2 bg-violet-900/20 border-violet-500/30 text-xs text-violet-200">
-                    Mage Armor active: <span className="font-medium">{activeMageArmorName}</span> ({activeMageArmorDots})
-                </div>
-            )}
+                {activeCharacter?.character_type === "mage" && arcanaWithArmor.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                        {arcanaWithArmor.map((a) => {
+                            const isActive = activeMageArmorName === a;
+                            return (
+                                <button
+                                    key={a}
+                                    type="button"
+                                    onClick={() => handleToggleMageArmor(a)}
+                                    disabled={!isActive && (activeCharacter?.mana || 0) < 1}
+                                    className={`px-2.5 py-1 text-xs rounded border transition-all ${
+                                        isActive
+                                            ? "bg-violet-600/40 border-violet-500 text-violet-200 shadow-[0_0_8px_rgba(139,92,246,0.3)]"
+                                            : "bg-zinc-800/50 border-zinc-700 text-zinc-400 hover:border-zinc-500 hover:text-zinc-300"
+                                    } disabled:opacity-40 disabled:cursor-not-allowed`}
+                                    data-testid={`combat-card-mage-armor-${a.toLowerCase()}`}
+                                >
+                                    {a} Armor
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
 
             <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
                 <div className="rounded-sm border p-3 bg-zinc-900/30 border-zinc-800 space-y-3">
@@ -800,36 +973,55 @@ export const CombatTrackerCard = ({
                         Outgoing Attack
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-2">
                         <div>
-                            <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Attribute</label>
-                            <Select value={attackAttribute} onValueChange={setAttackAttribute}>
+                            <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Weapon</label>
+                            <Select value={selectedWeaponKey} onValueChange={setSelectedWeaponKey}>
                                 <SelectTrigger className="bg-zinc-900/50 border-zinc-800 h-7 text-xs">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent className="bg-zinc-900 border-zinc-800">
-                                    {["strength", "dexterity"].map((value) => (
-                                        <SelectItem key={value} value={value} className="text-zinc-200 text-xs">
-                                            {formatLabel(value)} ({getValue("attributes", value) || 0})
+                                    <SelectItem value="__unarmed__" className="text-zinc-200 text-xs">
+                                        Unarmed
+                                    </SelectItem>
+                                    {equippedWeaponOptions.map((option) => (
+                                        <SelectItem key={option.key} value={option.key} className="text-zinc-200 text-xs">
+                                            {option.label}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
                         </div>
-                        <div>
-                            <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Skill</label>
-                            <Select value={attackSkill} onValueChange={setAttackSkill}>
-                                <SelectTrigger className="bg-zinc-900/50 border-zinc-800 h-7 text-xs">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent className="bg-zinc-900 border-zinc-800">
-                                    {["athletics", "brawl", "firearms", "weaponry"].map((value) => (
-                                        <SelectItem key={value} value={value} className="text-zinc-200 text-xs">
-                                            {formatLabel(value)} ({getValue("skills", value) || 0})
+
+                        {selectedWeaponOption && canThrowSelectedWeapon && (
+                            <div>
+                                <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Use As</label>
+                                <Select value={attackMode} onValueChange={setAttackMode}>
+                                    <SelectTrigger className="bg-zinc-900/50 border-zinc-800 h-7 text-xs">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-zinc-900 border-zinc-800">
+                                        <SelectItem value="melee" className="text-zinc-200 text-xs">
+                                            Melee
                                         </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                                        <SelectItem value="thrown" className="text-zinc-200 text-xs">
+                                            Thrown
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
+
+                        <div className="rounded-sm border px-3 py-2 bg-zinc-950/50 border-zinc-800 text-[10px] text-zinc-500">
+                            <div>{attackProfile.label}</div>
+                            <div>
+                                {formatLabel(attackProfile.attribute)} {attackAttributeValue}
+                                {" + "}
+                                {formatLabel(attackProfile.skill)} {attackSkillValue}
+                                {attackUntrainedPenalty !== 0 ? ` + Untrained ${attackUntrainedPenalty}` : ""}
+                                {modifierValue !== 0 ? ` + Modifier ${modifierValue}` : ""}
+                                {attackProfile.appliesDefense ? ` - Defense ${defensePenalty}` : ""}
+                            </div>
                         </div>
                     </div>
 
@@ -866,15 +1058,30 @@ export const CombatTrackerCard = ({
                     <Button
                         size="sm"
                         className="w-full btn-secondary text-xs h-7"
-                        onClick={() => {
+                        onClick={async () => {
                             if (!onTriggerDiceRoll) return;
+
                             onTriggerDiceRoll({
                                 pool: attackPool <= 0 ? 1 : attackPool,
                                 chance: attackPool <= 0,
-                                label: `${formatLabel(attackAttribute)} + ${formatLabel(attackSkill)} Attack`,
-                                dicePoolBreakdown: `${formatLabel(attackAttribute)} ${getValue("attributes", attackAttribute) || 0} + ${formatLabel(attackSkill)} ${getValue("skills", attackSkill) || 0} + Modifier ${parseInt(attackModifier, 10) || 0} - Target Defense ${parseInt(targetDefense, 10) || 0}`,
+                                label: `${attackProfile.label} Attack`,
+                                dicePoolBreakdown: `${formatLabel(attackProfile.attribute)} ${attackAttributeValue} + ${formatLabel(attackProfile.skill)} ${attackSkillValue}${attackUntrainedPenalty !== 0 ? ` + Untrained ${attackUntrainedPenalty}` : ""}${modifierValue !== 0 ? ` + Modifier ${modifierValue}` : ""}${attackProfile.appliesDefense ? ` - Target Defense ${defensePenalty}` : ""}`,
                                 exceptional_target: 5,
                             });
+
+                            if (
+                                attackProfile.unequipAfterAttack &&
+                                selectedWeaponIndex >= 0 &&
+                                typeof onUpdateCharacter === "function"
+                            ) {
+                                const updatedInventory = inventoryItems.map((item, idx) =>
+                                    idx === selectedWeaponIndex ? { ...item, equipped: false } : item
+                                );
+
+                                await onUpdateCharacter({ inventory_items: updatedInventory });
+                                setSelectedWeaponKey("__unarmed__");
+                                setAttackMode("unarmed");
+                            }
                         }}
                         data-testid="combat-card-outgoing-attack-btn"
                     >
@@ -945,10 +1152,104 @@ export const CombatTrackerCard = ({
                     >
                         Apply Damage
                     </Button>
+                <div className="space-y-2 border-t border-zinc-800 pt-2">
+                    <div className="flex items-center justify-between">
+                        <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Health</label>
+                        <span className="text-[10px] text-zinc-600 font-mono">
+                            {filledHealth}/{maxHealth}
+                        </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 flex-wrap">
+                        {isDeadTrack && (
+                            <span className="text-[10px] text-rose-400 font-mono">
+                                DEAD
+                            </span>
+                        )}
+                        <HealthTrack
+                            boxes={healthBoxes}
+                            max={maxHealth}
+                            onBoxClick={() => {}}
+                            testIdPrefix="combat-health"
+                        />
+                    </div>
+
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[10px] text-zinc-500 uppercase tracking-wider">HEAL</span>
+
+                        <Button
+                            type="button"
+                            variant="outline"
+                            className="h-6 px-2 text-[10px] bg-purple-900/50 border-purple-500/50 text-purple-200 hover:bg-purple-900/70"
+                            onClick={() => onHealHealthState?.("aggravated")}
+                            data-testid="combat-heal-aggravated-btn"
+                        >
+                            *
+                        </Button>
+
+                        <Button
+                            type="button"
+                            variant="outline"
+                            className="h-6 px-2 text-[10px] bg-rose-900/50 border-rose-500/50 text-rose-300 hover:bg-rose-900/70"
+                            onClick={() => onHealHealthState?.("lethal")}
+                            data-testid="combat-heal-lethal-btn"
+                        >
+                            X
+                        </Button>
+
+                        <Button
+                            type="button"
+                            variant="outline"
+                            className="h-6 px-2 text-[10px] bg-amber-900/50 border-amber-500/50 text-amber-300 hover:bg-amber-900/70"
+                            onClick={() => onHealHealthState?.("bashing")}
+                            data-testid="combat-heal-bashing-btn"
+                        >
+                            /
+                        </Button>
+
+                        {isMage && (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className="h-6 px-2 text-[10px] bg-violet-900/30 border-violet-500/30 text-violet-400 hover:bg-violet-800/40"
+                                onClick={() => onPatternRestoration?.()}
+                                disabled={patternRestorationDisabled}
+                                data-testid="combat-pattern-restoration-btn"
+                            >
+                                Pattern Restoration
+                            </Button>
+                        )}
+                    </div>
+
+                    {woundPenalty < 0 && (
+                        <p className="text-[10px] text-rose-400">
+                            Wound Penalty {woundPenalty}
+                        </p>
+                    )}
                 </div>
+            </div>
             </div>
 
             <div className="grid grid-cols-2 gap-2 pt-1">
+                <Button
+                    size="sm"
+                    className="w-full btn-secondary text-xs h-7"
+                    onClick={() => {
+                        setCurrentDefense(normalDefense);
+                        setTargetDefense("0");
+                        setAttackModifier("0");
+                        setIncomingDamage("1");
+                        setIncomingType("bashing");
+                        setIncomingSource("general");
+                        setSelectedWeaponKey("__unarmed__");
+                        setAttackMode("unarmed");
+                        rollInitiative();
+                    }}
+                    data-testid="combat-card-start-combat-btn"
+                >
+                    Start Combat
+                </Button>
+
                 <Button
                     size="sm"
                     className="w-full btn-secondary text-xs h-7"
@@ -956,14 +1257,6 @@ export const CombatTrackerCard = ({
                     data-testid="combat-card-end-turn-btn"
                 >
                     End Turn
-                </Button>
-                <Button
-                    size="sm"
-                    className="w-full btn-secondary text-xs h-7"
-                    onClick={onEndCombat}
-                    data-testid="combat-card-end-combat-btn"
-                >
-                    End Combat
                 </Button>
             </div>
         </div>

@@ -58,10 +58,17 @@ export const GameCardsPanel = ({
     onRelinquishActiveSpell,
     onRelinquishActiveSpellSafely,
     onGenerateCaseTruth,
-    combatCardOpen = false,
-    onEndCombat,
     onTriggerDiceRoll,
     onApplyIncomingDamage,
+    onUpdateCharacter,
+    healthBoxes,
+    maxHealth,
+    filledHealth,
+    isDeadTrack,
+    woundPenalty,
+    onHealHealthState,
+    onPatternRestoration,
+    patternRestorationDisabled,
 }) => {
     const [showAddCondition, setShowAddCondition] = useState(false);
     const [customConditionName, setCustomConditionName] = useState("");
@@ -86,7 +93,7 @@ export const GameCardsPanel = ({
         activeSpells: false,
         merits: false,
         places: false,
-        combat: false,
+        combat: true,
     });
     const [showCeremonyRollDialog, setShowCeremonyRollDialog] = useState(false);
     const [selectedCeremony, setSelectedCeremony] = useState(null);
@@ -252,12 +259,6 @@ export const GameCardsPanel = ({
 
     const hauntCount = Object.values(haunts).filter((v) => v > 0).length;
 
-    useEffect(() => {
-        if (combatCardOpen) {
-            setOpenSections((prev) => ({ ...prev, combat: true }));
-        }
-    }, [combatCardOpen]);
-
     const characterKey = activeCharacter?.innate_key;
     const geistKey = activeCharacter?.geist_innate_key;
     const mementoKeys = (activeCharacter?.mementos || [])
@@ -346,7 +347,6 @@ export const GameCardsPanel = ({
                             </pre>
                         </CollapsibleContent>
                     </Collapsible>
-                    {combatCardOpen && (
                         <Collapsible
                             open={openSections.combat}
                             onOpenChange={() => toggleSection("combat")}
@@ -376,11 +376,19 @@ export const GameCardsPanel = ({
                                     activeMageArmorDots={activeMageArmorDots}
                                     onTriggerDiceRoll={onTriggerDiceRoll}
                                     onApplyIncomingDamage={onApplyIncomingDamage}
-                                    onEndCombat={onEndCombat}
+                                    onUpdateCharacter={onUpdateCharacter}
+                                    healthBoxes={healthBoxes}
+                                    maxHealth={maxHealth}
+                                    filledHealth={filledHealth}
+                                    isDeadTrack={isDeadTrack}
+                                    woundPenalty={woundPenalty}
+                                    onHealHealthState={onHealHealthState}
+                                    onPatternRestoration={onPatternRestoration}
+                                    patternRestorationDisabled={patternRestorationDisabled}
+                                    isMage={isMage}
                                 />
                             </CollapsibleContent>
                         </Collapsible>
-                    )}
 
                     {/* Session Summary Card */}
                     <Collapsible

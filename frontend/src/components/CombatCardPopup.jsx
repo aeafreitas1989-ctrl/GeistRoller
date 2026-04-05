@@ -44,12 +44,16 @@ export const CombatCardPopup = ({
 
     const attackAttributeValue = getNestedValue("attributes", attackAttribute) || 0;
     const attackSkillValue = getNestedValue("skills", attackSkill) || 0;
+    const attackUntrainedPenalty = attackSkillValue > 0 ? 0 : -1;
 
     const outgoingPool = useMemo(() => {
         const defensePenalty = parseInt(targetDefense, 10) || 0;
         const modifier = parseInt(attackModifier, 10) || 0;
-        return Math.max(0, attackAttributeValue + attackSkillValue + modifier - defensePenalty);
-    }, [attackAttributeValue, attackSkillValue, targetDefense, attackModifier]);
+        return Math.max(
+            0,
+            attackAttributeValue + attackSkillValue + attackUntrainedPenalty + modifier - defensePenalty
+        );
+    }, [attackAttributeValue, attackSkillValue, attackUntrainedPenalty, targetDefense, attackModifier]);
 
     const rollInitiative = () => {
         const die = Math.floor(Math.random() * 10) + 1;
@@ -95,8 +99,7 @@ export const CombatCardPopup = ({
             pool: outgoingPool <= 0 ? 1 : outgoingPool,
             chance: outgoingPool <= 0,
             label: `${formatLabel(attackAttribute)} + ${formatLabel(attackSkill)} Attack`,
-            dicePoolBreakdown: `${formatLabel(attackAttribute)} ${attackAttributeValue} + ${formatLabel(attackSkill)} ${attackSkillValue} + Modifier ${parseInt(attackModifier, 10) || 0} - Target Defense ${parseInt(targetDefense, 10) || 0}`,
-            exceptional_target: 5,
+            dicePoolBreakdown: `${formatLabel(attackAttribute)} ${attackAttributeValue} + ${formatLabel(attackSkill)} ${attackSkillValue}${attackUntrainedPenalty !== 0 ? ` + Untrained ${attackUntrainedPenalty}` : ""} + Modifier ${parseInt(attackModifier, 10) || 0} - Target Defense ${parseInt(targetDefense, 10) || 0}`,
         });
     };
 
