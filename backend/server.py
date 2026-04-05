@@ -750,6 +750,7 @@ async def update_settings(input: StorytellerSettingsUpdate):
 @api_router.post("/dice/roll", response_model=DiceRollResult)
 async def roll_dice(request: DiceRollRequest):
     dice = []
+    is_chance = request.chance or request.pool <= 0
     pool = max(1, request.pool) if not request.chance else 1
     again_threshold = request.again if not request.chance else 11
 
@@ -763,7 +764,7 @@ async def roll_dice(request: DiceRollRequest):
             die = roll_single()
             dice.append(die)
 
-    if request.rote and not request.chance:
+    if request.rote and not is_chance:
         reroll_indices = [i for i, d in enumerate(dice) if d < 8 and i < pool]
         for idx in reroll_indices:
             new_die = roll_single()
@@ -774,7 +775,7 @@ async def roll_dice(request: DiceRollRequest):
 
     successes = sum(1 for d in dice if d >= 8)
 
-    if request.chance:
+    if is_chance:
         is_dramatic = dice[0] == 1
         successes = 1 if dice[0] == 10 else 0
         is_exceptional = False

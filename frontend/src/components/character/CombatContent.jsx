@@ -476,7 +476,14 @@ export const CombatContent = ({
                                                                             setInvDraft((prev) => {
                                                                                 const cur = prev.weapon.special || [];
                                                                                 const next = v ? [...cur, s] : cur.filter((x) => x !== s);
-                                                                                return { ...prev, weapon: { ...prev.weapon, kind: v ? "ranged" : "melee", special: v ? [] : (prev.weapon.special || []) } };
+
+                                                                                return {
+                                                                                    ...prev,
+                                                                                    weapon: {
+                                                                                        ...prev.weapon,
+                                                                                        special: next,
+                                                                                    },
+                                                                                };
                                                                             });
                                                                         }}
                                                                         className="h-3 w-3"

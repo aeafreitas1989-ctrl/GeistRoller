@@ -1667,6 +1667,7 @@ export const CharacterPanel = ({
                         currentPlasm={getValue("plasm") || 0}
                         preset={dicePopupPreset}
                         forceExpanded={true}
+                        isMage={isMage}
                     />
                 </DialogContent>
             </Dialog>

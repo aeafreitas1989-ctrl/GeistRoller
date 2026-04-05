@@ -531,6 +531,7 @@ export const ChatInterface = ({
                         currentPlasm={getValue("plasm") || 0}
                         preset={rollPopup.data}
                         forceExpanded={true}
+                        isMage={activeCharacter?.character_type === "mage"}
                     />
                 </DialogContent>
             </Dialog>

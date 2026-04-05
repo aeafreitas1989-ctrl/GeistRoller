@@ -89,6 +89,19 @@ export const InlineDiceRoller = ({
         if (forceExpanded) setExpanded(true);
     }, [forceExpanded]);
     useEffect(() => {
+        if (isMage) {
+            setUseRemembrance(false);
+        }
+    }, [isMage]);
+    useEffect(() => {
+        if (isMage && rollType === "haunt") {
+            setRollType("attr-attr");
+        }
+        if (!isMage && rollType === "spellcasting") {
+            setRollType("attr-attr");
+        }
+    }, [isMage, rollType]);
+    useEffect(() => {
         if (!preset) return;
         setExpanded(true);
 
@@ -317,6 +330,12 @@ export const InlineDiceRoller = ({
         ? 1
         : Math.max(0, basePool + modifierBonus + willpowerBonus + woundPenalty);
 
+    const isComputedChanceDie =
+        rollType === "chance" ||
+        (rollType !== "spellcasting" && poolTotal <= 0);
+
+    const effectivePool = isComputedChanceDie ? 1 : poolTotal;
+
     const rollDice = async () => {
         if (rollType === "spellcasting") {
             if (!spellArcanum) {
@@ -377,10 +396,16 @@ export const InlineDiceRoller = ({
 
         try {
             const response = await axios.post(`${API}/dice/roll`, {
-                pool: rollType === "chance" ? 1 : Math.max(1, poolTotal),
-                again: (rollType === "attr-attr" || rollType === "attr-skill") ? parseInt(displayedAgainRule, 10) : 10,
-                rote: (rollType === "attr-attr" || rollType === "attr-skill") ? useRote : false,
-                chance: rollType === "chance",
+                pool: effectivePool,
+                again: isComputedChanceDie
+                    ? 10
+                    : ((rollType === "attr-attr" || rollType === "attr-skill")
+                        ? parseInt(displayedAgainRule, 10)
+                        : 10),
+                rote: isComputedChanceDie
+                    ? false
+                    : ((rollType === "attr-attr" || rollType === "attr-skill") ? useRote : false),
+                chance: isComputedChanceDie,
             });
 
             await new Promise(resolve => setTimeout(resolve, 300));
@@ -552,19 +577,23 @@ export const InlineDiceRoller = ({
                                 <span>Specialty</span>
                                 <Switch checked={useSpecialty} onCheckedChange={setUseSpecialty} data-testid="dice-specialty-toggle" />
                             </div>
-                            <div className="flex items-center justify-between text-[10px] text-zinc-500">
-                                <span>Remembrance</span>
-                                <Switch checked={useRemembrance} onCheckedChange={setUseRemembrance} data-testid="dice-remembrance-toggle" />
-                            </div>
-                            {useRemembrance && (
-                                <p className="text-[10px] text-teal-400" data-testid="dice-remembrance-bonus">
-                                    Remembrance bonus +{geistRank} (Geist Rank)
-                                </p>
-                            )}
-                            {(getValue("remembrance_trait") || getValue("remembrance_trait_type")) && (
-                                <p className="text-[10px] text-zinc-600">
-                                    Remembrance Trait: {getValue("remembrance_trait") || "Unset"} ({getValue("remembrance_trait_type") || ""})
-                                </p>
+                            {!isMage && (
+                                <>
+                                    <div className="flex items-center justify-between text-[10px] text-zinc-500">
+                                        <span>Remembrance</span>
+                                        <Switch checked={useRemembrance} onCheckedChange={setUseRemembrance} data-testid="dice-remembrance-toggle" />
+                                    </div>
+                                    {useRemembrance && (
+                                        <p className="text-[10px] text-teal-400" data-testid="dice-remembrance-bonus">
+                                            Remembrance bonus +{geistRank} (Geist Rank)
+                                        </p>
+                                    )}
+                                    {(getValue("remembrance_trait") || getValue("remembrance_trait_type")) && (
+                                        <p className="text-[10px] text-zinc-600">
+                                            Remembrance Trait: {getValue("remembrance_trait") || "Unset"} ({getValue("remembrance_trait_type") || ""})
+                                        </p>
+                                    )}
+                                </>
                             )}
                         </div>
                     )}
@@ -819,7 +848,7 @@ export const InlineDiceRoller = ({
 
                     {rollType !== "spellcasting" && (
                         <>
-                    {rollType === "chance" && (
+                    {isComputedChanceDie && (
                         <div className="text-[10px] text-zinc-500">
                             Chance die: roll 1d10 with no rerolls. 10 = success, 2-9 = failure, 1 = dramatic failure + Beat.
                         </div>
@@ -849,7 +878,9 @@ export const InlineDiceRoller = ({
 
                     <div className="flex items-center gap-2">
                         <div className="text-[10px] text-zinc-500 uppercase tracking-wider">Pool</div>
-                        <div className="text-xs font-mono text-zinc-200" data-testid="dice-pool-total">{poolTotal}</div>
+                        <div className="text-xs font-mono text-zinc-200" data-testid="dice-pool-total">
+                            {isComputedChanceDie ? "Chance" : poolTotal}
+                        </div>
                         <Button onClick={rollDice} disabled={isRolling} className="btn-primary h-7 px-3 text-xs flex-1" data-testid="inline-dice-roll-btn">
                             {isRolling ? "..." : "Roll"}
                         </Button>
