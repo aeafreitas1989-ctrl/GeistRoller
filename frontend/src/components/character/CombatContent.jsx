@@ -12,7 +12,7 @@ import {
     AVAILABILITY_OPTIONS, WEAPON_SPECIAL_OPTIONS, ARMOR_COVERAGE_OPTIONS,
     PREMADE_ARMOR, PREMADE_EQUIPMENT,
 } from "../../data/character-data";
-import { HealthTrack, getHealthCounts, buildHealthBoxes } from "./StatComponents";
+import { HealthTrack, getHealthCounts, buildHealthBoxes, formatLabel } from "./StatComponents";
 
 export const CombatContent = ({
     getValue, getNestedValue, handleChange,
@@ -596,25 +596,52 @@ export const CombatContent = ({
                                                 </Select>
                                             </div>
 
-                                            <div>
-                                                <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Bonus</label>
-                                                <Input
-                                                    type="number"
-                                                    min={0}
-                                                    max={5}
-                                                    value={invDraft.yantra?.bonus ?? 1}
-                                                    onChange={(e) =>
-                                                        setInvDraft((prev) => ({
-                                                            ...prev,
-                                                            yantra: {
-                                                                ...(prev.yantra || {}),
-                                                                bonus: Math.max(0, Math.min(5, parseInt(e.target.value, 10) || 0)),
-                                                            },
-                                                        }))
-                                                    }
-                                                    className="h-7 input-geist text-xs"
-                                                />
-                                            </div>
+                                            {invDraft.yantra?.kind === "tool" ? (
+                                                <div>
+                                                    <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Tool Type</label>
+                                                    <Select
+                                                        value={invDraft.yantra?.tool_type || "Coin"}
+                                                        onValueChange={(v) =>
+                                                            setInvDraft((prev) => ({
+                                                                ...prev,
+                                                                yantra: { ...(prev.yantra || {}), tool_type: v },
+                                                            }))
+                                                        }
+                                                    >
+                                                        <SelectTrigger className="h-7 bg-zinc-900/50 border-zinc-700 text-xs">
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent className="bg-zinc-900 border-zinc-700">
+                                                            <SelectItem value="Coin" className="text-xs">Coin</SelectItem>
+                                                            <SelectItem value="Cup" className="text-xs">Cup</SelectItem>
+                                                            <SelectItem value="Mirror" className="text-xs">Mirror</SelectItem>
+                                                            <SelectItem value="Rod" className="text-xs">Rod</SelectItem>
+                                                            <SelectItem value="Weapon" className="text-xs">Weapon</SelectItem>
+                                                            <SelectItem value="Order" className="text-xs">Order</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                            ) : (
+                                                <div>
+                                                    <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Bonus</label>
+                                                    <Input
+                                                        type="number"
+                                                        min={0}
+                                                        max={5}
+                                                        value={invDraft.yantra?.bonus ?? 1}
+                                                        onChange={(e) =>
+                                                            setInvDraft((prev) => ({
+                                                                ...prev,
+                                                                yantra: {
+                                                                    ...(prev.yantra || {}),
+                                                                    bonus: Math.max(0, Math.min(5, parseInt(e.target.value, 10) || 0)),
+                                                                },
+                                                            }))
+                                                        }
+                                                        className="h-7 input-geist text-xs"
+                                                    />
+                                                </div>
+                                            )}
                                         </div>
 
                                         <div>
@@ -649,51 +676,177 @@ export const CombatContent = ({
                     <div className="space-y-2">
                         {inventoryItems.map((it, idx) => (
                             <div key={`${it.name || "item"}-${idx}`} className="p-2 rounded-sm bg-zinc-900/20 border border-zinc-800">
-                                <div className="flex items-center justify-between">
-                                    <div className="text-xs text-zinc-200">
+                                <div className="flex items-center justify-between gap-3">
+                                    <div className="text-xs text-zinc-200 min-w-0 flex-1">
                                         <span className="font-mono text-zinc-500 mr-2">
-                                            {it.type.charAt(0).toUpperCase() + it.type.slice(1)}
+                                            {it.type === "yantra"
+                                                ? `Yantra (${formatLabel(it.yantra?.tool_type || (it.yantra?.kind === "sacrament" ? "sacrament" : "coin"))})`
+                                                : it.type === "armor"
+                                                    ? `Armor (${it.armor?.general ?? 0}/${it.armor?.ballistic ?? 0})`
+                                                    : it.type.charAt(0).toUpperCase() + it.type.slice(1)}
                                         </span>
                                         {it.name || "Unnamed"}
                                         <span className="text-[10px] text-zinc-500 ml-2">
                                             {AVAILABILITY_OPTIONS.find((a) => a.value === (it.availability ?? 0))?.label ?? "o"}
                                         </span>
                                     </div>
-                                    <Button variant="ghost" size="sm" className="h-7 px-2 text-zinc-400 hover:text-red-300" onClick={() => removeInventoryItem(idx)} data-testid={`inventory-remove-${idx}`}>
-                                        <Trash2 className="w-4 h-4" />
-                                    </Button>
+
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        <span className="text-[10px] text-zinc-500">Equipped</span>
+                                        <Switch
+                                            checked={!!it.equipped}
+                                            onCheckedChange={(v) => {
+                                                const current = getValue("inventory_items") || [];
+                                                const target = current[idx];
+                                                let updated = current.map((it2, i) => (i === idx ? { ...it2, equipped: !!v } : it2));
+                                                if (target?.type === "armor" && !!v) {
+                                                    updated = current.map((it2, i) => {
+                                                        if (it2?.type !== "armor") return it2;
+                                                        if (i === idx) return { ...it2, equipped: true };
+                                                        return { ...it2, equipped: false };
+                                                    });
+                                                }
+                                                handleChange("inventory_items", updated);
+                                            }}
+                                            data-testid={`inventory-equipped-${idx}`}
+                                        />
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-7 px-2 text-zinc-400 hover:text-zinc-200"
+                                            onClick={() => setEditingInventoryIndex(idx)}
+                                            data-testid={`inventory-edit-${idx}`}
+                                        >
+                                            <Pencil className="w-4 h-4" />
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-7 px-2 text-zinc-400 hover:text-red-300"
+                                            onClick={() => removeInventoryItem(idx)}
+                                            data-testid={`inventory-remove-${idx}`}
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </Button>
+                                    </div>
                                 </div>
 
                                 {editingInventoryIndex === idx ? (
                                     <div className="grid grid-cols-2 gap-2 mt-2">
-                                        <Input value={it.name || ""} onChange={(e) => updateInventoryItem(idx, { name: e.target.value })} className="h-7 input-geist text-xs" placeholder="Name" />
-                                        <Select value={String(it.availability ?? 0)} onValueChange={(v) => updateInventoryItem(idx, { availability: parseInt(v, 10) })}>
-                                            <SelectTrigger className="h-7 bg-zinc-900/50 border-zinc-700 text-xs"><SelectValue /></SelectTrigger>
+                                        <Input
+                                            value={it.name || ""}
+                                            onChange={(e) => updateInventoryItem(idx, { name: e.target.value })}
+                                            className="h-7 input-geist text-xs"
+                                            placeholder="Name"
+                                        />
+                                        <Select
+                                            value={String(it.availability ?? 0)}
+                                            onValueChange={(v) => updateInventoryItem(idx, { availability: parseInt(v, 10) })}
+                                        >
+                                            <SelectTrigger className="h-7 bg-zinc-900/50 border-zinc-700 text-xs">
+                                                <SelectValue />
+                                            </SelectTrigger>
                                             <SelectContent className="bg-zinc-900 border-zinc-700">
-                                                {AVAILABILITY_OPTIONS.map((a) => (<SelectItem key={a.value} value={String(a.value)} className="text-xs">{a.label}</SelectItem>))}
+                                                {AVAILABILITY_OPTIONS.map((a) => (
+                                                    <SelectItem key={a.value} value={String(a.value)} className="text-xs">
+                                                        {a.label}
+                                                    </SelectItem>
+                                                ))}
                                             </SelectContent>
                                         </Select>
+
                                         {it.type === "weapon" && (
                                             <div className="col-span-2 grid grid-cols-3 gap-2">
-                                                <Input type="number" value={it.weapon?.damage ?? 1} onChange={(e) => updateInventoryItemNested(idx, "weapon", { damage: parseInt(e.target.value, 10) || 0 })} className="h-7 input-geist text-xs" placeholder="Damage" />
-                                                <Input type="number" value={it.weapon?.strength ?? 0} onChange={(e) => updateInventoryItemNested(idx, "weapon", { strength: parseInt(e.target.value, 10) || 0 })} className="h-7 input-geist text-xs" placeholder="Strength" />
-                                                <Input type="number" value={it.weapon?.size ?? 1} onChange={(e) => updateInventoryItemNested(idx, "weapon", { size: parseInt(e.target.value, 10) || 0 })} className="h-7 input-geist text-xs" placeholder="Size" />
+                                                <Input
+                                                    type="number"
+                                                    value={it.weapon?.damage ?? 1}
+                                                    onChange={(e) => updateInventoryItemNested(idx, "weapon", { damage: parseInt(e.target.value, 10) || 0 })}
+                                                    className="h-7 input-geist text-xs"
+                                                    placeholder="Damage"
+                                                />
+                                                <Input
+                                                    type="number"
+                                                    value={it.weapon?.strength ?? 0}
+                                                    onChange={(e) => updateInventoryItemNested(idx, "weapon", { strength: parseInt(e.target.value, 10) || 0 })}
+                                                    className="h-7 input-geist text-xs"
+                                                    placeholder="Strength"
+                                                />
+                                                <Input
+                                                    type="number"
+                                                    value={it.weapon?.size ?? 1}
+                                                    onChange={(e) => updateInventoryItemNested(idx, "weapon", { size: parseInt(e.target.value, 10) || 0 })}
+                                                    className="h-7 input-geist text-xs"
+                                                    placeholder="Size"
+                                                />
                                             </div>
                                         )}
+
                                         {it.type === "armor" && (
                                             <div className="col-span-2 grid grid-cols-2 gap-2">
-                                                <Input type="number" min={0} max={5} value={it.armor?.general ?? 0} onChange={(e) => { const v = parseInt(e.target.value, 10); updateInventoryItemNested(idx, "armor", { general: Math.max(0, Math.min(5, Number.isFinite(v) ? v : 0)) }); }} className="h-7 input-geist text-xs" placeholder="General" />
-                                                <Input type="number" min={0} max={5} value={it.armor?.ballistic ?? 0} onChange={(e) => { const v = parseInt(e.target.value, 10); updateInventoryItemNested(idx, "armor", { ballistic: Math.max(0, Math.min(5, Number.isFinite(v) ? v : 0)) }); }} className="h-7 input-geist text-xs" placeholder="Ballistic" />
+                                                <Input
+                                                    type="number"
+                                                    min={0}
+                                                    max={5}
+                                                    value={it.armor?.general ?? 0}
+                                                    onChange={(e) => {
+                                                        const v = parseInt(e.target.value, 10);
+                                                        updateInventoryItemNested(idx, "armor", {
+                                                            general: Math.max(0, Math.min(5, Number.isFinite(v) ? v : 0)),
+                                                        });
+                                                    }}
+                                                    className="h-7 input-geist text-xs"
+                                                    placeholder="General"
+                                                />
+                                                <Input
+                                                    type="number"
+                                                    min={0}
+                                                    max={5}
+                                                    value={it.armor?.ballistic ?? 0}
+                                                    onChange={(e) => {
+                                                        const v = parseInt(e.target.value, 10);
+                                                        updateInventoryItemNested(idx, "armor", {
+                                                            ballistic: Math.max(0, Math.min(5, Number.isFinite(v) ? v : 0)),
+                                                        });
+                                                    }}
+                                                    className="h-7 input-geist text-xs"
+                                                    placeholder="Ballistic"
+                                                />
                                             </div>
                                         )}
+
                                         {it.type === "equipment" && (
                                             <div className="col-span-2 grid grid-cols-4 gap-2">
-                                                <Input type="number" value={it.equipment?.bonus ?? 0} onChange={(e) => updateInventoryItemNested(idx, "equipment", { bonus: parseInt(e.target.value, 10) || 0 })} className="h-7 input-geist text-xs" placeholder="Bonus" />
-                                                <Input type="number" value={it.equipment?.durability ?? 0} onChange={(e) => updateInventoryItemNested(idx, "equipment", { durability: parseInt(e.target.value, 10) || 0 })} className="h-7 input-geist text-xs" placeholder="Dur." />
-                                                <Input type="number" value={it.equipment?.size ?? 1} onChange={(e) => updateInventoryItemNested(idx, "equipment", { size: parseInt(e.target.value, 10) || 0 })} className="h-7 input-geist text-xs" placeholder="Size" />
-                                                <Input type="number" value={it.equipment?.structure ?? 1} onChange={(e) => updateInventoryItemNested(idx, "equipment", { structure: parseInt(e.target.value, 10) || 0 })} className="h-7 input-geist text-xs" placeholder="Str." />
+                                                <Input
+                                                    type="number"
+                                                    value={it.equipment?.bonus ?? 0}
+                                                    onChange={(e) => updateInventoryItemNested(idx, "equipment", { bonus: parseInt(e.target.value, 10) || 0 })}
+                                                    className="h-7 input-geist text-xs"
+                                                    placeholder="Bonus"
+                                                />
+                                                <Input
+                                                    type="number"
+                                                    value={it.equipment?.durability ?? 0}
+                                                    onChange={(e) => updateInventoryItemNested(idx, "equipment", { durability: parseInt(e.target.value, 10) || 0 })}
+                                                    className="h-7 input-geist text-xs"
+                                                    placeholder="Dur."
+                                                />
+                                                <Input
+                                                    type="number"
+                                                    value={it.equipment?.size ?? 1}
+                                                    onChange={(e) => updateInventoryItemNested(idx, "equipment", { size: parseInt(e.target.value, 10) || 0 })}
+                                                    className="h-7 input-geist text-xs"
+                                                    placeholder="Size"
+                                                />
+                                                <Input
+                                                    type="number"
+                                                    value={it.equipment?.structure ?? 1}
+                                                    onChange={(e) => updateInventoryItemNested(idx, "equipment", { structure: parseInt(e.target.value, 10) || 0 })}
+                                                    className="h-7 input-geist text-xs"
+                                                    placeholder="Str."
+                                                />
                                             </div>
                                         )}
+
                                         {it.type === "yantra" && (
                                             <div className="col-span-2 grid grid-cols-2 gap-2">
                                                 <Select
@@ -709,94 +862,95 @@ export const CombatContent = ({
                                                     </SelectContent>
                                                 </Select>
 
-                                                <Input
-                                                    type="number"
-                                                    min={0}
-                                                    max={5}
-                                                    value={it.yantra?.bonus ?? 1}
-                                                    onChange={(e) =>
-                                                        updateInventoryItemNested(idx, "yantra", {
-                                                            bonus: Math.max(0, Math.min(5, parseInt(e.target.value, 10) || 0)),
-                                                        })
-                                                    }
-                                                    className="h-7 input-geist text-xs"
-                                                    placeholder="Bonus"
-                                                />
+                                                {it.yantra?.kind === "tool" ? (
+                                                    <Select
+                                                        value={it.yantra?.tool_type || "Coin"}
+                                                        onValueChange={(v) => updateInventoryItemNested(idx, "yantra", { tool_type: v })}
+                                                    >
+                                                        <SelectTrigger className="h-7 bg-zinc-900/50 border-zinc-700 text-xs">
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent className="bg-zinc-900 border-zinc-700">
+                                                            <SelectItem value="Coin" className="text-xs">Coin</SelectItem>
+                                                            <SelectItem value="Cup" className="text-xs">Cup</SelectItem>
+                                                            <SelectItem value="Mirror" className="text-xs">Mirror</SelectItem>
+                                                            <SelectItem value="Rod" className="text-xs">Rod</SelectItem>
+                                                            <SelectItem value="Weapon" className="text-xs">Weapon</SelectItem>
+                                                            <SelectItem value="Order" className="text-xs">Order</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                ) : (
+                                                    <Input
+                                                        type="number"
+                                                        min={0}
+                                                        max={5}
+                                                        value={it.yantra?.bonus ?? 1}
+                                                        onChange={(e) =>
+                                                            updateInventoryItemNested(idx, "yantra", {
+                                                                bonus: Math.max(0, Math.min(5, parseInt(e.target.value, 10) || 0)),
+                                                            })
+                                                        }
+                                                        className="h-7 input-geist text-xs"
+                                                        placeholder="Bonus"
+                                                    />
+                                                )}
                                             </div>
                                         )}
+
                                         <div className="col-span-2 flex justify-end gap-2">
-                                            <Button variant="ghost" size="sm" className="h-7 px-2 text-zinc-400 hover:text-zinc-200" onClick={() => setEditingInventoryIndex(null)} data-testid={`inventory-cancel-edit-${idx}`}>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-7 px-2 text-zinc-400 hover:text-zinc-200"
+                                                onClick={() => setEditingInventoryIndex(null)}
+                                                data-testid={`inventory-cancel-edit-${idx}`}
+                                            >
                                                 Done
                                             </Button>
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="mt-2 grid grid-cols-3 gap-2 items-center">
-                                        <div className="text-xs text-cyan-400 font-mono">
-                                            {(() => {
-                                                if (it.type === "weapon") return `Damage +${it.weapon?.damage ?? 1}`;
-                                                if (it.type === "armor") return `Rating ${it.armor?.general ?? 1}/${it.armor?.ballistic ?? 0}`;
-                                                if (it.type === "yantra")  return `${it.yantra?.kind === "sacrament" ? "Sacrament" : "Tool"} +${it.yantra?.bonus ?? 1}`;
-                                                return `Bonus +${it.equipment?.bonus ?? 0}`;
-                                            })()}
+                                    <>
+                                        <div className="mt-2 grid grid-cols-3 gap-2 items-center">
+                                            <div className="text-xs text-cyan-400 font-mono">
+                                                {(() => {
+                                                    if (it.type === "equipment") return `Bonus +${it.equipment?.bonus ?? 0}`;
+                                                    return null;
+                                                })()}
+                                            </div>
+                                            <div />
                                         </div>
-                                        <div className="flex items-center justify-end gap-2">
-                                            <span className="text-[10px] text-zinc-500">Equipped</span>
-                                            <Switch
-                                                checked={!!it.equipped}
-                                                onCheckedChange={(v) => {
-                                                    const current = getValue("inventory_items") || [];
-                                                    const target = current[idx];
-                                                    let updated = current.map((it2, i) => (i === idx ? { ...it2, equipped: !!v } : it2));
-                                                    if (target?.type === "armor" && !!v) {
-                                                        updated = current.map((it2, i) => {
-                                                            if (it2?.type !== "armor") return it2;
-                                                            if (i === idx) return { ...it2, equipped: true };
-                                                            return { ...it2, equipped: false };
-                                                        });
-                                                    }
-                                                    handleChange("inventory_items", updated);
-                                                }}
-                                                data-testid={`inventory-equipped-${idx}`}
-                                            />
-                                            <Button variant="ghost" size="sm" className="h-7 px-2 text-zinc-400 hover:text-zinc-200" onClick={() => setEditingInventoryIndex(idx)} data-testid={`inventory-edit-${idx}`}>
-                                                <Pencil className="w-4 h-4" />
-                                            </Button>
-                                        </div>
-                                    </div>
-                                )}
-                                {it.type === "weapon" && (
-                                    <div className="mt-2 grid grid-cols-3 gap-1 text-[12px] text-zinc-500">
-                                        <span>Damage {it.weapon?.damage ?? 1}</span>
-                                        <span>Size {it.weapon?.size ?? 1}</span>
-                                        <span>Strength {it.weapon?.strength ?? 0}</span>
-                                    </div>
-                                )}
-                                {it.type === "armor" && (
-                                    <div className="mt-2 grid grid-cols-3 gap-1 text-[12px] text-zinc-500">
-                                        <span>Strength {it.armor?.strength ?? 0}</span>
-                                        <span>Defense {it.armor?.defense ?? 0}</span>
-                                        <span>Speed {it.armor?.speed ?? 0}</span>
-                                    </div>
-                                )}
-                                {it.type === "equipment" && (
-                                    <div className="mt-2 grid grid-cols-3 gap-1 text-[12px] text-zinc-500">
-                                        <span>Durability {it.equipment?.durability ?? 0}</span>
-                                        <span>Structure {it.equipment?.structure ?? 1}</span>
-                                        <span>Size {it.equipment?.size ?? 1}</span>
-                                    </div>
-                                )}
-                                {it.type === "yantra" && (
-                                    <div className="mt-2 grid grid-cols-2 gap-1 text-[12px] text-zinc-500">
-                                        <span>Type {it.yantra?.kind === "sacrament" ? "Sacrament" : "Tool"}</span>
-                                        <span>Bonus +{it.yantra?.bonus ?? 1}</span>
-                                    </div>
-                                )}
 
-                                {it.type === "yantra" && it.yantra?.notes && (
-                                    <div className="mt-1 text-[11px] text-zinc-500">
-                                        {it.yantra.notes}
-                                    </div>
+                                        {it.type === "weapon" && (
+                                            <div className="mt-2 grid grid-cols-3 gap-1 text-[12px] text-zinc-500">
+                                                <span>Damage {it.weapon?.damage ?? 1}</span>
+                                                <span>Size {it.weapon?.size ?? 1}</span>
+                                                <span>Strength {it.weapon?.strength ?? 0}</span>
+                                            </div>
+                                        )}
+
+                                        {it.type === "armor" && (
+                                            <div className="mt-2 grid grid-cols-3 gap-1 text-[12px] text-zinc-500">
+                                                <span>Strength {it.armor?.strength ?? 0}</span>
+                                                <span>Defense {it.armor?.defense ?? 0}</span>
+                                                <span>Speed {it.armor?.speed ?? 0}</span>
+                                            </div>
+                                        )}
+
+                                        {it.type === "equipment" && (
+                                            <div className="mt-2 grid grid-cols-3 gap-1 text-[12px] text-zinc-500">
+                                                <span>Durability {it.equipment?.durability ?? 0}</span>
+                                                <span>Structure {it.equipment?.structure ?? 1}</span>
+                                                <span>Size {it.equipment?.size ?? 1}</span>
+                                            </div>
+                                        )}
+
+                                        {it.type === "yantra" && it.yantra?.notes && (
+                                            <div className="mt-1 text-[11px] text-zinc-500">
+                                                {it.yantra.notes}
+                                            </div>
+                                        )}
+                                    </>
                                 )}
                             </div>
                         ))}

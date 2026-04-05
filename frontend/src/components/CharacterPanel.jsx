@@ -119,7 +119,7 @@ export const CharacterPanel = ({
             coverage: { head: false, torso: false, arms: false, legs: false },
         },
         equipment: { bonus: 0, durability: 0, size: 1, structure: 1, effect: "" },
-        yantra: { kind: "tool", bonus: 1, notes: "" },
+        yantra: { kind: "tool", tool_type: "", bonus: 1, notes: "" },
     });
 
     // Ceremony Dialog State
@@ -382,7 +382,7 @@ export const CharacterPanel = ({
                 coverage: { head: false, torso: false, arms: false, legs: false },
             },
             equipment: { bonus: 0, durability: 0, size: 1, structure: 1, effect: "" },
-            yantra: {kind: "tool", bonus: 1, notes:""}
+            yantra: {kind: "tool", tool_type: "", bonus: 1, notes:""}
         }));
         setInventoryAddOpen(false);
     };

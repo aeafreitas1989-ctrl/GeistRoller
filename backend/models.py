@@ -163,7 +163,7 @@ class Character(BaseModel):
     wisdom: int = 7
     mana: int = 10
     nimbus: str = ""
-    nimbus_long-term: str = ""
+    nimbus_long_term: str = ""
     nimbus_immediate: str = ""
     nimbus_signature: str = ""
     nimbus_tilt: str = ""
@@ -253,7 +253,7 @@ class CharacterUpdate(BaseModel):
     wisdom: Optional[int] = None
     mana: Optional[int] = None
     nimbus: Optional[str] = None
-    nimbus_long-term: Optional[str] = None
+    nimbus_long_term: Optional[str] = None
     nimbus_immediate: Optional[str] = None
     nimbus_signature: Optional[str] = None
     nimbus_tilt: Optional[str] = None

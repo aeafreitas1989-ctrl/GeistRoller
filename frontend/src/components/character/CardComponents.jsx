@@ -73,7 +73,7 @@ export const MeritCard = ({ merit, index, onDelete, onUpdate, onRollPerception }
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     <span className="text-xs text-zinc-300">
-    {merit.specialty ? `${merit.specialty} — ${merit.name}` : merit.name}
+    {merit.specialty ? `${merit.name}: ${merit.specialty}` : merit.name}
 </span>
                     <StatDots
                         value={merit.dots || 0}
