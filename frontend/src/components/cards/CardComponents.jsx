@@ -759,13 +759,15 @@ export const CombatTrackerCard = ({
 
         const isActive = activeMageArmorName === arcanum;
 
-        // Turning an active armor off costs nothing
+        // Clicking the active armor turns it off for free
         if (isActive) {
-            await onUpdateCharacter({ active_mage_armor: null });
+            await onUpdateCharacter({
+                active_mage_armor: null,
+            });
             return;
         }
 
-        // Activating any Mage Armor costs 1 Mana
+        // Activating a new Mage Armor costs 1 Mana
         const currentMana = activeCharacter?.mana || 0;
         if (currentMana < 1) return;
 

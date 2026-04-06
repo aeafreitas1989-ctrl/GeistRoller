@@ -414,12 +414,7 @@ export const StorytellerPage = () => {
                 <div className="w-full max-w-7xl mx-auto min-h-full flex flex-col">
                     <div className="grid grid-cols-1 xl:grid-cols-2 gap-0 flex-1 min-h-0">
                         <section className="min-h-0 border-b xl:border-b-0 xl:border-r border-zinc-800">
-                            <div className="px-4 py-3 border-b border-zinc-800 bg-zinc-950/50">
-                                <h2 className="font-mono text-sm uppercase tracking-wider text-zinc-400">
-                                    Character
-                                </h2>
-                            </div>
-                            <div className="h-[calc(100vh-57px)] xl:h-full overflow-hidden">
+                            <div className="h-full overflow-hidden">
                                 <CharacterPanel
                                     characters={characters}
                                     activeCharacter={activeCharacter}
@@ -434,12 +429,7 @@ export const StorytellerPage = () => {
                         </section>
 
                         <section className="min-h-0">
-                            <div className="px-4 py-3 border-b border-zinc-800 bg-zinc-950/50">
-                                <h2 className="font-mono text-sm uppercase tracking-wider text-zinc-400">
-                                    Cards
-                                </h2>
-                            </div>
-                            <div className="h-[calc(100vh-57px)] xl:h-full overflow-hidden">
+                            <div className="h-full overflow-hidden">
                                 <GameCardsPanel
                                     activeCharacter={activeCharacter}
                                     activeConditions={activeCharacter?.conditions || []}

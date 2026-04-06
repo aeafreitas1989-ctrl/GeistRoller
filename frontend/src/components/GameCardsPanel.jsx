@@ -307,7 +307,7 @@ export const GameCardsPanel = ({
     return (
         <div className="h-full flex flex-col" data-testid="game-cards-panel">
             <div className="px-4 py-3 border-b border-zinc-800/50">
-                <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">Cards</span>
+                <h2 className="font-heading text-lg text-zinc-200">Cards</h2>
             </div>
 
             <ScrollArea className="flex-1">

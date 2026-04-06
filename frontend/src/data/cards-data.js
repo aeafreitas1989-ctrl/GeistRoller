@@ -14,18 +14,21 @@ export const CONDITION_DEFINITIONS = {
     "Sick": { type: "tilt", description: "You are ill. -1 to all actions.", resolution: "Rest and recovery." },
     
     // Conditions (Persistent and Regular)
-    "Shaken": { type: "condition", description: "-2 to Resolve or Composure rolls. Caused by fear or supernatural terror.", resolution: "Regain Willpower from Virtue/Vice, or confront the source." },
-    "Spooked": { type: "condition", description: "Something supernatural has rattled you. -1 to Composure rolls.", resolution: "Succeed on a Composure roll in a safe environment." },
+    "Broken": { type: "condition", description: "Your will is shattered. Cannot spend Willpower.", resolution: "Achieve a meaningful victory or time passes." },
+    "Deprived": { type: "condition", description: "You lack something essential. -1 to all rolls.", resolution: "Obtain what you need." },
+    "Distracted": { type: "condition", description: "Constant confusion and distractions buffet your character from all sides. You cannot take extended actions, and suffer a -2 die penalty to all rolls involving perception, concentration, and precision.", resolution: "Leaving the swarm." },
+    "Exhausted": { type: "condition", description: "Your character has been run ragged and desperately needs a good rest. She suffers a -2 penalty to all physical actions and rolls to remain conscious.", resolution: "The character has restful sleep." },
+    "Fugue": { type: "condition", description: "You've lost time and memory. Disoriented and confused.", resolution: "Piece together what happened." },
     "Guilty": { type: "condition", description: "Your conscience weighs on you. -2 to Subterfuge.", resolution: "Make amends or confess." },
     "Informed": { type: "condition", description: "You have useful information. +2 to one relevant roll.", resolution: "Use the bonus or the info becomes irrelevant." },
     "Inspired": { type: "condition", description: "You're driven to succeed. +2 to one roll related to your inspiration.", resolution: "Use the bonus or inspiration fades." },
     "Leveraged": { type: "condition", description: "Someone has something on you. They get +2 to Social rolls against you.", resolution: "Remove their leverage or give in." },
-    "Obsession": { type: "condition", description: "You're fixated on something. -2 to unrelated Mental rolls.", resolution: "Fulfill the obsession or dramatically fail because of it." },
-    "Swooned": { type: "condition", description: "You're romantically captivated. +2 to help them, -2 to act against them.", resolution: "They reject you or the feeling fades naturally." },
-    "Fugue": { type: "condition", description: "You've lost time and memory. Disoriented and confused.", resolution: "Piece together what happened." },
-    "Broken": { type: "condition", description: "Your will is shattered. Cannot spend Willpower.", resolution: "Achieve a meaningful victory or time passes." },
-    "Deprived": { type: "condition", description: "You lack something essential. -1 to all rolls.", resolution: "Obtain what you need." },
+    "Lost": { type: "condition", description: "Your character has no idea where she is, or how to reach her target. She cannot make any headway toward her goal without first navigating and finding out where she is. This requires a successful Wits + Streetwise action (in the city) or Wits + Survival action (in the wilderness).", resolution: "Abandoning the goal, successfully navigating." },
     "Madness": { type: "condition", description: "Your grip on reality is slipping.", resolution: "Professional help or time." },
+    "Obsession": { type: "condition", description: "You're fixated on something. -2 to unrelated Mental rolls.", resolution: "Fulfill the obsession or dramatically fail because of it." },
+    "Shaken": { type: "condition", description: "-2 to Resolve or Composure rolls. Caused by fear or supernatural terror.", resolution: "Regain Willpower from Virtue/Vice, or confront the source." },
+    "Spooked": { type: "condition", description: "Something supernatural has rattled you. -1 to Composure rolls.", resolution: "Succeed on a Composure roll in a safe environment." },
+    "Swooned": { type: "condition", description: "You're romantically captivated. +2 to help them, -2 to act against them.", resolution: "They reject you or the feeling fades naturally." },
     
     // Geist-Specific Conditions
     "Doomed": { type: "geist", origin: "Key Doom", description: "A Key's Doom hangs over you. Cannot use that Key until resolved.", resolution: "Suffer the Doom's effects." },
@@ -43,24 +46,9 @@ export const CONDITION_DEFINITIONS = {
     "Servant": { type: "geist", description: "Obeys commands but otherwise free to act/speak.", resolution: "Scene ends." },
     
     // Liminal Aura (Ephemeral Conditions)
-    "Anchor": {
-        type: "condition",
-        origin: "Liminal Aura",
-        description: "The subject of this Condition (usually a location or object, rarely a person) falls within a ghost’s sphere of influence. Ghosts within (Rank × 3) yards of their Anchors do not suffer Essence bleed.",
-        resolution: "Destroying the Anchor, resolving the ghost’s unfinished business, or the Anchor being removed."
-    },
-    "Controlled": {
-        type: "condition",
-        origin: "Liminal Aura",
-        description: "The ghost has fully conditioned a target, making them ready for permanent possession. The target must already have the Open Condition tagged to the ghost attempting possession.",
-        resolution: "Ending the Claimed Condition removes this Condition, reverting the subject back to Open."
-    },
-    "Open": {
-        type: "condition",
-        origin: "Liminal Aura",
-        description: "A target has been conditioned to accept a ghost’s influence. The Anchor Condition must exist on the same phenomenon.",
-        resolution: "If the Anchor Condition is removed, the Open Condition also ends."
-    },
+    "Anchor": { type: "condition", origin: "Liminal Aura", description: "The subject of this Condition (usually a location or object, rarely a person) falls within a ghost’s sphere of influence. Ghosts within (Rank × 3) yards of their Anchors do not suffer Essence bleed.", resolution: "Destroying the Anchor, resolving the ghost’s unfinished business, or the Anchor being removed." },
+    "Controlled": { type: "condition", origin: "Liminal Aura", description: "The ghost has fully conditioned a target, making them ready for permanent possession. The target must already have the Open Condition tagged to the ghost attempting possession.", resolution: "Ending the Claimed Condition removes this Condition, reverting the subject back to Open." },
+    "Open": { type: "condition", origin: "Liminal Aura", description: "A target has been conditioned to accept a ghost’s influence. The Anchor Condition must exist on the same phenomenon.", resolution: "If the Anchor Condition is removed, the Open Condition also ends." },
 };
 
 // Haunt definitions - Geist: the Sin-Eaters 2nd Edition

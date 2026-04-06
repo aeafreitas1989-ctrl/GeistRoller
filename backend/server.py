@@ -452,7 +452,7 @@ async def get_character(character_id: str):
 
 @api_router.put("/characters/{character_id}", response_model=Character)
 async def update_character(character_id: str, input: CharacterUpdate):
-    update_data = {k: v for k, v in input.model_dump().items() if v is not None}
+    update_data = input.model_dump(exclude_unset=True)
     if update_data:
         update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
         await db.characters.update_one({"id": character_id}, {"$set": update_data})

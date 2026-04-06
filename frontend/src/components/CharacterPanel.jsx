@@ -79,7 +79,6 @@ export const CharacterPanel = ({
     onDeleteCharacter,
     onDiceRollResult,
     onTriggerDiceRoll,
-    onStartCombat,
 }) => {
     const [expandedSections, setExpandedSections] = useState({
         header: false,
@@ -87,7 +86,6 @@ export const CharacterPanel = ({
         attributes: false,
         skills: false,
         merits: false,
-        combat: false,
         inventory: false,
         sinEater: false,
         powers: false,
@@ -1464,40 +1462,6 @@ export const CharacterPanel = ({
                         </CollapsibleContent>
                     </Collapsible>
 
-                    {/* Combat Stats */}
-                    <Collapsible open={expandedSections.combat}>
-                        <CollapsibleTrigger onClick={() => toggleSection("combat")} className="flex items-center justify-between w-full p-2 rounded-sm bg-red-900/50 border border-red-800 hover:bg-red-800/50" data-testid="section-toggle-combat">
-                            <span className="text-xs font-mono uppercase tracking-wider text-red-400">Combat</span>
-                            {expandedSections.combat ? <ChevronDown className="w-4 h-4 text-red-500" /> : <ChevronRight className="w-4 h-4 text-red-500" />}
-                        </CollapsibleTrigger>
-                        <CollapsibleContent className="pt-2">
-                            <CombatContent
-                                getValue={getValue} getNestedValue={getNestedValue} handleChange={handleChange}
-                                isMage={isMage}
-                                meritsList={meritsList}
-                                calculateDefense={calculateDefense} calculateInitiative={calculateInitiative} calculateSpeed={calculateSpeed}
-                                mageArmorDefenseBonus={mageArmorDefenseBonus} mageArmorGeneralBonus={mageArmorGeneralBonus}
-                                equippedArmorGeneral={equippedArmorGeneral} equippedArmorBallistic={equippedArmorBallistic}
-                                inventoryItems={inventoryItems} updateInventoryItem={updateInventoryItem} updateInventoryItemNested={updateInventoryItemNested} removeInventoryItem={removeInventoryItem} addInventoryItem={addInventoryItem}
-                                inventoryAddOpen={inventoryAddOpen} setInventoryAddOpen={setInventoryAddOpen}
-                                editingInventoryIndex={editingInventoryIndex} setEditingInventoryIndex={setEditingInventoryIndex}
-                                invType={invType} setInvType={setInvType} invPremade={invPremade} setInvPremade={setInvPremade} invDraft={invDraft} setInvDraft={setInvDraft}
-                                healthBoxes={healthBoxes}
-                                maxHealth={maxHealth}
-                                filledHealth={filledHealth}
-                                isDeadTrack={isDeadTrack}
-                                woundPenalty={woundPenalty}
-                                handleHealthBoxClick={handleHealthBoxClick}
-                                handleHealthBoxesChange={handleHealthBoxesChange}
-                                onHealHealthState={healHealthState}
-                                onStartCombat={onStartCombat}
-                                showCombat={true}
-                                showMageArmor={true}
-                                showInventory={false}
-                            />
-                        </CollapsibleContent>
-                    </Collapsible>
-
                     <Collapsible open={expandedSections.inventory}>
                         <CollapsibleTrigger
                             onClick={() => toggleSection("inventory")}
@@ -1532,7 +1496,6 @@ export const CharacterPanel = ({
                                 handleHealthBoxClick={handleHealthBoxClick}
                                 handleHealthBoxesChange={handleHealthBoxesChange}
                                 onHealHealthState={healHealthState}
-                                onStartCombat={onStartCombat}
                                 showCombat={false}
                                 showMageArmor={false}
                                 showInventory={true}
