@@ -39,6 +39,18 @@ const PHYSICAL_AND_SOCIAL_SKILLS = new Set([
     "subterfuge",
 ]);
 
+const PHYSICAL_ATTRIBUTES = new Set(["strength", "dexterity", "stamina"]);
+const PHYSICAL_SKILLS = new Set([
+    "athletics",
+    "brawl",
+    "drive",
+    "firearms",
+    "larceny",
+    "stealth",
+    "survival",
+    "weaponry",
+]);
+
 import { formatLabel } from "./StatComponents";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -202,6 +214,12 @@ export const InlineDiceRoller = ({
             .map(([name]) => name);
     }, [arcana]);
     const meritsList = getValue("merits_list") || [];
+    const activeConditions = getValue("conditions") || [];
+    const activeConditionNames = useMemo(
+        () => new Set((activeConditions || []).map((condition) => (condition?.name || "").toLowerCase())),
+        [activeConditions]
+    );
+    const hasCondition = (name) => activeConditionNames.has(name.toLowerCase());
     const trainedObserver = (meritsList || []).find((m) => m?.name === "Trained Observer");
     const trainedObserverDots = trainedObserver?.dots || 0;
     const trainedObserverAgainRule = trainedObserverDots >= 3 ? "8" : (trainedObserverDots >= 1 ? "9" : null);
@@ -281,7 +299,29 @@ export const InlineDiceRoller = ({
     const secondaryAttrValue = attributeValue(secondaryAttr);
     const selectedSkillValue = skillValue(skill);
     const untrainedSkillPenalty = getUntrainedSkillPenalty(skill, selectedSkillValue);
-    const remembranceBonus = useRemembrance ? geistRank : 0;
+    const remembranceBonus = !isMage && useRemembrance ? geistRank : 0;
+    const brokenConditionActive = hasCondition("Broken");
+    const isWitsComposureRoll =
+        rollType === "attr-attr" &&
+        ((primaryAttr === "wits" && secondaryAttr === "composure") ||
+            (primaryAttr === "composure" && secondaryAttr === "wits"));
+    const usesPhysicalAttribute =
+        (rollType === "attr-attr" && (PHYSICAL_ATTRIBUTES.has(primaryAttr) || PHYSICAL_ATTRIBUTES.has(secondaryAttr))) ||
+        (rollType === "attr-skill" && PHYSICAL_ATTRIBUTES.has(primaryAttr));
+    const usesPhysicalSkill = rollType === "attr-skill" && PHYSICAL_SKILLS.has(skill);
+    const sickPenalty = hasCondition("Sick") ? -1 : 0;
+    const guiltyPenalty = hasCondition("Guilty") && rollType === "attr-skill" && skill === "subterfuge" ? -2 : 0;
+    const shakenPenalty = hasCondition("Shaken") && (
+        (rollType === "attr-attr" && [primaryAttr, secondaryAttr].some((attr) => attr === "resolve" || attr === "composure")) ||
+        (rollType === "attr-skill" && (primaryAttr === "resolve" || primaryAttr === "composure"))
+    ) ? -2 : 0;
+    const distractedPenalty = hasCondition("Distracted") && (
+        isWitsComposureRoll ||
+        (rollType === "attr-skill" && skill === "investigation") ||
+        trainedObserverApplies
+    ) ? -2 : 0;
+    const exhaustedPenalty = hasCondition("Exhausted") && (usesPhysicalAttribute || usesPhysicalSkill) ? -2 : 0;
+    const conditionModifier = sickPenalty + guiltyPenalty + shakenPenalty + distractedPenalty + exhaustedPenalty;
     const willpowerBonus = spendWillpower ? 3 : 0;
     const manualMod =
         (rollType === "attr-attr" || rollType === "attr-skill")
@@ -328,13 +368,19 @@ export const InlineDiceRoller = ({
 
     const poolTotal = rollType === "chance"
         ? 1
-        : Math.max(0, basePool + modifierBonus + willpowerBonus + woundPenalty);
+        : Math.max(0, basePool + modifierBonus + willpowerBonus + woundPenalty + conditionModifier);
 
     const isComputedChanceDie =
         rollType === "chance" ||
         (rollType !== "spellcasting" && poolTotal <= 0);
 
     const effectivePool = isComputedChanceDie ? 1 : poolTotal;
+
+    useEffect(() => {
+        if (brokenConditionActive) {
+            setSpendWillpower(false);
+        }
+    }, [brokenConditionActive]);
 
     const rollDice = async () => {
         if (rollType === "spellcasting") {
@@ -856,7 +902,7 @@ export const InlineDiceRoller = ({
 
                     <div className="flex items-center justify-between text-[10px] text-zinc-500">
                         <span>Spend 1 Willpower</span>
-                        <Switch checked={spendWillpower} onCheckedChange={setSpendWillpower} data-testid="dice-willpower-toggle" />
+                        <Switch checked={spendWillpower} onCheckedChange={setSpendWillpower} disabled={brokenConditionActive} data-testid="dice-willpower-toggle" />
                     </div>
                     <div className="flex items-center justify-between text-[10px] text-zinc-500">
                         <span>Current Willpower</span>
@@ -874,6 +920,12 @@ export const InlineDiceRoller = ({
                                 Modifier {(parseInt(diceModifier, 10) || 0) > 0 ? "+" : ""}{parseInt(diceModifier, 10) || 0}
                             </span>
                         )}
+                        {sickPenalty !== 0 && <span data-testid="dice-condition-sick">Sick {sickPenalty}</span>}
+                        {guiltyPenalty !== 0 && <span data-testid="dice-condition-guilty">Guilty {guiltyPenalty}</span>}
+                        {shakenPenalty !== 0 && <span data-testid="dice-condition-shaken">Shaken {shakenPenalty}</span>}
+                        {distractedPenalty !== 0 && <span data-testid="dice-condition-distracted">Distracted {distractedPenalty}</span>}
+                        {exhaustedPenalty !== 0 && <span data-testid="dice-condition-exhausted">Exhausted {exhaustedPenalty}</span>}
+                        {brokenConditionActive && <span data-testid="dice-condition-broken">Broken: no Willpower</span>}
                     </div>
 
                     <div className="flex items-center gap-2">

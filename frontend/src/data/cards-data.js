@@ -9,8 +9,8 @@ export const CONDITION_DEFINITIONS = {
     "Immobilized": { type: "tilt", description: "You cannot move from your current position.", resolution: "Break free or effect ends." },
     "Knocked Down": { type: "tilt", description: "You're on the ground. Standing is an action.", resolution: "Stand up." },
     "Leg Wrack": { type: "tilt", description: "Your leg is damaged. Speed halved, -2 to movement actions.", resolution: "Healed or combat ends." },
-    "Poisoned": { type: "tilt", description: "Toxin in your system. Take damage each turn.", resolution: "Toxin runs its course or is treated." },
-    "Stunned": { type: "tilt", description: "You lose your next action.", resolution: "Lose an action." },
+    "Poisoned (Moderate)": { type: "tilt", description: "Moderate poison. Take 1 bashing damage at the end of each turn until treated or the toxin runs its course.", resolution: "Toxin runs its course or is treated." },
+    "Poisoned (Grave)": { type: "tilt", description: "Grave poison. Take 1 lethal damage at the end of each turn until treated or the toxin runs its course.", resolution: "Toxin runs its course or is treated." },    "Stunned": { type: "tilt", description: "You lose your next action.", resolution: "Lose an action." },
     "Sick": { type: "tilt", description: "You are ill. -1 to all actions.", resolution: "Rest and recovery." },
     
     // Conditions (Persistent and Regular)

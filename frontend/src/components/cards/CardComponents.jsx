@@ -688,6 +688,7 @@ export const CombatTrackerCard = ({
     onPatternRestoration,
     patternRestorationDisabled,
     isMage,
+    onEndTurn,
 }) => {
     const [currentDefense, setCurrentDefense] = useState(normalDefense);
     const [initiativeRoll, setInitiativeRoll] = useState(null);
@@ -702,6 +703,8 @@ export const CombatTrackerCard = ({
     const formatLabel = (value) => value.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
     const getValue = (parent, field) => activeCharacter?.[parent]?.[field] || 0;
     const meritsList = activeCharacter?.merits_list || [];
+    const activeConditionNames = new Set((activeCharacter?.conditions || []).map((condition) => (condition?.name || "").toLowerCase()));
+    const hasCondition = (name) => activeConditionNames.has(name.toLowerCase());
     const hasGiant = meritsList.some((m) => (m?.name || "") === "Giant");
     const hasSmallFramed = meritsList.some((m) => (m?.name || "") === "Small-Framed");
     const size = 5 + (hasGiant ? 1 : 0) + (hasSmallFramed ? -1 : 0);
@@ -851,13 +854,23 @@ export const CombatTrackerCard = ({
     const attackUntrainedPenalty = attackSkillValue > 0 ? 0 : -1;
     const defensePenalty = attackProfile.appliesDefense ? (parseInt(targetDefense, 10) || 0) : 0;
     const modifierValue = parseInt(attackModifier, 10) || 0;
+    const attackConditionPenalty =
+        (hasCondition("Arm Wrack") ? -2 : 0) +
+        (hasCondition("Exhausted") ? -2 : 0) +
+        (hasCondition("Sick") ? -1 : 0);
+    const attackConditionBreakdown = [
+        hasCondition("Arm Wrack") ? "Arm Wrack -2" : null,
+        hasCondition("Exhausted") ? "Exhausted -2" : null,
+        hasCondition("Sick") ? "Sick -1" : null,
+    ].filter(Boolean);
 
     const attackPool = Math.max(
         0,
         attackAttributeValue +
         attackSkillValue +
         attackUntrainedPenalty +
-        modifierValue -
+        modifierValue +
+        attackConditionPenalty -
         defensePenalty
     );
 
@@ -1015,13 +1028,13 @@ export const CombatTrackerCard = ({
                         )}
 
                         <div className="rounded-sm border px-3 py-2 bg-zinc-950/50 border-zinc-800 text-[10px] text-zinc-500">
-                            <div>{attackProfile.label}</div>
                             <div>
                                 {formatLabel(attackProfile.attribute)} {attackAttributeValue}
                                 {" + "}
                                 {formatLabel(attackProfile.skill)} {attackSkillValue}
                                 {attackUntrainedPenalty !== 0 ? ` + Untrained ${attackUntrainedPenalty}` : ""}
                                 {modifierValue !== 0 ? ` + Modifier ${modifierValue}` : ""}
+                                {attackConditionBreakdown.length > 0 ? ` ${attackConditionBreakdown.map((entry) => `+ ${entry}`).join(" ")}` : ""}
                                 {attackProfile.appliesDefense ? ` - Defense ${defensePenalty}` : ""}
                             </div>
                         </div>
@@ -1067,7 +1080,7 @@ export const CombatTrackerCard = ({
                                 pool: attackPool <= 0 ? 1 : attackPool,
                                 chance: attackPool <= 0,
                                 label: `${attackProfile.label} Attack`,
-                                dicePoolBreakdown: `${formatLabel(attackProfile.attribute)} ${attackAttributeValue} + ${formatLabel(attackProfile.skill)} ${attackSkillValue}${attackUntrainedPenalty !== 0 ? ` + Untrained ${attackUntrainedPenalty}` : ""}${modifierValue !== 0 ? ` + Modifier ${modifierValue}` : ""}${attackProfile.appliesDefense ? ` - Target Defense ${defensePenalty}` : ""}`,
+                                dicePoolBreakdown: `${formatLabel(attackProfile.attribute)} ${attackAttributeValue} + ${formatLabel(attackProfile.skill)} ${attackSkillValue}${attackUntrainedPenalty !== 0 ? ` + Untrained ${attackUntrainedPenalty}` : ""}${modifierValue !== 0 ? ` + Modifier ${modifierValue}` : ""}${attackConditionBreakdown.length > 0 ? ` ${attackConditionBreakdown.map((entry) => `+ ${entry}`).join(" ")}` : ""}${attackProfile.appliesDefense ? ` - Target Defense ${defensePenalty}` : ""}`,
                                 exceptional_target: 5,
                             });
 
@@ -1255,7 +1268,12 @@ export const CombatTrackerCard = ({
                 <Button
                     size="sm"
                     className="w-full btn-secondary text-xs h-7"
-                    onClick={() => setCurrentDefense(normalDefense)}
+                    onClick={async () => {
+                        setCurrentDefense(normalDefense);
+                        if (typeof onEndTurn === "function") {
+                            await onEndTurn();
+                        }
+                    }}
                     data-testid="combat-card-end-turn-btn"
                 >
                     End Turn

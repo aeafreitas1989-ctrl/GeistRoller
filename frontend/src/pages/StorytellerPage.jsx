@@ -56,7 +56,7 @@ export const StorytellerPage = () => {
             finalType = "bashing";
         }
 
-        if (activeMageArmorName === "Spirit" && finalType === "lethal" && sourceProfile === "spirit") {
+        if (activeMageArmorName === "Spirit" && finalType === "lethal" && ["general", "ballistic", "spirit"].includes(sourceProfile)) {
             finalType = "bashing";
         }
 
@@ -65,9 +65,19 @@ export const StorytellerPage = () => {
         }
 
         if (finalType !== "aggravated") {
-            const armorValue = sourceProfile === "ballistic"
-                ? equippedArmorBallistic
-                : equippedArmorGeneral + mageArmorGeneralBonus;
+            let armorValue = 0;
+
+            if (sourceProfile === "ballistic") {
+                armorValue = equippedArmorBallistic;
+            } else if (sourceProfile === "general") {
+                armorValue =
+                    equippedArmorGeneral +
+                    (["Matter", "Life"].includes(activeMageArmorName) ? mageArmorGeneralBonus : 0);
+            } else if (sourceProfile === "energy") {
+                armorValue =
+                    activeMageArmorName === "Forces" ? mageArmorGeneralBonus : 0;
+            }
+
             remaining = Math.max(0, remaining - armorValue);
         }
 
@@ -211,6 +221,34 @@ export const StorytellerPage = () => {
             const c = getHealthCounts(combatHealthBoxes);
             return c.lethal + c.bashing === 0;
         })();
+
+    const handleCombatEndTurn = async () => {
+        if (!activeCharacter) return;
+
+        const conditions = activeCharacter.conditions || [];
+        const hasModeratePoison = conditions.some(
+            (condition) => (condition?.name || "") === "Poisoned (Moderate)"
+        );
+        const hasGravePoison = conditions.some(
+            (condition) => (condition?.name || "") === "Poisoned (Grave)"
+        );
+
+        if (hasModeratePoison) {
+            await applyIncomingCombatDamage({
+                amount: 1,
+                damageType: "bashing",
+                sourceProfile: "poison",
+            });
+        }
+
+        if (hasGravePoison) {
+            await applyIncomingCombatDamage({
+                amount: 1,
+                damageType: "lethal",
+                sourceProfile: "poison",
+            });
+        }
+    };
 
     // Fetch sessions and campaigns on mount
     useEffect(() => {
@@ -457,6 +495,7 @@ export const StorytellerPage = () => {
                                     onPatternRestoration={handlePatternRestoration}
                                     patternRestorationDisabled={patternRestorationDisabled}
                                     isMage={activeCharacter?.character_type === "mage"}
+                                    onEndTurn={handleCombatEndTurn}
                                 />
                             </div>
                         </section>
@@ -469,3 +508,4 @@ export const StorytellerPage = () => {
         </div>
     );
 };
+    

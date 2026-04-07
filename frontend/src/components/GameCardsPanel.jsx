@@ -69,6 +69,7 @@ export const GameCardsPanel = ({
     onHealHealthState,
     onPatternRestoration,
     patternRestorationDisabled,
+    onEndTurn,
 }) => {
     const [showAddCondition, setShowAddCondition] = useState(false);
     const [customConditionName, setCustomConditionName] = useState("");
@@ -138,6 +139,7 @@ export const GameCardsPanel = ({
         const condition = CONDITION_DEFINITIONS[name];
         const originOverride = conditionOrigin.trim();
         const fallbackOrigin = condition.origin || (condition.type === "tilt" ? "Tilt" : condition.type === "geist" ? "Geist" : "Condition");
+
         onAddCondition({
             name,
             type: condition.type,
@@ -145,6 +147,7 @@ export const GameCardsPanel = ({
             resolution: condition.resolution,
             origin: originOverride || fallbackOrigin,
         });
+
         setShowAddCondition(false);
         setSearchTerm("");
         setConditionOrigin("");
@@ -172,6 +175,8 @@ export const GameCardsPanel = ({
     const isMage = characterType === "mage";
     const activeSpells = [...(activeCharacter?.active_spells || [])].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
     const meritsList = activeCharacter?.merits_list || [];
+    const activeConditionNames = new Set((activeCharacter?.conditions || []).map((condition) => (condition?.name || "").toLowerCase()));
+    const hasCondition = (name) => activeConditionNames.has(name.toLowerCase());
     const dexterity = activeCharacter?.attributes?.dexterity || 1;
     const wits = activeCharacter?.attributes?.wits || 1;
     const athletics = activeCharacter?.skills?.athletics || 0;
@@ -194,9 +199,11 @@ export const GameCardsPanel = ({
     const equippedArmor = (activeCharacter?.inventory_items || []).find((it) => it?.type === "armor" && !!it?.equipped) || null;
     const armorGeneral = (equippedArmor?.armor?.general ?? 0) + mageArmorGeneralBonus;
     const armorBallistic = equippedArmor?.armor?.ballistic ?? 0;
-    const normalDefense = Math.min(dexterity, wits) + athletics + mageArmorDefenseBonus;
+    const baseDefense = Math.min(dexterity, wits) + athletics + mageArmorDefenseBonus;
+    const normalDefense = hasCondition("Blinded") ? Math.max(0, Math.floor(baseDefense / 2)) : baseDefense;
     const initiativeModifier = dexterity + composure;
-    const speed = strength + dexterity + 5;
+    const baseSpeed = strength + dexterity + 5;
+    const speed = hasCondition("Leg Wrack") ? Math.max(1, Math.floor(baseSpeed / 2)) : baseSpeed;
 
     // Get character's merits with dots > 0
     const characterMerits = useMemo(() => {
@@ -386,6 +393,7 @@ export const GameCardsPanel = ({
                                     onPatternRestoration={onPatternRestoration}
                                     patternRestorationDisabled={patternRestorationDisabled}
                                     isMage={isMage}
+                                    onEndTurn={onEndTurn}
                                 />
                             </CollapsibleContent>
                         </Collapsible>
