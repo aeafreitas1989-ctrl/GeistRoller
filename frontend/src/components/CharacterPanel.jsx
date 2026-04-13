@@ -645,6 +645,54 @@ export const CharacterPanel = ({
 
     const geistRank = parseInt(getValue("geist_rank"), 10) || 1;
     const maxHealth = calculateHealthMax();
+    const resolveParadoxContainment = async ({ cancelled, remaining }) => {
+        const safeCancelled = Math.max(0, cancelled || 0);
+        const safeRemaining = Math.max(0, remaining || 0);
+    
+        const currentBoxes = normalizeHealthBoxes(
+            getValue("health_boxes"),
+            maxHealth,
+            getValue("health") || 0
+        );
+    
+        const currentCounts = getHealthCounts(currentBoxes);
+    
+        const nextCounts = {
+            ...currentCounts,
+            bashing: currentCounts.bashing + safeCancelled,
+        };
+    
+        const nextHealthBoxes = normalizeHealthBoxes(
+            buildHealthBoxes(nextCounts, maxHealth),
+            maxHealth,
+            0
+        );
+    
+        const currentConditions = getValue("conditions") || [];
+        const hasParadoxTaint = currentConditions.some(
+            (cond) => (cond?.name || "").toLowerCase() === "paradox taint"
+        );
+    
+        const nextConditions =
+            safeRemaining > 0 && !hasParadoxTaint
+                ? [
+                    ...currentConditions,
+                    {
+                        name: "Paradox Taint",
+                        type: "condition",
+                        origin: "Spellcasting",
+                        description: `${safeRemaining} uncancelled Paradox success${safeRemaining === 1 ? "" : "es"} remained after containment.`,
+                        resolution: "Resolve according to your Paradox rules.",
+                    },
+                ]
+                : currentConditions;
+    
+        await onUpdateCharacter({
+            health_boxes: nextHealthBoxes,
+            health: nextHealthBoxes.filter((box) => box !== "empty").length,
+            conditions: nextConditions,
+        });
+    };
     const healthBoxes = normalizeHealthBoxes(getValue("health_boxes"), maxHealth, getValue("health") || 0);
     const filledHealth = healthBoxes.filter((state) => state !== "empty").length;
     const isDeadTrack = healthBoxes.length > 0 && healthBoxes.every((state) => state === "aggravated");
@@ -1720,6 +1768,8 @@ export const CharacterPanel = ({
                         if (onTriggerDiceRoll) {
                             onTriggerDiceRoll(spellData);
                         }
+                    currentWisdom={getValue("wisdom") || 7}
+                    onResolveParadoxContainment={resolveParadoxContainment}
                     }}
                 />
             )}

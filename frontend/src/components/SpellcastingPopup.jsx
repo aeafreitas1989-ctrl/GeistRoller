@@ -174,26 +174,35 @@ export const SpellcastingPopup = ({
     // Each Active Spell above Gnosis adds another +1 Reach.
     const activeSpellReachSurcharge = Math.max(0, activeSpellCount - gnosis + 1);
 
-    const changePrimaryReach = overridePrimaryFactor ? 1 : 0;
+    const changePrimaryReach = overridePrimaryFactor && !!primaryFactor ? 1 : 0;
     const totalReachUsed = advancedReachUsed + indefiniteReach + changePrimaryReach + activeSpellReachSurcharge + spellReach;
     const reachRemaining = freeReach - totalReachUsed;
 
     // Primary factor gives free levels = arcanumDots - 1
     const primaryFreeLevels = Math.max(0, arcanumDots - 1);
+    const effectivePrimaryFactor =
+    overridePrimaryFactor && primaryFactor
+        ? (primaryFactor === "potency" ? "duration" : "potency")
+        : primaryFactor;
 
     // Dice penalty from factor levels (accounting for primary free levels)
     const calculatePenalty = () => {
         let penalty = 0;
-        const potencyPaid = Math.max(0, factors.potency.level - 1 - (primaryFactor === "potency" ? primaryFreeLevels : 0));
+    
+        const potencyPaid = Math.max(
+            0,
+            factors.potency.level - 1 - (effectivePrimaryFactor === "potency" ? primaryFreeLevels : 0)
+        );
         penalty += potencyPaid * -2;
-        if (!factors.duration.advanced && factors.duration.level > 5) {
-            penalty += (factors.duration.level - 5) * -2;
-        }
-        if (factors.duration.advanced) {
-            const durationPaid = Math.max(0, factors.duration.level - 1 - (primaryFactor === "duration" ? primaryFreeLevels : 0));
-            penalty += durationPaid * -2;
-        }
+    
+        const durationPaid = Math.max(
+            0,
+            factors.duration.level - 1 - (effectivePrimaryFactor === "duration" ? primaryFreeLevels : 0)
+        );
+        penalty += durationPaid * -2;
+    
         penalty += (factors.scale.level - 1) * -2;
+    
         return penalty;
     };
     const dicePenalty = calculatePenalty();
@@ -474,8 +483,9 @@ export const SpellcastingPopup = ({
         const isRange = factorName === "range";
         const isCasting = factorName === "casting";
         const hasPrimary = factorName === "potency" || factorName === "duration";
-        const isPrimary = hasPrimary && primaryFactor === factorName;
-        const freeLevelsFromPrimary = isPrimary ? primaryFreeLevels : 0;
+        const isSelectedPrimary = hasPrimary && primaryFactor === factorName;
+        const isEffectivePrimary = hasPrimary && effectivePrimaryFactor === factorName;
+        const freeLevelsFromPrimary = isEffectivePrimary ? primaryFreeLevels : 0;
 
         let description = "";
         if (isCasting) {
@@ -494,8 +504,8 @@ export const SpellcastingPopup = ({
             <div key={factorName} className="grid grid-cols-[20px,120px,50px,50px,50px,1fr] gap-1.5 items-center p-2 bg-zinc-800/30 rounded text-sm">
                 {hasPrimary ? (
                     <Checkbox
-                        checked={isPrimary}
-                        disabled={isPrimary}
+                        checked={isSelectedPrimary}
+                        disabled={isSelectedPrimary}
                         onCheckedChange={(checked) => {
                             if (checked) {
                                 setPrimaryFactor(factorName);
@@ -509,7 +519,11 @@ export const SpellcastingPopup = ({
                 )}
                 <span className="text-zinc-300 text-xs">
                     {label}
-                    {isPrimary && <span className="text-teal-400 text-[9px] ml-1">P</span>}
+                    {isEffectivePrimary && (
+                        <span className="text-teal-400 text-[9px] ml-1">
+                            {overridePrimaryFactor ? "PFO" : "P"}
+                        </span>
+                    )}
                 </span>
                 <div className="flex justify-center">
                     <Checkbox
