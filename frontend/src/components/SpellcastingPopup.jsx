@@ -409,8 +409,9 @@ export const SpellcastingPopup = ({
             label: `Paradox (${paradoxIsChanceDie ? "Chance Die" : `${finalParadoxPool} dice`})`,
         } : null;
 
-        const rollSpell = (poolModifier = 0) => {
-            onRollDice(buildSpellRollConfig(poolModifier));
+        const rollSpell = (poolModifier = 0, summaryOptions = null) => {
+            const spellConfig = buildSpellRollConfig(poolModifier);
+            onRollDice(summaryOptions ? { ...spellConfig, ...summaryOptions } : spellConfig);
         };
 
         if (!paradoxConfig) {
@@ -422,6 +423,9 @@ export const SpellcastingPopup = ({
         if (paradoxMode === "release") {
             onRollDice({
                 ...paradoxConfig,
+                resetSummary: true,
+                summaryKey: "paradox",
+                summaryLabel: "Paradox",
                 onResult: (paradoxResult) => {
                     const penalty = paradoxResult?.successes || 0;
 
@@ -431,7 +435,11 @@ export const SpellcastingPopup = ({
                         );
                     }
 
-                    rollSpell(-penalty);
+                    rollSpell(-penalty, {
+                        appendToSummary: true,
+                        summaryKey: "spell",
+                        summaryLabel: "Spell",
+                    });
                 },
             });
 
@@ -442,6 +450,9 @@ export const SpellcastingPopup = ({
         if (paradoxMode === "contain") {
             onRollDice({
                 ...paradoxConfig,
+                resetSummary: true,
+                summaryKey: "paradox",
+                summaryLabel: "Paradox",
                 onResult: (paradoxResult) => {
                     const paradoxSuccesses = paradoxResult?.successes || 0;
 
@@ -450,20 +461,31 @@ export const SpellcastingPopup = ({
                         chance: currentWisdom <= 0,
                         label: `Contain Paradox (Wisdom ${currentWisdom})`,
                         dicePoolBreakdown: currentWisdom <= 0 ? "Wisdom chance die" : `Wisdom ${currentWisdom}`,
+                        appendToSummary: true,
+                        summaryKey: "wisdom",
+                        summaryLabel: "Wisdom",
                         onResult: async (wisdomResult) => {
                             const wisdomSuccesses = wisdomResult?.successes || 0;
                             const cancelled = Math.min(paradoxSuccesses, wisdomSuccesses);
                             const remaining = Math.max(0, paradoxSuccesses - wisdomSuccesses);
 
                             if (onResolveParadoxContainment) {
-                                await onResolveParadoxContainment({ cancelled, remaining });
+                                await onResolveParadoxContainment({
+                                    cancelled,
+                                    remaining,
+                                    wisdomExceptional: !!wisdomResult?.is_exceptional,
+                                });
                             }
 
                             toast.info(
                                 `Contain: ${cancelled} cancelled, ${remaining} remaining${cancelled > 0 ? `, ${cancelled} Bashing dealt` : ""}.`
                             );
 
-                            rollSpell(0);
+                            rollSpell(0, {
+                                appendToSummary: true,
+                                summaryKey: "spell",
+                                summaryLabel: "Spell",
+                            });
                         },
                     });
                 },

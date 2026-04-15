@@ -305,6 +305,35 @@ export const StorytellerPage = () => {
         await updateCharacter({ places_people: placesPeople });
     };
 
+    const importCharacter = async (importedCharacter) => {
+        try {
+            const characterType = importedCharacter?.character_type === "mage" ? "mage" : "geist";
+            const importedName = (importedCharacter?.name || `Imported ${characterType === "mage" ? "Mage" : "Sin-Eater"}`).trim();
+
+            const createResponse = await axios.post(`${API}/characters`, {
+                name: importedName,
+                character_type: characterType,
+            });
+
+            const createdCharacter = createResponse.data;
+            const { id, _id, created_at, updated_at, ...updates } = importedCharacter || {};
+
+            const updateResponse = await axios.put(`${API}/characters/${createdCharacter.id}`, {
+                ...updates,
+                name: importedName,
+                character_type: characterType,
+            });
+
+            const finalCharacter = updateResponse.data;
+            setCharacters((prev) => [...prev, finalCharacter]);
+            setActiveCharacter(finalCharacter);
+            toast.success(`Imported character: ${finalCharacter.name}`);
+        } catch (error) {
+            console.error("Failed to import character:", error);
+            toast.error("Failed to import character");
+        }
+    };
+
     const addActiveSpell = async (spell) => {
         const currentActiveSpells = activeCharacter?.active_spells || [];
         await updateCharacter({ active_spells: [...currentActiveSpells, spell] });
@@ -462,6 +491,7 @@ export const StorytellerPage = () => {
                                     onDeleteCharacter={deleteCharacter}
                                     onTriggerDiceRoll={triggerDiceRoll}
                                     onCreateActiveSpell={addActiveSpell}
+                                    onImportCharacter={importCharacter}
                                 />
                             </div>
                         </section>

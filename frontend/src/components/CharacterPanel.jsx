@@ -1,6 +1,5 @@
-import { useState, useMemo, useEffect } from "react";
-import { Plus, Minus, Trash2, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Save, X, Info, Dices, Zap, Star, Pencil, Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { Plus, Minus, Trash2, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Save, X, Info, Dices, Zap, Star, Pencil, Sparkles, Download, Upload } from "lucide-react";import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -79,6 +78,7 @@ export const CharacterPanel = ({
     onDeleteCharacter,
     onDiceRollResult,
     onTriggerDiceRoll,
+    onImportCharacter,
 }) => {
     const [expandedSections, setExpandedSections] = useState({
         header: false,
@@ -98,6 +98,7 @@ export const CharacterPanel = ({
     const [newMeritSpecialty, setNewMeritSpecialty] = useState("");
     const [newSpecialty, setNewSpecialty] = useState("");
     const [inventoryAddOpen, setInventoryAddOpen] = useState(false);
+    const importFileInputRef = useRef(null);
     
     // Inventory add-item form state
     const [invType, setInvType] = useState("equipment");
@@ -296,6 +297,235 @@ export const CharacterPanel = ({
         if (Object.keys(pendingChanges).length > 0) {
             onUpdateCharacter(pendingChanges);
             setPendingChanges({});
+        }
+    };
+
+    const escapeHtml = (value = "") => String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+
+    const getCharacterForExport = () => ({
+        ...(activeCharacter || {}),
+        ...pendingChanges,
+    });
+
+    const buildCharacterExportText = (character) => {
+        if (!character) return "";
+
+        const lines = [];
+        const addLine = (label, value = "") => {
+            if (value === undefined || value === null || value === "") {
+                lines.push(`${label}: -`);
+                return;
+            }
+            lines.push(`${label}: ${value}`);
+        };
+        const addSection = (title) => {
+            if (lines.length > 0) lines.push("");
+            lines.push(title);
+            lines.push("-".repeat(title.length));
+        };
+
+        const typeLabel = character.character_type === "mage" ? "Mage" : "Sin-Eater";
+
+        lines.push(`${character.name || "Unnamed Character"}`);
+        lines.push(`${typeLabel} Character Sheet`);
+
+        addSection("Core");
+        addLine("Concept", character.concept);
+        addLine("Virtue", character.virtue);
+        addLine("Vice", character.vice);
+        addLine("Archetype", character.archetype);
+        addLine("Krewe", character.krewe);
+        addLine("Notes", character.notes);
+
+        if (character.character_type === "mage") {
+            addSection("Mage");
+            addLine("Path", character.path);
+            addLine("Order", character.order);
+            addLine("Gnosis", character.gnosis);
+            addLine("Wisdom", character.wisdom);
+            addLine("Mana", character.mana);
+            addLine("Obsession", character.obsession);
+        } else {
+            addSection("Geist");
+            addLine("Geist Name", character.geist_name);
+            addLine("Burden", character.burden);
+            addLine("Synergy", `${character.synergy ?? 0} / ${character.synergy_max ?? 10}`);
+            addLine("Plasm", character.plasm);
+            addLine("Geist Rank", character.geist_rank);
+        }
+
+        addSection("Attributes");
+        Object.entries(character.attributes || {}).forEach(([key, value]) => {
+            addLine(formatLabel(key), value);
+        });
+
+        addSection("Skills");
+        Object.entries(character.skills || {}).forEach(([key, value]) => {
+            addLine(formatLabel(key), value);
+        });
+
+        addSection("Merits");
+        const merits = character.merits_list || [];
+        if (merits.length === 0) {
+            lines.push("-");
+        } else {
+            merits.forEach((merit) => {
+                const dots = merit?.dots ? ` (${merit.dots})` : "";
+                const specialty = merit?.specialty ? ` - ${merit.specialty}` : "";
+                lines.push(`- ${merit?.name || "Unnamed Merit"}${dots}${specialty}`);
+            });
+        }
+
+        addSection("Inventory");
+        const inventory = character.inventory_items || [];
+        if (inventory.length === 0) {
+            lines.push("-");
+        } else {
+            inventory.forEach((item) => {
+                lines.push(`- ${item?.name || "Unnamed Item"} [${item?.type || "item"}]`);
+            });
+        }
+
+        addSection("Conditions");
+        const conditions = character.conditions || [];
+        if (conditions.length === 0) {
+            lines.push("-");
+        } else {
+            conditions.forEach((condition) => {
+                lines.push(`- ${condition?.name || "Unnamed Condition"}`);
+            });
+        }
+
+        return lines.join("\n");
+    };
+
+    const exportCharacterToJson = () => {
+        if (!activeCharacter) return;
+
+        const characterToExport = getCharacterForExport();
+        const fileName = `${(characterToExport.name || "character").replace(/[^a-z0-9-_]+/gi, "_")}.json`;
+
+        const payload = {
+            app: "GeistRoller",
+            exported_at: new Date().toISOString(),
+            character: characterToExport,
+        };
+
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+
+        toast.success("Character exported as JSON");
+    };
+
+    const exportCharacterToPdf = () => {
+        if (!activeCharacter) return;
+
+        const characterToExport = getCharacterForExport();
+        const printWindow = window.open("", "_blank", "width=900,height=1200");
+
+        if (!printWindow) {
+            toast.error("Popup blocked. Allow popups to export PDF.");
+            return;
+        }
+
+        const printableText = buildCharacterExportText(characterToExport);
+        const title = escapeHtml(characterToExport.name || "Character Sheet");
+        const subtitle = escapeHtml(characterToExport.character_type === "mage" ? "Mage" : "Sin-Eater");
+        const body = escapeHtml(printableText).replaceAll("\n", "<br />");
+
+        printWindow.document.write(`
+            <!doctype html>
+            <html>
+                <head>
+                    <meta charset="utf-8" />
+                    <title>${title}</title>
+                    <style>
+                        body {
+                            font-family: Arial, sans-serif;
+                            margin: 40px;
+                            color: #111827;
+                            background: #ffffff;
+                        }
+                        h1 {
+                            margin: 0 0 8px 0;
+                            font-size: 24px;
+                        }
+                        .subtitle {
+                            margin-bottom: 24px;
+                            color: #4b5563;
+                            font-size: 14px;
+                            text-transform: uppercase;
+                            letter-spacing: 0.08em;
+                        }
+                        .sheet {
+                            white-space: pre-wrap;
+                            font-family: "Courier New", monospace;
+                            font-size: 12px;
+                            line-height: 1.45;
+                        }
+                        @media print {
+                            body { margin: 20px; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <h1>${title}</h1>
+                    <div class="subtitle">${subtitle} character sheet</div>
+                    <div class="sheet">${body}</div>
+                    <script>
+                        window.onload = function () {
+                            window.focus();
+                            window.print();
+                        };
+                    </script>
+                </body>
+            </html>
+        `);
+
+        printWindow.document.close();
+        toast.success("Print dialog opened. Choose Save as PDF.");
+    };
+
+    const triggerImportCharacter = () => {
+        importFileInputRef.current?.click();
+    };
+
+    const handleImportCharacterFile = async (event) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        try {
+            const text = await file.text();
+            const parsed = JSON.parse(text);
+            const importedCharacter = parsed?.character || parsed;
+
+            if (!importedCharacter || typeof importedCharacter !== "object") {
+                throw new Error("Invalid character data");
+            }
+
+            if (!onImportCharacter) {
+                throw new Error("Import handler is missing");
+            }
+
+            await onImportCharacter(importedCharacter);
+        } catch (error) {
+            console.error("Failed to import character:", error);
+            toast.error("Could not import that JSON file");
+        } finally {
+            event.target.value = "";
         }
     };
 
@@ -643,9 +873,18 @@ export const CharacterPanel = ({
         return Math.max(0, resolve + composure + modifier);
     };
 
+    const getParadoxTaintDuration = (wisdom) => {
+        const safeWisdom = Number.isFinite(Number(wisdom)) ? Number(wisdom) : 0;
+
+        if (safeWisdom >= 8) return "1 Month";
+        if (safeWisdom >= 4) return "1 Day";
+        if (safeWisdom >= 1) return "1 Hour";
+        return "3 Seconds";
+    };
+
     const geistRank = parseInt(getValue("geist_rank"), 10) || 1;
     const maxHealth = calculateHealthMax();
-    const resolveParadoxContainment = async ({ cancelled, remaining }) => {
+    const resolveParadoxContainment = async ({ cancelled, remaining, wisdomExceptional = false }) => {
         const safeCancelled = Math.max(0, cancelled || 0);
         const safeRemaining = Math.max(0, remaining || 0);
     
@@ -672,7 +911,16 @@ export const CharacterPanel = ({
         const hasParadoxTaint = currentConditions.some(
             (cond) => (cond?.name || "").toLowerCase() === "paradox taint"
         );
-    
+
+        const currentWisdom = parseInt(getValue("wisdom"), 10) || 0;
+        const paradoxTaintDuration = getParadoxTaintDuration(currentWisdom);
+
+        const paradoxTaintDescription = wisdomExceptional
+            ? "Your Nimbus is disfigured by the Abyss. You and any subjects affected by your Nimbus, gain the Open Condition applicable to Abyssal entities."
+            : "Your Nimbus is disfigured by the Abyss. You and any subjects affected by your Nimbus, gain the Resonant Condition applicable to Abyssal entities.";
+
+        const paradoxTaintResolution = `An Abyssal Entity uses the Condition to Manifest, you Scour the Condition from your Pattern, or you allow the Condition to lapse after ${paradoxTaintDuration}.`;
+
         const nextConditions =
             safeRemaining > 0 && !hasParadoxTaint
                 ? [
@@ -681,8 +929,8 @@ export const CharacterPanel = ({
                         name: "Paradox Taint",
                         type: "condition",
                         origin: "Spellcasting",
-                        description: `${safeRemaining} uncancelled Paradox success${safeRemaining === 1 ? "" : "es"} remained after containment.`,
-                        resolution: "Resolve according to your Paradox rules.",
+                        description: paradoxTaintDescription,
+                        resolution: paradoxTaintResolution,
                     },
                 ]
                 : currentConditions;
@@ -1061,7 +1309,7 @@ export const CharacterPanel = ({
                     )}
                 </div>
                 
-                <div className="flex gap-2 items-center">
+                <div className="flex gap-2 items-center flex-wrap">
                     {/* Character Type Badge */}
                     <span className={`px-2 py-1 text-[10px] font-mono uppercase tracking-wider rounded ${
                         isMage 
@@ -1075,13 +1323,55 @@ export const CharacterPanel = ({
                         const char = characters.find(c => c.id === id);
                         if (char) onSelectCharacter(char);
                     }}>
-                        <SelectTrigger className="flex-1 bg-zinc-900/50 border-zinc-800 h-8 text-sm" data-testid="character-select">
+                        <SelectTrigger className="flex-1 min-w-[180px] bg-zinc-900/50 border-zinc-800 h-8 text-sm" data-testid="character-select">
                             <SelectValue placeholder="Select character" />
                         </SelectTrigger>
                         <SelectContent className="bg-zinc-900 border-zinc-800">
-                            {characters.map((char) => (<SelectItem key={char.id} value={char.id} className="text-zinc-200">{char.name}</SelectItem>))}
+                            {characters.map((char) => (
+                                <SelectItem key={char.id} value={char.id} className="text-zinc-200">
+                                    {char.name}
+                                </SelectItem>
+                            ))}
                         </SelectContent>
                     </Select>
+
+                    <input
+                        ref={importFileInputRef}
+                        type="file"
+                        accept="application/json,.json"
+                        className="hidden"
+                        onChange={handleImportCharacterFile}
+                    />
+
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 border-zinc-700 bg-zinc-900/40 text-zinc-200"
+                        onClick={exportCharacterToJson}
+                        data-testid="export-character-json-button"
+                    >
+                        <Download className="w-3 h-3 mr-1" /> JSON
+                    </Button>
+
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 border-zinc-700 bg-zinc-900/40 text-zinc-200"
+                        onClick={exportCharacterToPdf}
+                        data-testid="export-character-pdf-button"
+                    >
+                        <Download className="w-3 h-3 mr-1" /> PDF
+                    </Button>
+
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 border-zinc-700 bg-zinc-900/40 text-zinc-200"
+                        onClick={triggerImportCharacter}
+                        data-testid="import-character-button"
+                    >
+                        <Upload className="w-3 h-3 mr-1" /> Import
+                    </Button>
                     
                     {/* Add Character Dialog */}
                     <Dialog open={showAddCharacterDialog} onOpenChange={setShowAddCharacterDialog}>
@@ -1749,13 +2039,20 @@ export const CharacterPanel = ({
             {isMage && spellcastingArcanum && (
                 <SpellcastingPopup
                     isOpen={spellcastingOpen}
-                    onClose={() => { setSpellcastingOpen(false); setSpellcastingArcanum(null); setSpellcastingPractice(null); setSpellcastingType(null); setSpellcastingRoteSkill(null); }}
+                    onClose={() => {
+                        setSpellcastingOpen(false);
+                        setSpellcastingArcanum(null);
+                        setSpellcastingPractice(null);
+                        setSpellcastingType(null);
+                        setSpellcastingRoteSkill(null);
+                    }}
                     arcanum={spellcastingArcanum}
                     arcanumDots={getNestedValue("arcana", spellcastingArcanum) || 0}
                     gnosis={getValue("gnosis") || 1}
                     isRuling={getValue("path") && PATH_ARCANA[getValue("path")]?.ruling?.includes(spellcastingArcanum)}
                     isInferior={getValue("path") && PATH_ARCANA[getValue("path")]?.inferior === spellcastingArcanum}
                     currentMana={getValue("mana") || 0}
+                    currentWisdom={getValue("wisdom") || 7}
                     initialPractice={spellcastingPractice}
                     onCreateActiveSpell={addActiveSpell}
                     activeSpellCount={(activeCharacter?.active_spells || []).length}
@@ -1768,9 +2065,8 @@ export const CharacterPanel = ({
                         if (onTriggerDiceRoll) {
                             onTriggerDiceRoll(spellData);
                         }
-                    currentWisdom={getValue("wisdom") || 7}
-                    onResolveParadoxContainment={resolveParadoxContainment}
                     }}
+                    onResolveParadoxContainment={resolveParadoxContainment}
                 />
             )}
 
