@@ -8,8 +8,42 @@ import { StatDots, formatLabel } from "./StatComponents";
 
 export const MageArcanaContent = ({
     getValue, getNestedValue, handleChange, handleNestedChange,
-    openSpellcastingPopup, onTriggerDiceRoll,
+    openSpellcastingPopup, onTriggerDiceRoll, onActivateMageEffect,
 }) => {
+        const currentMana = getValue("mana") || 0;
+    const currentPath = getValue("path");
+    const currentArcana = getValue("arcana") || {};
+    const pathRulingArcana = currentPath ? (PATH_ARCANA[currentPath]?.ruling || []) : [];
+
+    const extraMageSightArcana = ARCANA.filter(
+        (arcanum) => (currentArcana[arcanum] || 0) >= 1 && !pathRulingArcana.includes(arcanum)
+    );
+
+    const getAttainmentLabel = (att) =>
+        att.name.split(" / ")[0].replace(` ${att.arcanum}`, "").replace(" Armor", "");
+
+    const getAttainmentDescription = (att) =>
+        att.dot === 2 && att.description.includes(";")
+            ? att.description.split(";")[0].trim()
+            : att.description;
+
+    const TWILIGHT_EFFECTS = {
+        Death: {
+            attainmentName: "Eyes of the Dead",
+            effectName: "Tangible to Ghost Twilight",
+            description: "You can perceive and physically interact with ghosts and ghostly ephemera in Twilight.",
+        },
+        Mind: {
+            attainmentName: "Mind's Eye",
+            effectName: "Tangible to Goetic Twilight",
+            description: "You can perceive and physically interact with Goetia and projecting minds in Twilight.",
+        },
+        Spirit: {
+            attainmentName: "Spirit Eyes",
+            effectName: "Tangible to Spirit Twilight",
+            description: "You can perceive and physically interact with spirits and spirit ephemera in Twilight.",
+        },
+    };
     return (
         <>
             {/* Arcana for Mages */}
@@ -26,26 +60,26 @@ export const MageArcanaContent = ({
                 <div className="space-y-1">
                     {ARCANA.map((arcanum) => {
                         const arcanumRating = getNestedValue("arcana", arcanum) || 0;
-                        const currentPath = getValue("path");
-                        const pathData = currentPath ? PATH_ARCANA[currentPath] : null;
+                                                const selectedPath = getValue("path");
+                        const pathData = selectedPath ? PATH_ARCANA[selectedPath] : null;
                         const isRuling = pathData?.ruling?.includes(arcanum);
                         const isInferior = pathData?.inferior === arcanum;
-                        
-                        let labelColor = arcanumRating > 0 ? 'text-zinc-400' : 'text-zinc-600';
-                        if (isRuling) labelColor = 'text-blue-400 font-medium';
-                        if (isInferior) labelColor = 'text-red-400';
-                        
+
+                        let labelColor = arcanumRating > 0 ? "text-zinc-400" : "text-zinc-600";
+                        if (isRuling) labelColor = "text-blue-400 font-medium";
+                        if (isInferior) labelColor = "text-red-400";
+
                         let dotColor = "violet";
                         if (isRuling) dotColor = "blue";
                         if (isInferior) dotColor = "red";
-                        
+
                         const unlockedPractices = [];
                         for (let i = 1; i <= arcanumRating; i++) {
                             if (ARCANA_PRACTICES[i]) {
                                 unlockedPractices.push(...ARCANA_PRACTICES[i]);
                             }
                         }
-                        
+
                         return (
                             <div key={arcanum} className="flex items-center justify-between group py-0.5">
                                 <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -222,6 +256,7 @@ export const MageArcanaContent = ({
                     const arcanaWithDots = ARCANA.filter(a => (arcanaValues[a] || 0) >= 1);
                     const arcanaWith3 = ARCANA.filter(a => (arcanaValues[a] || 0) >= 3);
                     const namedAttainments = [];
+
                     ARCANA.forEach(arcanum => {
                         const rating = arcanaValues[arcanum] || 0;
                         for (let dot = 2; dot <= rating; dot++) {
@@ -231,9 +266,11 @@ export const MageArcanaContent = ({
                             }
                         }
                     });
+
                     if (arcanaWithDots.length === 0) {
                         return <p className="text-[10px] text-zinc-600 italic">Gain Arcana dots to unlock attainments</p>;
                     }
+
                     return (
                         <div className="flex gap-4">
                             <div className="space-y-1.5 shrink-0">
@@ -257,6 +294,57 @@ export const MageArcanaContent = ({
                                         </TooltipContent>
                                     </Tooltip>
                                 </TooltipProvider>
+
+                                {currentPath && pathRulingArcana.length > 0 && (
+                                    <div className="space-y-1">
+                                        <TooltipProvider>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => onActivateMageEffect?.({ type: "mageSight", path: currentPath })}
+                                                        className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded border bg-blue-900/30 border-blue-500/40 text-blue-300 hover:bg-blue-800/40 transition-colors"
+                                                        data-testid="path-mage-sight-btn"
+                                                    >
+                                                        <Sparkles className="w-3 h-3" />
+                                                        {currentPath} Mage Sight
+                                                    </button>
+                                                </TooltipTrigger>
+                                                <TooltipContent className="bg-zinc-900 border-zinc-700 max-w-xs">
+                                                    <p className="text-xs text-zinc-300">
+                                                        Activate Mage Sight with {pathRulingArcana.join(" + ")} at no Mana cost.
+                                                    </p>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </TooltipProvider>
+
+                                        {extraMageSightArcana.length > 0 && (
+                                            <div className="flex flex-wrap gap-1">
+                                                {extraMageSightArcana.map((arcanum) => (
+                                                    <TooltipProvider key={arcanum}>
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => onActivateMageEffect?.({ type: "mageSight", path: currentPath, extraArcanum: arcanum })}
+                                                                    disabled={currentMana < 1}
+                                                                    className="px-2 py-1 text-[10px] rounded border bg-zinc-800/60 border-zinc-700 text-zinc-300 hover:border-blue-500/50 hover:text-blue-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                                                    data-testid={`mage-sight-extra-${arcanum.toLowerCase()}`}
+                                                                >
+                                                                    + {arcanum}
+                                                                </button>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent className="bg-zinc-900 border-zinc-700 max-w-xs">
+                                                                <p className="text-xs text-zinc-300">Spend 1 Mana to add {arcanum} to Mage Sight.</p>
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                    </TooltipProvider>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
                                 {arcanaWith3.length > 0 && (
                                     <TooltipProvider>
                                         <Tooltip>
@@ -276,24 +364,55 @@ export const MageArcanaContent = ({
                                     </TooltipProvider>
                                 )}
                             </div>
+
                             {namedAttainments.length > 0 && (
                                 <div className="flex flex-wrap gap-1 flex-1 content-start">
-                                    {namedAttainments.map((att, i) => (
-                                        <TooltipProvider key={i}>
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <span className="inline-flex items-center gap-1 px-2 py-1 text-[10px] rounded bg-zinc-800/50 border border-zinc-700/50 text-zinc-300 cursor-help">
-                                                        <span className="text-violet-400 font-mono">{"●".repeat(att.dot)}</span>
-                                                        {att.name.split(" / ")[0].replace(` ${att.arcanum}`, "").replace(" Armor", "")}
-                                                    </span>
-                                                </TooltipTrigger>
-                                                <TooltipContent className="bg-zinc-900 border-zinc-700 max-w-xs">
-                                                    <p className="text-xs font-medium text-violet-300">{att.arcanum} ({att.dot})</p>
-                                                    <p className="text-xs text-zinc-300">{att.description}</p>
-                                                </TooltipContent>
-                                            </Tooltip>
-                                        </TooltipProvider>
-                                    ))}
+                                    {namedAttainments.map((att, i) => {
+                                        const twilightEffect = att.dot === 2 ? TWILIGHT_EFFECTS[att.arcanum] : null;
+                                        const isClickableTwilight = !!twilightEffect;
+                                        const label = getAttainmentLabel(att);
+
+                                        return (
+                                            <TooltipProvider key={i}>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        {isClickableTwilight ? (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => onActivateMageEffect?.({
+                                                                    type: "twilight",
+                                                                    arcanum: att.arcanum,
+                                                                    attainmentName: twilightEffect.attainmentName,
+                                                                    effectName: twilightEffect.effectName,
+                                                                    description: twilightEffect.description,
+                                                                })}
+                                                                disabled={currentMana < 1}
+                                                                className="inline-flex items-center gap-1 px-2 py-1 text-[10px] rounded bg-zinc-800/50 border border-zinc-700/50 text-zinc-300 hover:border-teal-500/50 hover:text-teal-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                                                data-testid={`attainment-${att.arcanum.toLowerCase()}-btn`}
+                                                            >
+                                                                <span className="text-violet-400 font-mono">{"●".repeat(att.dot)}</span>
+                                                                {label}
+                                                            </button>
+                                                        ) : (
+                                                            <span className="inline-flex items-center gap-1 px-2 py-1 text-[10px] rounded bg-zinc-800/50 border border-zinc-700/50 text-zinc-300 cursor-help">
+                                                                <span className="text-violet-400 font-mono">{"●".repeat(att.dot)}</span>
+                                                                {label}
+                                                            </span>
+                                                        )}
+                                                    </TooltipTrigger>
+                                                    <TooltipContent className="bg-zinc-900 border-zinc-700 max-w-xs">
+                                                        <p className="text-xs font-medium text-violet-300">{att.arcanum} ({att.dot})</p>
+                                                        <p className="text-xs text-zinc-300">{getAttainmentDescription(att)}</p>
+                                                        {isClickableTwilight && (
+                                                            <p className="text-[11px] text-teal-400 mt-1">
+                                                                Spend 1 Mana: add “{twilightEffect.effectName}” to Active Spells & Effects.
+                                                            </p>
+                                                        )}
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            </TooltipProvider>
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>

@@ -102,6 +102,7 @@ export const SpellcastingPopup = ({
     roteSkillDots,
     isRoteOrderSkill,
     defaultPrimaryFactor = null,
+    allArcana = {}
 }) => {
     const [selectedPractice, setSelectedPractice] = useState("");
     const [spellName, setSpellName] = useState("");
@@ -121,13 +122,16 @@ export const SpellcastingPopup = ({
     const [paradoxMode, setParadoxMode] = useState("");
 
     // Yantras state
-    const [activeYantras, setActiveYantras] = useState(new Set());
-    const [yantraValues, setYantraValues] = useState({});
+    const [selectedYantras, setSelectedYantras] = useState([]);
 
     // Primary factor state (default: potency)
     const [primaryFactor, setPrimaryFactor] = useState(defaultPrimaryFactor);
     const [overridePrimaryFactor, setOverridePrimaryFactor] = useState(false);
     const [spellReach, setSpellReach] = useState(0);
+    const [fateDurationBonus, setFateDurationBonus] = useState(0);
+    const [matterDurationMana, setMatterDurationMana] = useState(false);
+    const [specialRangeMode, setSpecialRangeMode] = useState("none"); // none | space | time
+    const [sympatheticWithstand, setSympatheticWithstand] = useState(0);
 
     // Reset when popup opens
     useEffect(() => {
@@ -146,19 +150,42 @@ export const SpellcastingPopup = ({
             setPreviousParadoxRolls(0);
             setManaMitigation(0);
             setParadoxMode("");
-            setActiveYantras(new Set());
-            setYantraValues({});
+            setSelectedYantras(
+                Array.from(
+                    { length: (GNOSIS_TABLE[gnosis] || GNOSIS_TABLE[1]).yantras },
+                    () => ""
+                )
+            );
             setPrimaryFactor(defaultPrimaryFactor);
             setOverridePrimaryFactor(false);
             setSpellReach(0);
+            setFateDurationBonus(0);
+            setMatterDurationMana(false);
+            setSpecialRangeMode("none");
+            setSympatheticWithstand(0);
         }
     }, [isOpen, arcanum, initialPractice, defaultPrimaryFactor]);
 
     // Gnosis-derived data
     const gnosisData = GNOSIS_TABLE[gnosis] || GNOSIS_TABLE[1];
     const maxYantras = gnosisData.yantras;
+    useEffect(() => {
+        setSelectedYantras((prev) =>
+            Array.from({ length: maxYantras }, (_, index) => prev[index] || "")
+        );
+    }, [maxYantras]);
     const paradoxDiePerReach = gnosisData.paradoxDie;
     const manaPerTurn = gnosisData.perTurn;
+
+    const fateDots = allArcana?.Fate || 0;
+    const matterDots = allArcana?.Matter || 0;
+    const spaceDots = allArcana?.Space || 0;
+    const timeDots = allArcana?.Time || 0;
+
+    const canUseFateDuration = fateDots >= 2;
+    const canUseMatterDurationMana = matterDots >= 2 && arcanum === "Matter";
+    const canUseSpaceSympathetic = spaceDots >= 2;
+    const canUseTimeSympathetic = timeDots >= 2;
 
     const availablePractices = useMemo(() => {
         return ALL_PRACTICES.filter(p => p.dots <= arcanumDots);
@@ -166,7 +193,11 @@ export const SpellcastingPopup = ({
 
     const practiceDots = selectedPractice ? PRACTICE_DOTS[selectedPractice] : 0;
     const freeReach = selectedPractice ? Math.max(0, arcanumDots - practiceDots + 1) : 0;
-    const advancedReachUsed = Object.values(factors).filter(f => f.advanced).length;
+    const advancedReachUsed = Object.entries(factors).reduce((sum, [key, value]) => {
+        if (!value.advanced) return sum;
+        if (key === "duration" && matterDurationMana && arcanum === "Matter") return sum;
+        return sum + 1;
+    }, 0);
     const indefiniteReach = (factors.duration.advanced && factors.duration.level === 6) ? 1 : 0;
 
     // Current Active Spells increase the Reach cost of any spell cast.
@@ -175,7 +206,8 @@ export const SpellcastingPopup = ({
     const activeSpellReachSurcharge = Math.max(0, activeSpellCount - gnosis + 1);
 
     const changePrimaryReach = overridePrimaryFactor && !!primaryFactor ? 1 : 0;
-    const totalReachUsed = advancedReachUsed + indefiniteReach + changePrimaryReach + activeSpellReachSurcharge + spellReach;
+    const specialRangeReach = specialRangeMode !== "none" ? 1 : 0;
+    const totalReachUsed = advancedReachUsed + indefiniteReach + changePrimaryReach + activeSpellReachSurcharge + spellReach + specialRangeReach;
     const reachRemaining = freeReach - totalReachUsed;
 
     // Primary factor gives free levels = arcanumDots - 1
@@ -188,37 +220,40 @@ export const SpellcastingPopup = ({
     // Dice penalty from factor levels (accounting for primary free levels)
     const calculatePenalty = () => {
         let penalty = 0;
-    
+
         const potencyPaid = Math.max(
             0,
             factors.potency.level - 1 - (effectivePrimaryFactor === "potency" ? primaryFreeLevels : 0)
         );
         penalty += potencyPaid * -2;
-    
+
         const durationPaid = Math.max(
             0,
             factors.duration.level - 1 - (effectivePrimaryFactor === "duration" ? primaryFreeLevels : 0)
         );
         penalty += durationPaid * -2;
-    
+
         penalty += (factors.scale.level - 1) * -2;
-    
+
         return penalty;
     };
+
     const dicePenalty = calculatePenalty();
 
     // Yantras calculation
-    const hasDedicatedTool = activeYantras.has("Dedicated Tool");
-    const getYantraBonus = (yantra) => {
-        if (!yantra.variableBonus) return yantra.bonus;
-        return yantraValues[yantra.name] ?? yantra.bonus;
-    };
+    const selectedYantraData = useMemo(() => {
+        return selectedYantras
+            .map((name) => YANTRAS.find((y) => y.name === name))
+            .filter(Boolean);
+    }, [selectedYantras]);
+
+    const selectedYantraNames = selectedYantraData.map((y) => y.name);
+
+    const hasDedicatedTool = selectedYantraNames.includes("Dedicated Tool");
+
     const yantraBonus = useMemo(() => {
-        return YANTRAS.reduce((sum, y) => {
-            if (!activeYantras.has(y.name)) return sum;
-            return sum + getYantraBonus(y);
-        }, 0);
-    }, [activeYantras, yantraValues]);
+        return selectedYantraData.reduce((sum, y) => sum + y.bonus, 0);
+    }, [selectedYantraData]);
 
     // Dice pool
     const baseDicePool = gnosis + arcanumDots;
@@ -229,10 +264,16 @@ export const SpellcastingPopup = ({
     // Spell Mana cost
     const getManaCost = () => {
         let cost = 0;
+
         if (!isRuling) cost += 1;
         if (factors.duration.advanced && factors.duration.level === 6) cost += 1;
+        if (fateDurationBonus > 0) cost += 1;
+        if (matterDurationMana && arcanum === "Matter" && factors.duration.advanced) cost += 1;
+        if (specialRangeMode !== "none") cost += 1;
+
         return cost;
     };
+
     const manaCost = getManaCost();
 
     // Paradox calculation
@@ -291,16 +332,13 @@ export const SpellcastingPopup = ({
         return levels?.length || 1;
     };
 
-    const toggleYantra = (name) => {
-        setActiveYantras(prev => {
-            const next = new Set(prev);
-            if (next.has(name)) {
-                next.delete(name);
-            } else if (next.size < maxYantras) {
-                next.add(name);
-            }
-            return next;
-        });
+    const getDisplayedDurationLevel = () => {
+        const max = FACTOR_LEVELS.duration[factors.duration.advanced ? "advanced" : "standard"]?.length || 1;
+        return Math.min(max, factors.duration.level + fateDurationBonus);
+    };
+
+    const activateSpecialRange = (mode) => {
+        setSpecialRangeMode((prev) => (prev === mode ? "none" : mode));
     };
 
     const getFactorDescription = (factorName) => {
@@ -312,11 +350,20 @@ export const SpellcastingPopup = ({
         }
 
         if (factorName === "range") {
+            if (specialRangeMode === "space") {
+                return `Sympathetic Range (Withstand ${sympatheticWithstand})`;
+            }
+
+            if (specialRangeMode === "time") {
+                return `Sensory Range (Sympathetic Time, Withstand ${sympatheticWithstand})`;
+            }
+
             return factor.advanced ? "Sensory Range" : "Touch Range / Self";
         }
 
         const levels = FACTOR_LEVELS[factorName]?.[factor.advanced ? "advanced" : "standard"];
-        const baseDescription = levels?.[factor.level - 1]?.label || "";
+        const effectiveLevel = factorName === "duration" ? getDisplayedDurationLevel() : factor.level;
+        const baseDescription = levels?.[effectiveLevel - 1]?.label || "";
 
         if (factorName === "scale") {
             return `up to ${baseDescription}`;
@@ -325,21 +372,63 @@ export const SpellcastingPopup = ({
         return baseDescription;
     };
 
-    const adjustYantraValue = (name, delta) => {
-        const yantra = YANTRAS.find(y => y.name === name);
-        if (!yantra?.variableBonus || !activeYantras.has(name)) return;
+    const setYantraSlot = (index, value) => {
+        setSelectedYantras((prev) => {
+            const next = [...prev];
+            const currentValue = next[index];
+            const nextValue = value === "__none__" ? "" : value;
 
-        setYantraValues(prev => {
-            const currentValue = prev[name] ?? yantra.bonus;
-            const nextValue = Math.max(
-                yantra.minBonus ?? yantra.bonus,
-                Math.min(yantra.maxBonus ?? yantra.bonus, currentValue + delta)
-            );
-            return { ...prev, [name]: nextValue };
+            if (specialRangeMode !== "none" && currentValue === "Sympathy" && nextValue === "") {
+                return prev;
+            }
+
+            next[index] = nextValue;
+            return next;
         });
     };
 
-    const getYantraTestId = (name) => `yantra-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")}`;
+    const getYantraOptionsForSlot = (index) => {
+        const currentValue = selectedYantras[index];
+
+        return YANTRAS.filter((yantra) => {
+            const alreadyUsedElsewhere = selectedYantras.some(
+                (selectedName, selectedIndex) =>
+                    selectedIndex !== index && selectedName === yantra.name
+            );
+
+            return !alreadyUsedElsewhere || yantra.name === currentValue;
+        });
+    };
+
+    useEffect(() => {
+        setSelectedYantras((prev) => {
+            const hasSympathy = prev.includes("Sympathy");
+
+            if (specialRangeMode === "none") {
+                if (!hasSympathy) return prev;
+
+                const next = [...prev];
+                const sympathyIndex = next.findIndex((name) => name === "Sympathy");
+                if (sympathyIndex >= 0) {
+                    next[sympathyIndex] = "";
+                }
+                return next;
+            }
+
+            if (hasSympathy) return prev;
+
+            const emptyIndex = prev.findIndex((name) => !name);
+            if (emptyIndex >= 0) {
+                const next = [...prev];
+                next[emptyIndex] = "Sympathy";
+                return next;
+            }
+
+            toast.error("No free Yantra slot for Sympathy.");
+            setSpecialRangeMode("none");
+            return prev;
+        });
+    }, [specialRangeMode]);
 
     const handleCastSpell = () => {
         if (totalManaCost > 0 && currentMana < totalManaCost) return;
@@ -353,6 +442,7 @@ export const SpellcastingPopup = ({
         const activeSpellData = factors.duration.advanced && onCreateActiveSpell
             ? {
                 id: Date.now(),
+                kind: "spell",
                 name: spellName.trim(),
                 arcanum,
                 practice: selectedPractice,
@@ -362,13 +452,22 @@ export const SpellcastingPopup = ({
             }
             : null;
 
-        const spellSummary = [
+        const factorSummary = [
             getFactorDescription("casting"),
             getFactorDescription("range"),
             getFactorDescription("potency"),
             getFactorDescription("duration"),
             getFactorDescription("scale"),
         ].join("; ");
+
+        const selectedYantrasSummary = selectedYantraNames.length > 0
+            ? `(${selectedYantraNames.join(", ")})`
+            : "";
+
+        const spellSummary = [
+            ...(selectedYantrasSummary ? [selectedYantrasSummary] : []),
+            factorSummary,
+        ].join("\n");
 
         const castLabel = `${arcanum} ${spellType === "praxis" ? "Praxis" : spellType === "rote" ? "Rote" : "Spell"} (${selectedPractice})`;
 
@@ -377,11 +476,11 @@ export const SpellcastingPopup = ({
 
             const dicePoolBreakdownParts = [
                 `Gnosis ${gnosis}`,
-                `${arcanum} ${arcanumDots}`,
+                `${arcanum} ${arcanumDots}${selectedPractice ? ` (${selectedPractice})` : ""}`,
                 ...(roteBonus > 0 ? [`Rote Skill ${roteBonus}`] : []),
                 ...(orderSkillBonus > 0 ? [`Order Skill ${orderSkillBonus}`] : []),
                 ...(yantraBonus > 0 ? [`Yantras ${yantraBonus}`] : []),
-                ...(dicePenalty !== 0 ? [`${dicePenalty}`] : []),
+                ...(dicePenalty !== 0 ? [`Factors ${dicePenalty}`] : []),
                 ...(poolModifier < 0 ? [`Release Penalty ${poolModifier}`] : []),
             ];
 
@@ -508,22 +607,23 @@ export const SpellcastingPopup = ({
         const isSelectedPrimary = hasPrimary && primaryFactor === factorName;
         const isEffectivePrimary = hasPrimary && effectivePrimaryFactor === factorName;
         const freeLevelsFromPrimary = isEffectivePrimary ? primaryFreeLevels : 0;
+        const displayedLevel = factorName === "duration" ? getDisplayedDurationLevel() : f.level;
 
         let description = "";
         if (isCasting) {
             description = f.advanced ? "Instant" : `${castingTimeStandard} Ritual`;
         } else if (isRange) {
-            description = f.advanced ? "Sensory Range" : "Touch Range / Self";
+            description = getFactorDescription("range");
         } else {
-            const levels = FACTOR_LEVELS[factorName]?.[f.advanced ? "advanced" : "standard"];
-            const baseDescription = levels?.[f.level - 1]?.label || "";
-            description = factorName === "scale" ? `up to ${baseDescription}` : baseDescription;
+            description = getFactorDescription(factorName);
         }
 
-        const paidLevels = hasLevels ? Math.max(0, f.level - 1 - freeLevelsFromPrimary) : 0;
+        const paidLevels = hasLevels
+            ? Math.max(0, f.level - 1 - freeLevelsFromPrimary)
+            : 0;
 
         return (
-            <div key={factorName} className="grid grid-cols-[20px,120px,50px,50px,50px,1fr] gap-1.5 items-center p-2 bg-zinc-800/30 rounded text-sm">
+            <div key={factorName} className="grid grid-cols-[20px,170px,50px,50px,50px,1fr] gap-1.5 items-center p-2 bg-zinc-800/30 rounded text-sm">
                 {hasPrimary ? (
                     <Checkbox
                         checked={isSelectedPrimary}
@@ -539,46 +639,164 @@ export const SpellcastingPopup = ({
                 ) : (
                     <span />
                 )}
-                <span className="text-zinc-300 text-xs">
-                    {label}
-                    {isEffectivePrimary && (
-                        <span className="text-teal-400 text-[9px] ml-1">
-                            {overridePrimaryFactor ? "PFO" : "P"}
-                        </span>
+
+                <div className="text-xs">
+                    <div className="text-zinc-300">
+                        {label}
+                        {isEffectivePrimary && (
+                            <span className="text-teal-400 text-[9px] ml-1">
+                                {overridePrimaryFactor ? "PFO" : "P"}
+                            </span>
+                        )}
+                    </div>
+
+                    {factorName === "duration" && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                            {canUseFateDuration && [0, 1, 2, 3].map((bonus) => (
+                                <button
+                                    key={`fate-duration-${bonus}`}
+                                    type="button"
+                                    onClick={() => setFateDurationBonus(bonus)}
+                                    className={`px-1.5 py-0.5 rounded border text-[9px] ${
+                                        fateDurationBonus === bonus
+                                            ? "bg-blue-900/40 border-blue-500/50 text-blue-300"
+                                            : "bg-zinc-900/40 border-zinc-700 text-zinc-400"
+                                    }`}
+                                    data-testid={`fate-duration-${bonus}`}
+                                >
+                                    F{bonus === 0 ? "0" : `+${bonus}`}
+                                </button>
+                            ))}
+
+                            {canUseMatterDurationMana && (
+                                <button
+                                    type="button"
+                                    onClick={() => setMatterDurationMana((prev) => !prev)}
+                                    className={`px-1.5 py-0.5 rounded border text-[9px] ${
+                                        matterDurationMana
+                                            ? "bg-amber-900/40 border-amber-500/50 text-amber-300"
+                                            : "bg-zinc-900/40 border-zinc-700 text-zinc-400"
+                                    }`}
+                                    data-testid="matter-duration-mana"
+                                >
+                                    Matter 2
+                                </button>
+                            )}
+                        </div>
                     )}
-                </span>
+
+                    {factorName === "range" && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                            {canUseSpaceSympathetic && (
+                                <button
+                                    type="button"
+                                    onClick={() => activateSpecialRange("space")}
+                                    className={`px-1.5 py-0.5 rounded border text-[9px] ${
+                                        specialRangeMode === "space"
+                                            ? "bg-blue-900/40 border-blue-500/50 text-blue-300"
+                                            : "bg-zinc-900/40 border-zinc-700 text-zinc-400"
+                                    }`}
+                                    data-testid="space-sympathetic-range"
+                                >
+                                    Space 2
+                                </button>
+                            )}
+
+                            {canUseTimeSympathetic && (
+                                <button
+                                    type="button"
+                                    onClick={() => activateSpecialRange("time")}
+                                    className={`px-1.5 py-0.5 rounded border text-[9px] ${
+                                        specialRangeMode === "time"
+                                            ? "bg-blue-900/40 border-blue-500/50 text-blue-300"
+                                            : "bg-zinc-900/40 border-zinc-700 text-zinc-400"
+                                    }`}
+                                    data-testid="time-sympathetic-time"
+                                >
+                                    Time 2
+                                </button>
+                            )}
+
+                            {specialRangeMode !== "none" && (
+                                <div className="flex items-center gap-0.5">
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-4 w-4 text-zinc-400"
+                                        onClick={() => setSympatheticWithstand(Math.max(0, sympatheticWithstand - 1))}
+                                        disabled={sympatheticWithstand <= 0}
+                                    >
+                                        <Minus className="w-2.5 h-2.5" />
+                                    </Button>
+                                    <span className="w-4 text-center text-[10px] font-mono text-violet-300">
+                                        {sympatheticWithstand}
+                                    </span>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-4 w-4 text-zinc-400"
+                                        onClick={() => setSympatheticWithstand(Math.min(5, sympatheticWithstand + 1))}
+                                        disabled={sympatheticWithstand >= 5}
+                                    >
+                                        <Plus className="w-2.5 h-2.5" />
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+
                 <div className="flex justify-center">
                     <Checkbox
                         checked={!f.advanced}
                         onCheckedChange={() => updateFactor(factorName, { advanced: false, ...(hasLevels ? { level: 1 } : {}) })}
                         className="border-zinc-600 data-[state=checked]:bg-violet-600"
+                        disabled={factorName === "range" && specialRangeMode !== "none"}
                     />
                 </div>
+
                 <div className="flex justify-center">
                     <Checkbox
                         checked={f.advanced}
                         onCheckedChange={() => updateFactor(factorName, { advanced: true, ...(hasLevels ? { level: 1 } : {}) })}
                         className="border-zinc-600 data-[state=checked]:bg-amber-600"
+                        disabled={factorName === "range" && specialRangeMode !== "none"}
                     />
                 </div>
+
                 {hasLevels ? (
                     <div className="flex items-center justify-center gap-0.5">
-                        <Button variant="ghost" size="icon" className="h-5 w-5 text-zinc-400"
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5 text-zinc-400"
                             onClick={() => updateFactor(factorName, { level: Math.max(1, f.level - 1) })}
                             disabled={f.level <= 1}
-                        ><Minus className="w-3 h-3" /></Button>
-                        <span className="text-sm font-mono text-violet-300 w-4 text-center">{f.level}</span>
-                        <Button variant="ghost" size="icon" className="h-5 w-5 text-zinc-400"
+                        >
+                            <Minus className="w-3 h-3" />
+                        </Button>
+                        <span className="text-sm font-mono text-violet-300 w-4 text-center">{displayedLevel}</span>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5 text-zinc-400"
                             onClick={() => updateFactor(factorName, { level: Math.min(getMaxLevel(factorName, f.advanced), f.level + 1) })}
                             disabled={f.level >= getMaxLevel(factorName, f.advanced)}
-                        ><Plus className="w-3 h-3" /></Button>
+                        >
+                            <Plus className="w-3 h-3" />
+                        </Button>
                     </div>
                 ) : (
                     <span className="text-center text-zinc-500">-</span>
                 )}
+
                 <span className="text-xs text-zinc-400 truncate">
                     {description}
-                    {f.advanced && <span className="text-amber-400 ml-1">(+1R)</span>}
+                    {f.advanced && factorName !== "duration" && <span className="text-amber-400 ml-1">(+1R)</span>}
+                    {f.advanced && factorName === "duration" && !matterDurationMana && <span className="text-amber-400 ml-1">(+1R)</span>}
+                    {f.advanced && factorName === "duration" && matterDurationMana && arcanum === "Matter" && <span className="text-blue-400 ml-1">(+1 Mana)</span>}
+                    {factorName === "range" && specialRangeMode !== "none" && <span className="text-blue-400 ml-1">(+1 Mana, +1 Reach)</span>}
+                    {factorName === "duration" && fateDurationBonus > 0 && <span className="text-blue-400 ml-1">(+{fateDurationBonus} lvl, +1 Mana)</span>}
                     {hasLevels && paidLevels > 0 && <span className="text-red-400 ml-1">(-{paidLevels * 2}d)</span>}
                     {hasLevels && freeLevelsFromPrimary > 0 && f.level > 1 && <span className="text-teal-400 ml-1">(+{Math.min(freeLevelsFromPrimary, f.level - 1)}free)</span>}
                 </span>
@@ -698,6 +916,13 @@ export const SpellcastingPopup = ({
                                         </div>
                                     )}
 
+                                    {specialRangeReach > 0 && (
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-zinc-500">Sympathetic Casting</span>
+                                            <span className="font-mono text-amber-400">+{specialRangeReach} Reach</span>
+                                        </div>
+                                    )}
+
                                     {activeSpellReachSurcharge > 0 && (
                                         <div className="flex items-center justify-between">
                                             <span className="text-zinc-500">Active Spell surcharge</span>
@@ -796,65 +1021,53 @@ export const SpellcastingPopup = ({
                                 <Wrench className="w-3 h-3" /> Yantras
                             </p>
                             <span className="text-xs text-zinc-500">
-                                {activeYantras.size}/{maxYantras} used
+                                {selectedYantraNames.length}/{maxYantras} used
                                 {yantraBonus > 0 && <span className="text-teal-400 ml-1">(+{yantraBonus} dice)</span>}
                             </span>
                         </div>
-                        <div className="grid grid-cols-2 gap-1 max-h-[140px] overflow-y-auto pr-1">
-                            {YANTRAS.map(yantra => {
-                                const isActive = activeYantras.has(yantra.name);
-                                const atMax = !isActive && activeYantras.size >= maxYantras;
-                                const currentBonus = getYantraBonus(yantra);
-                                const canDecrease = isActive && yantra.variableBonus && currentBonus > (yantra.minBonus ?? yantra.bonus);
-                                const canIncrease = isActive && yantra.variableBonus && currentBonus < (yantra.maxBonus ?? yantra.bonus);
+
+                        <div className="space-y-2">
+                            {Array.from({ length: maxYantras }).map((_, index) => {
+                                const selectedName = selectedYantras[index] || "";
+                                const selectedData = YANTRAS.find((y) => y.name === selectedName);
+                                const availableOptions = getYantraOptionsForSlot(index);
+
                                 return (
-                                    <div
-                                        key={yantra.name}
-                                        className={`flex items-center gap-2 p-1.5 rounded text-xs cursor-pointer transition-colors ${
-                                            isActive ? "bg-violet-900/30 border border-violet-500/30" : "bg-zinc-800/30 border border-transparent hover:border-zinc-700"
-                                        } ${atMax ? "opacity-40 cursor-not-allowed" : ""}`}
-                                        onClick={() => !atMax && toggleYantra(yantra.name)}
-                                        title={yantra.description}
-                                        data-testid={getYantraTestId(yantra.name)}
-                                    >
-                                        <Checkbox
-                                            checked={isActive}
-                                            disabled={atMax}
-                                            onCheckedChange={() => toggleYantra(yantra.name)}
-                                            className="border-zinc-600 data-[state=checked]:bg-violet-600 h-3.5 w-3.5"
-                                        />
-                                        <span className={`flex-1 ${isActive ? "text-zinc-200" : "text-zinc-400"}`}>
-                                            {yantra.name}
+                                    <div key={`yantra-slot-${index}`} className="flex items-center gap-2">
+                                        <span className="w-16 text-[10px] uppercase tracking-wider text-zinc-500">
+                                            Yantra {index + 1}
                                         </span>
-                                        {yantra.variableBonus ? (
-                                            <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-5 w-5 text-zinc-400"
-                                                    onClick={() => adjustYantraValue(yantra.name, -1)}
-                                                    disabled={!canDecrease}
-                                                >
-                                                    <Minus className="w-3 h-3" />
-                                                </Button>
-                                                <span className={`font-mono w-6 text-center ${isActive ? "text-teal-400" : "text-zinc-600"}`}>
-                                                    +{currentBonus}
-                                                </span>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-5 w-5 text-zinc-400"
-                                                    onClick={() => adjustYantraValue(yantra.name, 1)}
-                                                    disabled={!canIncrease}
-                                                >
-                                                    <Plus className="w-3 h-3" />
-                                                </Button>
-                                            </div>
-                                        ) : (
-                                            <span className={`font-mono ${isActive ? "text-teal-400" : "text-zinc-600"}`}>
-                                                {yantra.bonus > 0 ? `+${yantra.bonus}` : "+0"}
-                                            </span>
-                                        )}
+
+                                        <Select
+                                            value={selectedName || "__none__"}
+                                            onValueChange={(value) => setYantraSlot(index, value)}
+                                        >
+                                            <SelectTrigger
+                                                className="flex-1 h-8 text-xs bg-zinc-900/50 border-zinc-700"
+                                                data-testid={`yantra-slot-${index + 1}`}
+                                            >
+                                                <SelectValue placeholder="None" />
+                                            </SelectTrigger>
+                                            <SelectContent className="bg-zinc-900 border-zinc-700 z-[200]">
+                                                <SelectItem value="__none__" className="text-xs text-zinc-400">
+                                                    None
+                                                </SelectItem>
+
+                                                {availableOptions.map((yantra) => (
+                                                    <SelectItem
+                                                        key={yantra.name}
+                                                        value={yantra.name}
+                                                        className="text-xs text-zinc-200"
+                                                    >
+                                                        {yantra.name} ({yantra.bonus > 0 ? `+${yantra.bonus}` : "+0"})
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+
+                                        <span className="w-10 text-right text-xs font-mono text-teal-400">
+                                            {selectedData ? `+${selectedData.bonus}` : "—"}
+                                        </span>
                                     </div>
                                 );
                             })}

@@ -27,6 +27,7 @@ export const DiceRoller = forwardRef((props, ref) => {
     const [rollLabel, setRollLabel] = useState(null);
     const [pendingParadox, setPendingParadox] = useState(null);
     const [exceptionalTarget, setExceptionalTarget] = useState(5);
+    const [lastRollConfig, setLastRollConfig] = useState(null);
     const [rollSequence, setRollSequence] = useState([]);
 
     // External roll trigger
@@ -229,7 +230,7 @@ export const DiceRoller = forwardRef((props, ref) => {
         const outcomeParts = [`${cancelled} bashing damage`];
 
         if (remaining > 0) {
-            outcomeParts.push("Paradox Condition");
+            outcomeParts.push("Paradox Taint");
         }
 
         return `Outcome: ${outcomeParts.join("; ")}`;
@@ -310,16 +311,67 @@ export const DiceRoller = forwardRef((props, ref) => {
 
     const formattedRollTranscript = useMemo(() => {
         if (rollSequence.length > 0) {
-            const summaryLines = rollSequence.map((entry) => (
-                `${entry.label}: ${formatOutcomeLine(entry.result)}`
-            ));
+            const paradoxEntry = rollSequence.find((entry) => entry.key === "paradox");
+            const wisdomEntry = rollSequence.find((entry) => entry.key === "wisdom");
+            const spellEntry = rollSequence.find((entry) => entry.key === "spell");
+            const otherEntries = rollSequence.filter(
+                (entry) => !["paradox", "wisdom", "spell"].includes(entry.key)
+            );
 
-            const detailBlocks = rollSequence.map((entry) => [
-                `${entry.label}:`,
-                formatTranscriptFromConfig(entry.result, entry.config),
-            ].join("\n"));
+            const summaryLines = [];
 
-            return [...summaryLines, "", ...detailBlocks].join("\n");
+            if (paradoxEntry && wisdomEntry) {
+                summaryLines.push(
+                    `Paradox: ${formatSuccessCount(paradoxEntry.result?.successes || 0)} - Wisdom: ${formatSuccessCount(wisdomEntry.result?.successes || 0)}`
+                );
+                summaryLines.push(
+                    buildContainmentOutcomeLine(paradoxEntry.result, wisdomEntry.result)
+                );
+            } else if (paradoxEntry) {
+                summaryLines.push(`Paradox: ${formatOutcomeLine(paradoxEntry.result)}`);
+            }
+
+            if (spellEntry) {
+                if (summaryLines.length > 0) {
+                    summaryLines.push("");
+                }
+                summaryLines.push(`Spell: ${formatOutcomeLine(spellEntry.result)}`);
+            }
+
+            otherEntries.forEach((entry) => {
+                if (summaryLines.length > 0) {
+                    summaryLines.push("");
+                }
+                summaryLines.push(`${entry.label}: ${formatOutcomeLine(entry.result)}`);
+            });
+
+            const detailBlocks = [];
+
+            if (paradoxEntry) {
+                detailBlocks.push(
+                    ["Paradox:", formatTranscriptFromConfig(paradoxEntry.result, paradoxEntry.config)].join("\n")
+                );
+            }
+
+            if (wisdomEntry) {
+                detailBlocks.push(
+                    ["Wisdom:", formatTranscriptFromConfig(wisdomEntry.result, wisdomEntry.config)].join("\n")
+                );
+            }
+
+            if (spellEntry) {
+                detailBlocks.push(
+                    ["Spell:", formatTranscriptFromConfig(spellEntry.result, spellEntry.config)].join("\n")
+                );
+            }
+
+            otherEntries.forEach((entry) => {
+                detailBlocks.push(
+                    [`${entry.label}:`, formatTranscriptFromConfig(entry.result, entry.config)].join("\n")
+                );
+            });
+
+            return [...summaryLines, "", ...detailBlocks].join("\n").trim();
         }
 
         if (!result) return "";
@@ -536,83 +588,34 @@ export const DiceRoller = forwardRef((props, ref) => {
                         </div>
                     )}
 
-                    const formattedRollTranscript = useMemo(() => {
-                        if (rollSequence.length > 0) {
-                            const paradoxEntry = rollSequence.find((entry) => entry.key === "paradox");
-                            const wisdomEntry = rollSequence.find((entry) => entry.key === "wisdom");
-                            const spellEntry = rollSequence.find((entry) => entry.key === "spell");
-                            const otherEntries = rollSequence.filter(
-                                (entry) => !["paradox", "wisdom", "spell"].includes(entry.key)
-                            );
+                    {formattedRollTranscript && (
+                        <div className="p-3 rounded-sm border bg-zinc-950/50 border-zinc-800 space-y-2">
+                            <div className="flex items-center justify-between">
+                                <p className="text-xs uppercase text-zinc-500">Copyable Roll Summary</p>
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-7 px-2 text-[10px] border-zinc-700 text-zinc-300"
+                                    onClick={async () => {
+                                        try {
+                                            await navigator.clipboard.writeText(formattedRollTranscript);
+                                            toast.success("Roll summary copied");
+                                        } catch {
+                                            toast.error("Failed to copy roll summary");
+                                        }
+                                    }}
+                                    data-testid="copy-roll-summary"
+                                >
+                                    Copy
+                                </Button>
+                            </div>
 
-                            const summaryLines = [];
-
-                            if (paradoxEntry && wisdomEntry) {
-                                summaryLines.push(
-                                    `Paradox: ${formatSuccessCount(paradoxEntry.result?.successes || 0)} - Wisdom: ${formatSuccessCount(wisdomEntry.result?.successes || 0)}`
-                                );
-                                summaryLines.push(
-                                    buildContainmentOutcomeLine(paradoxEntry.result, wisdomEntry.result)
-                                );
-                            } else if (paradoxEntry) {
-                                summaryLines.push(`Paradox: ${formatOutcomeLine(paradoxEntry.result)}`);
-                            }
-
-                            if (spellEntry) {
-                                if (summaryLines.length > 0) {
-                                    summaryLines.push("");
-                                }
-                                summaryLines.push(`Spell: ${formatOutcomeLine(spellEntry.result)}`);
-                            }
-
-                            otherEntries.forEach((entry) => {
-                                if (summaryLines.length > 0) {
-                                    summaryLines.push("");
-                                }
-                                summaryLines.push(`${entry.label}: ${formatOutcomeLine(entry.result)}`);
-                            });
-
-                            const detailBlocks = [];
-
-                            if (paradoxEntry) {
-                                detailBlocks.push(
-                                    ["Paradox:", formatTranscriptFromConfig(paradoxEntry.result, paradoxEntry.config)].join("\n")
-                                );
-                            }
-
-                            if (wisdomEntry) {
-                                detailBlocks.push(
-                                    ["Wisdom:", formatTranscriptFromConfig(wisdomEntry.result, wisdomEntry.config)].join("\n")
-                                );
-                            }
-
-                            if (spellEntry) {
-                                detailBlocks.push(
-                                    ["Spell:", formatTranscriptFromConfig(spellEntry.result, spellEntry.config)].join("\n")
-                                );
-                            }
-
-                            otherEntries.forEach((entry) => {
-                                detailBlocks.push(
-                                    [`${entry.label}:`, formatTranscriptFromConfig(entry.result, entry.config)].join("\n")
-                                );
-                            });
-
-                            return [...summaryLines, "", ...detailBlocks].join("\n").trim();
-                        }
-
-                        if (!result) return "";
-
-                        return formatTranscriptFromConfig(
-                            result,
-                            lastRollConfig || {
-                                pool,
-                                again: parseInt(again),
-                                chance,
-                                label: rollLabel,
-                            }
-                        );
-                    }, [rollSequence, result, lastRollConfig, pool, again, chance, rollLabel]);
+                            <pre className="whitespace-pre-wrap break-words text-xs text-zinc-200 font-mono leading-relaxed">
+                    {formattedRollTranscript}
+                            </pre>
+                        </div>
+                    )}
 
                     {/* Paradox Roll Button */}
                     {pendingParadox && result && !isRolling && (

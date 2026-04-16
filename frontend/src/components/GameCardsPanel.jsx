@@ -661,7 +661,7 @@ export const GameCardsPanel = ({
                         >
                             <CollapsibleTrigger className="w-full flex items-center justify-between p-3" data-testid="cards-section-active-spells-toggle">
                                 <div className="flex items-center gap-2">
-                                    <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">Active Spells</span>
+                                    <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">Active Spells & Effects</span>
                                     <span className="text-[10px] text-zinc-500">{activeSpells.length}</span>
                                 </div>
                                 {openSections.activeSpells ? (
@@ -673,7 +673,7 @@ export const GameCardsPanel = ({
                             <CollapsibleContent className="px-3 pb-3">
                                 {activeSpells.length === 0 ? (
                                     <div className="text-center py-6">
-                                        <p className="text-zinc-500 text-sm">No active spells</p>
+                                        <p className="text-zinc-500 text-sm">No active spells or effects</p>
                                         <p className="text-zinc-600 text-xs mt-1">Spells cast with Advanced Duration appear here</p>
                                     </div>
                                 ) : (

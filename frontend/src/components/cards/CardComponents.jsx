@@ -599,31 +599,49 @@ export const KeyCard = ({ name, active, definition, onToggle, locked = false, so
 };
 
 export const ActiveSpellCard = ({ spell, onDispel, onRelinquish, onRelinquishSafely }) => {
+    const isEffect = spell.kind === "effect";
+    const subtitle = spell.subtitle || [spell.arcanum, spell.practice].filter(Boolean).join(" • ");
+    const showStats = !!(spell.potency || spell.duration || spell.scale);
+
     return (
         <div className="bg-zinc-950 border border-zinc-800 rounded-md p-3 space-y-2">
             <div className="flex items-start justify-between gap-2">
                 <div>
                     <h4 className="text-sm font-medium text-zinc-100">{spell.name}</h4>
-                    <p className="text-xs text-zinc-400">
-                        {spell.arcanum} • {spell.practice}
-                    </p>
+                    {subtitle && (
+                        <p className="text-xs text-zinc-400">{subtitle}</p>
+                    )}
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                <div className="rounded-sm bg-zinc-900/50 border border-zinc-800 p-2">
-                    <span className="text-zinc-500">Potency:</span>{" "}
-                    <span className="text-zinc-200">{spell.potency}</span>
+            {spell.description && (
+                <div className="rounded-sm bg-zinc-900/40 border border-zinc-800 p-2">
+                    <p className="text-xs text-zinc-300 whitespace-pre-line">{spell.description}</p>
                 </div>
-                <div className="rounded-sm bg-zinc-900/50 border border-zinc-800 p-2">
-                    <span className="text-zinc-500">Duration:</span>{" "}
-                    <span className="text-zinc-200">{spell.duration}</span>
+            )}
+
+            {showStats && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    {spell.potency && (
+                        <div className="rounded-sm bg-zinc-900/50 border border-zinc-800 p-2">
+                            <span className="text-zinc-500">Potency:</span>{" "}
+                            <span className="text-zinc-200">{spell.potency}</span>
+                        </div>
+                    )}
+                    {spell.duration && (
+                        <div className="rounded-sm bg-zinc-900/50 border border-zinc-800 p-2">
+                            <span className="text-zinc-500">Duration:</span>{" "}
+                            <span className="text-zinc-200">{spell.duration}</span>
+                        </div>
+                    )}
+                    {spell.scale && (
+                        <div className="rounded-sm bg-zinc-900/50 border border-zinc-800 p-2 sm:col-span-2">
+                            <span className="text-zinc-500">Scale:</span>{" "}
+                            <span className="text-zinc-200">{spell.scale}</span>
+                        </div>
+                    )}
                 </div>
-                <div className="rounded-sm bg-zinc-900/50 border border-zinc-800 p-2 sm:col-span-2">
-                    <span className="text-zinc-500">Scale:</span>{" "}
-                    <span className="text-zinc-200">{spell.scale}</span>
-                </div>
-            </div>
+            )}
 
             <div className="flex flex-wrap gap-1 pt-1">
                 <Button
@@ -637,7 +655,7 @@ export const ActiveSpellCard = ({ spell, onDispel, onRelinquish, onRelinquishSaf
                     Dispel
                 </Button>
 
-                {onRelinquish && (
+                {!isEffect && onRelinquish && (
                     <Button
                         type="button"
                         variant="ghost"
@@ -650,7 +668,7 @@ export const ActiveSpellCard = ({ spell, onDispel, onRelinquish, onRelinquishSaf
                     </Button>
                 )}
 
-                {onRelinquishSafely && (
+                {!isEffect && onRelinquishSafely && (
                     <Button
                         type="button"
                         variant="ghost"

@@ -863,14 +863,24 @@ export const ARCANA_PRACTICES = {
 
 // Yantras (bonus dice tools for spellcasting)
 export const YANTRAS = [
+    { name: "Concentration", bonus: 2, description: "Focus your full attention on the spell." },
     { name: "Dedicated Tool", bonus: 1, description: "Personal magical tool. Also -2 to Paradox pool.", reducesParadox: true },
-    { name: "Path/Order Tool", bonus: 1, description: "A tool associated with the mage's Path or Order" },
-    { name: "High Speech", bonus: 2, description: "Chanting in the Supernal tongue (Atlantean)" },
-    { name: "Concentration", bonus: 2, description: "Focusing intently on the spell for the entire duration" },
-    { name: "Demesne/Verge", bonus: 2, description: "Casting within a Demesne or near a Supernal Verge" },
-    { name: "Location", bonus: 1, description: "A place symbolically linked to the spell's effect" },
-    { name: "Sacrament", bonus: 1, minBonus: 1, maxBonus: 3, variableBonus: true, description: "A material sympathy; adjust from common (+1) to unique (+3)" },
-    { name: "Persona", bonus: 2, description: "Invoking the mage's Shadow Name" },
+    { name: "Demesne/Verge", bonus: 2, description: "Casting within a Demesne or near a Supernal Verge." },
+    { name: "High Speech", bonus: 2, description: "Chanting in the Supernal tongue." },
+    { name: "Location", bonus: 1, description: "A place symbolically linked to the spell." },
+    { name: "Order Tool", bonus: 1, description: "A tool associated with the mage's Order." },
+    { name: "Path Tool: Coin", bonus: 1, description: "A Path Tool: Coin." },
+    { name: "Path Tool: Cup", bonus: 1, description: "A Path Tool: Cup." },
+    { name: "Path Tool: Mirror", bonus: 1, description: "A Path Tool: Mirror." },
+    { name: "Path Tool: Rod", bonus: 1, description: "A Path Tool: Rod." },
+    { name: "Path Tool: Weapon", bonus: 1, description: "A Path Tool: Weapon." },
+    { name: "Persona", bonus: 2, description: "Invoking the mage's Shadow Name." },
+    { name: "Sacrament: Minor", bonus: 1, description: "A minor sacrament." },
+    { name: "Sacrament: Major", bonus: 2, description: "A major sacrament." },
+    { name: "Sacrament: Mystic", bonus: 3, description: "A mystic sacrament." },
+    { name: "Sympathy: Material", bonus: 2, description: "A strong sympathetic link to the target or moment." },
+    { name: "Sympathy: Representational", bonus: 1, description: "A sufficient sympathetic link to the target or moment." },
+    { name: "Sympathy: Symbolic", bonus: 0, description: "A weak sympathetic link to the target or moment." },
 ];
 
 // Order Rote Skills

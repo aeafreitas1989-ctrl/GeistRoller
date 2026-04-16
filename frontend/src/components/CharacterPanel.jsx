@@ -69,6 +69,20 @@ import { MeritsContent } from "./character/MeritsContent";
 import { CombatContent } from "./character/CombatContent";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
+const MAGE_SIGHT_DESCRIPTIONS = {
+    Death: "Death Sight reveals the Anchor Condition, manifested ghosts, and related deathly phenomena. At a glance, the mage can tell whether a person has a soul and whether a body is truly dead.",
+    Fate: "Fate Sight reveals when someone experiences a dramatic failure or exceptional success. It also reveals the presence and use of a Destiny, but not the details of that Destiny.",
+    Forces: "Forces Sight reveals motion, environmental Tilts, fire, electricity, and other physical hazards. It also allows the mage to tell at a glance whether a device is powered.",
+    Life: "Life Sight reveals signs of life and allows the mage to tell at a glance whether a body is alive and how badly a living being is injured. Toxins, diseases, and Personal Tilts are also apparent.",
+    Matter: "Matter Sight reveals the Structure and Durability of an object, along with its value and quality.",
+    Mind: "Mind Sight reveals the presence of thinking beings and allows the mage to tell at a glance whether someone is asleep, comatose, awake, meditating, or projecting into the Astral. It also reveals when an observed being gains or spends Willpower.",
+    Prime: "Prime Sight reveals anything the mage can use as a Yantra, as well as the presence of Awakened spells and Attainment effects. It also allows the mage to recognize tass and determine when they are within a Hallow or Node.",
+    Space: "Space Sight reveals distances, range bands, and cover, allowing the mage to judge situational bonuses and penalties before acting. It also reveals spatial distortions, scrying windows, and Irises.",
+    Spirit: "Spirit Sight reveals the strength of the local Gauntlet, the presence and nature of the Resonance Condition, other sources of Essence, and manifested spirits and related phenomena.",
+    Time: "Time Sight reveals subtle temporal changes, allowing the mage to know the Initiative of all combatants. It also reveals when someone is about to act, even reflexively, and detects temporal distortions and signs of travel into the past.",
+};
+
 export const CharacterPanel = ({
     characters,
     activeCharacter,
@@ -534,6 +548,95 @@ export const CharacterPanel = ({
         const pending = pendingChanges[parent]?.[field];
         if (pending !== undefined) return pending;
         return activeCharacter?.[parent]?.[field] ?? 0;
+    };
+
+    const activateMageEffect = async ({ type, arcanum, attainmentName, effectName, description, path, extraArcanum }) => {
+        const currentActiveSpells = activeCharacter?.active_spells || [];
+        const currentMana = getValue("mana") || 0;
+
+        if (type === "twilight") {
+            if (currentMana < 1) {
+                toast.error("Not enough Mana");
+                return;
+            }
+
+            const effectKey = `twilight-${arcanum.toLowerCase()}`;
+
+            if (currentActiveSpells.some((spell) => spell.effect_key === effectKey)) {
+                toast.info(`${effectName} is already active.`);
+                return;
+            }
+
+            await onUpdateCharacter({
+                mana: Math.max(0, currentMana - 1),
+                active_spells: [
+                    ...currentActiveSpells,
+                    {
+                        id: Date.now(),
+                        kind: "effect",
+                        effect_key: effectKey,
+                        name: effectName,
+                        arcanum,
+                        practice: "Attainment",
+                        subtitle: `${arcanum} • ${attainmentName}`,
+                        description,
+                    },
+                ],
+            });
+
+            return;
+        }
+
+        if (type === "mageSight") {
+            const currentPath = path || getValue("path");
+            const rulingArcana = PATH_ARCANA[currentPath]?.ruling || [];
+
+            if (!currentPath || rulingArcana.length === 0) {
+                return;
+            }
+
+            const existingMageSight = currentActiveSpells.find((spell) => spell.effect_key === "mage-sight");
+            const existingExtras = Array.isArray(existingMageSight?.extra_arcana) ? existingMageSight.extra_arcana : [];
+
+            let nextExtras = [];
+
+            if (extraArcanum) {
+                if (existingExtras.includes(extraArcanum)) {
+                    toast.info(`${extraArcanum} Mage Sight is already active.`);
+                    return;
+                }
+
+                if (currentMana < 1) {
+                    toast.error("Not enough Mana");
+                    return;
+                }
+
+                nextExtras = [...existingExtras, extraArcanum];
+            }
+
+            const activeArcana = [...rulingArcana, ...nextExtras];
+            const plusLabel = nextExtras.length > 0 ? ` + ${nextExtras.join(" + ")}` : "";
+
+            await onUpdateCharacter({
+                ...(extraArcanum ? { mana: Math.max(0, currentMana - 1) } : {}),
+                active_spells: [
+                    ...currentActiveSpells.filter((spell) => spell.effect_key !== "mage-sight"),
+                    {
+                        id: existingMageSight?.id || Date.now(),
+                        kind: "effect",
+                        effect_key: "mage-sight",
+                        name: `Mage Sight: ${currentPath}${plusLabel}`,
+                        arcanum: activeArcana.join(", "),
+                        practice: "Mage Sight",
+                        subtitle: `${currentPath} • ${activeArcana.join(", ")}`,
+                        description: activeArcana
+                            .map((name) => `${name}: ${MAGE_SIGHT_DESCRIPTIONS[name]}`)
+                            .join("\n"),
+                        extra_arcana: nextExtras,
+                    },
+                ],
+            });
+        }
     };
 
     // Inventory helpers
@@ -1852,10 +1955,13 @@ export const CharacterPanel = ({
                         <CollapsibleContent className="pt-2 space-y-3">
                             {isMage ? (
                                 <MageArcanaContent
-                                    getValue={getValue} getNestedValue={getNestedValue}
-                                    handleChange={handleChange} handleNestedChange={handleNestedChange}
+                                    getValue={getValue}
+                                    getNestedValue={getNestedValue}
+                                    handleChange={handleChange}
+                                    handleNestedChange={handleNestedChange}
                                     openSpellcastingPopup={openSpellcastingPopup}
                                     onTriggerDiceRoll={onTriggerDiceRoll}
+                                    onActivateMageEffect={activateMageEffect}
                                 />
                             ) : (
                                 <GeistHauntsContent
@@ -2039,15 +2145,10 @@ export const CharacterPanel = ({
             {isMage && spellcastingArcanum && (
                 <SpellcastingPopup
                     isOpen={spellcastingOpen}
-                    onClose={() => {
-                        setSpellcastingOpen(false);
-                        setSpellcastingArcanum(null);
-                        setSpellcastingPractice(null);
-                        setSpellcastingType(null);
-                        setSpellcastingRoteSkill(null);
-                    }}
+                    onClose={() => { setSpellcastingOpen(false); setSpellcastingArcanum(null); setSpellcastingPractice(null); setSpellcastingType(null); setSpellcastingRoteSkill(null); }}
                     arcanum={spellcastingArcanum}
                     arcanumDots={getNestedValue("arcana", spellcastingArcanum) || 0}
+                    allArcana={getValue("arcana") || {}}
                     gnosis={getValue("gnosis") || 1}
                     isRuling={getValue("path") && PATH_ARCANA[getValue("path")]?.ruling?.includes(spellcastingArcanum)}
                     isInferior={getValue("path") && PATH_ARCANA[getValue("path")]?.inferior === spellcastingArcanum}
