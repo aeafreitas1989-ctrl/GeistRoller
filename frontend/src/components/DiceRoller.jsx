@@ -1,5 +1,5 @@
 import { useState, forwardRef, useImperativeHandle, useRef, useEffect, useCallback, useMemo } from "react";
-import { Dices, X, ChevronUp, ChevronDown, Zap } from "lucide-react";
+import { Dices, X, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -15,7 +15,7 @@ import { toast } from "sonner";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
-export const DiceRoller = forwardRef((props, ref) => {
+export const DiceRoller = forwardRef(({ embedded = false, collapsed = false, onToggleCollapsed = null }, ref) => {
     const [isOpen, setIsOpen] = useState(false);
     const [isMinimized, setIsMinimized] = useState(false);
     const [pool, setPool] = useState(3);
@@ -28,6 +28,7 @@ export const DiceRoller = forwardRef((props, ref) => {
     const [pendingParadox, setPendingParadox] = useState(null);
     const [exceptionalTarget, setExceptionalTarget] = useState(5);
     const [lastRollConfig, setLastRollConfig] = useState(null);
+    const [rollHistory, setRollHistory] = useState([]);
     const [rollSequence, setRollSequence] = useState([]);
 
     // External roll trigger
@@ -385,248 +386,318 @@ export const DiceRoller = forwardRef((props, ref) => {
                 label: rollLabel,
             }
         );
-    }, [rollSequence, result, lastRollConfig, pool, again, chance, rollLabel]);
+    
+}, [rollSequence, result, lastRollConfig, pool, again, chance, rollLabel]);
+    const visible = embedded || isOpen;
 
-    if (!isOpen) {
+    useEffect(() => {
+        if (!result || !formattedRollTranscript) return;
+
+        const nextEntry = {
+            id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            title: rollLabel || lastRollConfig?.label || "Roll",
+            transcript: formattedRollTranscript,
+            outcome: formatOutcomeLine(result),
+        };
+
+        setRollHistory((prev) => {
+            if (prev[0]?.transcript === formattedRollTranscript) {
+                return prev;
+            }
+
+            return [nextEntry, ...prev].slice(0, 12);
+        });
+    }, [result, formattedRollTranscript, rollLabel, lastRollConfig]);
+
+    if (!visible) {
         return null;
+    }
+
+    if (embedded && collapsed) {
+        return (
+            <div
+                className="h-full flex items-start justify-center bg-zinc-900/60 border-l border-zinc-800 pt-3"
+                data-testid="dice-roller-panel"
+            >
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={onToggleCollapsed}
+                    className="h-8 w-8 text-zinc-400 hover:text-zinc-200"
+                    data-testid="expand-last-rolls-btn"
+                >
+                    <ChevronLeft className="w-4 h-4" />
+                </Button>
+            </div>
+        );
     }
 
     return (
         <div
-            className={`fixed bottom-6 right-6 w-80 bg-zinc-900/95 backdrop-blur-sm border border-zinc-800 rounded-md shadow-deep z-[60] transition-all ${
-                isMinimized ? "h-12" : ""
-            }`}
+            className={
+                embedded
+                    ? "h-full flex flex-col bg-zinc-900/60 border-l border-zinc-800"
+                    : `fixed bottom-6 right-6 w-80 bg-zinc-900/95 backdrop-blur-sm border border-zinc-800 rounded-md shadow-deep z-[60] transition-all ${
+                        isMinimized ? "h-12" : ""
+                    }`
+            }
             data-testid="dice-roller-panel"
         >
             {/* Header */}
             <div className="flex items-center justify-between p-3 border-b border-zinc-800/50">
                 <div className="flex items-center gap-2">
                     <Dices className="w-5 h-5 text-teal-400" />
-                    <span className="font-heading text-lg text-zinc-200">Dice Roller</span>
+                    <span className="font-heading text-lg text-zinc-200">
+                        {embedded ? "Last Rolls" : "Dice Roller"}
+                    </span>
                 </div>
-                <div className="flex items-center gap-1">
+
+                {embedded ? (
                     <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => setIsMinimized(!isMinimized)}
+                        onClick={onToggleCollapsed}
                         className="h-7 w-7 text-zinc-500 hover:text-zinc-300"
-                        data-testid="minimize-dice-roller-btn"
+                        data-testid="collapse-last-rolls-btn"
                     >
-                        {isMinimized ? (
-                            <ChevronUp className="w-4 h-4" />
-                        ) : (
-                            <ChevronDown className="w-4 h-4" />
-                        )}
+                        <ChevronRight className="w-4 h-4" />
                     </Button>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => { setIsOpen(false); setPendingParadox(null); setRollLabel(null); setLastRollConfig(null); setRollSequence([]); }}
-                        className="h-7 w-7 text-zinc-500 hover:text-zinc-300"
-                        data-testid="close-dice-roller-btn"
-                    >
-                        <X className="w-4 h-4" />
-                    </Button>
-                </div>
+                ) : (
+                    <div className="flex items-center gap-1">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setIsMinimized(!isMinimized)}
+                            className="h-7 w-7 text-zinc-500 hover:text-zinc-300"
+                            data-testid="minimize-dice-roller-btn"
+                        >
+                            {isMinimized ? (
+                                <ChevronUp className="w-4 h-4" />
+                            ) : (
+                                <ChevronDown className="w-4 h-4" />
+                            )}
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                                setIsOpen(false);
+                                setPendingParadox(null);
+                                setRollLabel(null);
+                                setLastRollConfig(null);
+                                setRollSequence([]);
+                            }}
+                            className="h-7 w-7 text-zinc-500 hover:text-zinc-300"
+                            data-testid="close-dice-roller-btn"
+                        >
+                            <X className="w-4 h-4" />
+                        </Button>
+                    </div>
+                )}
             </div>
 
-            {!isMinimized && (
-                <div className="p-4 space-y-4">
-                    {/* Roll Label */}
-                    {rollLabel && (
-                        <div className="px-2 py-1.5 bg-violet-900/30 border border-violet-500/30 rounded text-xs text-violet-300 text-center" data-testid="roll-label">
-                            {rollLabel}
-                        </div>
-                    )}
-
-                    {/* Dice Pool */}
-                    <div className="flex items-center justify-between">
-                        <label className="text-sm text-zinc-400">Dice Pool</label>
-                        <div className="flex items-center gap-2">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => setPool(Math.max(1, pool - 1))}
-                                className="h-8 w-8 text-zinc-400"
-                                disabled={chance}
-                                data-testid="decrease-pool-btn"
-                            >
-                                -
-                            </Button>
-                            <Input
-                                type="number"
-                                value={chance ? 1 : pool}
-                                onChange={(e) => setPool(Math.max(1, parseInt(e.target.value) || 1))}
-                                className="w-16 text-center input-geist"
-                                disabled={chance}
-                                data-testid="dice-pool-input"
-                            />
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => setPool(pool + 1)}
-                                className="h-8 w-8 text-zinc-400"
-                                disabled={chance}
-                                data-testid="increase-pool-btn"
-                            >
-                                +
-                            </Button>
-                        </div>
-                    </div>
-
-                    {/* Again */}
-                    <div className="flex items-center justify-between">
-                        <label className="text-sm text-zinc-400">Exploding Dice</label>
-                        <Select value={again} onValueChange={setAgain} disabled={chance}>
-                            <SelectTrigger className="w-32 bg-zinc-900/50 border-zinc-800" data-testid="again-select">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent className="bg-zinc-900 border-zinc-800">
-                                <SelectItem value="10" className="text-zinc-200">10-again</SelectItem>
-                                <SelectItem value="9" className="text-zinc-200">9-again</SelectItem>
-                                <SelectItem value="8" className="text-zinc-200">8-again</SelectItem>
-                                <SelectItem value="11" className="text-zinc-200">No again</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-
-                    {/* Rote */}
-                    <div className="flex items-center justify-between">
-                        <label className="text-sm text-zinc-400">Rote Quality</label>
-                        <Switch
-                            checked={rote}
-                            onCheckedChange={setRote}
-                            disabled={chance}
-                            data-testid="rote-switch"
-                        />
-                    </div>
-
-                    {/* Chance Die */}
-                    <div className="flex items-center justify-between">
-                        <label className="text-sm text-zinc-400">Chance Die</label>
-                        <Switch
-                            checked={chance}
-                            onCheckedChange={(checked) => {
-                                setChance(checked);
-                                if (checked) {
-                                    setRote(false);
-                                }
-                            }}
-                            data-testid="chance-switch"
-                        />
-                    </div>
-
-                    {/* Roll Button */}
-                    <Button
-                        onClick={rollDice}
-                        disabled={isRolling}
-                        className="w-full btn-primary h-12 text-base"
-                        data-testid="roll-dice-btn"
-                    >
-                        {isRolling ? (
-                            <span className="flex items-center gap-2">
-                                <Dices className="w-5 h-5 animate-dice-roll" />
-                                Rolling...
-                            </span>
-                        ) : (
-                            <span className="flex items-center gap-2">
-                                <Dices className="w-5 h-5" />
-                                Roll {chance ? "Chance" : pool} {chance || pool === 1 ? "Die" : "Dice"}
-                            </span>
-                        )}
-                    </Button>
-
-                    {/* Result */}
-                    {result && (
-                        <div
-                            className={`p-4 rounded-sm border animate-fade-in ${
-                                result.is_dramatic_failure
-                                    ? "bg-rose-950/30 border-rose-500/30"
-                                    : result.is_exceptional
-                                    ? "bg-teal-950/30 border-teal-500/30"
-                                    : result.successes > 0
-                                    ? "bg-zinc-800/50 border-zinc-700"
-                                    : "bg-zinc-900/50 border-zinc-800"
-                            }`}
-                            data-testid="dice-result"
-                        >
-                            <div className="flex flex-wrap gap-2 justify-center mb-3">
-                                {result.dice.map((die, index) => (
-                                    <div
-                                        key={index}
-                                        className={`w-10 h-10 rounded-sm flex items-center justify-center font-mono text-lg font-bold transition-all ${
-                                            die >= 8
-                                                ? "bg-teal-900/50 border border-teal-500/50 text-teal-300"
-                                                : die === 1 && result.is_dramatic_failure
-                                                ? "bg-rose-900/50 border border-rose-500/50 text-rose-300"
-                                                : "bg-zinc-800 border border-zinc-700 text-zinc-400"
-                                        }`}
-                                        style={{ animationDelay: `${index * 50}ms` }}
-                                        data-testid={`die-${index}`}
-                                    >
-                                        {die}
-                                    </div>
-                                ))}
-                            </div>
-                            
-                            <div className="text-center">
-                                <p
-                                    className={`font-heading text-xl ${
-                                        result.is_dramatic_failure
-                                            ? "text-rose-400"
-                                            : result.is_exceptional
-                                            ? "text-teal-400"
-                                            : result.successes > 0
-                                            ? "text-zinc-200"
-                                            : "text-zinc-500"
-                                    }`}
-                                >
-                                    {result.successes} {result.successes === 1 ? "Success" : "Successes"}
-                                </p>
-                                <p className="text-xs text-zinc-500 mt-1">{result.description}</p>
-                            </div>
-                        </div>
-                    )}
-
-                    {formattedRollTranscript && (
-                        <div className="p-3 rounded-sm border bg-zinc-950/50 border-zinc-800 space-y-2">
+            {(!embedded ? !isMinimized : true) && (
+                <div className="p-4 space-y-4 overflow-y-auto">
+                    {embedded ? (
+                        <div className="p-3 rounded-sm border bg-zinc-950/40 border-zinc-800 space-y-2">
                             <div className="flex items-center justify-between">
-                                <p className="text-xs uppercase text-zinc-500">Copyable Roll Summary</p>
+                                <p className="text-xs uppercase text-zinc-500">Recent Rolls</p>
                                 <Button
                                     type="button"
                                     size="sm"
-                                    variant="outline"
-                                    className="h-7 px-2 text-[10px] border-zinc-700 text-zinc-300"
-                                    onClick={async () => {
-                                        try {
-                                            await navigator.clipboard.writeText(formattedRollTranscript);
-                                            toast.success("Roll summary copied");
-                                        } catch {
-                                            toast.error("Failed to copy roll summary");
-                                        }
-                                    }}
-                                    data-testid="copy-roll-summary"
+                                    variant="ghost"
+                                    className="h-7 px-2 text-[10px] text-zinc-400 hover:text-zinc-200"
+                                    onClick={() => setRollHistory([])}
                                 >
-                                    Copy
+                                    Clear
                                 </Button>
                             </div>
 
-                            <pre className="whitespace-pre-wrap break-words text-xs text-zinc-200 font-mono leading-relaxed">
-                    {formattedRollTranscript}
-                            </pre>
+                            {rollHistory.length === 0 ? (
+                                <p className="text-xs text-zinc-500">No rolls yet.</p>
+                            ) : (
+                                <div className="space-y-2 max-h-[72vh] overflow-y-auto pr-1">
+                                    {rollHistory.map((entry) => (
+                                        <div key={entry.id} className="rounded-sm border border-zinc-800 bg-zinc-900/50 p-2 space-y-1">
+                                            <p className="text-[11px] uppercase text-teal-400">{entry.title}</p>
+                                            <pre className="whitespace-pre-wrap break-words text-[11px] text-zinc-300 font-mono leading-relaxed">
+            {entry.transcript}
+                                            </pre>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
-                    )}
+                    ) : (
+                        <>
+                            {/* Roll Label */}
+                            {rollLabel && (
+                                <div className="px-2 py-1.5 bg-violet-900/30 border border-violet-500/30 rounded text-xs text-violet-300 text-center" data-testid="roll-label">
+                                    {rollLabel}
+                                </div>
+                            )}
 
-                    {/* Paradox Roll Button */}
-                    {pendingParadox && result && !isRolling && (
-                        <Button
-                            onClick={rollParadox}
-                            className="w-full h-10 bg-red-900/50 hover:bg-red-800/50 border border-red-500/50 text-red-300"
-                            data-testid="roll-paradox-btn"
-                        >
-                            <Zap className="w-4 h-4 mr-2" />
-                            Roll Paradox ({pendingParadox.chance ? "Chance Die" : `${pendingParadox.pool} dice`})
-                        </Button>
+                            {/* Dice Pool */}
+                            <div className="flex items-center justify-between">
+                                <label className="text-sm text-zinc-400">Dice Pool</label>
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => setPool(Math.max(1, pool - 1))}
+                                        className="h-8 w-8 text-zinc-400"
+                                        disabled={chance}
+                                        data-testid="decrease-pool-btn"
+                                    >
+                                        -
+                                    </Button>
+                                    <Input
+                                        type="number"
+                                        value={chance ? 1 : pool}
+                                        onChange={(e) => setPool(Math.max(1, parseInt(e.target.value) || 1))}
+                                        className="w-16 text-center input-geist"
+                                        disabled={chance}
+                                        data-testid="dice-pool-input"
+                                    />
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => setPool(pool + 1)}
+                                        className="h-8 w-8 text-zinc-400"
+                                        disabled={chance}
+                                        data-testid="increase-pool-btn"
+                                    >
+                                        +
+                                    </Button>
+                                </div>
+                            </div>
+
+                            {/* Again */}
+                            <div className="flex items-center justify-between">
+                                <label className="text-sm text-zinc-400">Exploding Dice</label>
+                                <Select value={again} onValueChange={setAgain} disabled={chance}>
+                                    <SelectTrigger className="w-32 bg-zinc-900/50 border-zinc-800" data-testid="again-select">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-zinc-900 border-zinc-800">
+                                        <SelectItem value="10" className="text-zinc-200">10-again</SelectItem>
+                                        <SelectItem value="9" className="text-zinc-200">9-again</SelectItem>
+                                        <SelectItem value="8" className="text-zinc-200">8-again</SelectItem>
+                                        <SelectItem value="11" className="text-zinc-200">No again</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            {/* Rote */}
+                            <div className="flex items-center justify-between">
+                                <label className="text-sm text-zinc-400">Rote Quality</label>
+                                <Switch
+                                    checked={rote}
+                                    onCheckedChange={setRote}
+                                    disabled={chance}
+                                    data-testid="rote-switch"
+                                />
+                            </div>
+
+                            {/* Chance Die */}
+                            <div className="flex items-center justify-between">
+                                <label className="text-sm text-zinc-400">Chance Die</label>
+                                <Switch
+                                    checked={chance}
+                                    onCheckedChange={(checked) => {
+                                        setChance(checked);
+                                        if (checked) {
+                                            setRote(false);
+                                        }
+                                    }}
+                                    data-testid="chance-switch"
+                                />
+                            </div>
+
+                            {/* Roll Button */}
+                            <Button
+                                onClick={rollDice}
+                                disabled={isRolling}
+                                className="w-full btn-primary h-12 text-base"
+                                data-testid="roll-dice-btn"
+                            >
+                                {isRolling ? (
+                                    <span className="flex items-center gap-2">
+                                        <Dices className="w-5 h-5 animate-dice-roll" />
+                                        Rolling...
+                                    </span>
+                                ) : (
+                                    <span className="flex items-center gap-2">
+                                        <Dices className="w-5 h-5" />
+                                        Roll {chance ? "Chance" : pool} {chance || pool === 1 ? "Die" : "Dice"}
+                                    </span>
+                                )}
+                            </Button>
+
+                            {/* Result */}
+                            {result && (
+                                <div
+                                    className={`p-4 rounded-sm border animate-fade-in ${
+                                        result.is_dramatic_failure
+                                            ? "bg-rose-950/30 border-rose-500/30"
+                                            : result.is_exceptional
+                                            ? "bg-teal-950/30 border-teal-500/30"
+                                            : result.successes > 0
+                                            ? "bg-zinc-800/50 border-zinc-700"
+                                            : "bg-zinc-900/50 border-zinc-800"
+                                    }`}
+                                    data-testid="dice-result"
+                                >
+                                    <div className="flex flex-wrap gap-2 justify-center mb-3">
+                                        {result.dice.map((die, index) => (
+                                            <div
+                                                key={index}
+                                                className={`w-10 h-10 rounded-sm flex items-center justify-center font-mono text-lg font-bold transition-all ${
+                                                    die >= 8
+                                                        ? "bg-teal-900/50 border border-teal-500/50 text-teal-300"
+                                                        : die === 1 && result.is_dramatic_failure
+                                                        ? "bg-rose-900/50 border border-rose-500/50 text-rose-300"
+                                                        : "bg-zinc-800 border border-zinc-700 text-zinc-400"
+                                                }`}
+                                                style={{ animationDelay: `${index * 50}ms` }}
+                                                data-testid={`die-${index}`}
+                                            >
+                                                {die}
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div className="text-center">
+                                        <p
+                                            className={`font-heading text-xl ${
+                                                result.is_dramatic_failure
+                                                    ? "text-rose-400"
+                                                    : result.is_exceptional
+                                                    ? "text-teal-400"
+                                                    : result.successes > 0
+                                                    ? "text-zinc-200"
+                                                    : "text-zinc-500"
+                                            }`}
+                                        >
+                                            {result.successes} {result.successes === 1 ? "Success" : "Successes"}
+                                        </p>
+                                        <p className="text-xs text-zinc-500 mt-1">{result.description}</p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Paradox Roll Button */}
+                            {pendingParadox && result && !isRolling && (
+                                <Button
+                                    onClick={rollParadox}
+                                    className="w-full h-10 bg-red-900/50 hover:bg-red-800/50 border border-red-500/50 text-red-300"
+                                    data-testid="roll-paradox-btn"
+                                >
+                                    <Zap className="w-4 h-4 mr-2" />
+                                    Roll Paradox ({pendingParadox.chance ? "Chance Die" : `${pendingParadox.pool} dice`})
+                                </Button>
+                            )}
+                        </>
                     )}
                 </div>
             )}

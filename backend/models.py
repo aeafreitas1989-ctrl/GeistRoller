@@ -239,6 +239,14 @@ class Character(BaseModel):
     aspiration_long: str = ""
     aspiration_burden: str = ""
     notes: str = ""
+    scene_tracker: Dict[str, str] = Field(default_factory=lambda: {
+        "date": "",
+        "time": "",
+        "temperature": "15",
+        "cloud_cover": "clear",
+        "precipitation": "dry",
+        "wind": "calm",
+    })
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     updated_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
@@ -318,7 +326,7 @@ class CharacterUpdate(BaseModel):
     aspiration_long: Optional[str] = None
     aspiration_burden: Optional[str] = None
     notes: Optional[str] = None
-
+    scene_tracker: Optional[Dict[str, str]] = None
 
 # Storyteller Settings Models
 

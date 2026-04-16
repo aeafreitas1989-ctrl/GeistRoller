@@ -6,11 +6,13 @@ import axios from "axios";
 import { toast } from "sonner";
 import { normalizeHealthBoxes, getHealthCounts, buildHealthBoxes } from "@/components/character/StatComponents";
 
+
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 export const StorytellerPage = () => {
     const [characters, setCharacters] = useState([]);
     const [activeCharacter, setActiveCharacter] = useState(null);
+    const [rollColumnCollapsed, setRollColumnCollapsed] = useState(true);
 
     const diceRollerRef = useRef(null);
     const lastCharacterStorageKey = "geistroller-last-active-character-id";
@@ -478,8 +480,16 @@ export const StorytellerPage = () => {
         <div className="app-container" data-testid="storyteller-page">
             {/* Main Content - Character and Cards always visible */}
             <div className="main-content overflow-y-auto">
-                <div className="w-full max-w-7xl mx-auto min-h-full flex flex-col">
-                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-0 flex-1 min-h-0">
+                <div
+                    className={`w-full ${rollColumnCollapsed ? "max-w-[1400px]" : "max-w-[1800px]"} mx-auto min-h-full flex flex-col`}
+                >
+                    <div
+                        className={`grid grid-cols-1 gap-0 flex-1 min-h-0 ${
+                            rollColumnCollapsed
+                                ? "xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"
+                                : "xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_380px]"
+                        }`}
+                    >
                         <section className="min-h-0 border-b xl:border-b-0 xl:border-r border-zinc-800">
                             <div className="h-full overflow-hidden">
                                 <CharacterPanel
@@ -529,12 +539,25 @@ export const StorytellerPage = () => {
                                 />
                             </div>
                         </section>
+                        <section
+                            className={
+                                rollColumnCollapsed
+                                    ? "hidden xl:block xl:fixed xl:right-0 xl:top-0 xl:bottom-0 xl:w-14 xl:z-40"
+                                    : "min-h-0 border-t xl:border-t-0 xl:border-l border-zinc-800"
+                            }
+                        >
+                            <div className="h-full overflow-hidden">
+                                <DiceRoller
+                                    ref={diceRollerRef}
+                                    embedded
+                                    collapsed={rollColumnCollapsed}
+                                    onToggleCollapsed={() => setRollColumnCollapsed((prev) => !prev)}
+                                />
+                            </div>
+                        </section>
                     </div>
                 </div>
             </div>
-
-            {/* Floating Dice Roller */}
-            <DiceRoller ref={diceRollerRef} />
         </div>
     );
 };

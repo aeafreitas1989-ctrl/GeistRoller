@@ -97,8 +97,7 @@ export const CharacterPanel = ({
     const [expandedSections, setExpandedSections] = useState({
         header: false,
         geist: false,
-        attributes: false,
-        skills: false,
+        attributesSkills: false,
         merits: false,
         inventory: false,
         sinEater: false,
@@ -295,7 +294,17 @@ export const CharacterPanel = ({
     };
 
     const toggleSection = (section) => {
-        setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }));
+        setExpandedSections((prev) => {
+            const shouldOpen = !prev[section];
+
+            if (!shouldOpen) {
+                return { ...prev, [section]: false };
+            }
+
+            return Object.fromEntries(
+                Object.keys(prev).map((key) => [key, key === section])
+            );
+        });
     };
 
     const handleChange = (field, value) => {
