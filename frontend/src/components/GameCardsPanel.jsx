@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { Pencil, X, Plus, Info, Flame, Skull, Droplets, Wind, Bug, Mountain, Sparkles, Ghost, Zap, ChevronDown, ChevronRight, ChevronUp, ChevronLeft, Star, BookOpen, CalendarDays, Clock3, Cloud, Thermometer } from "lucide-react";
+import { Pencil, X, Plus, Info, Flame, Skull, Droplets, Wind, Bug, Mountain, Sparkles, Ghost, Zap, ChevronDown, ChevronRight, ChevronUp, ChevronLeft, Star, BookOpen, CalendarDays, Clock3, Cloud, Thermometer, Leaf, Gauge } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -48,6 +48,7 @@ const DEFAULT_SCENE_TRACKER = {
     temperature: "15",
     cloud_cover: "clear",
     precipitation: "dry",
+    intensity: "none",
     wind: "calm",
 };
 
@@ -67,6 +68,14 @@ const PRECIPITATION_OPTIONS = [
     { value: "hail", label: "🧊 Hail" },
 ];
 
+const INTENSITY_OPTIONS = [
+    { value: "none", label: "– None" },
+    { value: "light", label: "• Light" },
+    { value: "moderate", label: "•• Moderate" },
+    { value: "heavy", label: "••• Heavy" },
+    { value: "violent", label: "‼ Violent" },
+];
+
 const WIND_OPTIONS = [
     { value: "calm", label: "≋ Calm" },
     { value: "light", label: "➝ Light" },
@@ -80,19 +89,43 @@ const getTemperatureValue = (value) => {
     return Number.isFinite(parsed) ? parsed : 15;
 };
 
+const getSeasonFromDate = (dateString) => {
+    if (!dateString) return "—";
+
+    const [, monthString] = dateString.split("-");
+    const month = Number(monthString);
+
+    if ([12, 1, 2].includes(month)) return "❄ Winter";
+    if ([3, 4, 5].includes(month)) return "🌱 Spring";
+    if ([6, 7, 8].includes(month)) return "☀ Summer";
+    return "🍂 Autumn";
+};
+
+const getSeasonColorClass = (dateString) => {
+    if (!dateString) return "border-zinc-800 bg-zinc-900/50 text-zinc-200";
+
+    const [, monthString] = dateString.split("-");
+    const month = Number(monthString);
+
+    if ([12, 1, 2].includes(month)) return "border-blue-400/40 bg-blue-950/70 text-blue-300";
+    if ([3, 4, 5].includes(month)) return "border-green-400/40 bg-green-950/50 text-green-300";
+    if ([6, 7, 8].includes(month)) return "border-yellow-400/50 bg-yellow-950/60 text-yellow-300";
+    return "border-red-400/40 bg-red-950/50 text-red-300";
+};
+
 const getTemperatureCondition = (temp) => {
-    if (temp < 0) return "Extreme Cold";
+    if (temp < 0) return "Freezing";
     if (temp <= 9) return "Cold";
     if (temp <= 14) return "Cool";
     if (temp <= 19) return "Mild";
     if (temp <= 29) return "Warm";
     if (temp <= 39) return "Hot";
-    return "Extreme Heat";
+    return "Harsh";
 };
 
 const getTemperatureColorClass = (temp) => {
-    if (temp < 0) return "border-cyan-400/40 bg-cyan-950/90 text-cyan-300";
-    if (temp <= 9) return "border-blue-400/40 bg-blue-950/70 text-blue-300";
+    if (temp < 0) return "border-blue-400/40 bg-blue-950/90 text-blue-300";
+    if (temp <= 9) return "border-cyan-400/40 bg-cyan-950/70 text-cyan-300";
     if (temp <= 14) return "border-teal-400/40 bg-teal-950/50 text-teal-300";
     if (temp <= 19) return "border-green-400/40 bg-green-950/50 text-green-300";
     if (temp <= 29) return "border-yellow-400/40 bg-yellow-950/50 text-yellow-300";
@@ -108,6 +141,94 @@ const getTemperatureIconClass = (temp) => {
     if (temp <= 29) return "text-yellow-300";
     if (temp <= 39) return "text-orange-300";
     return "text-red-300";
+};
+
+const WEATHER_CONDITION_ORIGIN = "Weather";
+
+const buildWeatherConditions = (tracker) => {
+    const temp = getTemperatureValue(tracker.temperature);
+    const precipitation = tracker.precipitation || "dry";
+    const intensity = tracker.intensity || "none";
+    const wind = tracker.wind || "calm";
+
+    const conditions = [];
+
+    if (temp < 0) {
+        conditions.push({
+            name: "Extreme Cold",
+            type: "tilt",
+            description: "Sub-zero weather exposure.",
+            resolution: "Leave the weather, gain shelter, or wait for conditions to improve.",
+            origin: WEATHER_CONDITION_ORIGIN,
+            weather_auto: true,
+        });
+    }
+
+    if (temp > 40) {
+        conditions.push({
+            name: "Extreme Heat",
+            type: "tilt",
+            description: "Dangerous heat exposure.",
+            resolution: "Leave the weather, gain shelter, cool down, or wait for conditions to improve.",
+            origin: WEATHER_CONDITION_ORIGIN,
+            weather_auto: true,
+        });
+    }
+
+    if (precipitation === "rain" && intensity === "heavy") {
+        conditions.push({
+            name: "Heavy Rain",
+            type: "tilt",
+            description: "Visibility and movement are impaired by heavy rainfall.",
+            resolution: "Leave the weather, gain shelter, or wait for conditions to improve.",
+            origin: WEATHER_CONDITION_ORIGIN,
+            weather_auto: true,
+        });
+    }
+
+    if (precipitation === "rain" && intensity === "violent") {
+        conditions.push({
+            name: "Heavy Rain",
+            type: "tilt",
+            description: "Visibility and movement are impaired by violent rainfall.",
+            resolution: "Leave the weather, gain shelter, or wait for conditions to improve.",
+            origin: WEATHER_CONDITION_ORIGIN,
+            weather_auto: true,
+        });
+
+        conditions.push({
+            name: "Flooded",
+            type: "tilt",
+            description: "Water has begun to flood the area and interfere with movement.",
+            resolution: "Leave the flooded area or wait for the water to recede.",
+            origin: WEATHER_CONDITION_ORIGIN,
+            weather_auto: true,
+        });
+    }
+
+    if (precipitation === "snow" && (intensity === "heavy" || intensity === "violent")) {
+        conditions.push({
+            name: "Blizzard",
+            type: "tilt",
+            description: "Snow and wind severely reduce visibility and mobility.",
+            resolution: "Leave the weather, gain shelter, or wait for conditions to improve.",
+            origin: WEATHER_CONDITION_ORIGIN,
+            weather_auto: true,
+        });
+    }
+
+    if (wind === "strong" || wind === "gale") {
+        conditions.push({
+            name: "Heavy Winds",
+            type: "tilt",
+            description: "Strong winds interfere with movement, perception, and exposed actions.",
+            resolution: "Leave the weather, gain shelter, or wait for conditions to improve.",
+            origin: WEATHER_CONDITION_ORIGIN,
+            weather_auto: true,
+        });
+    }
+
+    return conditions;
 };
 
 export const GameCardsPanel = ({ 
@@ -155,7 +276,6 @@ export const GameCardsPanel = ({
     const [openSections, setOpenSections] = useState({
         sessionSummary: false,
         caseTruth: false,
-        sceneTracker: false,
         conditions: false,
         haunts: false,
         keys: false,
@@ -358,18 +478,29 @@ export const GameCardsPanel = ({
             ...updates,
         };
 
+        if (nextTracker.precipitation === "dry") {
+            nextTracker.intensity = "none";
+        }
+
         setSceneTracker(nextTracker);
 
         if (!activeCharacter?.id || !onUpdateCharacter) return;
 
+        const currentConditions = activeCharacter?.conditions || [];
+        const preservedConditions = currentConditions.filter((condition) => !condition?.weather_auto);
+        const weatherConditions = buildWeatherConditions(nextTracker);
+
         await onUpdateCharacter({
             scene_tracker: nextTracker,
+            conditions: [...preservedConditions, ...weatherConditions],
         });
     };
 
     const hauntCount = Object.values(haunts).filter((v) => v > 0).length;
 
     const sceneTemperature = getTemperatureValue(sceneTracker.temperature);
+
+    const sceneSeason = getSeasonFromDate(sceneTracker.date);
 
     const characterKey = activeCharacter?.innate_key;
     const geistKey = activeCharacter?.geist_innate_key;
@@ -424,165 +555,187 @@ export const GameCardsPanel = ({
 
             <ScrollArea className="flex-1">
                 <div className="p-4 space-y-4">
-                    <Collapsible
-                        open={openSections.sceneTracker}
-                        onOpenChange={() => toggleSection("sceneTracker")}
-                        className="mb-4 bg-zinc-900/40 border border-zinc-800 rounded-sm"
-                    >
-                        <CollapsibleTrigger className="w-full flex items-center justify-between p-3">
-                            <div className="flex items-center gap-2">
-                                <CalendarDays className="w-4 h-4 text-sky-400" />
-                                <span className="text-xs font-mono uppercase tracking-wider text-sky-300">
-                                    Scene Clock
-                                </span>
+                    <div className="bg-zinc-900/40 border border-zinc-800 rounded-sm px-3 py-2.5 space-y-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-2">
+                            <div className="space-y-1">
+                                <label className="text-[10px] uppercase tracking-wider text-zinc-500 flex items-center gap-1">
+                                    <CalendarDays className="w-3 h-3" /> Date
+                                </label>
+                                <Input
+                                    type="date"
+                                    value={sceneTracker.date}
+                                    onChange={(e) => updateSceneTracker({ date: e.target.value })}
+                                    className="input-geist h-8"
+                                    data-testid="scene-date-input"
+                                />
                             </div>
-                            {openSections.sceneTracker ? (
-                                <ChevronDown className="w-4 h-4 text-sky-400" />
-                            ) : (
-                                <ChevronRight className="w-4 h-4 text-sky-400" />
-                            )}
-                        </CollapsibleTrigger>
 
-                        <CollapsibleContent className="px-3 pb-3 space-y-3">
-                            <div className="grid grid-cols-3 gap-2">
-                                <div className="space-y-1">
-                                    <label className="text-[10px] uppercase tracking-wider text-zinc-500 flex items-center gap-1">
-                                        <CalendarDays className="w-3 h-3" /> Date
-                                    </label>
-                                    <Input
-                                        type="date"
-                                        value={sceneTracker.date}
-                                        onChange={(e) => updateSceneTracker({ date: e.target.value })}
-                                        className="input-geist h-8"
-                                        data-testid="scene-date-input"
-                                    />
+                            <div className="space-y-1">
+                                <label className="text-[10px] uppercase tracking-wider text-zinc-500 flex items-center gap-1">
+                                    <Clock3 className="w-3 h-3" /> Time
+                                </label>
+                                <Input
+                                    type="time"
+                                    value={sceneTracker.time}
+                                    onChange={(e) => updateSceneTracker({ time: e.target.value })}
+                                    className="input-geist h-8"
+                                    data-testid="scene-time-input"
+                                />
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-[10px] uppercase tracking-wider text-zinc-500 flex items-center gap-1">
+                                    <Leaf className="w-3 h-3" />
+                                    Season
+                                </label>
+
+                                <div
+                                    className={`h-8 rounded-sm border flex items-center justify-center text-xs font-medium ${getSeasonColorClass(sceneTracker.date)}`}
+                                    data-testid="scene-season-display"
+                                >
+                                    {sceneSeason}
                                 </div>
+                            </div>
 
-                                <div className="space-y-1">
-                                    <label className="text-[10px] uppercase tracking-wider text-zinc-500 flex items-center gap-1">
-                                        <Clock3 className="w-3 h-3" /> Time
-                                    </label>
-                                    <Input
-                                        type="time"
-                                        value={sceneTracker.time}
-                                        onChange={(e) => updateSceneTracker({ time: e.target.value })}
-                                        className="input-geist h-8"
-                                        data-testid="scene-time-input"
-                                    />
-                                </div>
+                            <div className="space-y-1">
+                                <label className="text-[10px] uppercase tracking-wider text-zinc-500 flex items-center gap-1">
+                                    <Thermometer className={`w-3 h-3 ${getTemperatureIconClass(sceneTemperature)}`} />
+                                    Temp (°C)
+                                </label>
 
-                                <div className="space-y-1">
-                                    <label className="text-[10px] uppercase tracking-wider text-zinc-500 flex items-center gap-1">
-                                        <Thermometer className={`w-3 h-3 ${getTemperatureIconClass(sceneTemperature)}`} />
-                                        Temp
-                                    </label>
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-5 text-zinc-400 text-sm"
+                                        onClick={() =>
+                                            updateSceneTracker({
+                                                temperature: String(Math.max(-20, sceneTemperature - 1)),
+                                            })
+                                        }
+                                        disabled={sceneTemperature <= -20}
+                                        data-testid="scene-temperature-decrease"
+                                    >
+                                        <span className="leading-none">−</span>
+                                    </Button>
 
-                                    <div className="flex items-center gap-2">
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8 text-zinc-400"
-                                            onClick={() =>
-                                                updateSceneTracker({
-                                                    temperature: String(Math.max(-20, sceneTemperature - 1)),
-                                                })
-                                            }
-                                            disabled={sceneTemperature <= -20}
-                                            data-testid="scene-temperature-decrease"
-                                        >
-                                            -
-                                        </Button>
-
-                                        <div className={`flex-1 h-8 rounded-sm border flex items-center justify-center text-xs font-medium ${getTemperatureColorClass(sceneTemperature)}`}>
-                                            {sceneTemperature}°C · {getTemperatureCondition(sceneTemperature)}
-                                        </div>
-
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8 text-zinc-400"
-                                            onClick={() =>
-                                                updateSceneTracker({
-                                                    temperature: String(Math.min(45, sceneTemperature + 1)),
-                                                })
-                                            }
-                                            disabled={sceneTemperature >= 45}
-                                            data-testid="scene-temperature-increase"
-                                        >
-                                            +
-                                        </Button>
+                                    <div className={`flex-1 h-8 rounded-sm border flex items-center justify-center text-xs font-medium ${getTemperatureColorClass(sceneTemperature)}`}>
+                                        {sceneTemperature} · {getTemperatureCondition(sceneTemperature)}
                                     </div>
+
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-5 text-zinc-400 text-sm"
+                                        onClick={() =>
+                                            updateSceneTracker({
+                                                temperature: String(Math.min(45, sceneTemperature + 1)),
+                                            })
+                                        }
+                                        disabled={sceneTemperature >= 45}
+                                        data-testid="scene-temperature-increase"
+                                    >
+                                        <span className="leading-none">+</span>
+                                    </Button>
                                 </div>
                             </div>
+                        </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                                <div className="space-y-1">
-                                    <label className="text-[10px] uppercase tracking-wider text-zinc-500 flex items-center gap-1">
-                                        <Cloud className="w-3 h-3" /> Cloud
-                                    </label>
-                                    <Select
-                                        value={sceneTracker.cloud_cover}
-                                        onValueChange={(value) => updateSceneTracker({ cloud_cover: value })}
-                                    >
-                                        <SelectTrigger className="h-8 bg-zinc-900/50 border-zinc-800 text-xs" data-testid="scene-cloud-select">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent className="bg-zinc-900 border-zinc-800">
-                                            {CLOUD_COVER_OPTIONS.map((option) => (
-                                                <SelectItem key={option.value} value={option.value} className="text-xs text-zinc-200">
-                                                    {option.label}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-
-                                <div className="space-y-1">
-                                    <label className="text-[10px] uppercase tracking-wider text-zinc-500 flex items-center gap-1">
-                                        <Droplets className="w-3 h-3" /> Rain
-                                    </label>
-                                    <Select
-                                        value={sceneTracker.precipitation}
-                                        onValueChange={(value) => updateSceneTracker({ precipitation: value })}
-                                    >
-                                        <SelectTrigger className="h-8 bg-zinc-900/50 border-zinc-800 text-xs" data-testid="scene-precipitation-select">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent className="bg-zinc-900 border-zinc-800">
-                                            {PRECIPITATION_OPTIONS.map((option) => (
-                                                <SelectItem key={option.value} value={option.value} className="text-xs text-zinc-200">
-                                                    {option.label}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-
-                                <div className="space-y-1">
-                                    <label className="text-[10px] uppercase tracking-wider text-zinc-500 flex items-center gap-1">
-                                        <Wind className="w-3 h-3" /> Wind
-                                    </label>
-                                    <Select
-                                        value={sceneTracker.wind}
-                                        onValueChange={(value) => updateSceneTracker({ wind: value })}
-                                    >
-                                        <SelectTrigger className="h-8 bg-zinc-900/50 border-zinc-800 text-xs" data-testid="scene-wind-select">
-                                            <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent className="bg-zinc-900 border-zinc-800">
-                                            {WIND_OPTIONS.map((option) => (
-                                                <SelectItem key={option.value} value={option.value} className="text-xs text-zinc-200">
-                                                    {option.label}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-2">
+                            <div className="space-y-1">
+                                <label className="text-[10px] uppercase tracking-wider text-zinc-500 flex items-center gap-1">
+                                    <Cloud className="w-3 h-3" /> Cloud
+                                </label>
+                                <Select
+                                    value={sceneTracker.cloud_cover}
+                                    onValueChange={(value) => updateSceneTracker({ cloud_cover: value })}
+                                >
+                                    <SelectTrigger className="h-8 bg-zinc-900/50 border-zinc-800 text-xs" data-testid="scene-cloud-select">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-zinc-900 border-zinc-800">
+                                        {CLOUD_COVER_OPTIONS.map((option) => (
+                                            <SelectItem key={option.value} value={option.value} className="text-xs text-zinc-200">
+                                                {option.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
-                        </CollapsibleContent>
-                    </Collapsible>
+
+                            <div className="space-y-1">
+                                <label className="text-[10px] uppercase tracking-wider text-zinc-500 flex items-center gap-1">
+                                    <Droplets className="w-3 h-3" /> Precipitation
+                                </label>
+                                <Select
+                                    value={sceneTracker.precipitation}
+                                    onValueChange={(value) => updateSceneTracker({ precipitation: value })}
+                                >
+                                    <SelectTrigger className="h-8 bg-zinc-900/50 border-zinc-800 text-xs" data-testid="scene-precipitation-select">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-zinc-900 border-zinc-800">
+                                        {PRECIPITATION_OPTIONS.map((option) => (
+                                            <SelectItem key={option.value} value={option.value} className="text-xs text-zinc-200">
+                                                {option.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-[10px] uppercase tracking-wider text-zinc-500 flex items-center gap-1">
+                                    <Gauge className="w-3 h-3" />
+                                    Intensity
+                                </label>
+                                <Select
+                                    value={sceneTracker.precipitation === "dry" ? "none" : sceneTracker.intensity}
+                                    onValueChange={(value) => updateSceneTracker({ intensity: value })}
+                                    disabled={sceneTracker.precipitation === "dry"}
+                                >
+                                    <SelectTrigger
+                                        className={`h-8 bg-zinc-900/50 border-zinc-800 text-xs ${
+                                            sceneTracker.precipitation === "dry" ? "opacity-50" : ""
+                                        }`}
+                                        data-testid="scene-intensity-select"
+                                    >
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-zinc-900 border-zinc-800">
+                                        {INTENSITY_OPTIONS.map((option) => (
+                                            <SelectItem key={option.value} value={option.value} className="text-xs text-zinc-200">
+                                                {option.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-[10px] uppercase tracking-wider text-zinc-500 flex items-center gap-1">
+                                    <Wind className="w-3 h-3" /> Wind
+                                </label>
+                                <Select
+                                    value={sceneTracker.wind}
+                                    onValueChange={(value) => updateSceneTracker({ wind: value })}
+                                >
+                                    <SelectTrigger className="h-8 bg-zinc-900/50 border-zinc-800 text-xs" data-testid="scene-wind-select">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-zinc-900 border-zinc-800">
+                                        {WIND_OPTIONS.map((option) => (
+                                            <SelectItem key={option.value} value={option.value} className="text-xs text-zinc-200">
+                                                {option.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                    </div>
                         <Collapsible
                             open={openSections.combat}
                             onOpenChange={() => toggleSection("combat")}

@@ -242,9 +242,11 @@ class Character(BaseModel):
     scene_tracker: Dict[str, str] = Field(default_factory=lambda: {
         "date": "",
         "time": "",
+        "season": "autumn",
         "temperature": "15",
         "cloud_cover": "clear",
         "precipitation": "dry",
+        "intensity": "none",
         "wind": "calm",
     })
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
