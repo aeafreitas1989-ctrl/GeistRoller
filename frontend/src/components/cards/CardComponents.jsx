@@ -707,6 +707,7 @@ export const CombatTrackerCard = ({
     patternRestorationDisabled,
     isMage,
     onEndTurn,
+    onSleep,
 }) => {
     const [currentDefense, setCurrentDefense] = useState(normalDefense);
     const [initiativeRoll, setInitiativeRoll] = useState(null);
@@ -726,6 +727,8 @@ export const CombatTrackerCard = ({
     const hasGiant = meritsList.some((m) => (m?.name || "") === "Giant");
     const hasSmallFramed = meritsList.some((m) => (m?.name || "") === "Small-Framed");
     const size = 5 + (hasGiant ? 1 : 0) + (hasSmallFramed ? -1 : 0);
+    const currentWillpower = activeCharacter?.willpower || 0;
+    const currentMana = activeCharacter?.mana || 0;
 
     const equippedArmor =
         (activeCharacter?.inventory_items || []).find((it) => it?.type === "armor" && !!it?.equipped) || null;
@@ -965,12 +968,28 @@ export const CombatTrackerCard = ({
                     </div>
                 </div>
 
-                <div className="rounded-sm border p-2 bg-zinc-900/30 border-zinc-800 text-xs">
-                    <div className="flex items-center justify-between">
-                        <span className="text-zinc-500">
-                            {armorSourceLabel ? `Armor (${armorSourceLabel})` : "Armor"}
-                        </span>
-                        <span className="font-mono text-teal-400">{armorGeneral}/{armorBallistic}</span>
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div className="rounded-sm border p-2 bg-zinc-900/30 border-zinc-800">
+                        <div className="flex items-center justify-between">
+                            <span className="text-zinc-500">
+                                {armorSourceLabel ? `Armor (${armorSourceLabel})` : "Armor"}
+                            </span>
+                            <span className="font-mono text-teal-400">{armorGeneral}/{armorBallistic}</span>
+                        </div>
+                    </div>
+
+                    <div className="rounded-sm border p-2 bg-zinc-900/30 border-zinc-800">
+                        <div className="flex items-center justify-between">
+                            <span className="text-zinc-500">Willpower</span>
+                            <span className="font-mono text-teal-400">{currentWillpower}</span>
+                        </div>
+                    </div>
+
+                    <div className="rounded-sm border p-2 bg-zinc-900/30 border-zinc-800">
+                        <div className="flex items-center justify-between">
+                            <span className="text-zinc-500">Mana</span>
+                            <span className="font-mono text-teal-400">{currentMana}</span>
+                        </div>
                     </div>
                 </div>
 
@@ -1267,25 +1286,6 @@ export const CombatTrackerCard = ({
                 <Button
                     size="sm"
                     className="w-full btn-secondary text-xs h-7"
-                    onClick={() => {
-                        setCurrentDefense(normalDefense);
-                        setTargetDefense("0");
-                        setAttackModifier("0");
-                        setIncomingDamage("1");
-                        setIncomingType("bashing");
-                        setIncomingSource("general");
-                        setSelectedWeaponKey("__unarmed__");
-                        setAttackMode("unarmed");
-                        rollInitiative();
-                    }}
-                    data-testid="combat-card-start-combat-btn"
-                >
-                    Start Combat
-                </Button>
-
-                <Button
-                    size="sm"
-                    className="w-full btn-secondary text-xs h-7"
                     onClick={async () => {
                         setCurrentDefense(normalDefense);
                         if (typeof onEndTurn === "function") {
@@ -1295,6 +1295,20 @@ export const CombatTrackerCard = ({
                     data-testid="combat-card-end-turn-btn"
                 >
                     End Turn
+                </Button>
+
+                <Button
+                    size="sm"
+                    className="w-full btn-secondary text-xs h-7"
+                    onClick={async () => {
+                        setCurrentDefense(normalDefense);
+                        if (typeof onSleep === "function") {
+                            await onSleep();
+                        }
+                    }}
+                    data-testid="combat-card-sleep-btn"
+                >
+                    Sleep
                 </Button>
             </div>
         </div>

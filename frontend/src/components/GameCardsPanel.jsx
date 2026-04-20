@@ -259,6 +259,7 @@ export const GameCardsPanel = ({
     onPatternRestoration,
     patternRestorationDisabled,
     onEndTurn,
+    onSleep,
 }) => {
     const [showAddCondition, setShowAddCondition] = useState(false);
     const [customConditionName, setCustomConditionName] = useState("");
@@ -775,6 +776,7 @@ export const GameCardsPanel = ({
                                     patternRestorationDisabled={patternRestorationDisabled}
                                     isMage={isMage}
                                     onEndTurn={onEndTurn}
+                                    onSleep={onSleep}
                                 />
                             </CollapsibleContent>
                         </Collapsible>

@@ -252,6 +252,28 @@ export const StorytellerPage = () => {
         }
     };
 
+    const handleCombatSleep = async () => {
+        if (!activeCharacter) return;
+
+        const counts = getHealthCounts(combatHealthBoxes);
+        counts.bashing = 0;
+
+        const updatedBoxes = buildHealthBoxes(counts, combatMaxHealth);
+        const filled = updatedBoxes.filter((state) => state !== "empty").length;
+
+        const resolve = activeCharacter?.attributes?.resolve || 1;
+        const composure = activeCharacter?.attributes?.composure || 1;
+        const willpowerModifier = activeCharacter?.willpower_max_modifier || 0;
+        const maxWillpower = Math.max(0, resolve + composure + willpowerModifier);
+        const currentWillpower = activeCharacter?.willpower || 0;
+
+        await updateCharacter({
+            health_boxes: updatedBoxes,
+            health: filled,
+            willpower: Math.min(maxWillpower, currentWillpower + 1),
+        });
+    };
+
     // Fetch sessions and campaigns on mount
     useEffect(() => {
         fetchCharacters();
@@ -536,6 +558,7 @@ export const StorytellerPage = () => {
                                     patternRestorationDisabled={patternRestorationDisabled}
                                     isMage={activeCharacter?.character_type === "mage"}
                                     onEndTurn={handleCombatEndTurn}
+                                    onSleep={handleCombatSleep}
                                 />
                             </div>
                         </section>
