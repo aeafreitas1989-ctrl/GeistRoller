@@ -61,6 +61,24 @@ const formatLabel = (str) => {
         .join(" ");
 };
 
+const formatOutcomeLine = (rollResult) => {
+    const successes = rollResult?.successes || 0;
+
+    if (rollResult?.is_dramatic_failure) {
+        return `${successes} Success${successes === 1 ? "" : "es"} = Dramatic Failure`;
+    }
+
+    if (rollResult?.is_exceptional) {
+        return `${successes} Success${successes === 1 ? "" : "es"} = Exceptional Success`;
+    }
+
+    if (successes > 0) {
+        return `${successes} Success${successes === 1 ? "" : "es"} = Success`;
+    }
+
+    return "0 Successes = Failure";
+};
+
 const HAUNT_BASE_PLASM_LABELS = {
     "The Boneyard": { unit: "area", label: "Area" },
     "The Caul": { unit: "charges", label: "Charges" },
@@ -163,6 +181,7 @@ export const DiceRollPopup = ({
     onAddCondition,
     onAwardBeat,
     onDiceRollResult,
+    onAddRecentRoll,
     hauntEnhancements = {},
 }) => {
     const [haunt, setHaunt] = useState(initialHaunt || HAUNTS[0]);
@@ -419,6 +438,20 @@ export const DiceRollPopup = ({
             if (onDiceRollResult) {
                 onDiceRollResult(chatMessage);
             }
+
+            const cleanRollDescription = rollDescription.replace(/\*\*/g, "");
+            const transcript = [
+                `Rolled ${cleanRollDescription} = ${poolTotal} dice [10!]`,
+                plasmLine.replace(/\*/g, ""),
+                formatOutcomeLine(patchedResult),
+                patchedResult.dice.join(" "),
+            ].join("\n");
+
+            onAddRecentRoll?.({
+                title: rollType === "ceremony" ? "Ceremony" : haunt,
+                transcript,
+                outcome: formatOutcomeLine(patchedResult),
+            });
 
             if (patchedResult.beat_awarded) {
                 await onAwardBeat();

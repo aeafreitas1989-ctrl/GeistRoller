@@ -30,9 +30,11 @@ export const DiceRoller = forwardRef(({ embedded = false, collapsed = false, onT
     const [lastRollConfig, setLastRollConfig] = useState(null);
     const [rollHistory, setRollHistory] = useState([]);
     const [rollSequence, setRollSequence] = useState([]);
+    const [historyToken, setHistoryToken] = useState(0);
 
     // External roll trigger
     const pendingRollRef = useRef(null);
+    const completedRollRef = useRef(null);
     const [triggerExternal, setTriggerExternal] = useState(0);
 
     const performRoll = useCallback(async (
@@ -56,6 +58,25 @@ export const DiceRoller = forwardRef(({ embedded = false, collapsed = false, onT
             await new Promise(resolve => setTimeout(resolve, 500));
             setResult(response.data);
 
+            completedRollRef.current = {
+                result: response.data,
+                config: options.summaryConfig || {
+                    pool: rollChance ? 1 : rollPool,
+                    again: parseInt(rollAgain),
+                    rote: rollRote,
+                    chance: rollChance,
+                    exceptional_target: rollExceptionalTarget || 5,
+                    label: null,
+                    dicePoolBreakdown: rollChance ? "Chance Die" : `${rollPool} dice`,
+                    spellSummary: "",
+                },
+                title:
+                    options.summaryConfig?.label ||
+                    options.summaryLabel ||
+                    "Roll",
+            };
+
+            setHistoryToken((prev) => prev + 1);
             if (options.summaryLabel) {
                 const entry = {
                     key: options.summaryKey || options.summaryLabel,
@@ -101,7 +122,10 @@ export const DiceRoller = forwardRef(({ embedded = false, collapsed = false, onT
         rollWithConfig: (config) => {
             pendingRollRef.current = config;
             setTriggerExternal(prev => prev + 1);
-        }
+        },
+        addHistoryEntry: (entry) => {
+            addHistoryEntry(entry);
+        },
     }));
 
     useEffect(() => {
@@ -186,7 +210,7 @@ export const DiceRoller = forwardRef(({ embedded = false, collapsed = false, onT
         setExceptionalTarget(5);
         setRollSequence([]);
 
-        setLastRollConfig({
+        const manualConfig = {
             pool,
             again: parseInt(again),
             rote,
@@ -195,9 +219,13 @@ export const DiceRoller = forwardRef(({ embedded = false, collapsed = false, onT
             label: null,
             dicePoolBreakdown: chance ? "Chance Die" : `${pool} dice`,
             spellSummary: "",
-        });
+        };
 
-        performRoll(pool, parseInt(again), rote, chance, 5);
+        setLastRollConfig(manualConfig);
+
+        performRoll(pool, parseInt(again), rote, chance, 5, {
+            summaryConfig: manualConfig,
+        });
     };
 
     const formatOutcomeLine = (rollResult) => {
@@ -282,6 +310,28 @@ export const DiceRoller = forwardRef(({ embedded = false, collapsed = false, onT
             )
             .join("\n");
     };
+
+    const copyText = async (text, successMessage = "Copied") => {
+        try {
+            await navigator.clipboard.writeText(text);
+            toast.success(successMessage);
+        } catch {
+            toast.error("Failed to copy");
+        }
+    };
+
+    const addHistoryEntry = useCallback((entry) => {
+        if (!entry?.transcript) return;
+
+        const nextEntry = {
+            id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            title: entry.title || "Roll",
+            transcript: entry.transcript,
+            outcome: entry.outcome || "",
+        };
+
+        setRollHistory((prev) => [nextEntry, ...prev].slice(0, 20));
+    }, []);
 
     const formatTranscriptFromConfig = (rollResult, config = {}) => {
         if (!rollResult) return "";
@@ -391,23 +441,22 @@ export const DiceRoller = forwardRef(({ embedded = false, collapsed = false, onT
     const visible = embedded || isOpen;
 
     useEffect(() => {
-        if (!result || !formattedRollTranscript) return;
+        if (historyToken === 0 || !completedRollRef.current) return;
+
+        const { result: completedResult, config: completedConfig, title } = completedRollRef.current;
+        const transcript = formatTranscriptFromConfig(completedResult, completedConfig || {});
+
+        if (!transcript) return;
 
         const nextEntry = {
             id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-            title: rollLabel || lastRollConfig?.label || "Roll",
-            transcript: formattedRollTranscript,
-            outcome: formatOutcomeLine(result),
+            title: title || completedConfig?.label || "Roll",
+            transcript,
+            outcome: formatOutcomeLine(completedResult),
         };
 
-        setRollHistory((prev) => {
-            if (prev[0]?.transcript === formattedRollTranscript) {
-                return prev;
-            }
-
-            return [nextEntry, ...prev].slice(0, 12);
-        });
-    }, [result, formattedRollTranscript, rollLabel, lastRollConfig]);
+        setRollHistory((prev) => [nextEntry, ...prev].slice(0, 20));
+    }, [historyToken]);
 
     if (!visible) {
         return null;
@@ -519,9 +568,22 @@ export const DiceRoller = forwardRef(({ embedded = false, collapsed = false, onT
                                 <div className="space-y-2 max-h-[72vh] overflow-y-auto pr-1">
                                     {rollHistory.map((entry) => (
                                         <div key={entry.id} className="rounded-sm border border-zinc-800 bg-zinc-900/50 p-2 space-y-1">
-                                            <p className="text-[11px] uppercase text-teal-400">{entry.title}</p>
+                                            <div className="flex items-center justify-between gap-2">
+                                                <p className="text-[11px] uppercase text-teal-400">{entry.title}</p>
+                                                <Button
+                                                    type="button"
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    className="h-6 px-2 text-[10px] text-zinc-400 hover:text-zinc-200"
+                                                    onClick={() => copyText(entry.transcript, "Roll copied")}
+                                                    data-testid={`recent-roll-copy-${entry.id}`}
+                                                >
+                                                    Copy
+                                                </Button>
+                                            </div>
+
                                             <pre className="whitespace-pre-wrap break-words text-[11px] text-zinc-300 font-mono leading-relaxed">
-            {entry.transcript}
+                                    {entry.transcript}
                                             </pre>
                                         </div>
                                     ))}

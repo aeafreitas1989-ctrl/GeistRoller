@@ -64,19 +64,19 @@ const FACTOR_LEVELS = {
     },
     scale: {
         standard: [
-            { level: 1, label: "1 subject (Size 5) / 1m area" },
-            { level: 2, label: "2 subjects (Size 6) / small room" },
-            { level: 3, label: "4 subjects (Size 7) / large room" },
-            { level: 4, label: "8 subjects (Size 8) / single floor" },
-            { level: 5, label: "16 subjects (Size 9) / ballroom" },
+            { level: 1, targets: "1 subject (Size 5)", area: "1m area" },
+            { level: 2, targets: "2 subjects (Size 6)", area: "small room" },
+            { level: 3, targets: "4 subjects (Size 7)", area: "large room" },
+            { level: 4, targets: "8 subjects (Size 8)", area: "single floor" },
+            { level: 5, targets: "16 subjects (Size 9)", area: "ballroom" },
         ],
         advanced: [
-            { level: 1, label: "5 subjects (Size 5) / large house" },
-            { level: 2, label: "10 subjects (Size 10) / small warehouse" },
-            { level: 3, label: "20 subjects (Size 15) / supermarket" },
-            { level: 4, label: "40 subjects (Size 20) / shopping mall" },
-            { level: 5, label: "80 subjects (Size 25) / city block" },
-            { level: 6, label: "160 subjects (Size 30) / neighbourhood" },
+            { level: 1, targets: "5 subjects (Size 5)", area: "large house" },
+            { level: 2, targets: "10 subjects (Size 10)", area: "small warehouse" },
+            { level: 3, targets: "20 subjects (Size 15)", area: "supermarket" },
+            { level: 4, targets: "40 subjects (Size 20)", area: "shopping mall" },
+            { level: 5, targets: "80 subjects (Size 25)", area: "city block" },
+            { level: 6, targets: "160 subjects (Size 30)", area: "neighbourhood" },
         ]
     }
 };
@@ -132,6 +132,7 @@ export const SpellcastingPopup = ({
     const [matterDurationMana, setMatterDurationMana] = useState(false);
     const [specialRangeMode, setSpecialRangeMode] = useState("none"); // none | space | time
     const [sympatheticWithstand, setSympatheticWithstand] = useState(0);
+    const [scaleMode, setScaleMode] = useState("targets"); // targets | area
 
     // Reset when popup opens
     useEffect(() => {
@@ -163,6 +164,7 @@ export const SpellcastingPopup = ({
             setMatterDurationMana(false);
             setSpecialRangeMode("none");
             setSympatheticWithstand(0);
+            setScaleMode("targets");
         }
     }, [isOpen, arcanum, initialPractice, defaultPrimaryFactor]);
 
@@ -350,25 +352,22 @@ export const SpellcastingPopup = ({
         }
 
         if (factorName === "range") {
-            if (specialRangeMode === "space") {
-                return `Sympathetic Range (Withstand ${sympatheticWithstand})`;
-            }
-
-            if (specialRangeMode === "time") {
-                return `Sensory Range (Sympathetic Time, Withstand ${sympatheticWithstand})`;
-            }
-
             return factor.advanced ? "Sensory Range" : "Touch Range / Self";
         }
 
         const levels = FACTOR_LEVELS[factorName]?.[factor.advanced ? "advanced" : "standard"];
-        const effectiveLevel = factorName === "duration" ? getDisplayedDurationLevel() : factor.level;
-        const baseDescription = levels?.[effectiveLevel - 1]?.label || "";
+        const levelData = levels?.[factor.level - 1];
 
         if (factorName === "scale") {
-            return `up to ${baseDescription}`;
+            const scaleDescription =
+                scaleMode === "area"
+                    ? levelData?.area || ""
+                    : levelData?.targets || "";
+
+            return `up to ${scaleDescription}`;
         }
 
+        const baseDescription = levelData?.label || "";
         return baseDescription;
     };
 
@@ -1000,7 +999,7 @@ export const SpellcastingPopup = ({
                     {/* Spell Factors */}
                     <div className="space-y-1">
                         <p className="text-xs text-zinc-500 uppercase">Spell Factors</p>
-                        <div className="grid grid-cols-[130px,60px,60px,60px,1fr] gap-2 text-[10px] text-zinc-500 uppercase px-2">
+                        className="grid grid-cols-[20px_170px_50px_50px_50px_1fr] gap-1.5 items-center p-2 bg-zinc-800/30 rounded text-sm"
                             <span>Factor</span>
                             <span className="text-center">Std</span>
                             <span className="text-center">Adv</span>
@@ -1012,6 +1011,48 @@ export const SpellcastingPopup = ({
                         {renderFactorRow("potency", "Potency", true)}
                         {renderFactorRow("duration", "Duration", true)}
                         {renderFactorRow("scale", "Scale", true)}
+
+                        <div className="mt-2 p-2 bg-zinc-800/30 rounded space-y-1.5">
+                            <div className="flex items-center justify-between gap-3">
+                                <div>
+                                    <p className="text-xs text-zinc-500 uppercase">Scale Mode</p>
+                                    <p className="text-[11px] text-zinc-600">
+                                        Choose whether Scale applies to Targets or Area
+                                    </p>
+                                </div>
+
+                                <div
+                                    className="inline-flex rounded-md border border-zinc-700 bg-zinc-900/50 p-1"
+                                    data-testid="scale-mode-toggle"
+                                >
+                                    <button
+                                        type="button"
+                                        onClick={() => setScaleMode("targets")}
+                                        className={`px-3 py-1 text-xs rounded transition-all ${
+                                            scaleMode === "targets"
+                                                ? "bg-teal-600 text-white"
+                                                : "text-zinc-400 hover:text-zinc-200"
+                                        }`}
+                                        data-testid="scale-mode-targets"
+                                    >
+                                        Targets
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => setScaleMode("area")}
+                                        className={`px-3 py-1.5 text-xs rounded transition-all ${
+                                            scaleMode === "area"
+                                                ? "bg-teal-600 text-white"
+                                                : "text-zinc-400 hover:text-zinc-200"
+                                        }`}
+                                        data-testid="scale-mode-area"
+                                    >
+                                        Area
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     {/* Yantras Section */}
@@ -1367,6 +1408,5 @@ export const SpellcastingPopup = ({
                     </Button>
                 </div>
             </div>
-        </div>
     );
 };

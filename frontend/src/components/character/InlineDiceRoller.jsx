@@ -72,6 +72,7 @@ export const InlineDiceRoller = ({
     onSpendPlasm,
     onAddCondition,
     onDiceRollResult,
+    onAddRecentRoll,
     geistRank = 1,
     woundPenalty = 0,
     currentPlasm = 0,
@@ -376,6 +377,24 @@ export const InlineDiceRoller = ({
 
     const effectivePool = isComputedChanceDie ? 1 : poolTotal;
 
+    const formatOutcomeLine = (rollResult) => {
+        const successes = rollResult?.successes || 0;
+
+        if (rollResult?.is_dramatic_failure) {
+            return `${successes} Success${successes === 1 ? "" : "es"} = Dramatic Failure`;
+        }
+
+        if (rollResult?.is_exceptional) {
+            return `${successes} Success${successes === 1 ? "" : "es"} = Exceptional Success`;
+        }
+
+        if (successes > 0) {
+            return `${successes} Success${successes === 1 ? "" : "es"} = Success`;
+        }
+
+        return "0 Successes = Failure";
+    };
+
     useEffect(() => {
         if (brokenConditionActive) {
             setSpendWillpower(false);
@@ -503,10 +522,23 @@ export const InlineDiceRoller = ({
             // Send to chat
             const diceStr = response.data.dice.join(", ");
             const chatMessage = `${resultEmoji} **Dice Roll:** ${rollDescription}\n*Pool:* ${poolTotal} dice → [${diceStr}]\n*Result:* ${resultType}`;
-            
+
             if (onDiceRollResult) {
                 onDiceRollResult(chatMessage);
             }
+
+            const cleanRollDescription = rollDescription.replace(/\*\*/g, "");
+            const transcript = [
+                `Rolled ${cleanRollDescription} = ${effectivePool} ${effectivePool === 1 ? "die" : "dice"} [${isComputedChanceDie ? "Chance" : `${displayedAgainRule}!`}]`,
+                formatOutcomeLine(response.data),
+                response.data.dice.join(" "),
+            ].join("\n");
+
+            onAddRecentRoll?.({
+                title: cleanRollDescription,
+                transcript,
+                outcome: formatOutcomeLine(response.data),
+            });
 
             if (response.data.beat_awarded) {
                 await onAwardBeat();

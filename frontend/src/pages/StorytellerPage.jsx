@@ -21,6 +21,10 @@ export const StorytellerPage = () => {
         diceRollerRef.current?.rollWithConfig(config);
     };
 
+    const addRecentRoll = (entry) => {
+        diceRollerRef.current?.addHistoryEntry(entry);
+    };
+
 
     const applyIncomingCombatDamage = async ({ amount, damageType, sourceProfile }) => {
         if (!activeCharacter || !amount || amount <= 0) return;
@@ -522,6 +526,7 @@ export const StorytellerPage = () => {
                                     onUpdateCharacter={updateCharacter}
                                     onDeleteCharacter={deleteCharacter}
                                     onTriggerDiceRoll={triggerDiceRoll}
+                                    onAddRecentRoll={addRecentRoll}
                                     onCreateActiveSpell={addActiveSpell}
                                     onImportCharacter={importCharacter}
                                 />

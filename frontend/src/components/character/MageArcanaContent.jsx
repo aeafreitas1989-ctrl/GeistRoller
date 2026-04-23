@@ -6,6 +6,19 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { ARCANA, MAGE_ATTAINMENTS, MAGE_PATHS, PATH_ARCANA, ORDER_ROTE_SKILLS, ARCANA_PRACTICES, SKILL_LIST } from "../../data/character-data";
 import { StatDots, formatLabel } from "./StatComponents";
 
+const getPracticesForDots = (dots = 1) => {
+    const cappedDots = Math.max(1, dots || 1);
+    const practices = [];
+
+    for (let i = 1; i <= cappedDots; i += 1) {
+        if (ARCANA_PRACTICES[i]) {
+            practices.push(...ARCANA_PRACTICES[i]);
+        }
+    }
+
+    return [...new Set(practices)];
+};
+
 export const MageArcanaContent = ({
     getValue, getNestedValue, handleChange, handleNestedChange,
     openSpellcastingPopup, onTriggerDiceRoll, onActivateMageEffect,
@@ -121,7 +134,7 @@ export const MageArcanaContent = ({
                         size="sm" 
                         onClick={() => {
                             const rotes = getValue("rotes") || [];
-                            handleChange("rotes", [...rotes, { spell: "", arcanum: "Death", dots: 1, skill: "occult" }]);
+                            handleChange("rotes", [...rotes, { spell: "", arcanum: "Death", dots: 1, practice: getPracticesForDots(1)[0] || "", skill: "occult" }]);
                         }} 
                         className="h-5 px-2 text-[10px] btn-secondary" 
                         data-testid="add-rote-btn"
@@ -136,6 +149,8 @@ export const MageArcanaContent = ({
                         (getValue("rotes") || []).map((rote, index) => {
                             const currentOrder = getValue("order");
                             const roteIsOrderSkill = currentOrder && (ORDER_ROTE_SKILLS[currentOrder] || []).includes(rote.skill);
+                            const rotePracticeOptions = getPracticesForDots(rote.dots || 1);
+                            const rotePractice = rote.practice || rotePracticeOptions[0] || "";
                             return (
                             <div key={index} className="flex items-center gap-1.5 p-1.5 bg-zinc-900/30 border border-zinc-800 rounded-sm">
                                 <Input
@@ -161,7 +176,44 @@ export const MageArcanaContent = ({
                                         {ARCANA.map(a => <SelectItem key={a} value={a} className="text-xs">{a}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
-                                <StatDots value={rote.dots || 1} max={5} onChange={(v) => { const rotes = [...(getValue("rotes") || [])]; rotes[index] = { ...rotes[index], dots: v }; handleChange("rotes", rotes); }} color="violet" size="small" testIdPrefix={`rote-${index}-dots`} />
+                                <StatDots
+                                    value={rote.dots || 1}
+                                    max={5}
+                                    onChange={(v) => {
+                                        const rotes = [...(getValue("rotes") || [])];
+                                        const nextPracticeOptions = getPracticesForDots(v);
+                                        const nextPractice = nextPracticeOptions.includes(rote.practice)
+                                            ? rote.practice
+                                            : (nextPracticeOptions[0] || "");
+
+                                        rotes[index] = {
+                                            ...rotes[index],
+                                            dots: v,
+                                            practice: nextPractice,
+                                        };
+
+                                        handleChange("rotes", rotes);
+                                    }}
+                                    color="violet"
+                                    size="small"
+                                    testIdPrefix={`rote-${index}-dots`}
+                                />
+                                <Select value={rotePractice} onValueChange={(v) => {
+                                    const rotes = [...(getValue("rotes") || [])];
+                                    rotes[index] = { ...rotes[index], practice: v };
+                                    handleChange("rotes", rotes);
+                                }}>
+                                    <SelectTrigger className="h-6 w-[110px] bg-zinc-900/50 border-zinc-800 text-[10px] shrink-0" data-testid={`rote-${index}-practice`}>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-zinc-900 border-zinc-800">
+                                        {rotePracticeOptions.map((practice) => (
+                                            <SelectItem key={practice} value={practice} className="text-xs">
+                                                {practice}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                                 <Select value={rote.skill || "occult"} onValueChange={(v) => {
                                     const rotes = [...(getValue("rotes") || [])];
                                     rotes[index] = { ...rotes[index], skill: v };
@@ -177,7 +229,7 @@ export const MageArcanaContent = ({
                                         })}
                                     </SelectContent>
                                 </Select>
-                                <Button variant="ghost" size="sm" onClick={() => openSpellcastingPopup(rote.arcanum, null, "rote", rote.skill)} className="h-6 px-1.5 text-[10px] text-violet-400 hover:text-violet-300 shrink-0" data-testid={`rote-${index}-cast`}>
+                                <Button variant="ghost" size="sm" onClick={() => openSpellcastingPopup(rote.arcanum, rotePractice, "rote", rote.skill)} className="h-6 px-1.5 text-[10px] text-violet-400 hover:text-violet-300 shrink-0" data-testid={`rote-${index}-cast`}>
                                     <Sparkles className="w-3 h-3" />
                                 </Button>
                                 <Button variant="ghost" size="sm" onClick={() => { const rotes = (getValue("rotes") || []).filter((_, i) => i !== index); handleChange("rotes", rotes); }} className="h-6 w-6 text-zinc-400 hover:text-red-400 shrink-0" data-testid={`rote-${index}-delete`}>
@@ -198,7 +250,7 @@ export const MageArcanaContent = ({
                         size="sm" 
                         onClick={() => {
                             const praxes = getValue("praxes") || [];
-                            handleChange("praxes", [...praxes, { spell: "", arcanum: "Death", dots: 1 }]);
+                            handleChange("praxes", [...praxes, { spell: "", arcanum: "Death", dots: 1, practice: getPracticesForDots(1)[0] || "", }]);
                         }} 
                         className="h-5 px-2 text-[10px] btn-secondary" 
                         data-testid="add-praxis-btn"
@@ -210,7 +262,11 @@ export const MageArcanaContent = ({
                     {(getValue("praxes") || []).length === 0 ? (
                         <p className="text-[10px] text-zinc-600 italic">No praxes learned</p>
                     ) : (
-                        (getValue("praxes") || []).map((praxis, index) => (
+                        (getValue("praxes") || []).map((praxis, index) => {
+                            const praxisPracticeOptions = getPracticesForDots(praxis.dots || 1);
+                            const praxisPractice = praxis.practice || praxisPracticeOptions[0] || "";
+
+                            return (
                             <div key={index} className="flex items-center gap-1.5 p-1.5 bg-zinc-900/30 border border-zinc-800 rounded-sm">
                                 <Input
                                     value={praxis.spell || ""}
@@ -235,16 +291,54 @@ export const MageArcanaContent = ({
                                         {ARCANA.map(a => <SelectItem key={a} value={a} className="text-xs">{a}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
-                                <StatDots value={praxis.dots || 1} max={5} onChange={(v) => { const praxes = [...(getValue("praxes") || [])]; praxes[index] = { ...praxes[index], dots: v }; handleChange("praxes", praxes); }} color="violet" size="small" testIdPrefix={`praxis-${index}-dots`} />
-                                <Button variant="ghost" size="sm" onClick={() => openSpellcastingPopup(praxis.arcanum, null, "praxis")} className="h-6 px-1.5 text-[10px] text-teal-400 hover:text-teal-300 shrink-0" data-testid={`praxis-${index}-cast`}>
+                                <StatDots
+                                    value={praxis.dots || 1}
+                                    max={5}
+                                    onChange={(v) => {
+                                        const praxes = [...(getValue("praxes") || [])];
+                                        const nextPracticeOptions = getPracticesForDots(v);
+                                        const nextPractice = nextPracticeOptions.includes(praxis.practice)
+                                            ? praxis.practice
+                                            : (nextPracticeOptions[0] || "");
+
+                                        praxes[index] = {
+                                            ...praxes[index],
+                                            dots: v,
+                                            practice: nextPractice,
+                                        };
+
+                                        handleChange("praxes", praxes);
+                                    }}
+                                    color="violet"
+                                    size="small"
+                                    testIdPrefix={`praxis-${index}-dots`}
+                                />
+                                <Select value={praxisPractice} onValueChange={(v) => {
+                                    const praxes = [...(getValue("praxes") || [])];
+                                    praxes[index] = { ...praxes[index], practice: v };
+                                    handleChange("praxes", praxes);
+                                }}>
+                                    <SelectTrigger className="h-6 w-[110px] bg-zinc-900/50 border-zinc-800 text-[10px] shrink-0" data-testid={`praxis-${index}-practice`}>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-zinc-900 border-zinc-800">
+                                        {praxisPracticeOptions.map((practice) => (
+                                            <SelectItem key={practice} value={practice} className="text-xs">
+                                                {practice}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <Button variant="ghost" size="sm" onClick={() => openSpellcastingPopup(praxis.arcanum, praxisPractice, "praxis")} className="h-6 px-1.5 text-[10px] text-teal-400 hover:text-teal-300 shrink-0" data-testid={`praxis-${index}-cast`}>
                                     <Sparkles className="w-3 h-3" />
                                 </Button>
                                 <Button variant="ghost" size="sm" onClick={() => { const praxes = (getValue("praxes") || []).filter((_, i) => i !== index); handleChange("praxes", praxes); }} className="h-6 w-6 text-zinc-400 hover:text-red-400 shrink-0" data-testid={`praxis-${index}-delete`}>
                                     <Trash2 className="w-3 h-3" />
                                 </Button>
                             </div>
-                        ))
-                    )}
+                        );
+                    })
+                )}
                 </div>
             </div>
 

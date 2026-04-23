@@ -92,6 +92,7 @@ export const CharacterPanel = ({
     onDeleteCharacter,
     onDiceRollResult,
     onTriggerDiceRoll,
+    onAddRecentRoll,
     onImportCharacter,
 }) => {
     const [expandedSections, setExpandedSections] = useState({
@@ -2057,6 +2058,7 @@ export const CharacterPanel = ({
                 onAddCondition={addConditionFromDiceRoller}
                 onAwardBeat={awardBeat}
                 onDiceRollResult={onDiceRollResult}
+                onAddRecentRoll={onAddRecentRoll}
                 hauntEnhancements={HAUNT_ENHANCEMENTS}
             />
 
@@ -2078,6 +2080,7 @@ export const CharacterPanel = ({
                         onSpendPlasm={spendPlasm}
                         onAddCondition={addConditionFromDiceRoller}
                         onDiceRollResult={onDiceRollResult}
+                        onAddRecentRoll={onAddRecentRoll}
                         geistRank={getValue("geist_rank") || 1}
                         woundPenalty={getValue("wound_penalty") || 0}
                         currentPlasm={getValue("plasm") || 0}
@@ -2165,7 +2168,7 @@ export const CharacterPanel = ({
                     currentWisdom={getValue("wisdom") || 7}
                     initialPractice={spellcastingPractice}
                     onCreateActiveSpell={addActiveSpell}
-                    activeSpellCount={(activeCharacter?.active_spells || []).length}
+                    activeSpellCount={(activeCharacter?.active_spells || []).filter((entry) => entry?.kind === "spell").length}
                     orderRoteSkills={isMage && getValue("order") ? ORDER_ROTE_SKILLS[getValue("order")] || [] : []}
                     spellType={spellcastingType}
                     roteSkillDots={spellcastingRoteSkill ? (getNestedValue("skills", spellcastingRoteSkill) || 0) : 0}
