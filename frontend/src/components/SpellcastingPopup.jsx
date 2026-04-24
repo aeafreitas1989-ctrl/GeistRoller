@@ -622,7 +622,7 @@ export const SpellcastingPopup = ({
             : 0;
 
         return (
-            <div key={factorName} className="grid grid-cols-[20px,170px,50px,50px,50px,1fr] gap-1.5 items-center p-2 bg-zinc-800/30 rounded text-sm">
+            <div key={factorName} className="grid grid-cols-[20px_170px_50px_50px_50px_1fr] gap-1.5 items-center p-2 bg-zinc-800/30 rounded text-sm">
                 {hasPrimary ? (
                     <Checkbox
                         checked={isSelectedPrimary}
@@ -999,7 +999,8 @@ export const SpellcastingPopup = ({
                     {/* Spell Factors */}
                     <div className="space-y-1">
                         <p className="text-xs text-zinc-500 uppercase">Spell Factors</p>
-                        className="grid grid-cols-[20px_170px_50px_50px_50px_1fr] gap-1.5 items-center p-2 bg-zinc-800/30 rounded text-sm"
+                        <div className="grid grid-cols-[20px_170px_50px_50px_50px_1fr] gap-1.5 items-center p-2 bg-zinc-800/30 rounded text-sm">
+                            <span />
                             <span>Factor</span>
                             <span className="text-center">Std</span>
                             <span className="text-center">Adv</span>
@@ -1408,5 +1409,6 @@ export const SpellcastingPopup = ({
                     </Button>
                 </div>
             </div>
+        </div>
     );
 };
