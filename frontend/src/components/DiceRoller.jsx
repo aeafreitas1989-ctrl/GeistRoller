@@ -249,20 +249,42 @@ export const DiceRoller = forwardRef(({ embedded = false, collapsed = false, onT
     const formatSuccessCount = (successes = 0) =>
         `${successes} Success${successes === 1 ? "" : "es"}`;
 
+    const buildContainmentTranscript = (paradoxResult, wisdomResult, paradoxConfig = {}, wisdomConfig = {}) => {
+        const paradoxSuccesses = paradoxResult?.successes || 0;
+        const wisdomSuccesses = wisdomResult?.successes || 0;
+        const negated = Math.min(paradoxSuccesses, wisdomSuccesses);
+        const remaining = Math.max(0, paradoxSuccesses - wisdomSuccesses);
+
+        const paradoxDice = paradoxConfig.chance ? "Chance Die" : `${paradoxConfig.pool || 1} dice`;
+        const wisdomDice = wisdomConfig.chance ? "Chance Die" : wisdomConfig.pool || 1;
+
+        return [
+            "-Contained Paradox-",
+            `Rolled Paradox (${paradoxDice}) vs. Wisdom ${wisdomDice}`,
+            `Successes: ${paradoxSuccesses} Paradox - ${wisdomSuccesses} Wisdom`,
+            `Result: ${negated} Paradox negated; ${negated} Bashing Damage`,
+            `Remaining Paradox: ${remaining}; ${remaining > 0 ? "Paradox Condition" : "No Paradox Condition"}`,
+        ].join("\n");
+    };
+
+    const buildReleaseTranscript = (paradoxResult, paradoxConfig = {}) => {
+        const paradoxSuccesses = paradoxResult?.successes || 0;
+        const paradoxDice = paradoxConfig.chance ? "Chance Die" : `${paradoxConfig.pool || 1} dice`;
+
+        return [
+            "-Released Paradox-",
+            `Rolled Paradox (${paradoxDice})`,
+            `${paradoxSuccesses} Success${paradoxSuccesses === 1 ? "" : "es"} = ${paradoxSuccesses} Paradox Reach`,
+        ].join("\n");
+    };
+
     const buildContainmentOutcomeLine = (paradoxResult, wisdomResult) => {
         const paradoxSuccesses = paradoxResult?.successes || 0;
         const wisdomSuccesses = wisdomResult?.successes || 0;
-
-        const cancelled = Math.min(paradoxSuccesses, wisdomSuccesses);
+        const negated = Math.min(paradoxSuccesses, wisdomSuccesses);
         const remaining = Math.max(0, paradoxSuccesses - wisdomSuccesses);
 
-        const outcomeParts = [`${cancelled} bashing damage`];
-
-        if (remaining > 0) {
-            outcomeParts.push("Paradox Taint");
-        }
-
-        return `Outcome: ${outcomeParts.join("; ")}`;
+        return `Result: ${negated} Paradox negated; ${negated} Bashing Damage; Remaining Paradox: ${remaining}; ${remaining > 0 ? "Paradox Condition" : "No Paradox Condition"}`;
     };
 
     const formatDiceRows = (rollResult) => {
@@ -365,64 +387,29 @@ export const DiceRoller = forwardRef(({ embedded = false, collapsed = false, onT
             const paradoxEntry = rollSequence.find((entry) => entry.key === "paradox");
             const wisdomEntry = rollSequence.find((entry) => entry.key === "wisdom");
             const spellEntry = rollSequence.find((entry) => entry.key === "spell");
-            const otherEntries = rollSequence.filter(
-                (entry) => !["paradox", "wisdom", "spell"].includes(entry.key)
-            );
 
-            const summaryLines = [];
+            const blocks = [];
 
             if (paradoxEntry && wisdomEntry) {
-                summaryLines.push(
-                    `Paradox: ${formatSuccessCount(paradoxEntry.result?.successes || 0)} - Wisdom: ${formatSuccessCount(wisdomEntry.result?.successes || 0)}`
+                blocks.push(
+                    buildContainmentTranscript(
+                        paradoxEntry.result,
+                        wisdomEntry.result,
+                        paradoxEntry.config || {},
+                        wisdomEntry.config || {}
+                    )
                 );
-                summaryLines.push(
-                    buildContainmentOutcomeLine(paradoxEntry.result, wisdomEntry.result)
-                );
+            } else if (paradoxEntry && spellEntry) {
+                blocks.push(buildReleaseTranscript(paradoxEntry.result, paradoxEntry.config || {}));
             } else if (paradoxEntry) {
-                summaryLines.push(`Paradox: ${formatOutcomeLine(paradoxEntry.result)}`);
+                blocks.push(formatTranscriptFromConfig(paradoxEntry.result, paradoxEntry.config));
             }
 
             if (spellEntry) {
-                if (summaryLines.length > 0) {
-                    summaryLines.push("");
-                }
-                summaryLines.push(`Spell: ${formatOutcomeLine(spellEntry.result)}`);
+                blocks.push(formatTranscriptFromConfig(spellEntry.result, spellEntry.config));
             }
 
-            otherEntries.forEach((entry) => {
-                if (summaryLines.length > 0) {
-                    summaryLines.push("");
-                }
-                summaryLines.push(`${entry.label}: ${formatOutcomeLine(entry.result)}`);
-            });
-
-            const detailBlocks = [];
-
-            if (paradoxEntry) {
-                detailBlocks.push(
-                    ["Paradox:", formatTranscriptFromConfig(paradoxEntry.result, paradoxEntry.config)].join("\n")
-                );
-            }
-
-            if (wisdomEntry) {
-                detailBlocks.push(
-                    ["Wisdom:", formatTranscriptFromConfig(wisdomEntry.result, wisdomEntry.config)].join("\n")
-                );
-            }
-
-            if (spellEntry) {
-                detailBlocks.push(
-                    ["Spell:", formatTranscriptFromConfig(spellEntry.result, spellEntry.config)].join("\n")
-                );
-            }
-
-            otherEntries.forEach((entry) => {
-                detailBlocks.push(
-                    [`${entry.label}:`, formatTranscriptFromConfig(entry.result, entry.config)].join("\n")
-                );
-            });
-
-            return [...summaryLines, "", ...detailBlocks].join("\n").trim();
+            return blocks.join("\n\n").trim();
         }
 
         if (!result) return "";
@@ -436,15 +423,42 @@ export const DiceRoller = forwardRef(({ embedded = false, collapsed = false, onT
                 label: rollLabel,
             }
         );
-    
-}, [rollSequence, result, lastRollConfig, pool, again, chance, rollLabel]);
+    }, [rollSequence, result, lastRollConfig, pool, again, chance, rollLabel]);
+
     const visible = embedded || isOpen;
 
     useEffect(() => {
         if (historyToken === 0 || !completedRollRef.current) return;
 
         const { result: completedResult, config: completedConfig, title } = completedRollRef.current;
-        const transcript = formatTranscriptFromConfig(completedResult, completedConfig || {});
+
+        if (completedConfig?.summaryKey === "paradox" || completedConfig?.summaryKey === "wisdom") {
+            return;
+        }
+
+        let transcript = formatTranscriptFromConfig(completedResult, completedConfig || {});
+
+        if (completedConfig?.summaryKey === "spell") {
+            const paradoxEntry = rollSequence.find((entry) => entry.key === "paradox");
+            const wisdomEntry = rollSequence.find((entry) => entry.key === "wisdom");
+
+            if (paradoxEntry && wisdomEntry) {
+                transcript = [
+                    buildContainmentTranscript(
+                        paradoxEntry.result,
+                        wisdomEntry.result,
+                        paradoxEntry.config || {},
+                        wisdomEntry.config || {}
+                    ),
+                    formatTranscriptFromConfig(completedResult, completedConfig || {}),
+                ].join("\n\n");
+            } else if (paradoxEntry) {
+                transcript = [
+                    buildReleaseTranscript(paradoxEntry.result, paradoxEntry.config || {}),
+                    formatTranscriptFromConfig(completedResult, completedConfig || {}),
+                ].join("\n\n");
+            }
+        }
 
         if (!transcript) return;
 
@@ -456,7 +470,7 @@ export const DiceRoller = forwardRef(({ embedded = false, collapsed = false, onT
         };
 
         setRollHistory((prev) => [nextEntry, ...prev].slice(0, 20));
-    }, [historyToken]);
+    }, [historyToken, rollSequence]);
 
     if (!visible) {
         return null;
