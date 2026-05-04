@@ -368,6 +368,20 @@ const MageSightCard = ({
                 mode === "Scrutiny"
                     ? `${targetLine}\nFocused Mage Sight${!scrutinyActive ? "; costs 1 Willpower to begin" : " (ongoing)"}. Opacity: ${opacityValue}. Successes: ${scrutinySuccesses}.`
                     : `${targetLine}\nActive Mage Sight Revelation. Opacity: ${opacityValue}.`,
+            onResult: mode === "Scrutiny" ? (result) => {
+                const rolled = result?.successes || 0;
+                if (rolled > 0) {
+                    setScrutinySuccesses((prev) => {
+                        const updated = prev + rolled;
+                        const currentOpacity = Number.parseInt(opacity || "0", 10) || 0;
+                        if (currentOpacity > 0 && updated >= currentOpacity) {
+                            setOpacity(String(currentOpacity - 1));
+                            return 0;
+                        }
+                        return updated;
+                    });
+                }
+            } : undefined,
         });
     };
 
