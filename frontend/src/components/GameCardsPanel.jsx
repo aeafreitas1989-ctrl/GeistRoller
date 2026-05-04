@@ -276,7 +276,8 @@ const MageSightCard = ({
     const [target, setTarget] = useState("");
     const [obsessionApplies, setObsessionApplies] = useState(false);
     const [scrutinyActive, setScrutinyActive] = useState(false);
-    const [scrutinySuccesses, setScrutinySuccesses] = useState(0);
+    const [scrutinyLayers, setScrutinyLayers] = useState([]);
+    // Each layer: { successes: number, target: number, complete: boolean }
 
     useEffect(() => {
         if (!activeArcana.includes(selectedArcanum) && activeArcana.length > 0) {
@@ -328,6 +329,37 @@ const MageSightCard = ({
         });
     };
 
+    const applyScrutinySuccesses = (rolled, layers, startingOpacity) => {
+        let updatedLayers = layers.map(l => ({ ...l }));
+        let remaining = rolled;
+
+        while (remaining > 0) {
+            let currentLayer = updatedLayers.find(l => !l.complete);
+            if (!currentLayer) {
+                const lastTarget = updatedLayers.length > 0 ? updatedLayers[updatedLayers.length - 1].target : startingOpacity;
+                const nextTarget = lastTarget - 1;
+                if (nextTarget <= 0) break;
+                currentLayer = { successes: 0, target: nextTarget, complete: false };
+                updatedLayers.push(currentLayer);
+            }
+            const needed = currentLayer.target - currentLayer.successes;
+            if (remaining >= needed) {
+                currentLayer.successes = currentLayer.target;
+                currentLayer.complete = true;
+                remaining -= needed;
+                // Auto-create next layer if there's a next level
+                const nextTarget = currentLayer.target - 1;
+                if (nextTarget > 0 && remaining === 0) {
+                    updatedLayers.push({ successes: 0, target: nextTarget, complete: false });
+                }
+            } else {
+                currentLayer.successes += remaining;
+                remaining = 0;
+            }
+        }
+        return updatedLayers;
+    };
+
     const rollMageSight = async (mode) => {
         const gnosis = activeCharacter?.gnosis || 1;
         const arcanumDots = activeCharacter?.arcana?.[selectedArcanum] || 0;
@@ -341,7 +373,7 @@ const MageSightCard = ({
                 willpower: Math.max(0, currentWillpower - 1),
             });
             setScrutinyActive(true);
-            setScrutinySuccesses(0);
+            setScrutinyLayers([{ successes: 0, target: opacityValue, complete: false }]);
         }
 
         const rawPool =
@@ -366,19 +398,14 @@ const MageSightCard = ({
                     : `Gnosis ${gnosis} + ${selectedArcanum} ${arcanumDots}${obsessionBonus ? " + Obsession 1" : ""}`,
             spellSummary:
                 mode === "Scrutiny"
-                    ? `${targetLine}\nFocused Mage Sight${!scrutinyActive ? "; costs 1 Willpower to begin" : " (ongoing)"}. Opacity: ${opacityValue}. Successes: ${scrutinySuccesses}.`
+                    ? `${targetLine}\nFocused Mage Sight${!scrutinyActive ? "; costs 1 Willpower to begin" : " (ongoing)"}. Opacity: ${opacityValue}.`
                     : `${targetLine}\nActive Mage Sight Revelation. Opacity: ${opacityValue}.`,
             onResult: mode === "Scrutiny" ? (result) => {
                 const rolled = result?.successes || 0;
                 if (rolled > 0) {
-                    setScrutinySuccesses((prev) => {
-                        const updated = prev + rolled;
-                        const currentOpacity = Number.parseInt(opacity || "0", 10) || 0;
-                        if (currentOpacity > 0 && updated >= currentOpacity) {
-                            setOpacity(String(currentOpacity - 1));
-                            return 0;
-                        }
-                        return updated;
+                    setScrutinyLayers((prev) => {
+                        const startingOpacity = prev.length > 0 ? prev[0].target : opacityValue;
+                        return applyScrutinySuccesses(rolled, prev, startingOpacity);
                     });
                 }
             } : undefined,
@@ -387,24 +414,21 @@ const MageSightCard = ({
 
     const addScrutinyManaSuccess = async () => {
         if (currentMana < 1) return;
-        const opacityValue = Number.parseInt(opacity || "0", 10) || 0;
-        const newSuccesses = scrutinySuccesses + 1;
-
         await onUpdateCharacter?.({ mana: Math.max(0, currentMana - 1) });
-
-        if (opacityValue > 0 && newSuccesses >= opacityValue) {
-            const newOpacity = opacityValue - 1;
-            setOpacity(String(newOpacity));
-            setScrutinySuccesses(0);
-        } else {
-            setScrutinySuccesses(newSuccesses);
-        }
+        setScrutinyLayers((prev) => {
+            const startingOpacity = prev.length > 0 ? prev[0].target : (Number.parseInt(opacity || "0", 10) || 0);
+            return applyScrutinySuccesses(1, prev, startingOpacity);
+        });
     };
 
     const endScrutiny = () => {
         setScrutinyActive(false);
-        setScrutinySuccesses(0);
+        setScrutinyLayers([]);
     };
+
+    const scrutinyFullyUnveiled = scrutinyLayers.length > 0 && scrutinyLayers.every(l => l.complete) && (scrutinyLayers[scrutinyLayers.length - 1].target <= 1);
+    const currentIncompleteLayer = scrutinyLayers.find(l => !l.complete);
+    const showManaButton = scrutinyActive && !scrutinyFullyUnveiled && currentIncompleteLayer && currentIncompleteLayer.successes > 0;
 
     return (
         <div className="bg-zinc-950 border border-blue-500/30 rounded-md p-3 space-y-3">
@@ -556,16 +580,18 @@ const MageSightCard = ({
                         <div className="p-2 rounded-sm bg-amber-950/30 border border-amber-500/30 space-y-2" data-testid="scrutiny-tracker">
                             <div className="flex items-center justify-between">
                                 <span className="text-[10px] text-amber-400 uppercase tracking-wider">Scrutiny Tracker</span>
-                                <span className="text-[10px] text-zinc-500">
-                                    Opacity: <span className="text-amber-300 font-mono">{Number.parseInt(opacity || "0", 10) || 0}</span>
-                                </span>
                             </div>
-                            <div className="flex items-center gap-3">
-                                <div className="flex items-center gap-1.5">
-                                    <span className="text-xs text-zinc-400">Successes:</span>
-                                    <span className="text-sm font-mono text-amber-300 font-medium" data-testid="scrutiny-successes">{scrutinySuccesses}</span>
-                                    <span className="text-xs text-zinc-600">/ {Number.parseInt(opacity || "0", 10) || 0}</span>
-                                </div>
+                            <div className="space-y-1">
+                                {scrutinyLayers.map((layer, i) => (
+                                    <div key={i} className="flex items-center gap-2">
+                                        <span className={`text-xs font-mono ${layer.complete ? "text-emerald-400" : "text-amber-300"}`} data-testid={`scrutiny-layer-${i}`}>
+                                            Successes: {layer.successes}/{layer.target}
+                                        </span>
+                                        {layer.complete && <span className="text-[10px] text-emerald-500">&#10003;</span>}
+                                    </div>
+                                ))}
+                            </div>
+                            {showManaButton && (
                                 <Button
                                     type="button"
                                     size="sm"
@@ -576,9 +602,9 @@ const MageSightCard = ({
                                 >
                                     +1 Success (1 Mana)
                                 </Button>
-                            </div>
-                            {(Number.parseInt(opacity || "0", 10) || 0) === 0 && (
-                                <p className="text-[10px] text-emerald-400">Opacity is 0 — mystery fully unveiled.</p>
+                            )}
+                            {scrutinyFullyUnveiled && (
+                                <p className="text-[10px] text-emerald-400">Mystery fully unveiled.</p>
                             )}
                         </div>
                     )}
