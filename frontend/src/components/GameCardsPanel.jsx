@@ -331,30 +331,20 @@ const MageSightCard = ({
 
     const applyScrutinySuccesses = (rolled, layers, startingOpacity) => {
         let updatedLayers = layers.map(l => ({ ...l }));
-        let remaining = rolled;
-
-        while (remaining > 0) {
-            let currentLayer = updatedLayers.find(l => !l.complete);
-            if (!currentLayer) {
-                const lastTarget = updatedLayers.length > 0 ? updatedLayers[updatedLayers.length - 1].target : startingOpacity;
-                const nextTarget = lastTarget - 1;
-                if (nextTarget <= 0) break;
-                currentLayer = { successes: 0, target: nextTarget, complete: false };
-                updatedLayers.push(currentLayer);
-            }
-            const needed = currentLayer.target - currentLayer.successes;
-            if (remaining >= needed) {
-                currentLayer.successes = currentLayer.target;
-                currentLayer.complete = true;
-                remaining -= needed;
-                // Auto-create next layer if there's a next level
-                const nextTarget = currentLayer.target - 1;
-                if (nextTarget > 0 && remaining === 0) {
-                    updatedLayers.push({ successes: 0, target: nextTarget, complete: false });
-                }
-            } else {
-                currentLayer.successes += remaining;
-                remaining = 0;
+        let currentLayer = updatedLayers.find(l => !l.complete);
+        if (!currentLayer) {
+            const lastTarget = updatedLayers.length > 0 ? updatedLayers[updatedLayers.length - 1].target : startingOpacity;
+            const nextTarget = lastTarget - 1;
+            if (nextTarget <= 0) return updatedLayers;
+            currentLayer = { successes: 0, target: nextTarget, complete: false };
+            updatedLayers.push(currentLayer);
+        }
+        currentLayer.successes = Math.min(currentLayer.successes + rolled, currentLayer.target);
+        if (currentLayer.successes >= currentLayer.target) {
+            currentLayer.complete = true;
+            const nextTarget = currentLayer.target - 1;
+            if (nextTarget > 0) {
+                updatedLayers.push({ successes: 0, target: nextTarget, complete: false });
             }
         }
         return updatedLayers;
