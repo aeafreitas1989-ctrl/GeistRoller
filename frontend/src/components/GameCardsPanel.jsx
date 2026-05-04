@@ -329,7 +329,7 @@ const MageSightCard = ({
         });
     };
 
-    const applyScrutinySuccesses = (rolled, layers, startingOpacity, setOpacityFn) => {
+    const applyScrutinySuccesses = (rolled, layers, startingOpacity) => {
         let updatedLayers = layers.map(l => ({ ...l }));
         let currentLayer = updatedLayers.find(l => !l.complete);
         if (!currentLayer) {
@@ -342,7 +342,6 @@ const MageSightCard = ({
         currentLayer.successes = Math.min(currentLayer.successes + rolled, currentLayer.target);
         if (currentLayer.successes >= currentLayer.target) {
             currentLayer.complete = true;
-            setOpacityFn((prev) => String(Math.max(0, (Number.parseInt(prev || "0", 10) || 0) - 1)));
             const nextTarget = currentLayer.target - 1;
             if (nextTarget > 0) {
                 updatedLayers.push({ successes: 0, target: nextTarget, complete: false });
@@ -350,6 +349,8 @@ const MageSightCard = ({
         }
         return updatedLayers;
     };
+
+    const countCompletedLayers = (layers) => layers.filter(l => l.complete).length;
 
     const rollMageSight = async (mode) => {
         const gnosis = activeCharacter?.gnosis || 1;
@@ -390,14 +391,18 @@ const MageSightCard = ({
             spellSummary:
                 mode === "Scrutiny"
                     ? `${targetLine}\nFocused Mage Sight${!scrutinyActive ? "; costs 1 Willpower to begin" : " (ongoing)"}. Opacity: ${opacityValue}.`
-                    : `${targetLine}\nActive Mage Sight Revelation. Opacity: ${opacityValue}.`,
+                    : `${targetLine}\nFocused Mage Sight Revelation. Opacity: ${opacityValue}.`,
             onResult: mode === "Scrutiny" ? (result) => {
                 const rolled = result?.successes || 0;
                 if (rolled > 0) {
-                    setScrutinyLayers((prev) => {
-                        const startingOpacity = prev.length > 0 ? prev[0].target : opacityValue;
-                        return applyScrutinySuccesses(rolled, prev, startingOpacity, setOpacity);
-                    });
+                    const prevCompleted = countCompletedLayers(scrutinyLayers);
+                    const startingOpacity = scrutinyLayers.length > 0 ? scrutinyLayers[0].target : opacityValue;
+                    const newLayers = applyScrutinySuccesses(rolled, scrutinyLayers, startingOpacity);
+                    const newCompleted = countCompletedLayers(newLayers);
+                    if (newCompleted > prevCompleted) {
+                        setOpacity((prev) => String(Math.max(0, (Number.parseInt(prev || "0", 10) || 0) - (newCompleted - prevCompleted))));
+                    }
+                    setScrutinyLayers(newLayers);
                 }
             } : undefined,
         });
@@ -406,10 +411,14 @@ const MageSightCard = ({
     const addScrutinyManaSuccess = async () => {
         if (currentMana < 1) return;
         await onUpdateCharacter?.({ mana: Math.max(0, currentMana - 1) });
-        setScrutinyLayers((prev) => {
-            const startingOpacity = prev.length > 0 ? prev[0].target : (Number.parseInt(opacity || "0", 10) || 0);
-            return applyScrutinySuccesses(1, prev, startingOpacity, setOpacity);
-        });
+        const prevCompleted = countCompletedLayers(scrutinyLayers);
+        const startingOpacity = scrutinyLayers.length > 0 ? scrutinyLayers[0].target : (Number.parseInt(opacity || "0", 10) || 0);
+        const newLayers = applyScrutinySuccesses(1, scrutinyLayers, startingOpacity);
+        const newCompleted = countCompletedLayers(newLayers);
+        if (newCompleted > prevCompleted) {
+            setOpacity((prev) => String(Math.max(0, (Number.parseInt(prev || "0", 10) || 0) - (newCompleted - prevCompleted))));
+        }
+        setScrutinyLayers(newLayers);
     };
 
     const endScrutiny = () => {
