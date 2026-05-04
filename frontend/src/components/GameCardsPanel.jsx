@@ -329,7 +329,7 @@ const MageSightCard = ({
         });
     };
 
-    const applyScrutinySuccesses = (rolled, layers, startingOpacity) => {
+    const applyScrutinySuccesses = (rolled, layers, startingOpacity, setOpacityFn) => {
         let updatedLayers = layers.map(l => ({ ...l }));
         let currentLayer = updatedLayers.find(l => !l.complete);
         if (!currentLayer) {
@@ -342,6 +342,7 @@ const MageSightCard = ({
         currentLayer.successes = Math.min(currentLayer.successes + rolled, currentLayer.target);
         if (currentLayer.successes >= currentLayer.target) {
             currentLayer.complete = true;
+            setOpacityFn((prev) => String(Math.max(0, (Number.parseInt(prev || "0", 10) || 0) - 1)));
             const nextTarget = currentLayer.target - 1;
             if (nextTarget > 0) {
                 updatedLayers.push({ successes: 0, target: nextTarget, complete: false });
@@ -395,7 +396,7 @@ const MageSightCard = ({
                 if (rolled > 0) {
                     setScrutinyLayers((prev) => {
                         const startingOpacity = prev.length > 0 ? prev[0].target : opacityValue;
-                        return applyScrutinySuccesses(rolled, prev, startingOpacity);
+                        return applyScrutinySuccesses(rolled, prev, startingOpacity, setOpacity);
                     });
                 }
             } : undefined,
@@ -407,7 +408,7 @@ const MageSightCard = ({
         await onUpdateCharacter?.({ mana: Math.max(0, currentMana - 1) });
         setScrutinyLayers((prev) => {
             const startingOpacity = prev.length > 0 ? prev[0].target : (Number.parseInt(opacity || "0", 10) || 0);
-            return applyScrutinySuccesses(1, prev, startingOpacity);
+            return applyScrutinySuccesses(1, prev, startingOpacity, setOpacity);
         });
     };
 
