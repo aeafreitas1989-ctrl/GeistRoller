@@ -24,13 +24,7 @@ export const MageArcanaContent = ({
     openSpellcastingPopup, onTriggerDiceRoll, onActivateMageEffect,
 }) => {
         const currentMana = getValue("mana") || 0;
-    const currentPath = getValue("path");
     const currentArcana = getValue("arcana") || {};
-    const pathRulingArcana = currentPath ? (PATH_ARCANA[currentPath]?.ruling || []) : [];
-
-    const extraMageSightArcana = ARCANA.filter(
-        (arcanum) => (currentArcana[arcanum] || 0) >= 1 && !pathRulingArcana.includes(arcanum)
-    );
 
     const getAttainmentLabel = (att) =>
         att.name.split(" / ")[0].replace(` ${att.arcanum}`, "").replace(" Armor", "");
@@ -388,56 +382,6 @@ export const MageArcanaContent = ({
                                         </TooltipContent>
                                     </Tooltip>
                                 </TooltipProvider>
-
-                                {currentPath && pathRulingArcana.length > 0 && (
-                                    <div className="space-y-1">
-                                        <TooltipProvider>
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => onActivateMageEffect?.({ type: "mageSight", path: currentPath })}
-                                                        className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded border bg-blue-900/30 border-blue-500/40 text-blue-300 hover:bg-blue-800/40 transition-colors"
-                                                        data-testid="path-mage-sight-btn"
-                                                    >
-                                                        <Sparkles className="w-3 h-3" />
-                                                        {currentPath} Mage Sight
-                                                    </button>
-                                                </TooltipTrigger>
-                                                <TooltipContent className="bg-zinc-900 border-zinc-700 max-w-xs">
-                                                    <p className="text-xs text-zinc-300">
-                                                        Activate Mage Sight with {pathRulingArcana.join(" + ")} at no Mana cost.
-                                                    </p>
-                                                </TooltipContent>
-                                            </Tooltip>
-                                        </TooltipProvider>
-
-                                        {extraMageSightArcana.length > 0 && (
-                                            <div className="flex flex-wrap gap-1">
-                                                {extraMageSightArcana.map((arcanum) => (
-                                                    <TooltipProvider key={arcanum}>
-                                                        <Tooltip>
-                                                            <TooltipTrigger asChild>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => onActivateMageEffect?.({ type: "mageSight", path: currentPath, extraArcanum: arcanum })}
-                                                                    disabled={currentMana < 1}
-                                                                    className="px-2 py-1 text-[10px] rounded border bg-zinc-800/60 border-zinc-700 text-zinc-300 hover:border-blue-500/50 hover:text-blue-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                                                                    data-testid={`mage-sight-extra-${arcanum.toLowerCase()}`}
-                                                                >
-                                                                    + {arcanum}
-                                                                </button>
-                                                            </TooltipTrigger>
-                                                            <TooltipContent className="bg-zinc-900 border-zinc-700 max-w-xs">
-                                                                <p className="text-xs text-zinc-300">Spend 1 Mana to add {arcanum} to Mage Sight.</p>
-                                                            </TooltipContent>
-                                                        </Tooltip>
-                                                    </TooltipProvider>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
 
                                 {arcanaWith3.length > 0 && (
                                     <TooltipProvider>

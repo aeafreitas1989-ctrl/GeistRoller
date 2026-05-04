@@ -38,6 +38,9 @@ import {
     PERSON_TYPE_OPTIONS, PERSON_SUBTYPE_OPTIONS,
     PLACE_STATUS_OPTIONS, PERSON_STATUS_OPTIONS, PERSON_RELATIONSHIP_OPTIONS,
 } from "../data/cards-data";
+
+import { ARCANA, PATH_ARCANA } from "../data/character-data";
+
 import {
     MeritCard, CeremonyCard, PlacePersonCard, ConditionCard, HauntCard, KeyCard, ActiveSpellCard, CombatTrackerCard,
 } from "./cards/CardComponents";
@@ -143,6 +146,19 @@ const getTemperatureIconClass = (temp) => {
     return "text-red-300";
 };
 
+const MAGE_SIGHT_DESCRIPTIONS = {
+    Death: "Death Sight reveals the Anchor Condition, manifested ghosts, and related deathly phenomena. At a glance, the mage can tell whether a person has a soul and whether a body is truly dead.",
+    Fate: "Fate Sight reveals when someone experiences a dramatic failure or exceptional success. It also reveals the presence and use of a Destiny, but not the details of that Destiny.",
+    Forces: "Forces Sight reveals motion, environmental Tilts, fire, electricity, and other physical hazards. It also allows the mage to tell at a glance whether a device is powered.",
+    Life: "Life Sight reveals signs of life and allows the mage to tell at a glance whether a body is alive and how badly a living being is injured. Toxins, diseases, and Personal Tilts are also apparent.",
+    Matter: "Matter Sight reveals the Structure and Durability of an object, along with its value and quality.",
+    Mind: "Mind Sight reveals the presence of thinking beings and allows the mage to tell at a glance whether someone is asleep, comatose, awake, meditating, or projecting into the Astral. It also reveals when an observed being gains or spends Willpower.",
+    Prime: "Prime Sight reveals anything the mage can use as a Yantra, as well as the presence of Awakened spells and Attainment effects. It also allows the mage to recognize tass and determine when they are within a Hallow or Node.",
+    Space: "Space Sight reveals distances, range bands, and cover, allowing the mage to judge situational bonuses and penalties before acting. It also reveals spatial distortions, scrying windows, and Irises.",
+    Spirit: "Spirit Sight reveals the strength of the local Gauntlet, the presence and nature of the Resonance Condition, other sources of Essence, and manifested spirits and related phenomena.",
+    Time: "Time Sight reveals subtle temporal changes, allowing the mage to know the Initiative of all combatants. It also reveals when someone is about to act, even reflexively, and detects temporal distortions and signs of travel into the past.",
+};
+
 const WEATHER_CONDITION_ORIGIN = "Weather";
 
 const buildWeatherConditions = (tracker) => {
@@ -229,6 +245,339 @@ const buildWeatherConditions = (tracker) => {
     }
 
     return conditions;
+};
+
+const MageSightCard = ({
+    activeCharacter,
+    activeMageSight,
+    onUpdateCharacter,
+    onTriggerDiceRoll,
+}) => {
+    const currentPath = activeCharacter?.path;
+    const rulingArcana = currentPath ? (PATH_ARCANA[currentPath]?.ruling || []) : [];
+    const currentMana = activeCharacter?.mana || 0;
+    const currentWillpower = activeCharacter?.willpower || 0;
+    const activeSpells = activeCharacter?.active_spells || [];
+
+    const activeArcana = activeMageSight
+        ? (activeMageSight.arcanum || "")
+            .split(",")
+            .map((entry) => entry.trim())
+            .filter(Boolean)
+        : rulingArcana;
+
+    const availableExtraArcana = ARCANA.filter((arcanum) => {
+        const dots = activeCharacter?.arcana?.[arcanum] || 0;
+        return dots >= 1 && !activeArcana.includes(arcanum);
+    });
+
+    const [selectedArcanum, setSelectedArcanum] = useState(activeArcana[0] || "Death");
+    const [opacity, setOpacity] = useState("0");
+    const [target, setTarget] = useState("");
+    const [obsessionApplies, setObsessionApplies] = useState(false);
+    const [scrutinyActive, setScrutinyActive] = useState(false);
+    const [scrutinySuccesses, setScrutinySuccesses] = useState(0);
+
+    useEffect(() => {
+        if (!activeArcana.includes(selectedArcanum) && activeArcana.length > 0) {
+            setSelectedArcanum(activeArcana[0]);
+        }
+    }, [activeArcana, selectedArcanum]);
+
+    const buildMageSightEffect = (nextArcana) => {
+        const extraArcana = nextArcana.filter((name) => !rulingArcana.includes(name));
+        const plusLabel = extraArcana.length > 0 ? ` + ${extraArcana.join(" + ")}` : "";
+
+        return {
+            id: activeMageSight?.id || Date.now(),
+            kind: "effect",
+            effect_key: "mage-sight",
+            name: `Mage Sight: ${currentPath}${plusLabel}`,
+            arcanum: nextArcana.join(", "),
+            practice: "Mage Sight",
+            subtitle: `${currentPath} • ${nextArcana.join(", ")}`,
+            description: nextArcana
+                .map((name) => `${name}: ${MAGE_SIGHT_DESCRIPTIONS[name]}`)
+                .join("\n"),
+            extra_arcana: extraArcana,
+        };
+    };
+
+    const activateMageSight = async () => {
+        if (!currentPath || rulingArcana.length === 0) return;
+
+        await onUpdateCharacter?.({
+            active_spells: [
+                ...activeSpells.filter((spell) => spell.effect_key !== "mage-sight"),
+                buildMageSightEffect(rulingArcana),
+            ],
+        });
+    };
+
+    const addArcanumToMageSight = async (arcanum) => {
+        if (currentMana < 1) return;
+
+        const nextArcana = [...new Set([...activeArcana, arcanum])];
+
+        await onUpdateCharacter?.({
+            mana: Math.max(0, currentMana - 1),
+            active_spells: [
+                ...activeSpells.filter((spell) => spell.effect_key !== "mage-sight"),
+                buildMageSightEffect(nextArcana),
+            ],
+        });
+    };
+
+    const rollMageSight = async (mode) => {
+        const gnosis = activeCharacter?.gnosis || 1;
+        const arcanumDots = activeCharacter?.arcana?.[selectedArcanum] || 0;
+        const opacityValue = Number.parseInt(opacity || "0", 10) || 0;
+        const obsessionBonus = mode === "Scrutiny" && obsessionApplies ? 1 : 0;
+
+        if (mode === "Scrutiny" && !scrutinyActive && currentWillpower < 1) return;
+
+        if (mode === "Scrutiny" && !scrutinyActive) {
+            await onUpdateCharacter?.({
+                willpower: Math.max(0, currentWillpower - 1),
+            });
+            setScrutinyActive(true);
+            setScrutinySuccesses(0);
+        }
+
+        const rawPool =
+            mode === "Revelation"
+                ? gnosis + arcanumDots - opacityValue
+                : gnosis + arcanumDots + obsessionBonus;
+
+        const chance = rawPool < 1;
+        const pool = chance ? 1 : rawPool;
+        const targetLine = target.trim() ? `Target: ${target.trim()}` : "Target: unspecified";
+
+        onTriggerDiceRoll?.({
+            pool,
+            chance,
+            again: 10,
+            rote: false,
+            exceptional_target: 5,
+            label: `Mage Sight — ${mode} (${selectedArcanum})`,
+            dicePoolBreakdown:
+                mode === "Revelation"
+                    ? `Gnosis ${gnosis} + ${selectedArcanum} ${arcanumDots} - Opacity ${opacityValue}`
+                    : `Gnosis ${gnosis} + ${selectedArcanum} ${arcanumDots}${obsessionBonus ? " + Obsession 1" : ""}`,
+            spellSummary:
+                mode === "Scrutiny"
+                    ? `${targetLine}\nFocused Mage Sight${!scrutinyActive ? "; costs 1 Willpower to begin" : " (ongoing)"}. Opacity: ${opacityValue}. Successes: ${scrutinySuccesses}.`
+                    : `${targetLine}\nActive Mage Sight Revelation. Opacity: ${opacityValue}.`,
+        });
+    };
+
+    const addScrutinyManaSuccess = async () => {
+        if (currentMana < 1) return;
+        const opacityValue = Number.parseInt(opacity || "0", 10) || 0;
+        const newSuccesses = scrutinySuccesses + 1;
+
+        await onUpdateCharacter?.({ mana: Math.max(0, currentMana - 1) });
+
+        if (opacityValue > 0 && newSuccesses >= opacityValue) {
+            const newOpacity = opacityValue - 1;
+            setOpacity(String(newOpacity));
+            setScrutinySuccesses(0);
+        } else {
+            setScrutinySuccesses(newSuccesses);
+        }
+    };
+
+    const endScrutiny = () => {
+        setScrutinyActive(false);
+        setScrutinySuccesses(0);
+    };
+
+    return (
+        <div className="bg-zinc-950 border border-blue-500/30 rounded-md p-3 space-y-3">
+            <div className="flex items-start justify-between gap-2">
+                <div>
+                    <h4 className="text-sm font-medium text-blue-300">
+                        Mage Sight{currentPath ? `: ${currentPath}` : ""}
+                    </h4>
+                    <p className="text-xs text-zinc-400">
+                        {activeMageSight
+                            ? activeArcana.join(", ")
+                            : rulingArcana.length > 0
+                                ? `${rulingArcana.join(", ")} available`
+                                : "No Path selected"}
+                    </p>
+                </div>
+
+                {!activeMageSight && (
+                    <Button
+                        type="button"
+                        size="sm"
+                        className="h-7 px-2 text-[10px] btn-secondary"
+                        onClick={activateMageSight}
+                        disabled={!currentPath || rulingArcana.length === 0}
+                    >
+                        Activate
+                    </Button>
+                )}
+            </div>
+
+            {activeMageSight?.description && (
+                <div className="rounded-sm bg-zinc-900/40 border border-zinc-800 p-2">
+                    <p className="text-xs text-zinc-300 whitespace-pre-line">
+                        {activeMageSight.description}
+                    </p>
+                </div>
+            )}
+
+            {activeMageSight && availableExtraArcana.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                    {availableExtraArcana.map((arcanum) => (
+                        <Button
+                            key={arcanum}
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 px-2 text-[10px] text-blue-300 border border-zinc-700 hover:bg-blue-950/30"
+                            onClick={() => addArcanumToMageSight(arcanum)}
+                            disabled={currentMana < 1}
+                        >
+                            + {arcanum}
+                        </Button>
+                    ))}
+                </div>
+            )}
+
+            {activeMageSight && (
+                <div className="space-y-2 border-t border-zinc-800 pt-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <div>
+                            <label className="text-[10px] text-zinc-500 uppercase tracking-wider">
+                                Arcanum
+                            </label>
+                            <Select value={selectedArcanum} onValueChange={setSelectedArcanum}>
+                                <SelectTrigger className="h-7 bg-zinc-900/50 border-zinc-800 text-xs">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="bg-zinc-900 border-zinc-800">
+                                    {activeArcana.map((arcanum) => (
+                                        <SelectItem key={arcanum} value={arcanum} className="text-xs">
+                                            {arcanum}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div>
+                            <label className="text-[10px] text-zinc-500 uppercase tracking-wider">
+                                Opacity
+                            </label>
+                            <Input
+                                value={opacity}
+                                onChange={(e) => setOpacity(e.target.value)}
+                                className="input-geist h-7 text-xs"
+                                type="number"
+                                min="0"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="text-[10px] text-zinc-500 uppercase tracking-wider">
+                                Target
+                            </label>
+                            <Input
+                                value={target}
+                                onChange={(e) => setTarget(e.target.value)}
+                                className="input-geist h-7 text-xs"
+                                placeholder="Object, person, room"
+                            />
+                        </div>
+                    </div>
+
+                    <label className="flex items-center gap-2 text-xs text-zinc-400">
+                        <input
+                            type="checkbox"
+                            checked={obsessionApplies}
+                            onChange={(e) => setObsessionApplies(e.target.checked)}
+                        />
+                        Obsession applies to Scrutiny
+                    </label>
+
+                    <div className="flex flex-wrap gap-1">
+                        <Button
+                            type="button"
+                            size="sm"
+                            className="h-7 px-2 text-xs btn-secondary"
+                            onClick={() => rollMageSight("Revelation")}
+                        >
+                            Revelation
+                        </Button>
+
+                        <Button
+                            type="button"
+                            size="sm"
+                            className={`h-7 px-2 text-xs ${scrutinyActive ? "bg-amber-600/40 border-amber-500 text-amber-200 hover:bg-amber-600/60" : "btn-secondary"}`}
+                            onClick={() => rollMageSight("Scrutiny")}
+                            disabled={!scrutinyActive && currentWillpower < 1}
+                            data-testid="scrutiny-btn"
+                        >
+                            Scrutiny{scrutinyActive ? " (Active)" : ""}
+                        </Button>
+
+                        {scrutinyActive && (
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 px-2 text-xs text-zinc-400 hover:text-rose-400"
+                                onClick={endScrutiny}
+                                data-testid="end-scrutiny-btn"
+                            >
+                                End Scrutiny
+                            </Button>
+                        )}
+                    </div>
+
+                    {scrutinyActive && (
+                        <div className="p-2 rounded-sm bg-amber-950/30 border border-amber-500/30 space-y-2" data-testid="scrutiny-tracker">
+                            <div className="flex items-center justify-between">
+                                <span className="text-[10px] text-amber-400 uppercase tracking-wider">Scrutiny Tracker</span>
+                                <span className="text-[10px] text-zinc-500">
+                                    Opacity: <span className="text-amber-300 font-mono">{Number.parseInt(opacity || "0", 10) || 0}</span>
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-1.5">
+                                    <span className="text-xs text-zinc-400">Successes:</span>
+                                    <span className="text-sm font-mono text-amber-300 font-medium" data-testid="scrutiny-successes">{scrutinySuccesses}</span>
+                                    <span className="text-xs text-zinc-600">/ {Number.parseInt(opacity || "0", 10) || 0}</span>
+                                </div>
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    className="h-6 px-2 text-[10px] bg-violet-900/40 border border-violet-500/40 text-violet-300 hover:bg-violet-800/50"
+                                    onClick={addScrutinyManaSuccess}
+                                    disabled={currentMana < 1}
+                                    data-testid="scrutiny-mana-btn"
+                                >
+                                    +1 Success (1 Mana)
+                                </Button>
+                            </div>
+                            {(Number.parseInt(opacity || "0", 10) || 0) === 0 && (
+                                <p className="text-[10px] text-emerald-400">Opacity is 0 — mystery fully unveiled.</p>
+                            )}
+                        </div>
+                    )}
+
+                    {!scrutinyActive && currentWillpower < 1 && (
+                        <p className="text-[10px] text-rose-400">
+                            Scrutiny requires 1 Willpower.
+                        </p>
+                    )}
+                </div>
+            )}
+        </div>
+    );
 };
 
 export const GameCardsPanel = ({ 
@@ -376,6 +725,7 @@ export const GameCardsPanel = ({
     const characterType = activeCharacter?.character_type || "geist";
     const isMage = characterType === "mage";
     const activeSpells = [...(activeCharacter?.active_spells || [])].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+    const activeMageSight = activeSpells.find((spell) => spell.effect_key === "mage-sight") || null;
     const meritsList = activeCharacter?.merits_list || [];
     const activeConditionNames = new Set((activeCharacter?.conditions || []).map((condition) => (condition?.name || "").toLowerCase()));
     const hasCondition = (name) => activeConditionNames.has(name.toLowerCase());
@@ -1054,14 +1404,17 @@ export const GameCardsPanel = ({
                                 )}
                             </CollapsibleTrigger>
                             <CollapsibleContent className="px-3 pb-3">
-                                {activeSpells.length === 0 ? (
-                                    <div className="text-center py-6">
-                                        <p className="text-zinc-500 text-sm">No active spells or effects</p>
-                                        <p className="text-zinc-600 text-xs mt-1">Spells cast with Advanced Duration appear here</p>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-2" data-testid="active-spells-list">
-                                        {activeSpells.map((spell) => (
+                                <div className="space-y-2" data-testid="active-spells-list">
+                                    <MageSightCard
+                                        activeCharacter={activeCharacter}
+                                        activeMageSight={activeMageSight}
+                                        onUpdateCharacter={onUpdateCharacter}
+                                        onTriggerDiceRoll={onTriggerDiceRoll}
+                                    />
+
+                                    {activeSpells
+                                        .filter((spell) => spell.effect_key !== "mage-sight")
+                                        .map((spell) => (
                                             <ActiveSpellCard
                                                 key={spell.id || `${spell.name}-${spell.arcanum}-${spell.practice}`}
                                                 spell={spell}
@@ -1070,8 +1423,14 @@ export const GameCardsPanel = ({
                                                 onRelinquishSafely={onRelinquishActiveSpellSafely}
                                             />
                                         ))}
-                                    </div>
-                                )}
+
+                                    {activeSpells.filter((spell) => spell.effect_key !== "mage-sight").length === 0 && (
+                                        <div className="text-center py-4">
+                                            <p className="text-zinc-500 text-sm">No active spells or effects</p>
+                                            <p className="text-zinc-600 text-xs mt-1">Spells cast with Advanced Duration appear here</p>
+                                        </div>
+                                    )}
+                                </div>
                             </CollapsibleContent>
                         </Collapsible>
                     )}
