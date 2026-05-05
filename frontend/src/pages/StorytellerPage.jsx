@@ -5,6 +5,7 @@ import { DiceRoller } from "@/components/DiceRoller";
 import axios from "axios";
 import { toast } from "sonner";
 import { normalizeHealthBoxes, getHealthCounts, buildHealthBoxes } from "@/components/character/StatComponents";
+import { advanceSceneTime, sleepUntilMorning } from "@/utils/timeUtils";
 
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -271,10 +272,31 @@ export const StorytellerPage = () => {
         const maxWillpower = Math.max(0, resolve + composure + willpowerModifier);
         const currentWillpower = activeCharacter?.willpower || 0;
 
+        const currentTracker = activeCharacter?.scene_tracker || {};
+        const nextTime = sleepUntilMorning(currentTracker);
+
         await updateCharacter({
             health_boxes: updatedBoxes,
             health: filled,
             willpower: Math.min(maxWillpower, currentWillpower + 1),
+            scene_tracker: {
+                ...currentTracker,
+                date: nextTime.date,
+                time: nextTime.time,
+            },
+        });
+    };
+
+    const handleAdvanceTime = async (hours = 0, minutes = 0) => {
+        if (!activeCharacter) return;
+        const currentTracker = activeCharacter?.scene_tracker || {};
+        const next = advanceSceneTime(currentTracker, hours, minutes);
+        await updateCharacter({
+            scene_tracker: {
+                ...currentTracker,
+                date: next.date,
+                time: next.time,
+            },
         });
     };
 
@@ -529,6 +551,7 @@ export const StorytellerPage = () => {
                                     onAddRecentRoll={addRecentRoll}
                                     onCreateActiveSpell={addActiveSpell}
                                     onImportCharacter={importCharacter}
+                                    onAdvanceTime={handleAdvanceTime}
                                 />
                             </div>
                         </section>

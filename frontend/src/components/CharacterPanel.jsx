@@ -94,6 +94,7 @@ export const CharacterPanel = ({
     onTriggerDiceRoll,
     onAddRecentRoll,
     onImportCharacter,
+    onAdvanceTime,
 }) => {
     const [expandedSections, setExpandedSections] = useState({
         header: false,
@@ -1930,6 +1931,7 @@ export const CharacterPanel = ({
                                     calculateWillpowerMax={calculateWillpowerMax}
                                     onRebuyWillpowerDot={rebuyWillpowerDot}
                                     onTriggerDiceRoll={onTriggerDiceRoll}
+                                    onAdvanceTime={onAdvanceTime}
                                 />
                             ) : (
                                 <GeistSynergyContent
