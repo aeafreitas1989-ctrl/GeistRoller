@@ -1814,9 +1814,37 @@ export const CharacterPanel = ({
                                 </div>
                                 <div>
                                     <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1 text-center">Physical</p>
-                                    {["strength", "dexterity", "stamina"].map((attr) => (
-                                        <StatRow key={attr} label={attr} value={getNestedValue("attributes", attr)} max={5} onChange={(v) => handleNestedChange("attributes", attr, v)} color="zinc" onLabelClick={() => openDicePopup('attribute', attr)} />
-                                    ))}
+                                    {["strength", "dexterity", "stamina"].map((attr) => {
+                                        const scoured = getValue("scoured_attributes") || {};
+                                        const bolts = scoured[attr] || 0;
+                                        const isScoured = bolts > 0;
+                                        return (
+                                            <div key={attr} className="flex items-center gap-0.5">
+                                                {isScoured && (
+                                                    <div className="flex shrink-0">
+                                                        {Array.from({ length: bolts }).map((_, i) => (
+                                                            <button
+                                                                key={i}
+                                                                onClick={() => {
+                                                                    const newScoured = { ...scoured, [attr]: bolts - 1 };
+                                                                    if (newScoured[attr] <= 0) delete newScoured[attr];
+                                                                    handleChange("scoured_attributes", newScoured);
+                                                                    const currentVal = getNestedValue("attributes", attr) || 0;
+                                                                    handleNestedChange("attributes", attr, currentVal + 1);
+                                                                }}
+                                                                className="text-red-400 hover:text-red-300 text-[10px] leading-none"
+                                                                title="Click to restore 1 dot"
+                                                                data-testid={`scour-bolt-${attr}-${i}`}
+                                                            >&#9889;</button>
+                                                        ))}
+                                                    </div>
+                                                )}
+                                                <div className="flex-1">
+                                                    <StatRow label={attr} value={getNestedValue("attributes", attr)} max={5} onChange={(v) => handleNestedChange("attributes", attr, v)} color={isScoured ? "red" : "zinc"} onLabelClick={() => openDicePopup('attribute', attr)} />
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                                 <div>
                                     <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1 text-center">Social</p>
@@ -1896,7 +1924,7 @@ export const CharacterPanel = ({
                         <CollapsibleContent className="pt-2 space-y-3">
                             {isMage ? (
                                 <MageGnosisContent
-                                    getValue={getValue} handleChange={handleChange} getNestedValue={getNestedValue}
+                                    getValue={getValue} handleChange={handleChange} getNestedValue={getNestedValue} handleNestedChange={handleNestedChange}
                                     healthBoxes={healthBoxes} maxHealth={maxHealth} filledHealth={filledHealth} isDeadTrack={isDeadTrack} woundPenalty={woundPenalty}
                                     handleHealthBoxClick={handleHealthBoxClick} handleHealthBoxesChange={handleHealthBoxesChange}
                                     calculateWillpowerMax={calculateWillpowerMax}

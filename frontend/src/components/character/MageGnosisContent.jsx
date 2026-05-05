@@ -1,16 +1,48 @@
+import { useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { GNOSIS_TABLE } from "../../data/character-data";
 import { SynergyTrack, HealthTrack, ResourceTrack, getHealthCounts, buildHealthBoxes } from "./StatComponents";
 
 export const MageGnosisContent = ({
-    getValue, handleChange, getNestedValue,
+    getValue, handleChange, getNestedValue, handleNestedChange,
     healthBoxes, maxHealth, filledHealth, isDeadTrack, woundPenalty,
     handleHealthBoxClick, handleHealthBoxesChange,
     calculateWillpowerMax,
     onRebuyWillpowerDot,
     onTriggerDiceRoll,
 }) => {
+    const [scourOpen, setScourOpen] = useState(false);
+
+    const doScour = (choice) => {
+        const gnosisLevel = getValue("gnosis") || 1;
+        const gd = GNOSIS_TABLE[gnosisLevel] || GNOSIS_TABLE[1];
+        const currentMana = getValue("mana") || 0;
+
+        if (choice === "damage") {
+            const counts = getHealthCounts(healthBoxes);
+            counts.lethal += 1;
+            const totalAfter = counts.aggravated + counts.lethal + counts.bashing;
+            if (totalAfter > maxHealth) {
+                if (counts.bashing > 0) { counts.bashing -= 1; }
+            }
+            const updatedBoxes = buildHealthBoxes(counts, maxHealth);
+            handleHealthBoxesChange(updatedBoxes);
+        } else {
+            const scoured = getValue("scoured_attributes") || {};
+            handleChange("scoured_attributes", { ...scoured, [choice]: (scoured[choice] || 0) + 1 });
+            const currentVal = getNestedValue("attributes", choice) || 1;
+            if (currentVal > 0) {
+                handleNestedChange("attributes", choice, currentVal - 1);
+            }
+        }
+
+        handleChange("mana", Math.min(gd.maxMana, currentMana + 3));
+        setScourOpen(false);
+    };
+
     return (
         <>
             {/* Gnosis for Mages */}
@@ -95,24 +127,41 @@ export const MageGnosisContent = ({
                     <div className="flex items-center gap-1.5">
                         <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Mana</label>
                         <button
-                            onClick={() => {
-                                const counts = getHealthCounts(healthBoxes);
-                                counts.lethal += 1;
-                                const totalAfter = counts.aggravated + counts.lethal + counts.bashing;
-                                if (totalAfter > maxHealth) {
-                                    if (counts.bashing > 0) { counts.bashing -= 1; }
-                                }
-                                const updatedBoxes = buildHealthBoxes(counts, maxHealth);
-                                handleHealthBoxesChange(updatedBoxes);
-                                const gnosisLevel = getValue("gnosis") || 1;
-                                const gd = GNOSIS_TABLE[gnosisLevel] || GNOSIS_TABLE[1];
-                                const currentMana = getValue("mana") || 0;
-                                handleChange("mana", Math.min(gd.maxMana, currentMana + 3));
-                            }}
+                            onClick={() => setScourOpen(true)}
                             className="text-[9px] px-1.5 py-0.5 rounded bg-red-900/30 text-red-400 hover:bg-red-800/40 transition-colors"
-                            title="Deal 1 Lethal damage, gain 3 Mana"
-                            data-testid="pattern-scourge-btn"
-                        >Pattern Scourge</button>
+                            title="Reduce 1 Physical Attribute or deal 1 Lethal, gain 3 Mana"
+                            data-testid="scour-pattern-btn"
+                        >Scour Pattern</button>
+
+                        <Dialog open={scourOpen} onOpenChange={setScourOpen}>
+                            <DialogContent className="bg-zinc-900 border-zinc-700 max-w-xs">
+                                <DialogHeader>
+                                    <DialogTitle className="text-red-300 font-heading text-sm">Scour Pattern</DialogTitle>
+                                </DialogHeader>
+                                <p className="text-[10px] text-zinc-400 -mt-2">Choose what to sacrifice for 3 Mana:</p>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {["strength", "dexterity", "stamina"].map((attr) => (
+                                        <Button
+                                            key={attr}
+                                            size="sm"
+                                            className="h-8 text-xs bg-red-900/30 border border-red-500/40 text-red-300 hover:bg-red-800/50 capitalize"
+                                            onClick={() => doScour(attr)}
+                                            data-testid={`scour-${attr}`}
+                                        >
+                                            {attr}
+                                        </Button>
+                                    ))}
+                                    <Button
+                                        size="sm"
+                                        className="h-8 text-xs bg-zinc-800 border border-zinc-600 text-zinc-300 hover:bg-zinc-700"
+                                        onClick={() => doScour("damage")}
+                                        data-testid="scour-damage"
+                                    >
+                                        Damage
+                                    </Button>
+                                </div>
+                            </DialogContent>
+                        </Dialog>
                         <button
                             onClick={() => {
                                 const gnosisLevel = getValue("gnosis") || 1;
