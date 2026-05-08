@@ -333,8 +333,12 @@ const MageSightCard = ({
         let updatedLayers = layers.map(l => ({ ...l }));
         let currentLayer = updatedLayers.find(l => !l.complete);
         if (!currentLayer) {
-            const lastTarget = updatedLayers.length > 0 ? updatedLayers[updatedLayers.length - 1].target : startingOpacity;
-            const nextTarget = lastTarget - 1;
+            // Determine the next layer's target. The very first layer's target
+            // equals the starting Opacity. Subsequent layers decrement by 1
+            // once the previous layer is complete.
+            const nextTarget = updatedLayers.length === 0
+                ? startingOpacity
+                : updatedLayers[updatedLayers.length - 1].target - 1;
             if (nextTarget <= 0) return updatedLayers;
             currentLayer = { successes: 0, target: nextTarget, complete: false };
             updatedLayers.push(currentLayer);
