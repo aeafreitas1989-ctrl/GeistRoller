@@ -470,6 +470,10 @@ export const DiceRoller = forwardRef(({ embedded = false, collapsed = false, onT
         };
 
         setRollHistory((prev) => [nextEntry, ...prev].slice(0, 20));
+
+        // Clear the ref so subsequent dep changes (e.g. rollSequence reset on
+        // the next roll trigger) don't re-add the same entry.
+        completedRollRef.current = null;
     }, [historyToken, rollSequence]);
 
     if (!visible) {
