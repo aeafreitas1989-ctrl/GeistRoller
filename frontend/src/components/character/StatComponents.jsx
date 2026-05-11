@@ -6,6 +6,7 @@ export const formatLabel = (value) => value.replace(/_/g, " ").replace(/\b\w/g, 
 
 export const HEALTH_STATES = ["empty", "bashing", "lethal", "aggravated"];
 export const HEALTH_SYMBOLS = { bashing: "/", lethal: "X", aggravated: "*" };
+export const SCOURED_ATTRIBUTE_SYMBOL = "⚡";
 
 export const normalizeHealthBoxes = (boxes, max, fallback = 0) => {
     let normalized = Array.isArray(boxes) ? [...boxes] : [];
@@ -47,6 +48,9 @@ export const StatDots = ({
     size = "normal",
     clickable = true,
     testIdPrefix = "stat",
+    scoured = 0,
+    onRestoreScoured,
+    scouredSymbol = SCOURED_ATTRIBUTE_SYMBOL,
 }) => {
 
     const colorClasses = {
@@ -60,25 +64,50 @@ export const StatDots = ({
     };
     
     const sizeClasses = size === "small" ? "w-2.5 h-2.5" : "w-3 h-3";
+    const safeValue = Math.max(0, Number(value) || 0);
+    const safeScoured = Math.max(0, Number(scoured) || 0);
 
     return (
         <div className="flex gap-0.5">
-            {Array.from({ length: max }, (_, i) => (
-                <button
-                    key={i}
-                    onClick={() => clickable && onChange(i + 1 === value ? i : i + 1)}
-                    className={`${sizeClasses} rounded-full border-2 transition-all ${clickable ? "hover:scale-110" : ""} ${
-                        i < value ? `${colorClasses[color]} bg-current` : `border-current ${colorClasses[color]} opacity-40`
-                    }`}
-                    disabled={!clickable}
-                    data-testid={`${testIdPrefix}-dot-${i + 1}`}
-                />
-            ))}
+            {Array.from({ length: max }, (_, i) => {
+                const isFilled = i < safeValue;
+                const isScoured = !isFilled && i < safeValue + safeScoured;
+                const buttonTitle = isScoured ? "Click to restore 1 scoured dot" : undefined;
+                const buttonTestId = isScoured
+                    ? `${testIdPrefix}-scoured-${i + 1}`
+                    : `${testIdPrefix}-dot-${i + 1}`;
+
+                return (
+                    <button
+                        key={i}
+                        onClick={() => {
+                            if (!clickable) return;
+                            if (isScoured) {
+                                if (onRestoreScoured) onRestoreScoured();
+                                return;
+                            }
+                            onChange(i + 1 === value ? i : i + 1);
+                        }}
+                        className={`${sizeClasses} rounded-full border-2 transition-all flex items-center justify-center ${clickable ? "hover:scale-110" : ""} ${
+                            isScoured
+                                ? "border-red-500 bg-red-950/80 text-red-300 text-[8px] font-bold opacity-100"
+                                : isFilled
+                                ? `${colorClasses[color]} bg-current`
+                                : `border-current ${colorClasses[color]} opacity-40`
+                        }`}
+                        disabled={!clickable}
+                        title={buttonTitle}
+                        data-testid={buttonTestId}
+                    >
+                        {isScoured ? scouredSymbol : null}
+                    </button>
+                );
+            })}
         </div>
     );
 };
 
-export const StatRow = ({ label, value, max, onChange, color, onLabelClick }) => (
+export const StatRow = ({ label, value, max, onChange, color, onLabelClick, scoured = 0, onRestoreScoured }) => (
     <div className="flex items-center justify-between py-0.5 group">
         <button 
             onClick={onLabelClick}
@@ -88,7 +117,16 @@ export const StatRow = ({ label, value, max, onChange, color, onLabelClick }) =>
             <Dices className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 text-teal-500 transition-opacity" />
             {formatLabel(label)}
         </button>
-        <StatDots value={value} max={max} onChange={onChange} color={color} size="small" testIdPrefix={`stat-${label.replace(/_/g, '-')}`} />
+        <StatDots
+            value={value}
+            max={max}
+            onChange={onChange}
+            color={color}
+            size="small"
+            testIdPrefix={`stat-${label.replace(/_/g, '-')}`}
+            scoured={scoured}
+            onRestoreScoured={onRestoreScoured}
+        />
     </div>
 );
 

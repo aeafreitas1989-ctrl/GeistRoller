@@ -325,6 +325,23 @@ export const CharacterPanel = ({
         }
     };
 
+    const commitCharacterUpdate = async (updates) => {
+        if (!updates || Object.keys(updates).length === 0) return;
+
+        setPendingChanges((prev) => ({ ...prev, ...updates }));
+
+        if (onUpdateCharacter) {
+            await onUpdateCharacter(updates);
+            setPendingChanges((prev) => {
+                const next = { ...prev };
+                Object.keys(updates).forEach((key) => {
+                    if (next[key] === updates[key]) delete next[key];
+                });
+                return next;
+            });
+        }
+    };
+
     const escapeHtml = (value = "") => String(value)
         .replaceAll("&", "&amp;")
         .replaceAll("<", "&lt;")
@@ -950,27 +967,46 @@ export const CharacterPanel = ({
     }, [getValue("innate_key"), getValue("geist_innate_key"), getValue("mementos"), getValue("keys"), doomedKeys]);
 
     // Calculate derived stats
+    const SCOURED_DERIVED_ATTRIBUTES = ["strength", "dexterity", "stamina"];
+
+    const getScouredAttributeCount = (attr) => {
+        const scoured = getValue("scoured_attributes") || {};
+        return Math.max(0, Number(scoured[attr]) || 0);
+    };
+
+    const getAttributeForDerivedTrait = (attr, fallback = 1) => {
+        const rawValue = getNestedValue("attributes", attr);
+        const currentValue = Number.isFinite(Number(rawValue)) ? Number(rawValue) : fallback;
+
+        if (!SCOURED_DERIVED_ATTRIBUTES.includes(attr)) return currentValue;
+
+        const hasLifeTwo = (getNestedValue("arcana", "Life") || 0) >= 2;
+        if (!hasLifeTwo) return currentValue;
+
+        return currentValue + getScouredAttributeCount(attr);
+    };
+
     const calculateDefense = () => {
-        const dex = getNestedValue("attributes", "dexterity") || 1;
+        const dex = getAttributeForDerivedTrait("dexterity", 1);
         const wits = getNestedValue("attributes", "wits") || 1;
         const athletics = getNestedValue("skills", "athletics") || 0;
         return Math.min(dex, wits) + athletics;
     };
 
     const calculateInitiative = () => {
-        const dex = getNestedValue("attributes", "dexterity") || 1;
+        const dex = getAttributeForDerivedTrait("dexterity", 1);
         const composure = getNestedValue("attributes", "composure") || 1;
         return dex + composure;
     };
 
     const calculateSpeed = () => {
-        const str = getNestedValue("attributes", "strength") || 1;
-        const dex = getNestedValue("attributes", "dexterity") || 1;
+        const str = getAttributeForDerivedTrait("strength", 1);
+        const dex = getAttributeForDerivedTrait("dexterity", 1);
         return str + dex + 5;
     };
 
     const calculateHealthMax = () => {
-        const stamina = getNestedValue("attributes", "stamina") || 0;
+        const stamina = getAttributeForDerivedTrait("stamina", 0);
 
         const meritsList = getValue("merits_list") || [];
         const hasGiant = (meritsList || []).some((m) => (m?.name || "") === "Giant");
@@ -1817,33 +1853,35 @@ export const CharacterPanel = ({
                                     <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1 text-center">Physical</p>
                                     {["strength", "dexterity", "stamina"].map((attr) => {
                                         const scoured = getValue("scoured_attributes") || {};
-                                        const bolts = scoured[attr] || 0;
-                                        const isScoured = bolts > 0;
+                                        const scouredCount = scoured[attr] || 0;
+                                        const isScoured = scouredCount > 0;
+                                        const restoreScouredDot = () => {
+                                            const newScoured = { ...scoured, [attr]: scouredCount - 1 };
+                                            if (newScoured[attr] <= 0) delete newScoured[attr];
+                                            const currentVal = getNestedValue("attributes", attr) || 0;
+                                            const attributes = getValue("attributes") || {};
+
+                                            commitCharacterUpdate({
+                                                scoured_attributes: newScoured,
+                                                attributes: {
+                                                    ...attributes,
+                                                    [attr]: currentVal + 1,
+                                                },
+                                            });
+                                        };
+
                                         return (
-                                            <div key={attr} className="flex items-center gap-0.5">
-                                                {isScoured && (
-                                                    <div className="flex shrink-0">
-                                                        {Array.from({ length: bolts }).map((_, i) => (
-                                                            <button
-                                                                key={i}
-                                                                onClick={() => {
-                                                                    const newScoured = { ...scoured, [attr]: bolts - 1 };
-                                                                    if (newScoured[attr] <= 0) delete newScoured[attr];
-                                                                    handleChange("scoured_attributes", newScoured);
-                                                                    const currentVal = getNestedValue("attributes", attr) || 0;
-                                                                    handleNestedChange("attributes", attr, currentVal + 1);
-                                                                }}
-                                                                className="text-red-400 hover:text-red-300 text-[10px] leading-none"
-                                                                title="Click to restore 1 dot"
-                                                                data-testid={`scour-bolt-${attr}-${i}`}
-                                                            >&#9889;</button>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                                <div className="flex-1">
-                                                    <StatRow label={attr} value={getNestedValue("attributes", attr)} max={5} onChange={(v) => handleNestedChange("attributes", attr, v)} color={isScoured ? "red" : "zinc"} onLabelClick={() => openDicePopup('attribute', attr)} />
-                                                </div>
-                                            </div>
+                                            <StatRow
+                                                key={attr}
+                                                label={attr}
+                                                value={getNestedValue("attributes", attr)}
+                                                max={5}
+                                                onChange={(v) => handleNestedChange("attributes", attr, v)}
+                                                color={isScoured ? "red" : "zinc"}
+                                                onLabelClick={() => openDicePopup('attribute', attr)}
+                                                scoured={scouredCount}
+                                                onRestoreScoured={restoreScouredDot}
+                                            />
                                         );
                                     })}
                                 </div>
@@ -1926,6 +1964,7 @@ export const CharacterPanel = ({
                             {isMage ? (
                                 <MageGnosisContent
                                     getValue={getValue} handleChange={handleChange} getNestedValue={getNestedValue} handleNestedChange={handleNestedChange}
+                                    onCommitCharacterUpdate={commitCharacterUpdate}
                                     healthBoxes={healthBoxes} maxHealth={maxHealth} filledHealth={filledHealth} isDeadTrack={isDeadTrack} woundPenalty={woundPenalty}
                                     handleHealthBoxClick={handleHealthBoxClick} handleHealthBoxesChange={handleHealthBoxesChange}
                                     calculateWillpowerMax={calculateWillpowerMax}

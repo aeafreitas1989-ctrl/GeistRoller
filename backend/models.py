@@ -222,6 +222,7 @@ class Character(BaseModel):
     conditions: List[Dict[str, Any]] = Field(default_factory=list)
     active_spells: List[Dict[str, Any]] = Field(default_factory=list)
     active_mage_armor: Optional[str] = None
+    scoured_attributes: Dict[str, int] = Field(default_factory=dict)
     places_people: List[Dict[str, Any]] = Field(default_factory=list)
     size: int = 5
     health: int = 7
@@ -311,6 +312,7 @@ class CharacterUpdate(BaseModel):
     conditions: Optional[List[Dict[str, Any]]] = None
     active_spells: Optional[List[Dict[str, Any]]] = None
     active_mage_armor: Optional[str] = None
+    scoured_attributes: Optional[Dict[str, int]] = None
     places_people: Optional[List[Dict[str, Any]]] = None
     size: Optional[int] = None
     health: Optional[int] = None

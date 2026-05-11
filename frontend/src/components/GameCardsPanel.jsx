@@ -773,11 +773,23 @@ export const GameCardsPanel = ({
     const meritsList = activeCharacter?.merits_list || [];
     const activeConditionNames = new Set((activeCharacter?.conditions || []).map((condition) => (condition?.name || "").toLowerCase()));
     const hasCondition = (name) => activeConditionNames.has(name.toLowerCase());
-    const dexterity = activeCharacter?.attributes?.dexterity || 1;
+    const getAttributeForDerivedTrait = (attr, fallback = 1) => {
+        const rawValue = activeCharacter?.attributes?.[attr];
+        const currentValue = Number.isFinite(Number(rawValue)) ? Number(rawValue) : fallback;
+
+        if (!["strength", "dexterity", "stamina"].includes(attr)) return currentValue;
+
+        const hasLifeTwo = (activeCharacter?.arcana?.Life || 0) >= 2;
+        if (!hasLifeTwo) return currentValue;
+
+        const scoured = activeCharacter?.scoured_attributes || {};
+        return currentValue + Math.max(0, Number(scoured[attr]) || 0);
+    };
+    const dexterity = getAttributeForDerivedTrait("dexterity", 1);
     const wits = activeCharacter?.attributes?.wits || 1;
     const athletics = activeCharacter?.skills?.athletics || 0;
     const composure = activeCharacter?.attributes?.composure || 1;
-    const strength = activeCharacter?.attributes?.strength || 1;
+    const strength = getAttributeForDerivedTrait("strength", 1);
     const activeMageArmorName = isMage ? (activeCharacter?.active_mage_armor || null) : null;
     const activeMageArmorDots = activeMageArmorName ? (activeCharacter?.arcana?.[activeMageArmorName] || 0) : 0;
     const mageArmorDefenseBonus = (() => {

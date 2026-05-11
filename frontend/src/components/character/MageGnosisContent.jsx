@@ -14,6 +14,7 @@ export const MageGnosisContent = ({
     onRebuyWillpowerDot,
     onTriggerDiceRoll,
     onAdvanceTime,
+    onCommitCharacterUpdate,
 }) => {
     const [scourOpen, setScourOpen] = useState(false);
     const [hallowOpen, setHallowOpen] = useState(false);
@@ -65,10 +66,24 @@ export const MageGnosisContent = ({
         });
     };
 
+    const applyScourUpdates = (updates) => {
+        if (onCommitCharacterUpdate) {
+            onCommitCharacterUpdate(updates);
+            return;
+        }
+
+        Object.entries(updates).forEach(([field, value]) => {
+            handleChange(field, value);
+        });
+    };
+
     const doScour = (choice) => {
         const gnosisLevel = getValue("gnosis") || 1;
         const gd = GNOSIS_TABLE[gnosisLevel] || GNOSIS_TABLE[1];
         const currentMana = getValue("mana") || 0;
+        const updates = {
+            mana: Math.min(gd.maxMana, currentMana + 3),
+        };
 
         if (choice === "damage") {
             const counts = getHealthCounts(healthBoxes);
@@ -78,17 +93,24 @@ export const MageGnosisContent = ({
                 if (counts.bashing > 0) { counts.bashing -= 1; }
             }
             const updatedBoxes = buildHealthBoxes(counts, maxHealth);
-            handleHealthBoxesChange(updatedBoxes);
+            updates.health_boxes = updatedBoxes;
+            updates.health = updatedBoxes.filter((state) => state !== "empty").length;
         } else {
             const scoured = getValue("scoured_attributes") || {};
-            handleChange("scoured_attributes", { ...scoured, [choice]: (scoured[choice] || 0) + 1 });
+            const attributes = getValue("attributes") || {};
             const currentVal = getNestedValue("attributes", choice) || 1;
-            if (currentVal > 0) {
-                handleNestedChange("attributes", choice, currentVal - 1);
-            }
+
+            updates.scoured_attributes = {
+                ...scoured,
+                [choice]: (scoured[choice] || 0) + 1,
+            };
+            updates.attributes = {
+                ...attributes,
+                [choice]: Math.max(0, currentVal - 1),
+            };
         }
 
-        handleChange("mana", Math.min(gd.maxMana, currentMana + 3));
+        applyScourUpdates(updates);
         setScourOpen(false);
     };
 

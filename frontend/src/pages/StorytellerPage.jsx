@@ -26,6 +26,19 @@ export const StorytellerPage = () => {
         diceRollerRef.current?.addHistoryEntry(entry);
     };
 
+    const getCharacterAttributeForDerivedTrait = (character, attr, fallback = 0) => {
+        const rawValue = character?.attributes?.[attr];
+        const currentValue = Number.isFinite(Number(rawValue)) ? Number(rawValue) : fallback;
+
+        if (!character || !["strength", "dexterity", "stamina"].includes(attr)) return currentValue;
+
+        const hasLifeTwo = (character?.arcana?.Life || 0) >= 2;
+        if (!hasLifeTwo) return currentValue;
+
+        const scoured = character?.scoured_attributes || {};
+        return currentValue + Math.max(0, Number(scoured[attr]) || 0);
+    };
+
 
     const applyIncomingCombatDamage = async ({ amount, damageType, sourceProfile }) => {
         if (!activeCharacter || !amount || amount <= 0) return;
@@ -34,7 +47,7 @@ export const StorytellerPage = () => {
         const hasGiant = meritsList.some((m) => (m?.name || "") === "Giant");
         const hasSmallFramed = meritsList.some((m) => (m?.name || "") === "Small-Framed");
         const size = 5 + (hasGiant ? 1 : 0) + (hasSmallFramed ? -1 : 0);
-        const stamina = activeCharacter?.attributes?.stamina || 0;
+        const stamina = getCharacterAttributeForDerivedTrait(activeCharacter, "stamina", 0);
         const maxHealth = stamina + size;
 
         const inventoryItems = activeCharacter?.inventory_items || [];
@@ -154,7 +167,7 @@ export const StorytellerPage = () => {
     const hasGiant = meritsList.some((m) => (m?.name || "") === "Giant");
     const hasSmallFramed = meritsList.some((m) => (m?.name || "") === "Small-Framed");
     const combatSize = 5 + (hasGiant ? 1 : 0) + (hasSmallFramed ? -1 : 0);
-    const combatStamina = activeCharacter?.attributes?.stamina || 0;
+    const combatStamina = getCharacterAttributeForDerivedTrait(activeCharacter, "stamina", 0);
     const combatMaxHealth = combatStamina + combatSize;
 
     const combatHealthBoxes = normalizeHealthBoxes(
@@ -426,16 +439,37 @@ export const StorytellerPage = () => {
     const updateCharacter = async (updates) => {
         if (!activeCharacter) return;
 
+        const previousCharacter = activeCharacter;
+        const optimisticCharacter = {
+            ...activeCharacter,
+            ...updates,
+        };
+
+        setActiveCharacter(optimisticCharacter);
+        setCharacters((prevCharacters) =>
+            prevCharacters.map((c) =>
+                c.id === activeCharacter.id ? optimisticCharacter : c
+            )
+        );
+
         try {
             const response = await axios.put(
                 `${API}/characters/${activeCharacter.id}`,
                 updates
             );
             setActiveCharacter(response.data);
-            setCharacters(characters.map(c => 
-                c.id === activeCharacter.id ? response.data : c
-            ));
+            setCharacters((prevCharacters) =>
+                prevCharacters.map((c) =>
+                    c.id === activeCharacter.id ? response.data : c
+                )
+            );
         } catch (error) {
+            setActiveCharacter(previousCharacter);
+            setCharacters((prevCharacters) =>
+                prevCharacters.map((c) =>
+                    c.id === previousCharacter.id ? previousCharacter : c
+                )
+            );
             toast.error("Failed to update character");
         }
     };
