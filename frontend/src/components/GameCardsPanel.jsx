@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { Pencil, X, Plus, Info, Flame, Skull, Droplets, Wind, Bug, Mountain, Sparkles, Ghost, Zap, ChevronDown, ChevronRight, ChevronUp, ChevronLeft, Star, BookOpen, CalendarDays, Clock3, Cloud, Thermometer, Leaf, Gauge } from "lucide-react";
+import { Pencil, Plus, Info, Flame, Skull, Droplets, Wind, Bug, Mountain, Sparkles, Ghost, Zap, ChevronDown, ChevronRight, ChevronUp, ChevronLeft, Star, BookOpen, CalendarDays, Clock3, Cloud, Thermometer, Leaf, Gauge } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -329,6 +329,14 @@ const MageSightCard = ({
         });
     };
 
+    const deactivateMageSight = async () => {
+        await onUpdateCharacter?.({
+            active_spells: activeSpells.filter((spell) => spell.effect_key !== "mage-sight"),
+        });
+        setScrutinyActive(false);
+        setScrutinyLayers([]);
+    };
+
     const applyScrutinySuccesses = (rolled, layers, startingOpacity) => {
         let updatedLayers = layers.map(l => ({ ...l }));
         let currentLayer = updatedLayers.find(l => !l.complete);
@@ -450,7 +458,19 @@ const MageSightCard = ({
                     </p>
                 </div>
 
-                {!activeMageSight && (
+                {activeMageSight ? (
+                    <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 px-2 text-[10px] border border-zinc-800 text-zinc-400 hover:text-rose-400 hover:bg-rose-950/30"
+                        onClick={deactivateMageSight}
+                        title="Deactivate Mage Sight"
+                        data-testid="deactivate-mage-sight-btn"
+                    >
+                        Dismiss
+                    </Button>
+                ) : (
                     <Button
                         type="button"
                         size="sm"

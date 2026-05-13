@@ -18,6 +18,11 @@ const PRACTICE_DOTS = {
 
 const ALL_PRACTICES = Object.entries(PRACTICE_DOTS).map(([name, dots]) => ({ name, dots }));
 
+const ARCANA_NAMES = [
+    "Death", "Fate", "Forces", "Life", "Matter",
+    "Mind", "Prime", "Space", "Spirit", "Time"
+];
+
 const getCastingTime = (gnosis) => {
     if (gnosis <= 2) return "3 hours";
     if (gnosis <= 4) return "1 hour";
@@ -133,6 +138,10 @@ export const SpellcastingPopup = ({
     const [specialRangeMode, setSpecialRangeMode] = useState("none"); // none | space | time
     const [sympatheticWithstand, setSympatheticWithstand] = useState(0);
     const [scaleMode, setScaleMode] = useState("targets"); // targets | area
+    const [ritualCastingBonus, setRitualCastingBonus] = useState(0);
+    const [additionalMana, setAdditionalMana] = useState(0);
+    const [combinedSpellCount, setCombinedSpellCount] = useState(0);
+    const [combinedSpellArcana, setCombinedSpellArcana] = useState([]);
 
     // Reset when popup opens
     useEffect(() => {
@@ -165,6 +174,10 @@ export const SpellcastingPopup = ({
             setSpecialRangeMode("none");
             setSympatheticWithstand(0);
             setScaleMode("targets");
+            setRitualCastingBonus(0);
+            setAdditionalMana(0);
+            setCombinedSpellCount(0);
+            setCombinedSpellArcana([]);
         }
     }, [isOpen, arcanum, initialPractice, defaultPrimaryFactor]);
 
@@ -188,6 +201,39 @@ export const SpellcastingPopup = ({
     const canUseMatterDurationMana = matterDots >= 2 && arcanum === "Matter";
     const canUseSpaceSympathetic = spaceDots >= 2;
     const canUseTimeSympathetic = timeDots >= 2;
+
+    const maxCombinedSpellCount = Math.max(0, Math.floor((Number(gnosis) || 0) / 2));
+
+    const getArcanaDotsForCombinedSpell = (arcanaName) => {
+        if (arcanaName === arcanum) return Number(arcanumDots) || 0;
+        return Number(allArcana?.[arcanaName]) || 0;
+    };
+
+    const availableCombinedArcana = ARCANA_NAMES
+        .map((arcanaName) => ({
+            name: arcanaName,
+            dots: getArcanaDotsForCombinedSpell(arcanaName),
+        }))
+        .filter((arcanaData) => arcanaData.dots > 0);
+
+    useEffect(() => {
+        if (combinedSpellCount > maxCombinedSpellCount) {
+            setCombinedSpellCount(maxCombinedSpellCount);
+        }
+    }, [combinedSpellCount, maxCombinedSpellCount]);
+
+    useEffect(() => {
+        setCombinedSpellArcana((prev) =>
+            Array.from({ length: combinedSpellCount }, (_, index) => prev[index] || arcanum)
+        );
+    }, [combinedSpellCount, arcanum]);
+
+    const selectedCombinedArcana = combinedSpellArcana.slice(0, combinedSpellCount);
+    const selectedCombinedArcanaDots = selectedCombinedArcana.map(getArcanaDotsForCombinedSpell);
+    const combinedLowestArcanumDots = selectedCombinedArcanaDots.length > 0
+        ? Math.min(Number(arcanumDots) || 0, ...selectedCombinedArcanaDots)
+        : Number(arcanumDots) || 0;
+    const combinedSpellPenalty = combinedSpellCount * -2;
 
     const availablePractices = useMemo(() => {
         return ALL_PRACTICES.filter(p => p.dots <= arcanumDots);
@@ -258,10 +304,12 @@ export const SpellcastingPopup = ({
     }, [selectedYantraData]);
 
     // Dice pool
-    const baseDicePool = gnosis + arcanumDots;
+    const ritualBonus = factors.casting.advanced ? 0 : ritualCastingBonus;
+    const baseArcanumDots = combinedSpellCount > 0 ? combinedLowestArcanumDots : arcanumDots;
+    const baseDicePool = gnosis + baseArcanumDots;
     const roteBonus = spellType === "rote" ? (roteSkillDots || 0) : 0;
     const orderSkillBonus = (spellType === "rote" && isRoteOrderSkill) ? 1 : 0;
-    const finalDicePool = Math.max(0, baseDicePool + dicePenalty + yantraBonus + roteBonus + orderSkillBonus);
+    const finalDicePool = Math.max(0, baseDicePool + dicePenalty + yantraBonus + roteBonus + orderSkillBonus + ritualBonus + combinedSpellPenalty);
 
     // Spell Mana cost
     const getManaCost = () => {
@@ -291,10 +339,12 @@ export const SpellcastingPopup = ({
 
     const paradoxAfterModifiers = baseParadoxDice + paradoxModifiers;
 
+    const committedSpellManaCost = manaCost + additionalMana;
+
     // Max mana for mitigation: can't exceed perTurn total (including spell cost), can't exceed available mana
     const maxManaMitigation = Math.max(0, Math.min(
-        manaPerTurn - manaCost,
-        currentMana - manaCost,
+        manaPerTurn - committedSpellManaCost,
+        currentMana - committedSpellManaCost,
         Math.max(0, paradoxAfterModifiers)
     ));
 
@@ -319,7 +369,7 @@ export const SpellcastingPopup = ({
     const paradoxRollQuality = getParadoxRollQuality();
 
     // Total mana
-    const totalManaCost = manaCost + actualManaMitigation;
+    const totalManaCost = committedSpellManaCost + actualManaMitigation;
 
     const updateFactor = (factorName, updates) => {
         setFactors(prev => ({
@@ -448,6 +498,7 @@ export const SpellcastingPopup = ({
                 potency: getFactorDescription("potency"),
                 duration: getFactorDescription("duration"),
                 scale: getFactorDescription("scale"),
+                combined: combinedSpellCount > 0 ? `${combinedSpellCount + 1} spells` : undefined,
             }
             : null;
 
@@ -463,8 +514,23 @@ export const SpellcastingPopup = ({
             ? `(${selectedYantraNames.join(", ")})`
             : "";
 
+        const ritualSummary = ritualBonus > 0
+            ? `Ritual Casting: +${ritualBonus} dice`
+            : "";
+
+        const combinedSpellSummary = combinedSpellCount > 0
+            ? `Combined Spell: ${combinedSpellCount + 1} spells (${[arcanum, ...selectedCombinedArcana].join(", ")}); lowest Arcanum ${combinedLowestArcanumDots}; ${combinedSpellPenalty} dice`
+            : "";
+
+        const additionalManaSummary = additionalMana > 0
+            ? `Additional Mana: ${additionalMana}`
+            : "";
+
         const spellSummary = [
             ...(selectedYantrasSummary ? [selectedYantrasSummary] : []),
+            ...(ritualSummary ? [ritualSummary] : []),
+            ...(combinedSpellSummary ? [combinedSpellSummary] : []),
+            ...(additionalManaSummary ? [additionalManaSummary] : []),
             factorSummary,
         ].join("\n");
 
@@ -475,10 +541,14 @@ export const SpellcastingPopup = ({
 
             const dicePoolBreakdownParts = [
                 `Gnosis ${gnosis}`,
-                `${arcanum} ${arcanumDots}${selectedPractice ? ` (${selectedPractice})` : ""}`,
+                combinedSpellCount > 0
+                    ? `Lowest Arcanum ${combinedLowestArcanumDots}${selectedPractice ? ` (${selectedPractice})` : ""}`
+                    : `${arcanum} ${arcanumDots}${selectedPractice ? ` (${selectedPractice})` : ""}`,
                 ...(roteBonus > 0 ? [`Rote Skill ${roteBonus}`] : []),
                 ...(orderSkillBonus > 0 ? [`Order Skill ${orderSkillBonus}`] : []),
                 ...(yantraBonus > 0 ? [`Yantras ${yantraBonus}`] : []),
+                ...(ritualBonus > 0 ? [`Ritual +${ritualBonus}`] : []),
+                ...(combinedSpellPenalty !== 0 ? [`Combined Spell ${combinedSpellPenalty}`] : []),
                 ...(dicePenalty !== 0 ? [`Factors ${dicePenalty}`] : []),
                 ...(poolModifier < 0 ? [`Release Penalty ${poolModifier}`] : []),
             ];
@@ -785,6 +855,30 @@ export const SpellcastingPopup = ({
                             <Plus className="w-3 h-3" />
                         </Button>
                     </div>
+                ) : isCasting && !f.advanced ? (
+                    <div className="flex items-center justify-center gap-0.5">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5 text-zinc-400"
+                            onClick={() => setRitualCastingBonus(Math.max(0, ritualCastingBonus - 1))}
+                            disabled={ritualCastingBonus <= 0}
+                            data-testid="ritual-casting-decrease"
+                        >
+                            <Minus className="w-3 h-3" />
+                        </Button>
+                        <span className="text-sm font-mono text-violet-300 w-4 text-center">{ritualCastingBonus}</span>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5 text-zinc-400"
+                            onClick={() => setRitualCastingBonus(Math.min(5, ritualCastingBonus + 1))}
+                            disabled={ritualCastingBonus >= 5}
+                            data-testid="ritual-casting-increase"
+                        >
+                            <Plus className="w-3 h-3" />
+                        </Button>
+                    </div>
                 ) : (
                     <span className="text-center text-zinc-500">-</span>
                 )}
@@ -796,6 +890,7 @@ export const SpellcastingPopup = ({
                     {f.advanced && factorName === "duration" && matterDurationMana && arcanum === "Matter" && <span className="text-blue-400 ml-1">(+1 Mana)</span>}
                     {factorName === "range" && specialRangeMode !== "none" && <span className="text-blue-400 ml-1">(+1 Mana, +1 Reach)</span>}
                     {factorName === "duration" && fateDurationBonus > 0 && <span className="text-blue-400 ml-1">(+{fateDurationBonus} lvl, +1 Mana)</span>}
+                    {isCasting && !f.advanced && ritualCastingBonus > 0 && <span className="text-teal-400 ml-1">(+{ritualCastingBonus}d)</span>}
                     {hasLevels && paidLevels > 0 && <span className="text-red-400 ml-1">(-{paidLevels * 2}d)</span>}
                     {hasLevels && freeLevelsFromPrimary > 0 && f.level > 1 && <span className="text-teal-400 ml-1">(+{Math.min(freeLevelsFromPrimary, f.level - 1)}free)</span>}
                 </span>
@@ -871,6 +966,102 @@ export const SpellcastingPopup = ({
                             </SelectContent>
                         </Select>
                     </div>
+
+                    {/* Combined Spell */}
+                    {selectedPractice && maxCombinedSpellCount > 0 && (
+                        <div className="p-2 bg-zinc-800/30 rounded space-y-2">
+                            <div className="flex items-center justify-between gap-3">
+                                <div>
+                                    <p className="text-xs text-zinc-500 uppercase">Combined Spell</p>
+                                    <p className="text-[11px] text-zinc-600">
+                                        Add extra spells. Each extra spell is -2 dice. Base pool uses the lowest Arcanum used.
+                                    </p>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-6 w-6 text-zinc-400"
+                                        onClick={() => setCombinedSpellCount(Math.max(0, combinedSpellCount - 1))}
+                                        disabled={combinedSpellCount <= 0}
+                                        data-testid="combined-spell-decrease"
+                                    >
+                                        <Minus className="w-3 h-3" />
+                                    </Button>
+                                    <span className="font-mono text-amber-400 w-12 text-center">
+                                        {combinedSpellCount}/{maxCombinedSpellCount}
+                                    </span>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-6 w-6 text-zinc-400"
+                                        onClick={() => setCombinedSpellCount(Math.min(maxCombinedSpellCount, combinedSpellCount + 1))}
+                                        disabled={combinedSpellCount >= maxCombinedSpellCount}
+                                        data-testid="combined-spell-increase"
+                                    >
+                                        <Plus className="w-3 h-3" />
+                                    </Button>
+                                </div>
+                            </div>
+
+                            {combinedSpellCount > 0 && (
+                                <div className="space-y-2 pt-2 border-t border-zinc-700/50">
+                                    {Array.from({ length: combinedSpellCount }).map((_, index) => {
+                                        const selectedArcanaName = selectedCombinedArcana[index] || arcanum;
+                                        const selectedDots = getArcanaDotsForCombinedSpell(selectedArcanaName);
+
+                                        return (
+                                            <div key={`combined-spell-${index}`} className="flex items-center gap-2">
+                                                <span className="w-20 text-[10px] uppercase tracking-wider text-zinc-500">
+                                                    Spell {index + 2}
+                                                </span>
+                                                <Select
+                                                    value={selectedArcanaName}
+                                                    onValueChange={(value) => {
+                                                        setCombinedSpellArcana((prev) => {
+                                                            const next = [...prev];
+                                                            next[index] = value;
+                                                            return next;
+                                                        });
+                                                    }}
+                                                >
+                                                    <SelectTrigger
+                                                        className="flex-1 h-8 text-xs bg-zinc-900/50 border-zinc-700"
+                                                        data-testid={`combined-spell-arcana-${index + 1}`}
+                                                    >
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent className="bg-zinc-900 border-zinc-700 z-[200]">
+                                                        {availableCombinedArcana.map((arcanaData) => (
+                                                            <SelectItem
+                                                                key={arcanaData.name}
+                                                                value={arcanaData.name}
+                                                                className="text-xs text-zinc-200"
+                                                            >
+                                                                {arcanaData.name} {arcanaData.dots}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                <span className="w-12 text-right text-xs font-mono text-violet-300">
+                                                    {selectedDots} dot{selectedDots === 1 ? "" : "s"}
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
+
+                                    <div className="flex justify-between text-xs">
+                                        <span className="text-zinc-500">Combined penalty</span>
+                                        <span className="font-mono text-red-400">{combinedSpellPenalty} dice</span>
+                                    </div>
+                                    <div className="flex justify-between text-xs">
+                                        <span className="text-zinc-500">Lowest Arcanum used</span>
+                                        <span className="font-mono text-violet-300">{combinedLowestArcanumDots}</span>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
 
                     {/* Reach Display */}
                     {selectedPractice && (
@@ -968,6 +1159,45 @@ export const SpellcastingPopup = ({
                                         className="h-6 w-6 text-zinc-400"
                                         onClick={() => setSpellReach(spellReach + 1)}
                                         data-testid="spell-reach-increase"
+                                    >
+                                        <Plus className="w-3 h-3" />
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Additional Mana */}
+                    {selectedPractice && (
+                        <div className="p-2 bg-zinc-800/30 rounded space-y-1.5">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-xs text-zinc-500 uppercase">Add Mana</p>
+                                    <p className="text-[11px] text-zinc-600">
+                                        Manual Mana for spell options, aggravated damage, or other extra costs
+                                    </p>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-6 w-6 text-zinc-400"
+                                        onClick={() => setAdditionalMana(Math.max(0, additionalMana - 1))}
+                                        disabled={additionalMana <= 0}
+                                        data-testid="additional-mana-decrease"
+                                    >
+                                        <Minus className="w-3 h-3" />
+                                    </Button>
+                                    <span className="font-mono text-violet-400 w-8 text-center">
+                                        {additionalMana}
+                                    </span>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-6 w-6 text-zinc-400"
+                                        onClick={() => setAdditionalMana(additionalMana + 1)}
+                                        disabled={committedSpellManaCost >= currentMana}
+                                        data-testid="additional-mana-increase"
                                     >
                                         <Plus className="w-3 h-3" />
                                     </Button>
@@ -1120,10 +1350,12 @@ export const SpellcastingPopup = ({
                     <div className="p-3 bg-violet-900/20 border border-violet-500/30 rounded">
                         <p className="text-xs text-zinc-500 uppercase mb-1">Spellcasting Dice Pool</p>
                         <p className="text-base font-mono text-violet-300">
-                            Gnosis ({gnosis}) + {arcanum} ({arcanumDots})
+                            Gnosis ({gnosis}) + {combinedSpellCount > 0 ? "Lowest Arcanum" : arcanum} ({baseArcanumDots})
                             {roteBonus > 0 && <span className="text-amber-400"> + Rote Skill ({roteBonus})</span>}
                             {orderSkillBonus > 0 && <span className="text-amber-400"> + Order Skill ({orderSkillBonus})</span>}
                             {yantraBonus > 0 && <span className="text-teal-400"> + Yantras ({yantraBonus})</span>}
+                            {ritualBonus > 0 && <span className="text-teal-400"> + Ritual ({ritualBonus})</span>}
+                            {combinedSpellPenalty !== 0 && <span className="text-red-400"> {combinedSpellPenalty}</span>}
                             {dicePenalty !== 0 && <span className="text-red-400"> {dicePenalty}</span>}
                             <span className="text-zinc-400"> = </span>
                             <span className="text-teal-400 font-bold text-lg">{finalDicePool}</span>
@@ -1365,6 +1597,24 @@ export const SpellcastingPopup = ({
                             <span className="text-zinc-400">Spell Mana:</span>
                             <span className="font-mono text-violet-400">{manaCost}</span>
                         </div>
+                        {additionalMana > 0 && (
+                            <div className="flex justify-between text-sm">
+                                <span className="text-zinc-400">Additional Mana:</span>
+                                <span className="font-mono text-violet-400">{additionalMana}</span>
+                            </div>
+                        )}
+                        {ritualBonus > 0 && (
+                            <div className="flex justify-between text-sm">
+                                <span className="text-zinc-400">Ritual bonus:</span>
+                                <span className="font-mono text-teal-400">+{ritualBonus} dice</span>
+                            </div>
+                        )}
+                        {combinedSpellCount > 0 && (
+                            <div className="flex justify-between text-sm">
+                                <span className="text-zinc-400">Combined Spell:</span>
+                                <span className="font-mono text-red-400">{combinedSpellPenalty} dice</span>
+                            </div>
+                        )}
                         {actualManaMitigation > 0 && (
                             <div className="flex justify-between text-sm">
                                 <span className="text-zinc-400">Paradox Mitigation Mana:</span>
