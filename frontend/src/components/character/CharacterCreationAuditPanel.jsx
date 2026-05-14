@@ -83,6 +83,7 @@ export const CharacterCreationAuditPanel = ({ character, getValue, handleChange,
     const meritsReport = validation.reports.merits;
     const arcanaReport = validation.reports.arcana;
     const obsessionReport = validation.reports.obsessions;
+    const specialtiesReport = validation.reports.specialties;
 
     return (
         <div className="p-3 bg-violet-950/20 border border-violet-700/40 rounded-sm space-y-3" data-testid="mage-creation-audit-panel">
@@ -181,7 +182,7 @@ export const CharacterCreationAuditPanel = ({ character, getValue, handleChange,
 
                 <div className="p-2 bg-zinc-950/50 border border-zinc-800 rounded-sm">
                     <ProgressLine label="Merits" spent={meritsReport.spent} expected={meritsReport.available} />
-                    <ProgressLine label="Specialties" spent={(character.specialties || []).length} expected={MAGE_CREATION_RULES.specialties} />
+                    <ProgressLine label="Specialties" spent={specialtiesReport.current} expected={specialtiesReport.expected} />
                 </div>
             </div>
 

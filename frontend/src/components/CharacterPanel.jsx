@@ -68,7 +68,16 @@ import { GeistRemembranceContent } from "./character/GeistRemembranceContent";
 import { MeritsContent } from "./character/MeritsContent";
 import { CombatContent } from "./character/CombatContent";
 import { CharacterCreationAuditPanel } from "./character/CharacterCreationAuditPanel";
-import { calculateMagePurchaseCost, canAffordMagePurchase, getBlankMageCreationChoices, makeLedgerEntry, validateMageCreation } from "@/utils/mageCreationAudit";
+import {
+    PROFESSIONAL_TRAINING_RULES,
+    calculateMagePurchaseCost,
+    canAffordMagePurchase,
+    getBlankMageCreationChoices,
+    getChargeableMeritDots,
+    getProfessionalTrainingFreeSpecialtyCount,
+    makeLedgerEntry,
+    validateMageCreation,
+} from "@/utils/mageCreationAudit";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -393,7 +402,53 @@ export const CharacterPanel = ({
         return true;
     };
 
-    const totalMeritDots = (merits = []) => (Array.isArray(merits) ? merits : []).reduce((total, merit) => total + (Number(merit?.dots) || 0), 0);
+    const totalChargeableMeritDots = (merits = []) =>
+        (Array.isArray(merits) ? merits : []).reduce(
+            (total, merit) => total + getChargeableMeritDots(merit),
+            0
+        );
+
+    const getProfessionalTrainingDotsFromList = (merits = []) => {
+        const professionalTraining = (Array.isArray(merits) ? merits : []).find(
+            (merit) => (merit?.name || "") === PROFESSIONAL_TRAINING_RULES.meritName
+        );
+
+        return Math.max(0, Number(professionalTraining?.dots) || 0);
+    };
+
+    const buildProfessionalTrainingFreeContactsMerit = () => ({
+        id: "professional-training-free-contacts",
+        name: PROFESSIONAL_TRAINING_RULES.freeContactMeritName,
+        dots: PROFESSIONAL_TRAINING_RULES.freeContactDots,
+        specialty: PROFESSIONAL_TRAINING_RULES.freeContactSpecialty,
+        source: PROFESSIONAL_TRAINING_RULES.freeContactSource,
+        locked: true,
+    });
+
+    const withProfessionalTrainingFreeContacts = (merits = []) => {
+        const safeMerits = Array.isArray(merits) ? merits : [];
+        const withoutFreeContacts = safeMerits.filter(
+            (merit) => merit?.source !== PROFESSIONAL_TRAINING_RULES.freeContactSource
+        );
+
+        const professionalTrainingDots = getProfessionalTrainingDotsFromList(withoutFreeContacts);
+
+        if (professionalTrainingDots < PROFESSIONAL_TRAINING_RULES.contactsAtDots) {
+            return withoutFreeContacts;
+        }
+
+        return [
+            ...withoutFreeContacts,
+            buildProfessionalTrainingFreeContactsMerit(),
+        ].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+    };
+
+    const getProfessionalTrainingFreeSpecialtySlotsGained = (currentMerits = [], nextMerits = []) => {
+        const currentFreeSpecialties = getProfessionalTrainingFreeSpecialtyCount(currentMerits);
+        const nextFreeSpecialties = getProfessionalTrainingFreeSpecialtyCount(nextMerits);
+
+        return Math.max(0, nextFreeSpecialties - currentFreeSpecialties);
+    };
 
     const requestListTraitPurchase = (field, value, currentValue) => {
         if (!isAdvancementLocked) return false;
@@ -402,6 +457,17 @@ export const CharacterPanel = ({
         const nextList = Array.isArray(value) ? value : [];
 
         if (field === "specialties" && nextList.length > currentList.length) {
+            const freeSlots = Math.max(0, Number(activeCharacter?.free_skill_specialty_slots) || 0);
+
+            if (freeSlots > 0) {
+                commitCharacterUpdate({
+                    specialties: nextList,
+                    free_skill_specialty_slots: freeSlots - 1,
+                });
+                toast.success("Free Professional Training Specialty recorded.");
+                return true;
+            }
+
             openAdvancementPurchase({
                 trait_type: "skill_specialty",
                 trait_key: nextList[nextList.length - 1] || "specialty",
@@ -439,16 +505,32 @@ export const CharacterPanel = ({
             return true;
         }
 
-        if (field === "merits_list" && totalMeritDots(nextList) > totalMeritDots(currentList)) {
-            openAdvancementPurchase({
-                trait_type: "merit",
-                trait_key: "merit",
-                label: "Merit increase",
-                from: totalMeritDots(currentList),
-                to: totalMeritDots(nextList),
-                apply: { kind: "field", field, value },
-            });
-            return true;
+        if (field === "merits_list") {
+            const normalizedNextList = withProfessionalTrainingFreeContacts(nextList);
+            const currentChargeableDots = totalChargeableMeritDots(currentList);
+            const nextChargeableDots = totalChargeableMeritDots(normalizedNextList);
+
+            if (nextChargeableDots > currentChargeableDots) {
+                const freeSpecialtySlotsGained = getProfessionalTrainingFreeSpecialtySlotsGained(currentList, normalizedNextList);
+                const patch = {
+                    merits_list: normalizedNextList,
+                };
+
+                if (freeSpecialtySlotsGained > 0) {
+                    patch.free_skill_specialty_slots =
+                        Math.max(0, Number(activeCharacter?.free_skill_specialty_slots) || 0) + freeSpecialtySlotsGained;
+                }
+
+                openAdvancementPurchase({
+                    trait_type: "merit",
+                    trait_key: "merit",
+                    label: "Merit increase",
+                    from: currentChargeableDots,
+                    to: nextChargeableDots,
+                    apply: { kind: "patch", patch },
+                });
+                return true;
+            }
         }
 
         return false;
@@ -538,6 +620,10 @@ export const CharacterPanel = ({
 
         if (purchase.apply.kind === "field") {
             return { [purchase.apply.field]: purchase.apply.value };
+        }
+
+        if (purchase.apply.kind === "patch") {
+            return purchase.apply.patch || {};
         }
 
         return {};
@@ -1710,7 +1796,7 @@ export const CharacterPanel = ({
                 base = base.filter((m) => (m?.name || "") !== "Giant");
             }
 
-            const newMerits = [...base, meritToAdd]
+            const newMerits = withProfessionalTrainingFreeContacts([...base, meritToAdd])
                 .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
             
             handleChange("merits_list", newMerits);
@@ -1739,15 +1825,35 @@ export const CharacterPanel = ({
 
     const deleteMerit = (id) => {
         if (!id) return;
-        const newMerits = meritsList.filter((m) => (m?.id || null) !== id);
+
+        const merit = meritsList.find((m) => (m?.id || null) === id);
+        if (merit?.source === PROFESSIONAL_TRAINING_RULES.freeContactSource) {
+            toast.error("Professional Training Contacts are granted by the Merit. Remove or lower Professional Training instead.");
+            return;
+        }
+
+        const newMerits = withProfessionalTrainingFreeContacts(
+            meritsList.filter((m) => (m?.id || null) !== id)
+        );
+
         handleChange("merits_list", newMerits);
     };
     const updateMerit = (id, data) => {
         if (!id) return;
-        const newMerits = meritsList.map((m) => {
-            if ((m?.id || null) !== id) return m;
-            return { ...m, ...data };
-        });
+
+        const merit = meritsList.find((m) => (m?.id || null) === id);
+        if (merit?.source === PROFESSIONAL_TRAINING_RULES.freeContactSource) {
+            toast.error("Professional Training Contacts are granted by the Merit. Edit Professional Training instead.");
+            return;
+        }
+
+        const newMerits = withProfessionalTrainingFreeContacts(
+            meritsList.map((m) => {
+                if ((m?.id || null) !== id) return m;
+                return { ...m, ...data };
+            })
+        );
+
         handleChange("merits_list", newMerits);
     };
 

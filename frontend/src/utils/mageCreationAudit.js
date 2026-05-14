@@ -46,6 +46,17 @@ export const MAGE_CREATION_RULES = {
     },
 };
 
+export const PROFESSIONAL_TRAINING_RULES = {
+    meritName: "Professional Training",
+    contactsAtDots: 1,
+    specialtiesAtDots: 2,
+    freeContactDots: 2,
+    freeSpecialties: 2,
+    freeContactSource: "professional_training_free",
+    freeContactMeritName: "Contacts",
+    freeContactSpecialty: "Professional Training",
+};
+
 export const MAGE_XP_COSTS = {
     attribute: { experience: 4, arcane_experience: 0 },
     skill: { experience: 2, arcane_experience: 0 },
@@ -97,6 +108,38 @@ const sum = (values) => values.reduce((total, value) => total + (Number(value) |
 const getMeritName = (merit) => (merit?.name || "").trim();
 const getMeritDots = (merit) => Math.max(0, Number(merit?.dots) || 0);
 
+export const isProfessionalTrainingFreeMerit = (merit = {}) =>
+    merit?.source === PROFESSIONAL_TRAINING_RULES.freeContactSource;
+
+export const getProfessionalTrainingDotsFromMerits = (merits = []) => {
+    const professionalTraining = (Array.isArray(merits) ? merits : []).find(
+        (merit) => getMeritName(merit) === PROFESSIONAL_TRAINING_RULES.meritName
+    );
+
+    return getMeritDots(professionalTraining);
+};
+
+export const getProfessionalTrainingFreeSpecialtyCount = (merits = []) => {
+    const dots = getProfessionalTrainingDotsFromMerits(merits);
+
+    return dots >= PROFESSIONAL_TRAINING_RULES.specialtiesAtDots
+        ? PROFESSIONAL_TRAINING_RULES.freeSpecialties
+        : 0;
+};
+
+export const getProfessionalTrainingFreeContactDots = (merits = []) =>
+    (Array.isArray(merits) ? merits : []).reduce((total, merit) => {
+        if (!isProfessionalTrainingFreeMerit(merit)) return total;
+        if (getMeritName(merit) !== PROFESSIONAL_TRAINING_RULES.freeContactMeritName) return total;
+        return total + getMeritDots(merit);
+    }, 0);
+
+export const getChargeableMeritDots = (merit = {}) => {
+    if (isProfessionalTrainingFreeMerit(merit)) return 0;
+    if (merit?.source === "order_free") return 0;
+    return getMeritDots(merit);
+};
+
 export const getMageMeritCreationDots = (character = {}) => {
     const order = character.order || "";
     const orderStatusName = order ? `Status: ${order}` : "";
@@ -106,6 +149,7 @@ export const getMageMeritCreationDots = (character = {}) => {
         const name = getMeritName(merit);
         const dots = getMeritDots(merit);
 
+        if (isProfessionalTrainingFreeMerit(merit)) return total;
         if (isOrderMember(order) && name === "High Speech") return total;
         if (isOrderMember(order) && name === orderStatusName) return total + Math.max(0, dots - 1);
         if (merit?.source === "order_free") return total;
@@ -153,6 +197,7 @@ export const validateMageCreation = (character = {}) => {
     const rotes = Array.isArray(character.rotes) ? character.rotes : [];
     const praxes = Array.isArray(character.praxes) ? character.praxes : [];
     const specialties = Array.isArray(character.specialties) ? character.specialties : [];
+    const merits = Array.isArray(character.merits_list) ? character.merits_list : [];
     const obsessions = normalizeMageObsessions(character).filter((entry) => String(entry || "").trim());
 
     const chosenAttributeCategories = Object.values(attributePriorities).filter(Boolean);
@@ -258,8 +303,11 @@ export const validateMageCreation = (character = {}) => {
         errors.push(`${inferior} is the Inferior Arcanum and cannot receive starting dots.`);
     }
 
-    if (specialties.length !== MAGE_CREATION_RULES.specialties) {
-        errors.push(`Starting Skill Specialties: ${specialties.length}; expected ${MAGE_CREATION_RULES.specialties}.`);
+    const professionalTrainingFreeSpecialties = getProfessionalTrainingFreeSpecialtyCount(merits);
+    const expectedStartingSpecialties = MAGE_CREATION_RULES.specialties + professionalTrainingFreeSpecialties;
+
+    if (specialties.length !== expectedStartingSpecialties) {
+        errors.push(`Starting Skill Specialties: ${specialties.length}; expected ${expectedStartingSpecialties}.`);
     }
 
     if (gnosis < 1 || gnosis > 3) {
@@ -286,6 +334,15 @@ export const validateMageCreation = (character = {}) => {
     const gnosisMeritCost = MAGE_CREATION_RULES.gnosisMeritCosts[gnosis] ?? 0;
     const availableMerits = MAGE_CREATION_RULES.merits - gnosisMeritCost;
     const spentMerits = getMageMeritCreationDots(character);
+    const professionalTrainingDots = getProfessionalTrainingDotsFromMerits(merits);
+    const professionalTrainingFreeContacts = getProfessionalTrainingFreeContactDots(merits);
+
+    if (
+        professionalTrainingDots >= PROFESSIONAL_TRAINING_RULES.contactsAtDots &&
+        professionalTrainingFreeContacts < PROFESSIONAL_TRAINING_RULES.freeContactDots
+    ) {
+        errors.push(`Professional Training grants ${PROFESSIONAL_TRAINING_RULES.freeContactDots} free Contacts dots.`);
+    }
 
     if (spentMerits > availableMerits) {
         errors.push(`Creation Merit dots overspent: spent ${spentMerits}; available ${availableMerits} after Gnosis ${gnosis}.`);
@@ -297,7 +354,6 @@ export const validateMageCreation = (character = {}) => {
         if ((Number(skills.occult) || 0) < 1) {
             errors.push("Order members receive Occult 1 for free; Occult must be at least 1.");
         }
-        const merits = Array.isArray(character.merits_list) ? character.merits_list : [];
         const hasHighSpeech = merits.some((merit) => getMeritName(merit) === "High Speech");
         const hasOrderStatus = merits.some((merit) => getMeritName(merit) === `Status: ${order}` && getMeritDots(merit) >= 1);
         if (!hasHighSpeech) warnings.push("Order member is missing the free High Speech Merit.");
@@ -323,6 +379,11 @@ export const validateMageCreation = (character = {}) => {
             obsessions: {
                 current: obsessions.length,
                 expected: expectedObsessions,
+            },
+            specialties: {
+                current: specialties.length,
+                expected: expectedStartingSpecialties,
+                professionalTrainingFree: professionalTrainingFreeSpecialties,
             },
         },
     };
