@@ -380,9 +380,15 @@ export const StorytellerPage = () => {
 
             const createdCharacter = createResponse.data;
             const { id, _id, created_at, updated_at, ...updates } = importedCharacter || {};
+            const normalizedUpdates = { ...updates };
+
+            if (characterType === "mage" && normalizedUpdates.creation_locked === undefined) {
+                normalizedUpdates.creation_mode = "active";
+                normalizedUpdates.creation_locked = true;
+            }
 
             const updateResponse = await axios.put(`${API}/characters/${createdCharacter.id}`, {
-                ...updates,
+                ...normalizedUpdates,
                 name: importedName,
                 character_type: characterType,
             });
@@ -646,4 +652,4 @@ export const StorytellerPage = () => {
         </div>
     );
 };
-    
+     

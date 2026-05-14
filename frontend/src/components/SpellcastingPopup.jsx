@@ -23,6 +23,16 @@ const ARCANA_NAMES = [
     "Mind", "Prime", "Space", "Spirit", "Time"
 ];
 
+const WITHSTAND_TRAITS = [
+    { value: "none", label: "None" },
+    { value: "stamina", label: "Stamina" },
+    { value: "resolve", label: "Resolve" },
+    { value: "composure", label: "Composure" },
+    { value: "defense", label: "Defense" },
+    { value: "arcanum", label: "Arcanum" },
+    { value: "custom", label: "Custom" },
+];
+
 const getCastingTime = (gnosis) => {
     if (gnosis <= 2) return "3 hours";
     if (gnosis <= 4) return "1 hour";
@@ -107,7 +117,12 @@ export const SpellcastingPopup = ({
     roteSkillDots,
     isRoteOrderSkill,
     defaultPrimaryFactor = null,
-    allArcana = {}
+    allArcana = {},
+    athleticsDots = 0,
+    firearmsDots = 0,
+    previousParadoxRolls = 0,
+    onPreviousParadoxRollsChange,
+    onResetPreviousParadoxRolls
 }) => {
     const [selectedPractice, setSelectedPractice] = useState("");
     const [spellName, setSpellName] = useState("");
@@ -122,7 +137,6 @@ export const SpellcastingPopup = ({
     // Paradox state
     const [paradoxInured, setParadoxInured] = useState(false);
     const [sleeperWitnesses, setSleeperWitnesses] = useState("none");
-    const [previousParadoxRolls, setPreviousParadoxRolls] = useState(0);
     const [manaMitigation, setManaMitigation] = useState(0);
     const [paradoxMode, setParadoxMode] = useState("");
 
@@ -137,11 +151,46 @@ export const SpellcastingPopup = ({
     const [matterDurationMana, setMatterDurationMana] = useState(false);
     const [specialRangeMode, setSpecialRangeMode] = useState("none"); // none | space | time
     const [sympatheticWithstand, setSympatheticWithstand] = useState(0);
+    const [withstandTrait, setWithstandTrait] = useState("none");
+    const [withstandValue, setWithstandValue] = useState(0);
+    const [aimedTargetDefense, setAimedTargetDefense] = useState(0);
     const [scaleMode, setScaleMode] = useState("targets"); // targets | area
     const [ritualCastingBonus, setRitualCastingBonus] = useState(0);
     const [additionalMana, setAdditionalMana] = useState(0);
     const [combinedSpellCount, setCombinedSpellCount] = useState(0);
     const [combinedSpellArcana, setCombinedSpellArcana] = useState([]);
+
+    const effectiveSpellType = spellType || "improvised";
+    const scenePreviousParadoxRolls = Math.max(0, Number(previousParadoxRolls) || 0);
+
+    const setPreviousParadoxRolls = (valueOrUpdater) => {
+        if (!onPreviousParadoxRollsChange) return;
+
+        if (typeof valueOrUpdater === "function") {
+            onPreviousParadoxRollsChange(valueOrUpdater);
+            return;
+        }
+
+        onPreviousParadoxRollsChange(Math.max(0, Number(valueOrUpdater) || 0));
+    };
+
+    const resetPreviousParadoxRolls = () => {
+        if (onResetPreviousParadoxRolls) {
+            onResetPreviousParadoxRolls();
+            return;
+        }
+
+        setPreviousParadoxRolls(0);
+    };
+
+    const registerParadoxRollForScene = (paradoxResult = {}) => {
+        if (paradoxResult?.is_dramatic_failure) {
+            toast.info("Paradox dramatic failure: previous Paradox roll counter does not increase.");
+            return;
+        }
+
+        setPreviousParadoxRolls((current) => current + 1);
+    };
 
     // Reset when popup opens
     useEffect(() => {
@@ -157,12 +206,17 @@ export const SpellcastingPopup = ({
             });
             setParadoxInured(false);
             setSleeperWitnesses("none");
-            setPreviousParadoxRolls(0);
             setManaMitigation(0);
             setParadoxMode("");
             setSelectedYantras(
                 Array.from(
-                    { length: (GNOSIS_TABLE[gnosis] || GNOSIS_TABLE[1]).yantras },
+                    {
+                        length: Math.max(
+                            0,
+                            (GNOSIS_TABLE[gnosis] || GNOSIS_TABLE[1]).yantras -
+                                (effectiveSpellType === "rote" && Math.max(0, Number(roteSkillDots) || 0) > 0 ? 1 : 0)
+                        ),
+                    },
                     () => ""
                 )
             );
@@ -173,22 +227,29 @@ export const SpellcastingPopup = ({
             setMatterDurationMana(false);
             setSpecialRangeMode("none");
             setSympatheticWithstand(0);
+            setWithstandTrait("none");
+            setWithstandValue(0);
+            setAimedTargetDefense(0);
             setScaleMode("targets");
             setRitualCastingBonus(0);
             setAdditionalMana(0);
             setCombinedSpellCount(0);
             setCombinedSpellArcana([]);
         }
-    }, [isOpen, arcanum, initialPractice, defaultPrimaryFactor]);
+    }, [isOpen, arcanum, initialPractice, defaultPrimaryFactor, gnosis, effectiveSpellType, roteSkillDots]);
 
     // Gnosis-derived data
     const gnosisData = GNOSIS_TABLE[gnosis] || GNOSIS_TABLE[1];
     const maxYantras = gnosisData.yantras;
+    const roteMudraBonus = effectiveSpellType === "rote" ? Math.max(0, Number(roteSkillDots) || 0) : 0;
+    const usesRoteMudra = effectiveSpellType === "rote" && roteMudraBonus > 0;
+    const yantraSlotLimit = Math.max(0, maxYantras - (usesRoteMudra ? 1 : 0));
+
     useEffect(() => {
         setSelectedYantras((prev) =>
-            Array.from({ length: maxYantras }, (_, index) => prev[index] || "")
+            Array.from({ length: yantraSlotLimit }, (_, index) => prev[index] || "")
         );
-    }, [maxYantras]);
+    }, [yantraSlotLimit]);
     const paradoxDiePerReach = gnosisData.paradoxDie;
     const manaPerTurn = gnosisData.perTurn;
 
@@ -234,13 +295,15 @@ export const SpellcastingPopup = ({
         ? Math.min(Number(arcanumDots) || 0, ...selectedCombinedArcanaDots)
         : Number(arcanumDots) || 0;
     const combinedSpellPenalty = combinedSpellCount * -2;
+    const baseArcanumDots = combinedSpellCount > 0 ? combinedLowestArcanumDots : Number(arcanumDots) || 0;
 
     const availablePractices = useMemo(() => {
         return ALL_PRACTICES.filter(p => p.dots <= arcanumDots);
     }, [arcanumDots]);
 
     const practiceDots = selectedPractice ? PRACTICE_DOTS[selectedPractice] : 0;
-    const freeReach = selectedPractice ? Math.max(0, arcanumDots - practiceDots + 1) : 0;
+    const reachArcanumDots = effectiveSpellType === "rote" ? 5 : baseArcanumDots;
+    const freeReach = selectedPractice ? Math.max(0, reachArcanumDots - practiceDots + 1) : 0;
     const advancedReachUsed = Object.entries(factors).reduce((sum, [key, value]) => {
         if (!value.advanced) return sum;
         if (key === "duration" && matterDurationMana && arcanum === "Matter") return sum;
@@ -258,8 +321,8 @@ export const SpellcastingPopup = ({
     const totalReachUsed = advancedReachUsed + indefiniteReach + changePrimaryReach + activeSpellReachSurcharge + spellReach + specialRangeReach;
     const reachRemaining = freeReach - totalReachUsed;
 
-    // Primary factor gives free levels = arcanumDots - 1
-    const primaryFreeLevels = Math.max(0, arcanumDots - 1);
+    // Primary factor gives free levels = spell Arcanum dots - 1. Combined spells use the lowest Arcanum.
+    const primaryFreeLevels = Math.max(0, baseArcanumDots - 1);
     const effectivePrimaryFactor =
     overridePrimaryFactor && primaryFactor
         ? (primaryFactor === "potency" ? "duration" : "potency")
@@ -299,23 +362,27 @@ export const SpellcastingPopup = ({
 
     const hasDedicatedTool = selectedYantraNames.includes("Dedicated Tool");
 
-    const yantraBonus = useMemo(() => {
-        return selectedYantraData.reduce((sum, y) => sum + y.bonus, 0);
-    }, [selectedYantraData]);
+    const selectedYantraBonus = selectedYantraData.reduce((sum, y) => sum + y.bonus, 0);
+    const rawYantraBonus = selectedYantraBonus + roteMudraBonus;
+    const yantraBonusCap = 5 + Math.abs(Math.min(0, dicePenalty));
+    const yantraBonus = Math.min(rawYantraBonus, yantraBonusCap);
+    const yantraBonusWasCapped = rawYantraBonus > yantraBonus;
+    const selectedYantraLabels = [
+        ...selectedYantraNames,
+        ...(usesRoteMudra ? [`Rote Mudra +${roteMudraBonus}`] : []),
+    ];
+    const yantraCount = selectedYantraNames.length + (usesRoteMudra ? 1 : 0);
 
     // Dice pool
     const ritualBonus = factors.casting.advanced ? 0 : ritualCastingBonus;
-    const baseArcanumDots = combinedSpellCount > 0 ? combinedLowestArcanumDots : arcanumDots;
     const baseDicePool = gnosis + baseArcanumDots;
-    const roteBonus = spellType === "rote" ? (roteSkillDots || 0) : 0;
-    const orderSkillBonus = (spellType === "rote" && isRoteOrderSkill) ? 1 : 0;
-    const finalDicePool = Math.max(0, baseDicePool + dicePenalty + yantraBonus + roteBonus + orderSkillBonus + ritualBonus + combinedSpellPenalty);
+    const finalDicePool = Math.max(0, baseDicePool + dicePenalty + yantraBonus + ritualBonus + combinedSpellPenalty);
 
     // Spell Mana cost
     const getManaCost = () => {
         let cost = 0;
 
-        if (!isRuling) cost += 1;
+        if (effectiveSpellType === "improvised" && !isRuling) cost += 1;
         if (factors.duration.advanced && factors.duration.level === 6) cost += 1;
         if (fateDurationBonus > 0) cost += 1;
         if (matterDurationMana && arcanum === "Matter" && factors.duration.advanced) cost += 1;
@@ -335,7 +402,7 @@ export const SpellcastingPopup = ({
     if (paradoxInured) paradoxModifiers += 2;
     if (sleeperWitnesses !== "none") paradoxModifiers += 1;
     if (hasDedicatedTool) paradoxModifiers -= 2;
-    paradoxModifiers += previousParadoxRolls;
+    paradoxModifiers += scenePreviousParadoxRolls;
 
     const paradoxAfterModifiers = baseParadoxDice + paradoxModifiers;
 
@@ -370,6 +437,31 @@ export const SpellcastingPopup = ({
 
     // Total mana
     const totalManaCost = committedSpellManaCost + actualManaMitigation;
+
+    const manualWithstandValue = withstandTrait === "none" ? 0 : Math.max(0, Number(withstandValue) || 0);
+    const sympatheticWithstandValue = specialRangeMode !== "none" ? Math.max(0, Number(sympatheticWithstand) || 0) : 0;
+    const withstandRatings = [manualWithstandValue, sympatheticWithstandValue].filter((value) => value > 0);
+    const effectiveWithstand = withstandRatings.length > 0
+        ? Math.max(...withstandRatings) + Math.max(0, withstandRatings.length - 1)
+        : 0;
+    const basePotency = Number(factors.potency.level) || 1;
+    const effectivePotency = Math.max(0, basePotency - effectiveWithstand);
+    const withstandLabel = withstandTrait === "none"
+        ? "None"
+        : WITHSTAND_TRAITS.find((entry) => entry.value === withstandTrait)?.label || "Custom";
+
+    const aimedAthletics = Number(athleticsDots) || 0;
+    const aimedFirearms = Number(firearmsDots) || 0;
+    const aimedSkillName = aimedAthletics >= aimedFirearms ? "Athletics" : "Firearms";
+    const aimedSkillDots = Math.max(aimedAthletics, aimedFirearms);
+    const aimedDefense = Math.max(0, Number(aimedTargetDefense) || 0);
+    const aimedSpellPoolRaw = (Number(gnosis) || 0) + aimedSkillDots - aimedDefense;
+    const aimedRangeBands = {
+        short: (Number(gnosis) || 0) * 10,
+        medium: (Number(gnosis) || 0) * 20,
+        long: (Number(gnosis) || 0) * 40,
+    };
+    const isTouchSelfRange = !factors.range.advanced && specialRangeMode === "none";
 
     const updateFactor = (factorName, updates) => {
         setFactors(prev => ({
@@ -479,6 +571,27 @@ export const SpellcastingPopup = ({
         });
     }, [specialRangeMode]);
 
+    const handleRollAimedSpell = () => {
+        if (!onRollDice) return;
+
+        if (!isTouchSelfRange) {
+            toast.error("Aimed Spell rolls are only available for Touch/Self Range spells.");
+            return;
+        }
+
+        const adjustedPool = Math.max(0, aimedSpellPoolRaw);
+
+        onRollDice({
+            pool: adjustedPool <= 0 ? 1 : adjustedPool,
+            chance: adjustedPool <= 0,
+            label: "Aimed Spell",
+            exceptional_target: 5,
+            dicePoolBreakdown: `Gnosis ${gnosis} + ${aimedSkillName} ${aimedSkillDots} - Target Defense ${aimedDefense}`,
+            spellSummary: `Roll after successful spellcasting when using Touch/Self Range without touching the target. Range bands: short ${aimedRangeBands.short}, medium ${aimedRangeBands.medium}, long ${aimedRangeBands.long}.`,
+        });
+        onClose();
+    };
+
     const handleCastSpell = () => {
         if (totalManaCost > 0 && currentMana < totalManaCost) return;
         if (factors.duration.advanced && !spellName.trim()) return;
@@ -496,6 +609,7 @@ export const SpellcastingPopup = ({
                 arcanum,
                 practice: selectedPractice,
                 potency: getFactorDescription("potency"),
+                effectivePotency: effectiveWithstand > 0 ? `Potency ${effectivePotency}` : undefined,
                 duration: getFactorDescription("duration"),
                 scale: getFactorDescription("scale"),
                 combined: combinedSpellCount > 0 ? `${combinedSpellCount + 1} spells` : undefined,
@@ -510,8 +624,8 @@ export const SpellcastingPopup = ({
             getFactorDescription("scale"),
         ].join("; ");
 
-        const selectedYantrasSummary = selectedYantraNames.length > 0
-            ? `(${selectedYantraNames.join(", ")})`
+        const selectedYantrasSummary = selectedYantraLabels.length > 0
+            ? `Yantras: ${selectedYantraLabels.join(", ")}${yantraBonusWasCapped ? `; raw +${rawYantraBonus}, capped at +${yantraBonus}` : ""}`
             : "";
 
         const ritualSummary = ritualBonus > 0
@@ -522,19 +636,35 @@ export const SpellcastingPopup = ({
             ? `Combined Spell: ${combinedSpellCount + 1} spells (${[arcanum, ...selectedCombinedArcana].join(", ")}); lowest Arcanum ${combinedLowestArcanumDots}; ${combinedSpellPenalty} dice`
             : "";
 
-        const additionalManaSummary = additionalMana > 0
-            ? `Additional Mana: ${additionalMana}`
+        const arcanaManaSurchargeSummary = effectiveSpellType === "improvised" && !isRuling
+            ? (isInferior ? "Inferior Arcanum" : "Common Arcanum")
+            : "";
+
+        const spentSpellManaSummary = `Spent Mana: ${committedSpellManaCost}${
+            arcanaManaSurchargeSummary ? ` (${arcanaManaSurchargeSummary})` : ""
+        }`;
+
+        const spellReachSummary = `Spell Reach: ${totalReachUsed} used / ${freeReach} free; ${
+            reachBeyondFree > 0
+                ? `${reachBeyondFree} over free`
+                : `${reachRemaining} free Reach remaining`
+        }`;
+
+        const withstandSummary = effectiveWithstand > 0
+            ? `Withstand: ${effectiveWithstand} total; effective Potency ${effectivePotency}${effectivePotency <= 0 ? " (spell active, no effect)" : ""}`
             : "";
 
         const spellSummary = [
+            spellReachSummary,
+            spentSpellManaSummary,
             ...(selectedYantrasSummary ? [selectedYantrasSummary] : []),
             ...(ritualSummary ? [ritualSummary] : []),
             ...(combinedSpellSummary ? [combinedSpellSummary] : []),
-            ...(additionalManaSummary ? [additionalManaSummary] : []),
+            ...(withstandSummary ? [withstandSummary] : []),
             factorSummary,
         ].join("\n");
 
-        const castLabel = `${arcanum} ${spellType === "praxis" ? "Praxis" : spellType === "rote" ? "Rote" : "Spell"} (${selectedPractice})`;
+        const castLabel = `${arcanum} ${effectiveSpellType === "praxis" ? "Praxis" : effectiveSpellType === "rote" ? "Rote" : "Spell"} (${selectedPractice})`;
 
         const buildSpellRollConfig = (poolModifier = 0) => {
             const adjustedPool = Math.max(0, finalDicePool + poolModifier);
@@ -544,9 +674,7 @@ export const SpellcastingPopup = ({
                 combinedSpellCount > 0
                     ? `Lowest Arcanum ${combinedLowestArcanumDots}${selectedPractice ? ` (${selectedPractice})` : ""}`
                     : `${arcanum} ${arcanumDots}${selectedPractice ? ` (${selectedPractice})` : ""}`,
-                ...(roteBonus > 0 ? [`Rote Skill ${roteBonus}`] : []),
-                ...(orderSkillBonus > 0 ? [`Order Skill ${orderSkillBonus}`] : []),
-                ...(yantraBonus > 0 ? [`Yantras ${yantraBonus}`] : []),
+                ...(yantraBonus > 0 ? [`Yantras ${yantraBonus}${yantraBonusWasCapped ? ` (raw ${rawYantraBonus}, capped)` : ""}`] : []),
                 ...(ritualBonus > 0 ? [`Ritual +${ritualBonus}`] : []),
                 ...(combinedSpellPenalty !== 0 ? [`Combined Spell ${combinedSpellPenalty}`] : []),
                 ...(dicePenalty !== 0 ? [`Factors ${dicePenalty}`] : []),
@@ -557,7 +685,7 @@ export const SpellcastingPopup = ({
                 pool: adjustedPool <= 0 ? 1 : adjustedPool,
                 chance: adjustedPool <= 0,
                 label: castLabel,
-                exceptional_target: spellType === "praxis" ? 3 : 5,
+                exceptional_target: effectiveSpellType === "praxis" ? 3 : 5,
                 dicePoolBreakdown: dicePoolBreakdownParts.join(" + "),
                 spellSummary,
                 onResult: (rollResult) => {
@@ -575,6 +703,8 @@ export const SpellcastingPopup = ({
             again: paradoxRollQuality.again,
             rote: paradoxRollQuality.rote,
             label: `Paradox (${paradoxIsChanceDie ? "Chance Die" : `${finalParadoxPool} dice`})`,
+            paradoxSummary: `Spent Mana on Paradox: ${actualManaMitigation}`,
+            spellSummary: `Spent Mana on Paradox: ${actualManaMitigation}`,
         } : null;
 
         const rollSpell = (poolModifier = 0, summaryOptions = null) => {
@@ -595,6 +725,8 @@ export const SpellcastingPopup = ({
                 summaryKey: "paradox",
                 summaryLabel: "Paradox",
                 onResult: (paradoxResult) => {
+                    registerParadoxRollForScene(paradoxResult);
+
                     const penalty = paradoxResult?.successes || 0;
 
                     if (penalty > 0) {
@@ -622,6 +754,8 @@ export const SpellcastingPopup = ({
                 summaryKey: "paradox",
                 summaryLabel: "Paradox",
                 onResult: (paradoxResult) => {
+                    registerParadoxRollForScene(paradoxResult);
+
                     const paradoxSuccesses = paradoxResult?.successes || 0;
 
                     onRollDice({
@@ -910,15 +1044,15 @@ export const SpellcastingPopup = ({
                         <Sparkles className="w-5 h-5 text-violet-400" />
                         <div>
                             <h2 className="font-heading text-lg text-zinc-100" data-testid="spellcasting-title">
-                                {arcanum} {spellType === "rote" ? "Rote" : spellType === "praxis" ? "Praxis" : "Spellcasting"}
+                                {arcanum} {effectiveSpellType === "rote" ? "Rote" : effectiveSpellType === "praxis" ? "Praxis" : "Spellcasting"}
                             </h2>
                             <p className="text-xs text-zinc-500">
                                 {isRuling && <span className="text-blue-400">Ruling Arcanum</span>}
                                 {isInferior && <span className="text-red-400">Inferior Arcanum</span>}
                                 {!isRuling && !isInferior && <span className="text-zinc-400">Common Arcanum</span>}
                                 {" · "}{arcanumDots} dot{arcanumDots !== 1 && "s"} · Gnosis {gnosis}
-                                {spellType === "rote" && <span className="text-amber-400">{" · "}Rote Skill +{roteSkillDots}{isRoteOrderSkill ? " (Order +1)" : ""}</span>}
-                                {spellType === "praxis" && <span className="text-teal-400">{" · "}Exceptional on 3</span>}
+                                {effectiveSpellType === "rote" && <span className="text-amber-400">{" · "}Rote Mudra +{roteMudraBonus}</span>}
+                                {effectiveSpellType === "praxis" && <span className="text-teal-400">{" · "}Exceptional on 3</span>}
                             </p>
                         </div>
                     </div>
@@ -1069,7 +1203,7 @@ export const SpellcastingPopup = ({
                             <div className="flex items-center justify-between">
                                 <span className="text-zinc-400">
                                     Free Reach: <span className="text-teal-400 font-mono">{freeReach}</span>
-                                    <span className="text-zinc-600 ml-1">({arcanumDots} - {practiceDots} + 1)</span>
+                                    <span className="text-zinc-600 ml-1">({reachArcanumDots} - {practiceDots} + 1{effectiveSpellType === "rote" ? "; Rote uses 5" : ""})</span>
                                 </span>
                                 <span className={`font-mono ${reachRemaining >= 0 ? "text-teal-400" : "text-red-400"}`}>
                                     {reachRemaining >= 0 ? `${reachRemaining} remaining` : `${Math.abs(reachRemaining)} over`}
@@ -1286,6 +1420,121 @@ export const SpellcastingPopup = ({
                         </div>
                     </div>
 
+                    {/* Withstand */}
+                    <div className="p-2 bg-zinc-800/30 rounded space-y-2">
+                        <div className="flex items-center justify-between gap-3">
+                            <div>
+                                <p className="text-xs text-zinc-500 uppercase">Withstand</p>
+                                <p className="text-[11px] text-zinc-600">
+                                    Manual tracker. Withstand reduces Potency, not the casting pool.
+                                </p>
+                            </div>
+                            <div className="text-right text-xs">
+                                <div className="text-zinc-500">Effective Potency</div>
+                                <div className={`font-mono ${effectivePotency > 0 ? "text-teal-400" : "text-red-400"}`}>
+                                    {effectivePotency}/{basePotency}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-[1fr_90px] gap-2 items-center">
+                            <Select value={withstandTrait} onValueChange={setWithstandTrait}>
+                                <SelectTrigger className="h-8 text-xs bg-zinc-900/50 border-zinc-700" data-testid="withstand-trait-select">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="bg-zinc-900 border-zinc-700 z-[200]">
+                                    {WITHSTAND_TRAITS.map((trait) => (
+                                        <SelectItem key={trait.value} value={trait.value} className="text-xs text-zinc-200">
+                                            {trait.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+
+                            <Input
+                                type="number"
+                                min="0"
+                                value={withstandValue}
+                                onChange={(event) => setWithstandValue(Math.max(0, Number(event.target.value) || 0))}
+                                disabled={withstandTrait === "none"}
+                                className="h-8 text-xs bg-zinc-900/50 border-zinc-700 text-right font-mono"
+                                data-testid="withstand-value-input"
+                            />
+                        </div>
+
+                        {(effectiveWithstand > 0 || sympatheticWithstandValue > 0) && (
+                            <div className="space-y-1 text-xs">
+                                {manualWithstandValue > 0 && (
+                                    <div className="flex justify-between">
+                                        <span className="text-zinc-500">{withstandLabel}</span>
+                                        <span className="font-mono text-amber-400">{manualWithstandValue}</span>
+                                    </div>
+                                )}
+                                {sympatheticWithstandValue > 0 && (
+                                    <div className="flex justify-between">
+                                        <span className="text-zinc-500">Sympathetic Withstand</span>
+                                        <span className="font-mono text-amber-400">{sympatheticWithstandValue}</span>
+                                    </div>
+                                )}
+                                <div className="flex justify-between pt-1 border-t border-zinc-700/50">
+                                    <span className="text-zinc-400">Total Withstand</span>
+                                    <span className="font-mono text-amber-400">{effectiveWithstand}</span>
+                                </div>
+                                {effectivePotency <= 0 && (
+                                    <p className="text-[11px] text-red-400">
+                                        Potency is reduced to 0: the spell may be active but has no effect.
+                                    </p>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Aimed Spell */}
+                    {isTouchSelfRange && (
+                        <div className="p-2 bg-zinc-800/30 rounded space-y-2">
+                            <div className="flex items-center justify-between gap-3">
+                                <div>
+                                    <p className="text-xs text-zinc-500 uppercase">Aimed Spell</p>
+                                    <p className="text-[11px] text-zinc-600">
+                                        Use only for Touch/Self Range spells thrown or fired at a target.
+                                    </p>
+                                </div>
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    className="h-7 px-2 text-xs bg-violet-700 hover:bg-violet-600"
+                                    onClick={handleRollAimedSpell}
+                                    data-testid="roll-aimed-spell-btn"
+                                >
+                                    Roll Aimed Spell
+                                </Button>
+                            </div>
+
+                            <div className="grid grid-cols-[1fr_90px] gap-2 items-center">
+                                <div className="text-xs text-zinc-400">
+                                    Pool: <span className="font-mono text-violet-300">Gnosis {gnosis} + {aimedSkillName} {aimedSkillDots} - Defense</span>
+                                </div>
+                                <Input
+                                    type="number"
+                                    min="0"
+                                    value={aimedTargetDefense}
+                                    onChange={(event) => setAimedTargetDefense(Math.max(0, Number(event.target.value) || 0))}
+                                    className="h-8 text-xs bg-zinc-900/50 border-zinc-700 text-right font-mono"
+                                    data-testid="aimed-target-defense-input"
+                                />
+                            </div>
+
+                            <div className="flex justify-between text-xs text-zinc-500">
+                                <span>Short {aimedRangeBands.short}</span>
+                                <span>Medium {aimedRangeBands.medium}</span>
+                                <span>Long {aimedRangeBands.long}</span>
+                                <span className={`font-mono ${aimedSpellPoolRaw > 0 ? "text-teal-400" : "text-amber-400"}`}>
+                                    {aimedSpellPoolRaw > 0 ? `${aimedSpellPoolRaw} dice` : "Chance Die"}
+                                </span>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Yantras Section */}
                     <div className="space-y-2">
                         <div className="flex items-center justify-between">
@@ -1293,13 +1542,26 @@ export const SpellcastingPopup = ({
                                 <Wrench className="w-3 h-3" /> Yantras
                             </p>
                             <span className="text-xs text-zinc-500">
-                                {selectedYantraNames.length}/{maxYantras} used
+                                {yantraCount}/{maxYantras} used
                                 {yantraBonus > 0 && <span className="text-teal-400 ml-1">(+{yantraBonus} dice)</span>}
                             </span>
                         </div>
 
+                        {usesRoteMudra && (
+                            <div className="p-2 bg-amber-950/20 border border-amber-500/30 rounded text-xs flex items-center justify-between">
+                                <span className="text-amber-300">Rote Mudra uses 1 Yantra slot</span>
+                                <span className="font-mono text-amber-300">+{roteMudraBonus}</span>
+                            </div>
+                        )}
+
+                        {yantraBonusWasCapped && (
+                            <p className="text-[11px] text-amber-400">
+                                Yantra bonus raw +{rawYantraBonus} is capped at +{yantraBonus}. Cap is +5 after offsetting spell factor penalties.
+                            </p>
+                        )}
+
                         <div className="space-y-2">
-                            {Array.from({ length: maxYantras }).map((_, index) => {
+                            {Array.from({ length: yantraSlotLimit }).map((_, index) => {
                                 const selectedName = selectedYantras[index] || "";
                                 const selectedData = YANTRAS.find((y) => y.name === selectedName);
                                 const availableOptions = getYantraOptionsForSlot(index);
@@ -1351,9 +1613,7 @@ export const SpellcastingPopup = ({
                         <p className="text-xs text-zinc-500 uppercase mb-1">Spellcasting Dice Pool</p>
                         <p className="text-base font-mono text-violet-300">
                             Gnosis ({gnosis}) + {combinedSpellCount > 0 ? "Lowest Arcanum" : arcanum} ({baseArcanumDots})
-                            {roteBonus > 0 && <span className="text-amber-400"> + Rote Skill ({roteBonus})</span>}
-                            {orderSkillBonus > 0 && <span className="text-amber-400"> + Order Skill ({orderSkillBonus})</span>}
-                            {yantraBonus > 0 && <span className="text-teal-400"> + Yantras ({yantraBonus})</span>}
+                            {yantraBonus > 0 && <span className="text-teal-400"> + Yantras ({yantraBonus}{yantraBonusWasCapped ? ` / raw ${rawYantraBonus}` : ""})</span>}
                             {ritualBonus > 0 && <span className="text-teal-400"> + Ritual ({ritualBonus})</span>}
                             {combinedSpellPenalty !== 0 && <span className="text-red-400"> {combinedSpellPenalty}</span>}
                             {dicePenalty !== 0 && <span className="text-red-400"> {dicePenalty}</span>}
@@ -1447,18 +1707,44 @@ export const SpellcastingPopup = ({
                                         <div className="flex items-center gap-2 text-xs">
                                             <span className="text-zinc-400">Previous Paradox rolls this scene:</span>
                                             <div className="flex items-center gap-1 ml-auto">
-                                                <Button variant="ghost" size="icon" className="h-5 w-5 text-zinc-400"
-                                                    onClick={() => setPreviousParadoxRolls(Math.max(0, previousParadoxRolls - 1))}
-                                                    disabled={previousParadoxRolls <= 0}
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-5 w-5 text-zinc-400"
+                                                    onClick={() => setPreviousParadoxRolls((current) => Math.max(0, current - 1))}
+                                                    disabled={scenePreviousParadoxRolls <= 0}
                                                     data-testid="prev-paradox-decrease"
-                                                ><Minus className="w-3 h-3" /></Button>
-                                                <span className="font-mono text-red-400 w-4 text-center">{previousParadoxRolls}</span>
-                                                <Button variant="ghost" size="icon" className="h-5 w-5 text-zinc-400"
-                                                    onClick={() => setPreviousParadoxRolls(previousParadoxRolls + 1)}
+                                                >
+                                                    <Minus className="w-3 h-3" />
+                                                </Button>
+
+                                                <span className="font-mono text-red-400 w-4 text-center">
+                                                    {scenePreviousParadoxRolls}
+                                                </span>
+
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-5 w-5 text-zinc-400"
+                                                    onClick={() => setPreviousParadoxRolls((current) => current + 1)}
                                                     data-testid="prev-paradox-increase"
-                                                ><Plus className="w-3 h-3" /></Button>
-                                                {previousParadoxRolls > 0 && (
-                                                    <span className="text-red-400 font-mono">+{previousParadoxRolls}</span>
+                                                >
+                                                    <Plus className="w-3 h-3" />
+                                                </Button>
+
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="h-5 px-2 text-[10px] text-zinc-500 hover:text-zinc-200"
+                                                    onClick={resetPreviousParadoxRolls}
+                                                    disabled={scenePreviousParadoxRolls <= 0}
+                                                    data-testid="prev-paradox-reset"
+                                                >
+                                                    Reset
+                                                </Button>
+
+                                                {scenePreviousParadoxRolls > 0 && (
+                                                    <span className="text-red-400 font-mono">+{scenePreviousParadoxRolls}</span>
                                                 )}
                                             </div>
                                         </div>
@@ -1601,6 +1887,14 @@ export const SpellcastingPopup = ({
                             <div className="flex justify-between text-sm">
                                 <span className="text-zinc-400">Additional Mana:</span>
                                 <span className="font-mono text-violet-400">{additionalMana}</span>
+                            </div>
+                        )}
+                        {effectiveWithstand > 0 && (
+                            <div className="flex justify-between text-sm">
+                                <span className="text-zinc-400">Effective Potency:</span>
+                                <span className={`font-mono ${effectivePotency > 0 ? "text-teal-400" : "text-red-400"}`}>
+                                    {effectivePotency}/{basePotency}
+                                </span>
                             </div>
                         )}
                         {ritualBonus > 0 && (

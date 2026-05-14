@@ -389,6 +389,16 @@ const MageSightCard = ({
         const pool = chance ? 1 : rawPool;
         const targetLine = target.trim() ? `Target: ${target.trim()}` : "Target: unspecified";
 
+        const scrutinyStartingOpacity = scrutinyLayers.length > 0
+            ? scrutinyLayers[0].target
+            : opacityValue;
+
+        const scrutinyTrackerLayers = scrutinyActive
+            ? scrutinyLayers
+            : opacityValue > 0
+            ? [{ successes: 0, target: opacityValue, complete: false }]
+            : [];
+
         onTriggerDiceRoll?.({
             pool,
             chance,
@@ -404,6 +414,13 @@ const MageSightCard = ({
                 mode === "Scrutiny"
                     ? `${targetLine}\nFocused Mage Sight${!scrutinyActive ? "; costs 1 Willpower to begin" : " (ongoing)"}. Opacity: ${opacityValue}.`
                     : `${targetLine}\nFocused Mage Sight Revelation. Opacity: ${opacityValue}.`,
+            scrutinyTracker: mode === "Scrutiny"
+                ? {
+                    startingOpacity: scrutinyStartingOpacity,
+                    currentOpacity: opacityValue,
+                    layers: scrutinyTrackerLayers,
+                }
+                : null,
             onResult: mode === "Scrutiny" ? (result) => {
                 const rolled = result?.successes || 0;
                 if (rolled > 0) {

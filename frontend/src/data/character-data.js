@@ -885,7 +885,7 @@ export const YANTRAS = [
 
 // Order Rote Skills
 export const ORDER_ROTE_SKILLS = {
-    "Adamantine Arrow": ["athletics", "intimidation", "survival"],
+    "Adamantine Arrow": ["athletics", "intimidation", "medicine"],
     "Guardians of the Veil": ["investigation", "stealth", "subterfuge"],
     "Mysterium": ["investigation", "occult", "survival"],
     "Silver Ladder": ["expression", "persuasion", "subterfuge"],

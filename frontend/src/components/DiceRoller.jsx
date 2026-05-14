@@ -249,6 +249,90 @@ export const DiceRoller = forwardRef(({ embedded = false, collapsed = false, onT
     const formatSuccessCount = (successes = 0) =>
         `${successes} Success${successes === 1 ? "" : "es"}`;
 
+    const cloneScrutinyLayers = (layers = []) =>
+        Array.isArray(layers)
+            ? layers.map((layer) => ({
+                successes: Math.max(0, Number(layer.successes) || 0),
+                target: Math.max(0, Number(layer.target) || 0),
+                complete: !!layer.complete,
+            }))
+            : [];
+
+    const countCompletedScrutinyLayers = (layers = []) =>
+        layers.filter((layer) => layer.complete).length;
+
+    const applyScrutinyTrackerSuccesses = (rolled, layers, startingOpacity) => {
+        let updatedLayers = cloneScrutinyLayers(layers);
+        let currentLayer = updatedLayers.find((layer) => !layer.complete);
+
+        if (!currentLayer) {
+            const nextTarget = updatedLayers.length === 0
+                ? startingOpacity
+                : updatedLayers[updatedLayers.length - 1].target - 1;
+
+            if (nextTarget <= 0) return updatedLayers;
+
+            currentLayer = {
+                successes: 0,
+                target: nextTarget,
+                complete: false,
+            };
+
+            updatedLayers.push(currentLayer);
+        }
+
+        currentLayer.successes = Math.min(currentLayer.successes + rolled, currentLayer.target);
+
+        if (currentLayer.successes >= currentLayer.target) {
+            currentLayer.complete = true;
+
+            const nextTarget = currentLayer.target - 1;
+            if (nextTarget > 0) {
+                updatedLayers.push({
+                    successes: 0,
+                    target: nextTarget,
+                    complete: false,
+                });
+            }
+        }
+
+        return updatedLayers;
+    };
+
+    const buildScrutinyTrackerSummary = (rollResult, config = {}) => {
+        const tracker = config.scrutinyTracker;
+        if (!tracker) return "";
+
+        const rolled = Math.max(0, Number(rollResult?.successes) || 0);
+        const startingOpacity = Math.max(0, Number(tracker.startingOpacity) || 0);
+        const opacityBefore = Math.max(0, Number(tracker.currentOpacity) || startingOpacity);
+        const beforeLayers = cloneScrutinyLayers(tracker.layers);
+
+        const activeBeforeLayers = beforeLayers.length > 0
+            ? beforeLayers
+            : startingOpacity > 0
+            ? [{ successes: 0, target: startingOpacity, complete: false }]
+            : [];
+
+        const completedBefore = countCompletedScrutinyLayers(activeBeforeLayers);
+        const afterLayers = applyScrutinyTrackerSuccesses(rolled, activeBeforeLayers, startingOpacity);
+        const completedAfter = countCompletedScrutinyLayers(afterLayers);
+        const opacityReduction = Math.max(0, completedAfter - completedBefore);
+        const opacityAfter = Math.max(0, opacityBefore - opacityReduction);
+
+        const layerLines = afterLayers.map((layer, index) => {
+            const status = layer.complete ? " complete" : "";
+            return `Layer ${index + 1}: ${layer.successes}/${layer.target}${status}`;
+        });
+
+        return [
+            "Scrutiny Tracker:",
+            `Scrutiny successes applied: ${rolled}`,
+            ...layerLines,
+            `Opacity: ${opacityBefore} → ${opacityAfter}`,
+        ].join("\n");
+    };
+
     const buildContainmentTranscript = (paradoxResult, wisdomResult, paradoxConfig = {}, wisdomConfig = {}) => {
         const paradoxSuccesses = paradoxResult?.successes || 0;
         const wisdomSuccesses = wisdomResult?.successes || 0;
@@ -260,6 +344,7 @@ export const DiceRoller = forwardRef(({ embedded = false, collapsed = false, onT
 
         return [
             "-Contained Paradox-",
+            ...(paradoxConfig.paradoxSummary ? [paradoxConfig.paradoxSummary] : []),
             `Rolled Paradox (${paradoxDice}) vs. Wisdom ${wisdomDice}`,
             `Successes: ${paradoxSuccesses} Paradox - ${wisdomSuccesses} Wisdom`,
             `Result: ${negated} Paradox negated; ${negated} Bashing Damage`,
@@ -273,6 +358,7 @@ export const DiceRoller = forwardRef(({ embedded = false, collapsed = false, onT
 
         return [
             "-Released Paradox-",
+            ...(paradoxConfig.paradoxSummary ? [paradoxConfig.paradoxSummary] : []),
             `Rolled Paradox (${paradoxDice})`,
             `${paradoxSuccesses} Success${paradoxSuccesses === 1 ? "" : "es"} = ${paradoxSuccesses} Paradox Reach`,
         ].join("\n");
@@ -371,12 +457,14 @@ export const DiceRoller = forwardRef(({ embedded = false, collapsed = false, onT
             (config.chance ? "Chance Die" : `${poolSize} dice`);
 
         const spellSummary = config.spellSummary || "";
+        const scrutinyTrackerSummary = buildScrutinyTrackerSummary(rollResult, config);
         const outcomeLine = formatOutcomeLine(rollResult);
         const diceRows = formatDiceRows(rollResult);
 
         return [
             `Rolled ${poolBreakdown} = ${poolSize} dice [${againValue}]`,
             ...(spellSummary ? [spellSummary] : []),
+            ...(scrutinyTrackerSummary ? [scrutinyTrackerSummary] : []),
             outcomeLine,
             ...(diceRows ? [diceRows] : []),
         ].join("\n");

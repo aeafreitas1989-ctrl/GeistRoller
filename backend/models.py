@@ -183,7 +183,19 @@ class Character(BaseModel):
     # Mage-specific fields
     path: str = ""  # Acanthus, Mastigos, Moros, Obrimos, Thyrsus
     order: str = ""  # Adamantine Arrow, Guardians of the Veil, Mysterium, Silver Ladder, Free Council
-    obsession: str = ""  # Mage's Obsession (replaces Burden Aspiration)
+    obsession: str = ""  # Mage's Obsession (legacy single field)
+    obsessions: List[str] = Field(default_factory=list)
+    creation_mode: str = "active"
+    creation_locked: bool = True
+    creation_locked_at: str = ""
+    creation_choices: Dict[str, Any] = Field(default_factory=dict)
+    creation_baseline: Optional[Dict[str, Any]] = None
+    creation_validation: Optional[Dict[str, Any]] = None
+    arcane_beats: int = 0
+    arcane_experience: int = 0
+    spent_experience: int = 0
+    spent_arcane_experience: int = 0
+    advancement_ledger: List[Dict[str, Any]] = Field(default_factory=list)
     remembrance_trait_type: str = ""
     remembrance_trait: str = ""
     root: str = ""
@@ -284,7 +296,19 @@ class CharacterUpdate(BaseModel):
     geist_rank: Optional[int] = None
     path: Optional[str] = None  # Mage path
     order: Optional[str] = None  # Mage order
-    obsession: Optional[str] = None  # Mage obsession
+    obsession: Optional[str] = None  # Mage obsession legacy single field
+    obsessions: Optional[List[str]] = None
+    creation_mode: Optional[str] = None
+    creation_locked: Optional[bool] = None
+    creation_locked_at: Optional[str] = None
+    creation_choices: Optional[Dict[str, Any]] = None
+    creation_baseline: Optional[Dict[str, Any]] = None
+    creation_validation: Optional[Dict[str, Any]] = None
+    arcane_beats: Optional[int] = None
+    arcane_experience: Optional[int] = None
+    spent_experience: Optional[int] = None
+    spent_arcane_experience: Optional[int] = None
+    advancement_ledger: Optional[List[Dict[str, Any]]] = None
     remembrance_trait_type: Optional[str] = None
     remembrance_trait: Optional[str] = None
     root: Optional[str] = None

@@ -429,10 +429,23 @@ async def suggest_session_title(session_id: str, input: SessionTitleSuggestionRe
 
 @api_router.post("/characters", response_model=Character)
 async def create_character(input: CharacterCreate):
+    character_type = input.character_type or "geist"
     character = Character(
-        name=input.name or ("New Mage" if input.character_type == "mage" else "New Sin-Eater"),
-        character_type=input.character_type or "geist"
+        name=input.name or ("New Mage" if character_type == "mage" else "New Sin-Eater"),
+        character_type=character_type
     )
+
+    if character_type == "mage":
+        character.creation_mode = "creation"
+        character.creation_locked = False
+        character.creation_choices = {
+            "attribute_priorities": {"primary": "", "secondary": "", "tertiary": ""},
+            "skill_priorities": {"primary": "", "secondary": "", "tertiary": ""},
+            "resistance_attribute_bonus": "",
+        }
+        character.wisdom = 7
+        character.gnosis = 1
+        character.obsessions = [""]
     await db.characters.insert_one(character.model_dump())
     result = character.model_dump()
     result.pop("_id", None)

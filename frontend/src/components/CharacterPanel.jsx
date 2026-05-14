@@ -67,6 +67,8 @@ import { GeistHauntsContent } from "./character/GeistHauntsContent";
 import { GeistRemembranceContent } from "./character/GeistRemembranceContent";
 import { MeritsContent } from "./character/MeritsContent";
 import { CombatContent } from "./character/CombatContent";
+import { CharacterCreationAuditPanel } from "./character/CharacterCreationAuditPanel";
+import { calculateMagePurchaseCost, canAffordMagePurchase, getBlankMageCreationChoices, makeLedgerEntry, validateMageCreation } from "@/utils/mageCreationAudit";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -150,6 +152,40 @@ export const CharacterPanel = ({
     const [spellcastingPractice, setSpellcastingPractice] = useState(null);
     const [spellcastingType, setSpellcastingType] = useState(null);
     const [spellcastingRoteSkill, setSpellcastingRoteSkill] = useState(null);
+    const [mageSceneParadoxRollsByCharacter, setMageSceneParadoxRollsByCharacter] = useState({});
+
+    const getMageSceneParadoxKey = () => activeCharacter?.id || "__active_mage__";
+
+    const getMageSceneParadoxRolls = () => {
+        const key = getMageSceneParadoxKey();
+        return Math.max(0, Number(mageSceneParadoxRollsByCharacter[key]) || 0);
+    };
+
+    const setMageSceneParadoxRolls = (valueOrUpdater) => {
+        const key = getMageSceneParadoxKey();
+
+        setMageSceneParadoxRollsByCharacter((previous) => {
+            const current = Math.max(0, Number(previous[key]) || 0);
+            const nextValue = typeof valueOrUpdater === "function"
+                ? valueOrUpdater(current)
+                : valueOrUpdater;
+
+            return {
+                ...previous,
+                [key]: Math.max(0, Number(nextValue) || 0),
+            };
+        });
+    };
+
+    const resetMageSceneParadoxRolls = () => {
+        setMageSceneParadoxRolls(0);
+    };
+
+    // Mage advancement purchase flow
+    const [xpPurchaseOpen, setXpPurchaseOpen] = useState(false);
+    const [pendingPurchase, setPendingPurchase] = useState(null);
+    const [arcaneXpApplied, setArcaneXpApplied] = useState(0);
+    const [xpPurchaseNote, setXpPurchaseNote] = useState("");
 
     const openSpellcastingPopup = (arcanum, practice = null, spellType = null, roteSkill = null) => {
         setSpellcastingArcanum(arcanum);
@@ -309,12 +345,157 @@ export const CharacterPanel = ({
         });
     };
 
+    const isMageCharacter = activeCharacter?.character_type === "mage";
+    const isCreationMode = isMageCharacter && activeCharacter?.creation_mode === "creation" && !activeCharacter?.creation_locked;
+    const isAdvancementLocked = isMageCharacter && !!activeCharacter?.creation_locked;
+
+    const getCurrentValueForPurchase = (field) => {
+        const value = pendingChanges[field] ?? activeCharacter?.[field];
+        return value;
+    };
+
+    const openAdvancementPurchase = (purchase) => {
+        const cost = calculateMagePurchaseCost(activeCharacter || {}, purchase);
+        const maxArcaneApplied = cost.allowsArcane
+            ? Math.min(Number(activeCharacter?.arcane_experience) || 0, Number(cost.flexible ?? cost.experience) || 0)
+            : 0;
+
+        setPendingPurchase({
+            ...purchase,
+            cost,
+            maxArcaneApplied,
+        });
+        setArcaneXpApplied(maxArcaneApplied);
+        setXpPurchaseNote("");
+        setXpPurchaseOpen(true);
+    };
+
+    const requestNestedTraitPurchase = (parent, field, value, currentValue) => {
+        const traitTypeMap = {
+            attributes: "attribute",
+            skills: "skill",
+            arcana: "arcanum",
+        };
+
+        const traitType = traitTypeMap[parent];
+        if (!traitType) return false;
+
+        if (!isAdvancementLocked || Number(value) <= Number(currentValue)) return false;
+
+        openAdvancementPurchase({
+            trait_type: traitType,
+            trait_key: field,
+            label: `${formatLabel(field)} ${currentValue} → ${value}`,
+            from: Number(currentValue) || 0,
+            to: Number(value) || 0,
+            apply: { kind: "nested", parent, field, value },
+        });
+        return true;
+    };
+
+    const totalMeritDots = (merits = []) => (Array.isArray(merits) ? merits : []).reduce((total, merit) => total + (Number(merit?.dots) || 0), 0);
+
+    const requestListTraitPurchase = (field, value, currentValue) => {
+        if (!isAdvancementLocked) return false;
+
+        const currentList = Array.isArray(currentValue) ? currentValue : [];
+        const nextList = Array.isArray(value) ? value : [];
+
+        if (field === "specialties" && nextList.length > currentList.length) {
+            openAdvancementPurchase({
+                trait_type: "skill_specialty",
+                trait_key: nextList[nextList.length - 1] || "specialty",
+                label: `Skill Specialty: ${nextList[nextList.length - 1] || "New Specialty"}`,
+                from: currentList.length,
+                to: nextList.length,
+                apply: { kind: "field", field, value },
+            });
+            return true;
+        }
+
+        if (field === "rotes" && nextList.length > currentList.length) {
+            const added = nextList[nextList.length - 1] || {};
+            openAdvancementPurchase({
+                trait_type: "rote",
+                trait_key: added.spell || "rote",
+                label: `Rote: ${added.spell || "New Rote"}`,
+                from: currentList.length,
+                to: nextList.length,
+                apply: { kind: "field", field, value },
+            });
+            return true;
+        }
+
+        if (field === "praxes" && nextList.length > currentList.length) {
+            const added = nextList[nextList.length - 1] || {};
+            openAdvancementPurchase({
+                trait_type: "praxis",
+                trait_key: added.spell || "praxis",
+                label: `Praxis: ${added.spell || "New Praxis"}`,
+                from: currentList.length,
+                to: nextList.length,
+                apply: { kind: "field", field, value },
+            });
+            return true;
+        }
+
+        if (field === "merits_list" && totalMeritDots(nextList) > totalMeritDots(currentList)) {
+            openAdvancementPurchase({
+                trait_type: "merit",
+                trait_key: "merit",
+                label: "Merit increase",
+                from: totalMeritDots(currentList),
+                to: totalMeritDots(nextList),
+                apply: { kind: "field", field, value },
+            });
+            return true;
+        }
+
+        return false;
+    };
+
+    const requestFieldTraitPurchase = (field, value, currentValue) => {
+        if (!isAdvancementLocked || Number(value) <= Number(currentValue)) return false;
+
+        const traitTypeMap = {
+            gnosis: "gnosis",
+            wisdom: "wisdom",
+        };
+
+        const traitType = traitTypeMap[field];
+        if (!traitType) return false;
+
+        openAdvancementPurchase({
+            trait_type: traitType,
+            trait_key: field,
+            label: `${formatLabel(field)} ${currentValue} → ${value}`,
+            from: Number(currentValue) || 0,
+            to: Number(value) || 0,
+            apply: { kind: "field", field, value },
+        });
+        return true;
+    };
+
     const handleChange = (field, value) => {
+        const currentValue = getCurrentValueForPurchase(field);
+
+        if (isAdvancementLocked && ["path", "order"].includes(field) && value !== currentValue) {
+            toast.error(`${formatLabel(field)} is locked after character creation.`);
+            return;
+        }
+
+        if (requestFieldTraitPurchase(field, value, currentValue)) return;
+        if (requestListTraitPurchase(field, value, currentValue)) return;
+
         setPendingChanges(prev => ({ ...prev, [field]: value }));
     };
 
     const handleNestedChange = (parent, field, value) => {
         const currentParent = pendingChanges[parent] || activeCharacter?.[parent] || {};
+        const currentValue = currentParent[field] ?? 0;
+
+        if (requestNestedTraitPurchase(parent, field, value, currentValue)) return;
+
         setPendingChanges(prev => ({ ...prev, [parent]: { ...currentParent, [field]: value } }));
     };
 
@@ -340,6 +521,94 @@ export const CharacterPanel = ({
                 return next;
             });
         }
+    };
+
+    const applyPurchasePatch = (purchase) => {
+        if (!purchase?.apply) return {};
+
+        if (purchase.apply.kind === "nested") {
+            const currentParent = activeCharacter?.[purchase.apply.parent] || {};
+            return {
+                [purchase.apply.parent]: {
+                    ...currentParent,
+                    [purchase.apply.field]: purchase.apply.value,
+                },
+            };
+        }
+
+        if (purchase.apply.kind === "field") {
+            return { [purchase.apply.field]: purchase.apply.value };
+        }
+
+        return {};
+    };
+
+    const confirmAdvancementPurchase = async () => {
+        if (!pendingPurchase) return;
+
+        const cost = pendingPurchase.cost || calculateMagePurchaseCost(activeCharacter || {}, pendingPurchase);
+        const safeArcaneApplied = Math.min(
+            pendingPurchase.maxArcaneApplied || 0,
+            Math.max(0, Number(arcaneXpApplied) || 0)
+        );
+
+        if (!canAffordMagePurchase(activeCharacter || {}, cost, safeArcaneApplied)) {
+            toast.error("Not enough XP for this purchase.");
+            return;
+        }
+
+        const ledgerEntry = makeLedgerEntry({ ...pendingPurchase, note: xpPurchaseNote }, cost, safeArcaneApplied);
+        const currentLedger = activeCharacter?.advancement_ledger || [];
+        const updates = {
+            ...applyPurchasePatch(pendingPurchase),
+            experience: Math.max(0, (activeCharacter?.experience || 0) - ledgerEntry.cost.experience),
+            arcane_experience: Math.max(0, (activeCharacter?.arcane_experience || 0) - ledgerEntry.cost.arcane_experience),
+            spent_experience: (activeCharacter?.spent_experience || 0) + ledgerEntry.cost.experience,
+            spent_arcane_experience: (activeCharacter?.spent_arcane_experience || 0) + ledgerEntry.cost.arcane_experience,
+            advancement_ledger: [...currentLedger, ledgerEntry],
+        };
+
+        await commitCharacterUpdate(updates);
+        setPendingPurchase(null);
+        setArcaneXpApplied(0);
+        setXpPurchaseNote("");
+        setXpPurchaseOpen(false);
+        toast.success("XP purchase recorded.");
+    };
+
+    const lockMageCharacter = async (validationFromPanel = null) => {
+        if (!activeCharacter || activeCharacter.character_type !== "mage") return;
+
+        const characterForValidation = {
+            ...activeCharacter,
+            ...pendingChanges,
+            creation_choices: pendingChanges.creation_choices || activeCharacter.creation_choices || getBlankMageCreationChoices(),
+        };
+        const validation = validationFromPanel || validateMageCreation(characterForValidation);
+
+        if (!validation.valid) {
+            toast.error("Character creation is not valid yet.");
+            return;
+        }
+
+        const now = new Date().toISOString();
+        const { created_at, updated_at, id, ...baselineCharacter } = characterForValidation;
+        const updates = {
+            ...pendingChanges,
+            creation_mode: "active",
+            creation_locked: true,
+            creation_locked_at: now,
+            creation_validation: validation,
+            creation_baseline: {
+                locked_at: now,
+                character: baselineCharacter,
+            },
+            advancement_ledger: [],
+        };
+
+        await onUpdateCharacter(updates);
+        setPendingChanges({});
+        toast.success("Character locked. Future permanent increases require XP.");
     };
 
     const escapeHtml = (value = "") => String(value)
@@ -391,7 +660,12 @@ export const CharacterPanel = ({
             addLine("Gnosis", character.gnosis);
             addLine("Wisdom", character.wisdom);
             addLine("Mana", character.mana);
-            addLine("Obsession", character.obsession);
+            const exportObsessions = Array.isArray(character.obsessions) && character.obsessions.length > 0
+                ? character.obsessions.filter(Boolean).join("; ")
+                : character.obsession;
+            addLine("Obsessions", exportObsessions);
+            addLine("Arcane Beats", character.arcane_beats);
+            addLine("Arcane Experience", character.arcane_experience);
         } else {
             addSection("Geist");
             addLine("Geist Name", character.geist_name);
@@ -576,6 +850,41 @@ export const CharacterPanel = ({
         const pending = pendingChanges[parent]?.[field];
         if (pending !== undefined) return pending;
         return activeCharacter?.[parent]?.[field] ?? 0;
+    };
+
+    const getAdvancementLedger = () => {
+        const ledger = getValue("advancement_ledger");
+        return Array.isArray(ledger) ? ledger : [];
+    };
+
+    const formatLedgerDate = (value) => {
+        if (!value) return "—";
+        const parsed = new Date(value);
+        if (Number.isNaN(parsed.getTime())) return "—";
+        return new Intl.DateTimeFormat("en-GB", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+        }).format(parsed);
+    };
+
+    const formatLedgerCost = (entry = {}) => {
+        const cost = entry.cost || {};
+        const xp = Number(cost.experience) || 0;
+        const arcane = Number(cost.arcane_experience) || 0;
+        const parts = [];
+        if (xp > 0) parts.push(`${xp} XP`);
+        if (arcane > 0) parts.push(`${arcane} Arcane XP`);
+        return parts.length > 0 ? parts.join(" / ") : "0 XP";
+    };
+
+    const formatLedgerChange = (entry = {}) => {
+        const hasFrom = entry.from !== null && entry.from !== undefined;
+        const hasTo = entry.to !== null && entry.to !== undefined;
+        if (hasFrom && hasTo) return `${entry.from} → ${entry.to}`;
+        return "";
     };
 
     const activateMageEffect = async ({ type, arcanum, attainmentName, effectName, description, path, extraArcanum }) => {
@@ -837,6 +1146,78 @@ export const CharacterPanel = ({
             return next;
         });
     };
+
+    const awardArcaneBeat = async () => {
+        const currentBeats = getValue("arcane_beats") || 0;
+        const currentXP = getValue("arcane_experience") || 0;
+        const newBeats = currentBeats + 1;
+
+        if (newBeats >= 5) {
+            await onUpdateCharacter({ arcane_beats: newBeats - 5, arcane_experience: currentXP + 1 });
+            toast.success("5 Arcane Beats converted to 1 Arcane Experience!");
+        } else {
+            await onUpdateCharacter({ arcane_beats: newBeats });
+        }
+
+        setPendingChanges((prev) => {
+            const next = { ...prev };
+            delete next.arcane_beats;
+            delete next.arcane_experience;
+            return next;
+        });
+    };
+
+    const removeArcaneBeat = async () => {
+        const currentBeats = getValue("arcane_beats") || 0;
+        if (currentBeats <= 0) return;
+
+        await onUpdateCharacter({ arcane_beats: currentBeats - 1 });
+
+        setPendingChanges((prev) => {
+            const next = { ...prev };
+            delete next.arcane_beats;
+            return next;
+        });
+    };
+
+    const fulfillAspiration = async (field) => {
+        await awardBeat();
+        if (field) {
+            handleChange(field, "");
+        }
+    };
+
+    const getObsessions = () => {
+        const list = getValue("obsessions");
+        if (Array.isArray(list)) return list;
+        const legacy = getValue("obsession");
+        return legacy ? [legacy] : [""];
+    };
+
+    const updateObsession = (index, value) => {
+        const next = [...getObsessions()];
+        next[index] = value;
+        handleChange("obsessions", next);
+        if (index === 0) handleChange("obsession", value);
+    };
+
+    const addObsession = () => {
+        handleChange("obsessions", [...getObsessions(), ""]);
+    };
+
+    const removeObsession = (index) => {
+        const next = getObsessions().filter((_, i) => i !== index);
+        handleChange("obsessions", next.length > 0 ? next : [""]);
+        if (index === 0) handleChange("obsession", next[0] || "");
+    };
+
+    const fulfillObsession = async (index) => {
+        await awardArcaneBeat();
+        const next = [...getObsessions()];
+        next[index] = "";
+        handleChange("obsessions", next);
+        if (index === 0) handleChange("obsession", "");
+    };
     
     // Resolve condition and award beat
     const resolveCondition = async (conditionIndex) => {
@@ -895,6 +1276,11 @@ export const CharacterPanel = ({
 
     // Handle Mage Path selection - auto-set Ruling Arcana to 1 dot
     const handlePathChange = (newPath) => {
+        if (isAdvancementLocked) {
+            toast.error("Path is locked after character creation.");
+            return;
+        }
+
         handleChange("path", newPath);
         
         if (newPath && PATH_ARCANA[newPath]) {
@@ -912,6 +1298,37 @@ export const CharacterPanel = ({
             handleChange("arcana", newArcana);
             toast.success(`Path set to ${newPath}. Ruling Arcana (${pathData.ruling.join(" & ")}) set to 1 dot.`);
         }
+    };
+
+    const handleOrderChange = (newOrder) => {
+        if (isAdvancementLocked) {
+            toast.error("Order is locked after character creation.");
+            return;
+        }
+
+        handleChange("order", newOrder);
+
+        if (!newOrder || newOrder === "Nameless") return;
+
+        const currentSkills = getValue("skills") || {};
+        const currentMerits = getValue("merits_list") || [];
+        const orderStatusName = `Status: ${newOrder}`;
+        const nextSkills = {
+            ...currentSkills,
+            occult: Math.max(1, Number(currentSkills.occult) || 0),
+        };
+
+        const hasHighSpeech = currentMerits.some((merit) => (merit?.name || "") === "High Speech");
+        const hasOrderStatus = currentMerits.some((merit) => (merit?.name || "") === orderStatusName);
+        const nextMerits = [
+            ...currentMerits,
+            ...(hasHighSpeech ? [] : [{ id: Date.now(), name: "High Speech", dots: 1, source: "order_free" }]),
+            ...(hasOrderStatus ? [] : [{ id: Date.now() + 1, name: orderStatusName, dots: 1, source: "order_free" }]),
+        ];
+
+        handleChange("skills", nextSkills);
+        handleChange("merits_list", nextMerits);
+        toast.success(`Order set to ${newOrder}. Added free Occult, High Speech, and Order Status if missing.`);
     };
 
     const hasPendingChanges = Object.keys(pendingChanges).length > 0;
@@ -1574,6 +1991,27 @@ export const CharacterPanel = ({
 
             <ScrollArea className="flex-1">
                 <div className="p-3 space-y-3">
+                    {isMage && isCreationMode && (
+                        <CharacterCreationAuditPanel
+                            character={{ ...(activeCharacter || {}), ...pendingChanges }}
+                            getValue={getValue}
+                            handleChange={handleChange}
+                            onLockCharacter={lockMageCharacter}
+                        />
+                    )}
+
+                    {isMage && isAdvancementLocked && (
+                        <div className="p-2 bg-zinc-900/40 border border-zinc-800 rounded-sm flex items-center justify-between gap-3" data-testid="mage-advancement-status">
+                            <div>
+                                <div className="text-[10px] font-mono uppercase tracking-wider text-emerald-400">Active Character</div>
+                                <div className="text-[10px] text-zinc-500">Permanent increases are recorded as XP purchases.</div>
+                            </div>
+                            <div className="text-[10px] font-mono text-zinc-400 text-right">
+                                XP {getValue("experience") || 0} / Arcane XP {getValue("arcane_experience") || 0}
+                            </div>
+                        </div>
+                    )}
+
                     {/* Dice Roller */}
                     {false && (
                         <InlineDiceRoller
@@ -1635,7 +2073,7 @@ export const CharacterPanel = ({
                                         {isMage ? "Order" : "Character's Innate Key"}
                                     </label>
                                     {isMage ? (
-                                        <Select value={getValue("order") || ""} onValueChange={(v) => handleChange("order", v)}>
+                                        <Select value={getValue("order") || ""} onValueChange={handleOrderChange}>
                                             <SelectTrigger className="bg-zinc-900/50 border-zinc-800 h-8 text-sm mt-0.5" data-testid="character-order-select"><SelectValue placeholder="Select..." /></SelectTrigger>
                                             <SelectContent className="bg-zinc-900 border-zinc-800">
                                                 {MAGE_ORDERS.map((o) => (<SelectItem key={o} value={o} className="text-zinc-200">{o}</SelectItem>))}
@@ -1726,25 +2164,71 @@ export const CharacterPanel = ({
                                         </div>
                                     </div>
 
-                                    <div>
-                                        <div className="flex items-center gap-2 mt-1">
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="h-7 px-2 text-[10px] text-zinc-400 hover:text-zinc-200"
-                                                onClick={() => fulfillAspiration(isMage ? "obsession" : "aspiration_burden")}
-                                                data-testid="aspiration-burden-progressed"
-                                            >
-                                                {isMage ? "OBSESSION" : "BURDEN"}
-                                            </Button>
-                                            <Input
-                                                value={getValue(isMage ? "obsession" : "aspiration_burden") || ""}
-                                                onChange={(e) => handleChange(isMage ? "obsession" : "aspiration_burden", e.target.value)}
-                                                className="h-7 input-geist text-xs flex-1"
-                                                placeholder={isMage ? "Your Mage's Obsession" : ""}
-                                            />
+                                    {isMage ? (
+                                        <div className="space-y-1">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-[10px] text-violet-400 uppercase tracking-wider">Obsessions</span>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="h-6 px-2 text-[10px] text-violet-400 hover:text-violet-300"
+                                                    onClick={addObsession}
+                                                    data-testid="add-obsession-btn"
+                                                >
+                                                    <Plus className="w-3 h-3 mr-1" /> Add
+                                                </Button>
+                                            </div>
+                                            {getObsessions().map((obsession, index) => (
+                                                <div key={index} className="flex items-center gap-2 mt-1">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-7 px-2 text-[10px] text-zinc-400 hover:text-violet-300"
+                                                        onClick={() => fulfillObsession(index)}
+                                                        data-testid={`obsession-${index}-progressed`}
+                                                    >
+                                                        OBSESSION {index + 1}
+                                                    </Button>
+                                                    <Input
+                                                        value={obsession || ""}
+                                                        onChange={(e) => updateObsession(index, e.target.value)}
+                                                        className="h-7 input-geist text-xs flex-1"
+                                                        placeholder="Mage Obsession"
+                                                        data-testid={`obsession-${index}-input`}
+                                                    />
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-7 w-7 p-0 text-zinc-500 hover:text-red-400"
+                                                        onClick={() => removeObsession(index)}
+                                                        disabled={getObsessions().length <= 1}
+                                                        data-testid={`obsession-${index}-remove`}
+                                                    >
+                                                        <X className="w-3 h-3" />
+                                                    </Button>
+                                                </div>
+                                            ))}
                                         </div>
-                                    </div>
+                                    ) : (
+                                        <div>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="h-7 px-2 text-[10px] text-zinc-400 hover:text-zinc-200"
+                                                    onClick={() => fulfillAspiration("aspiration_burden")}
+                                                    data-testid="aspiration-burden-progressed"
+                                                >
+                                                    BURDEN
+                                                </Button>
+                                                <Input
+                                                    value={getValue("aspiration_burden") || ""}
+                                                    onChange={(e) => handleChange("aspiration_burden", e.target.value)}
+                                                    className="h-7 input-geist text-xs flex-1"
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -1813,7 +2297,65 @@ export const CharacterPanel = ({
                                         />
                                     </div>
                                 </div>
-                                <p className="text-[10px] text-zinc-600 mt-2 italic">5 Beats = 1 Experience (auto-converts)</p>
+                                {isMage && (
+                                    <div className="mt-3 pt-3 border-t border-amber-900/40 flex items-center gap-4">
+                                        <div className="flex-1">
+                                            <div className="flex items-center justify-between text-xs mb-1">
+                                                <span className="text-zinc-400">Arcane Beats</span>
+                                                <div className="flex items-center gap-2">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-6 w-6 p-0 text-zinc-400 hover:text-zinc-200"
+                                                        onClick={removeArcaneBeat}
+                                                        disabled={(getValue("arcane_beats") || 0) <= 0}
+                                                        data-testid="arcane-beats-minus"
+                                                    >
+                                                        <Minus className="w-3 h-3" />
+                                                    </Button>
+                                                    <span className="font-mono text-violet-300">{getValue("arcane_beats") || 0}/5</span>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-6 w-6 p-0 text-zinc-400 hover:text-zinc-200"
+                                                        onClick={awardArcaneBeat}
+                                                        data-testid="arcane-beats-plus"
+                                                    >
+                                                        <Plus className="w-3 h-3" />
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-0.5">
+                                                {[0, 1, 2, 3, 4].map((i) => (
+                                                    <div
+                                                        key={i}
+                                                        className={`w-4 h-4 rounded-full border transition-all ${
+                                                            i < (getValue("arcane_beats") || 0)
+                                                                ? "bg-violet-500/50 border-violet-500"
+                                                                : "bg-zinc-900 border-zinc-700"
+                                                        }`}
+                                                        data-testid={`arcane-beat-${i}`}
+                                                    />
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="flex items-center justify-between text-xs mb-1">
+                                                <span className="text-zinc-400">Arcane XP</span>
+                                                <span className="font-mono text-violet-300">{getValue("arcane_experience") || 0}</span>
+                                            </div>
+                                            <Input
+                                                type="number"
+                                                min={0}
+                                                value={getValue("arcane_experience") || 0}
+                                                onChange={(e) => handleChange("arcane_experience", Math.max(0, parseInt(e.target.value) || 0))}
+                                                className="h-6 w-16 text-center input-geist text-xs"
+                                                data-testid="arcane-experience-input-header"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+                                <p className="text-[10px] text-zinc-600 mt-2 italic">5 Beats = 1 Experience. 5 Arcane Beats = 1 Arcane Experience.</p>
                             </div>
                         </CollapsibleContent>
                     </Collapsible>
@@ -2078,24 +2620,84 @@ export const CharacterPanel = ({
                         </CollapsibleContent>
                     </Collapsible>
 
-                    {/* Notes */}
+                    {/* Notes / XP Expenditure */}
                     <Collapsible
                         open={expandedSections.notes}
                         onOpenChange={() => toggleSection("notes")}
->
+                    >
                         <CollapsibleTrigger className="w-full">
                             <div className="flex items-center justify-between p-2 bg-zinc-900/40 border border-zinc-800 rounded-sm">
-                                <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">Notes</span>
+                                <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">
+                                    {isMage ? "XP Expenditure" : "Notes"}
+                                </span>
+                                {expandedSections.notes ? <ChevronDown className="w-4 h-4 text-zinc-500" /> : <ChevronRight className="w-4 h-4 text-zinc-500" />}
                             </div>
                         </CollapsibleTrigger>
 
                         <CollapsibleContent className="mt-2">
-                            <Textarea
-                                value={getValue("notes") || ""}
-                                onChange={(e) => handleChange("notes", e.target.value)}
-                                className="bg-zinc-900 border-zinc-700 text-zinc-200"
-                                rows={6}
-                            />
+                            {isMage ? (
+                                <div className="space-y-3">
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <div className="p-2 bg-zinc-950/50 border border-zinc-800 rounded-sm">
+                                            <div className="text-[10px] text-zinc-500 uppercase tracking-wider">Available</div>
+                                            <div className="font-mono text-xs text-emerald-300 mt-1">
+                                                XP {getValue("experience") || 0} / Arcane {getValue("arcane_experience") || 0}
+                                            </div>
+                                        </div>
+                                        <div className="p-2 bg-zinc-950/50 border border-zinc-800 rounded-sm">
+                                            <div className="text-[10px] text-zinc-500 uppercase tracking-wider">Spent</div>
+                                            <div className="font-mono text-xs text-amber-300 mt-1">
+                                                XP {getValue("spent_experience") || 0} / Arcane {getValue("spent_arcane_experience") || 0}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {getAdvancementLedger().length === 0 ? (
+                                        <div className="p-3 bg-zinc-950/40 border border-zinc-800 rounded-sm text-xs text-zinc-500">
+                                            No XP expenditure recorded yet. Trait increases after locking character creation will appear here.
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            {getAdvancementLedger().slice().reverse().map((entry, index) => (
+                                                <div
+                                                    key={entry.id || `${entry.trait_type}-${entry.trait_key}-${index}`}
+                                                    className="p-2 bg-zinc-950/50 border border-zinc-800 rounded-sm"
+                                                    data-testid="xp-expenditure-entry"
+                                                >
+                                                    <div className="flex items-start justify-between gap-3">
+                                                        <div className="min-w-0">
+                                                            <div className="text-xs text-zinc-200 truncate">
+                                                                {entry.label || formatLabel(entry.trait_key || entry.trait_type || "Purchase")}
+                                                                {formatLedgerChange(entry) && (
+                                                                    <span className="ml-2 font-mono text-zinc-500">{formatLedgerChange(entry)}</span>
+                                                                )}
+                                                            </div>
+                                                            <div className="mt-1 text-[10px] text-zinc-500 uppercase tracking-wider">
+                                                                {formatLedgerDate(entry.date)} · {formatLabel(entry.trait_type || "purchase")}
+                                                            </div>
+                                                        </div>
+                                                        <div className="shrink-0 text-xs font-mono text-emerald-300">
+                                                            {formatLedgerCost(entry)}
+                                                        </div>
+                                                    </div>
+                                                    {entry.note && (
+                                                        <div className="mt-2 text-xs text-zinc-400 whitespace-pre-wrap border-t border-zinc-800 pt-2">
+                                                            {entry.note}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <Textarea
+                                    value={getValue("notes") || ""}
+                                    onChange={(e) => handleChange("notes", e.target.value)}
+                                    className="bg-zinc-900 border-zinc-700 text-zinc-200"
+                                    rows={6}
+                                />
+                            )}
                         </CollapsibleContent>
                     </Collapsible>
                 </div>
@@ -2157,6 +2759,97 @@ export const CharacterPanel = ({
                         forceExpanded={true}
                         isMage={isMage}
                     />
+                </DialogContent>
+            </Dialog>
+
+            {/* Mage XP Purchase Popup */}
+            <Dialog open={xpPurchaseOpen} onOpenChange={setXpPurchaseOpen}>
+                <DialogContent className="bg-zinc-900 border-zinc-800 max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="font-heading text-emerald-300">Record XP Purchase</DialogTitle>
+                        <DialogDescription className="text-zinc-400">
+                            {pendingPurchase?.label || "Permanent trait increase"}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {pendingPurchase && (
+                        <div className="space-y-3">
+                            <div className="grid grid-cols-2 gap-2 text-xs">
+                                <div className="p-2 bg-zinc-950/50 border border-zinc-800 rounded-sm">
+                                    <div className="text-[10px] text-zinc-500 uppercase tracking-wider">Cost</div>
+                                    <div className="font-mono text-zinc-200 mt-1">
+                                        XP {Math.max(0, (pendingPurchase.cost?.experience || 0) - arcaneXpApplied)}
+                                        {((pendingPurchase.cost?.arcane_experience || 0) + arcaneXpApplied) > 0 && (
+                                            <span> / Arcane XP {(pendingPurchase.cost?.arcane_experience || 0) + arcaneXpApplied}</span>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="p-2 bg-zinc-950/50 border border-zinc-800 rounded-sm">
+                                    <div className="text-[10px] text-zinc-500 uppercase tracking-wider">Available</div>
+                                    <div className="font-mono text-zinc-200 mt-1">
+                                        XP {getValue("experience") || 0} / Arcane {getValue("arcane_experience") || 0}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {pendingPurchase.maxArcaneApplied > 0 && (
+                                <div className="p-2 bg-violet-950/20 border border-violet-800/40 rounded-sm space-y-2">
+                                    <div className="text-[10px] text-violet-300 uppercase tracking-wider">Apply Arcane XP to flexible cost</div>
+                                    <div className="flex items-center gap-2">
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="h-7 w-7 p-0 bg-zinc-900 border-zinc-700 text-zinc-300"
+                                            onClick={() => setArcaneXpApplied(Math.max(0, arcaneXpApplied - 1))}
+                                            disabled={arcaneXpApplied <= 0}
+                                        >
+                                            <Minus className="w-3 h-3" />
+                                        </Button>
+                                        <span className="text-xs font-mono text-violet-300 w-10 text-center">{arcaneXpApplied}</span>
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="h-7 w-7 p-0 bg-zinc-900 border-zinc-700 text-zinc-300"
+                                            onClick={() => setArcaneXpApplied(Math.min(pendingPurchase.maxArcaneApplied, arcaneXpApplied + 1))}
+                                            disabled={arcaneXpApplied >= pendingPurchase.maxArcaneApplied}
+                                        >
+                                            <Plus className="w-3 h-3" />
+                                        </Button>
+                                        <span className="text-[10px] text-zinc-500">max {pendingPurchase.maxArcaneApplied}</span>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div>
+                                <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Ledger note</label>
+                                <Textarea
+                                    value={xpPurchaseNote}
+                                    onChange={(e) => setXpPurchaseNote(e.target.value)}
+                                    className="mt-1 bg-zinc-950 border-zinc-800 text-zinc-200 text-xs min-h-[70px]"
+                                    placeholder="Optional reason, teacher, chapter, or approval note..."
+                                    data-testid="xp-purchase-note-input"
+                                />
+                            </div>
+
+                            <div className="flex gap-2 pt-1">
+                                <Button
+                                    variant="outline"
+                                    className="flex-1 bg-zinc-900 border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+                                    onClick={() => { setXpPurchaseOpen(false); setPendingPurchase(null); setArcaneXpApplied(0); setXpPurchaseNote(""); }}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    className="flex-1 bg-emerald-800 hover:bg-emerald-700 text-white"
+                                    onClick={confirmAdvancementPurchase}
+                                    disabled={!canAffordMagePurchase(activeCharacter || {}, pendingPurchase.cost || {}, arcaneXpApplied)}
+                                    data-testid="confirm-xp-purchase-btn"
+                                >
+                                    Record Purchase
+                                </Button>
+                            </div>
+                        </div>
+                    )}
                 </DialogContent>
             </Dialog>
 
@@ -2235,6 +2928,8 @@ export const CharacterPanel = ({
                     isInferior={getValue("path") && PATH_ARCANA[getValue("path")]?.inferior === spellcastingArcanum}
                     currentMana={getValue("mana") || 0}
                     currentWisdom={getValue("wisdom") || 7}
+                    athleticsDots={getNestedValue("skills", "athletics") || 0}
+                    firearmsDots={getNestedValue("skills", "firearms") || 0}
                     initialPractice={spellcastingPractice}
                     onCreateActiveSpell={addActiveSpell}
                     activeSpellCount={(activeCharacter?.active_spells || []).filter((entry) => entry?.kind === "spell").length}
@@ -2248,6 +2943,9 @@ export const CharacterPanel = ({
                             onTriggerDiceRoll(spellData);
                         }
                     }}
+                    previousParadoxRolls={getMageSceneParadoxRolls()}
+                    onPreviousParadoxRollsChange={setMageSceneParadoxRolls}
+                    onResetPreviousParadoxRolls={resetMageSceneParadoxRolls}
                     onResolveParadoxContainment={resolveParadoxContainment}
                 />
             )}
