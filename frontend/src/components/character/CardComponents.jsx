@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { KEYS, KEY_UNLOCK_ATTRIBUTES, SKILL_LIST } from "../../data/character-data";
+import { KEYS, KEY_UNLOCK_ATTRIBUTES, SKILL_LIST, MERIT_LIST } from "../../data/character-data";
 import { StatDots, formatLabel } from "./StatComponents";
 
 export const MementoCard = ({ memento, index, onUpdate, onDelete }) => {
@@ -68,23 +68,51 @@ export const MementoCard = ({ memento, index, onUpdate, onDelete }) => {
 };
 
 export const MeritCard = ({ merit, index, onDelete, onUpdate, onRollPerception }) => {
+    const meritDef = MERIT_LIST.find((entry) => entry.name === merit.name);
+    const minDots = meritDef?.minDots || 1;
+    const maxDots = meritDef?.maxDots || 5;
+    const isFixedDotMerit = minDots === maxDots;
+    const isLockedMerit = !!merit.locked || merit.source === "order_free" || merit.source === "professional_training_free";
+    const canEditDots = !isLockedMerit && !isFixedDotMerit;
+
+    const handleDotChange = (nextValue) => {
+        if (!canEditDots) return;
+
+        const safeNextValue = Math.max(
+            minDots,
+            Math.min(maxDots, Number(nextValue) || minDots)
+        );
+
+        if (safeNextValue === (Number(merit.dots) || 0)) return;
+
+        onUpdate({ dots: safeNextValue });
+    };
+
     return (
         <div className="bg-zinc-800/50 border border-zinc-700 rounded-sm p-2 relative group space-y-2">
             <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <span className="text-xs text-zinc-300">
-    {merit.specialty ? `${merit.name}: ${merit.specialty}` : merit.name}
-</span>
+                <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-xs text-zinc-300 truncate">
+                        {merit.specialty ? `${merit.name}: ${merit.specialty}` : merit.name}
+                    </span>
+
                     <StatDots
                         value={merit.dots || 0}
-                        max={5}
-                        onChange={() => {}}
+                        max={maxDots}
+                        onChange={handleDotChange}
                         color="amber"
                         size="small"
-                        clickable={false}
-                        testIdPrefix={`merit-${merit.name.toLowerCase().replace(/\s+/g, '-')}`}
+                        clickable={canEditDots}
+                        testIdPrefix={`merit-${(merit.name || "merit").toLowerCase().replace(/\s+/g, '-')}`}
                     />
+
+                    {isLockedMerit && (
+                        <span className="text-[9px] text-zinc-500 uppercase tracking-wider">
+                            locked
+                        </span>
+                    )}
                 </div>
+
                 <Button
                     size="icon"
                     variant="ghost"
@@ -113,7 +141,7 @@ export const MeritCard = ({ merit, index, onDelete, onUpdate, onRollPerception }
             {merit.name === "Professional Training" && (
                 <div className="space-y-2">
                     <div className="text-[10px] text-zinc-500">
-                        Select 3 Asset Skills. 9-again applies on rolls using these skills when Professional Training is 3+ dots.
+                        Select 3 Asset Skills. 9-again applies on rolls using Asset Skills when Professional Training is 2+ dots.
                     </div>
 
                     <div className="grid grid-cols-1 gap-2">

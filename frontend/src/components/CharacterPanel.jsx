@@ -76,6 +76,7 @@ import {
     getChargeableMeritDots,
     getProfessionalTrainingFreeSpecialtyCount,
     makeLedgerEntry,
+    makeSanctityOfMeritsEntry,
     validateMageCreation,
 } from "@/utils/mageCreationAudit";
 
@@ -450,6 +451,44 @@ export const CharacterPanel = ({
         return Math.max(0, nextFreeSpecialties - currentFreeSpecialties);
     };
 
+    const getProfessionalTrainingFreeSpecialtySlotsLost = (currentMerits = [], nextMerits = []) => {
+        const currentFreeSpecialties = getProfessionalTrainingFreeSpecialtyCount(currentMerits);
+        const nextFreeSpecialties = getProfessionalTrainingFreeSpecialtyCount(nextMerits);
+
+        return Math.max(0, currentFreeSpecialties - nextFreeSpecialties);
+    };
+
+    const recordSanctityOfMeritsRefund = async ({ nextMerits, refundDots, label = "Merit loss" }) => {
+        const safeRefundDots = Math.max(0, Number(refundDots) || 0);
+        if (safeRefundDots <= 0) return;
+
+        const currentLedger = activeCharacter?.advancement_ledger || [];
+        const ledgerEntry = makeSanctityOfMeritsEntry({
+            label,
+            dots: safeRefundDots,
+            note: "Sanctity of Merits refund.",
+        });
+
+        const freeSpecialtySlotsLost = getProfessionalTrainingFreeSpecialtySlotsLost(meritsList, nextMerits);
+        const nextFreeSpecialtySlots = Math.max(
+            0,
+            (Number(activeCharacter?.free_skill_specialty_slots) || 0) - freeSpecialtySlotsLost
+        );
+
+        const updates = {
+            merits_list: nextMerits,
+            experience: (Number(activeCharacter?.experience) || 0) + safeRefundDots,
+            advancement_ledger: [...currentLedger, ledgerEntry],
+        };
+
+        if (freeSpecialtySlotsLost > 0) {
+            updates.free_skill_specialty_slots = nextFreeSpecialtySlots;
+        }
+
+        await commitCharacterUpdate(updates);
+        toast.success(`Sanctity of Merits: refunded ${safeRefundDots} XP.`);
+    };
+
     const requestListTraitPurchase = (field, value, currentValue) => {
         if (!isAdvancementLocked) return false;
 
@@ -460,9 +499,25 @@ export const CharacterPanel = ({
             const freeSlots = Math.max(0, Number(activeCharacter?.free_skill_specialty_slots) || 0);
 
             if (freeSlots > 0) {
+                const currentLedger = activeCharacter?.advancement_ledger || [];
+                const addedSpecialty = nextList[nextList.length - 1] || "New Specialty";
+                const ledgerEntry = makeLedgerEntry(
+                    {
+                        trait_type: "skill_specialty",
+                        trait_key: addedSpecialty,
+                        label: `Free Specialty: ${addedSpecialty}`,
+                        from: currentList.length,
+                        to: nextList.length,
+                        note: "Free Specialty from Professional Training.",
+                    },
+                    { experience: 0, arcane_experience: 0 },
+                    0
+                );
+
                 commitCharacterUpdate({
                     specialties: nextList,
                     free_skill_specialty_slots: freeSlots - 1,
+                    advancement_ledger: [...currentLedger, ledgerEntry],
                 });
                 toast.success("Free Professional Training Specialty recorded.");
                 return true;
@@ -493,7 +548,33 @@ export const CharacterPanel = ({
         }
 
         if (field === "praxes" && nextList.length > currentList.length) {
+            const freeSlots = Math.max(0, Number(activeCharacter?.free_praxis_slots) || 0);
             const added = nextList[nextList.length - 1] || {};
+
+            if (freeSlots > 0) {
+                const currentLedger = activeCharacter?.advancement_ledger || [];
+                const ledgerEntry = makeLedgerEntry(
+                    {
+                        trait_type: "praxis",
+                        trait_key: added.spell || "praxis",
+                        label: `Free Praxis: ${added.spell || "New Praxis"}`,
+                        from: currentList.length,
+                        to: nextList.length,
+                        note: "Free Praxis from increased Gnosis.",
+                    },
+                    { experience: 0, arcane_experience: 0 },
+                    0
+                );
+
+                commitCharacterUpdate({
+                    praxes: nextList,
+                    free_praxis_slots: freeSlots - 1,
+                    advancement_ledger: [...currentLedger, ledgerEntry],
+                });
+                toast.success("Free Praxis recorded.");
+                return true;
+            }
+
             openAdvancementPurchase({
                 trait_type: "praxis",
                 trait_key: added.spell || "praxis",
@@ -529,6 +610,18 @@ export const CharacterPanel = ({
                     to: nextChargeableDots,
                     apply: { kind: "patch", patch },
                 });
+                return true;
+            }
+
+            if (nextChargeableDots < currentChargeableDots) {
+                const refundDots = currentChargeableDots - nextChargeableDots;
+
+                recordSanctityOfMeritsRefund({
+                    nextMerits: normalizedNextList,
+                    refundDots,
+                    label: "Sanctity of Merits refund",
+                });
+
                 return true;
             }
         }
@@ -645,8 +738,22 @@ export const CharacterPanel = ({
 
         const ledgerEntry = makeLedgerEntry({ ...pendingPurchase, note: xpPurchaseNote }, cost, safeArcaneApplied);
         const currentLedger = activeCharacter?.advancement_ledger || [];
+        const purchasePatch = applyPurchasePatch(pendingPurchase);
+
+        if (pendingPurchase.trait_type === "gnosis") {
+            const freePraxesGained = Math.max(
+                0,
+                (Number(pendingPurchase.to) || 0) - (Number(pendingPurchase.from) || 0)
+            );
+
+            if (freePraxesGained > 0) {
+                purchasePatch.free_praxis_slots =
+                    Math.max(0, Number(activeCharacter?.free_praxis_slots) || 0) + freePraxesGained;
+            }
+        }
+
         const updates = {
-            ...applyPurchasePatch(pendingPurchase),
+            ...purchasePatch,
             experience: Math.max(0, (activeCharacter?.experience || 0) - ledgerEntry.cost.experience),
             arcane_experience: Math.max(0, (activeCharacter?.arcane_experience || 0) - ledgerEntry.cost.arcane_experience),
             spent_experience: (activeCharacter?.spent_experience || 0) + ledgerEntry.cost.experience,
@@ -1827,8 +1934,14 @@ export const CharacterPanel = ({
         if (!id) return;
 
         const merit = meritsList.find((m) => (m?.id || null) === id);
+
         if (merit?.source === PROFESSIONAL_TRAINING_RULES.freeContactSource) {
             toast.error("Professional Training Contacts are granted by the Merit. Remove or lower Professional Training instead.");
+            return;
+        }
+
+        if (merit?.source === "order_free") {
+            toast.error("Order freebies cannot be deleted directly.");
             return;
         }
 
@@ -1838,12 +1951,19 @@ export const CharacterPanel = ({
 
         handleChange("merits_list", newMerits);
     };
+
     const updateMerit = (id, data) => {
         if (!id) return;
 
         const merit = meritsList.find((m) => (m?.id || null) === id);
+
         if (merit?.source === PROFESSIONAL_TRAINING_RULES.freeContactSource) {
             toast.error("Professional Training Contacts are granted by the Merit. Edit Professional Training instead.");
+            return;
+        }
+
+        if (merit?.source === "order_free") {
+            toast.error("Order freebies cannot be edited directly.");
             return;
         }
 

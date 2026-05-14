@@ -49,7 +49,7 @@ export const MAGE_CREATION_RULES = {
 export const PROFESSIONAL_TRAINING_RULES = {
     meritName: "Professional Training",
     contactsAtDots: 1,
-    specialtiesAtDots: 2,
+    specialtiesAtDots: 3,
     freeContactDots: 2,
     freeSpecialties: 2,
     freeContactSource: "professional_training_free",
@@ -485,4 +485,20 @@ export const makeLedgerEntry = (purchase = {}, cost = {}, arcaneApplied = 0) => 
         arcane_experience: (Number(cost.arcane_experience) || 0) + (Number(arcaneApplied) || 0),
     },
     note: purchase.note || "",
+});
+
+export const makeSanctityOfMeritsEntry = ({ label = "Merit refund", dots = 0, note = "" } = {}) => ({
+    id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    date: new Date().toISOString(),
+    type: "sanctity_of_merits",
+    trait_type: "merit",
+    trait_key: "merit",
+    label,
+    from: dots,
+    to: 0,
+    cost: {
+        experience: -Math.max(0, Number(dots) || 0),
+        arcane_experience: 0,
+    },
+    note: note || "Sanctity of Merits refund.",
 });
