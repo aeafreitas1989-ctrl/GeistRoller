@@ -13,16 +13,18 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 export const StorytellerPage = () => {
     const [characters, setCharacters] = useState([]);
     const [activeCharacter, setActiveCharacter] = useState(null);
-    const [rollColumnCollapsed, setRollColumnCollapsed] = useState(true);
+    const [rollColumnCollapsed, setRollColumnCollapsed] = useState(false);
 
     const diceRollerRef = useRef(null);
     const lastCharacterStorageKey = "geistroller-last-active-character-id";
 
     const triggerDiceRoll = (config) => {
+        setRollColumnCollapsed(false);
         diceRollerRef.current?.rollWithConfig(config);
     };
 
     const addRecentRoll = (entry) => {
+        setRollColumnCollapsed(false);
         diceRollerRef.current?.addHistoryEntry(entry);
     };
 

@@ -426,6 +426,9 @@ export const CharacterPanel = ({
         locked: true,
     });
 
+    const isOrderStatusMerit = (merit = {}) =>
+        merit?.source === "order_free" && (merit?.name || "").startsWith("Status:");
+
     const withProfessionalTrainingFreeContacts = (merits = []) => {
         const safeMerits = Array.isArray(merits) ? merits : [];
         const withoutFreeContacts = safeMerits.filter(
@@ -1940,8 +1943,8 @@ export const CharacterPanel = ({
             return;
         }
 
-        if (merit?.source === "order_free") {
-            toast.error("Order freebies cannot be deleted directly.");
+        if (merit?.source === "order_free" && !isOrderStatusMerit(merit)) {
+            toast.error("Order freebies cannot be edited directly.");
             return;
         }
 
@@ -1963,7 +1966,7 @@ export const CharacterPanel = ({
         }
 
         if (merit?.source === "order_free") {
-            toast.error("Order freebies cannot be edited directly.");
+            toast.error("Order freebies cannot be deleted directly. Lower Status to 1 instead.");
             return;
         }
 
@@ -2978,6 +2981,7 @@ export const CharacterPanel = ({
                         onAddCondition={addConditionFromDiceRoller}
                         onDiceRollResult={onDiceRollResult}
                         onAddRecentRoll={onAddRecentRoll}
+                        onRollComplete={() => setGenericDicePopupOpen(false)}
                         geistRank={getValue("geist_rank") || 1}
                         woundPenalty={getValue("wound_penalty") || 0}
                         currentPlasm={getValue("plasm") || 0}

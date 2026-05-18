@@ -414,6 +414,7 @@ const MageSightCard = ({
                 mode === "Scrutiny"
                     ? `${targetLine}\nFocused Mage Sight${!scrutinyActive ? "; costs 1 Willpower to begin" : " (ongoing)"}. Opacity: ${opacityValue}.`
                     : `${targetLine}\nFocused Mage Sight Revelation. Opacity: ${opacityValue}.`,
+            countOnly: mode === "Scrutiny",
             scrutinyTracker: mode === "Scrutiny"
                 ? {
                     startingOpacity: scrutinyStartingOpacity,

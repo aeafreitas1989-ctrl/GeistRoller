@@ -22,6 +22,7 @@ export const DiceRoller = forwardRef(({ embedded = false, collapsed = false, onT
     const [again, setAgain] = useState("10");
     const [rote, setRote] = useState(false);
     const [chance, setChance] = useState(false);
+    const [countOnly, setCountOnly] = useState(false);
     const [isRolling, setIsRolling] = useState(false);
     const [result, setResult] = useState(null);
     const [rollLabel, setRollLabel] = useState(null);
@@ -209,12 +210,15 @@ export const DiceRoller = forwardRef(({ embedded = false, collapsed = false, onT
         setPendingParadox(null);
         setExceptionalTarget(5);
         setRollSequence([]);
+        setIsOpen(false);
+        setIsMinimized(false);
 
         const manualConfig = {
             pool,
             again: parseInt(again),
             rote,
             chance,
+            countOnly,
             exceptional_target: 5,
             label: null,
             dicePoolBreakdown: chance ? "Chance Die" : `${pool} dice`,
@@ -228,22 +232,41 @@ export const DiceRoller = forwardRef(({ embedded = false, collapsed = false, onT
         });
     };
 
-    const formatOutcomeLine = (rollResult) => {
+    const formatOutcomeLine = (rollResult, countOnlyResult = false) => {
         const successes = rollResult?.successes || 0;
+        const successText = `${successes} Success${successes === 1 ? "" : "es"}`;
 
         if (rollResult?.is_dramatic_failure) {
-            return `${successes} Success${successes === 1 ? "" : "es"} = Dramatic Failure`;
+            return `${successText} = Dramatic Failure...`;
         }
 
         if (rollResult?.is_exceptional) {
-            return `${successes} Success${successes === 1 ? "" : "es"} = Exceptional Success`;
+            return `${successText} = Exceptional Success!`;
+        }
+
+        if (countOnlyResult) {
+            return successText;
         }
 
         if (successes > 0) {
-            return `${successes} Success${successes === 1 ? "" : "es"} = Success`;
+            return `${successText} = Success`;
         }
 
         return "0 Successes = Failure";
+    };
+
+    const buildAttackDamageLine = (rollResult, config = {}) => {
+        if (!config.isAttack) return "";
+
+        const successes = Math.max(0, Number(rollResult?.successes) || 0);
+        const weaponDamage = Math.max(0, Number(config.weaponDamage) || 0);
+        const successText = `${successes} Success${successes === 1 ? "" : "es"}`;
+
+        if (successes <= 0) {
+            return "Damage: 0";
+        }
+
+        return `Damage: ${successText} + Weapon Damage ${weaponDamage} = ${successes + weaponDamage}`;
     };
 
     const formatSuccessCount = (successes = 0) =>
@@ -458,7 +481,9 @@ export const DiceRoller = forwardRef(({ embedded = false, collapsed = false, onT
 
         const spellSummary = config.spellSummary || "";
         const scrutinyTrackerSummary = buildScrutinyTrackerSummary(rollResult, config);
-        const outcomeLine = formatOutcomeLine(rollResult);
+        const countOnlyResult = !!(config.countOnly || config.isAttack || config.scrutinyTracker);
+        const outcomeLine = formatOutcomeLine(rollResult, countOnlyResult);
+        const attackDamageLine = buildAttackDamageLine(rollResult, config);
         const diceRows = formatDiceRows(rollResult);
 
         return [
@@ -466,6 +491,7 @@ export const DiceRoller = forwardRef(({ embedded = false, collapsed = false, onT
             ...(spellSummary ? [spellSummary] : []),
             ...(scrutinyTrackerSummary ? [scrutinyTrackerSummary] : []),
             outcomeLine,
+            ...(attackDamageLine ? [attackDamageLine] : []),
             ...(diceRows ? [diceRows] : []),
         ].join("\n");
     };
@@ -508,10 +534,11 @@ export const DiceRoller = forwardRef(({ embedded = false, collapsed = false, onT
                 pool,
                 again: parseInt(again),
                 chance,
+                countOnly,
                 label: rollLabel,
             }
         );
-    }, [rollSequence, result, lastRollConfig, pool, again, chance, rollLabel]);
+    }, [rollSequence, result, lastRollConfig, pool, again, chance, countOnly, rollLabel]);
 
     const visible = embedded || isOpen;
 
@@ -554,7 +581,10 @@ export const DiceRoller = forwardRef(({ embedded = false, collapsed = false, onT
             id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
             title: title || completedConfig?.label || "Roll",
             transcript,
-            outcome: formatOutcomeLine(completedResult),
+            outcome: formatOutcomeLine(
+                completedResult,
+                !!(completedConfig?.countOnly || completedConfig?.isAttack || completedConfig?.scrutinyTracker)
+            ),
         };
 
         setRollHistory((prev) => [nextEntry, ...prev].slice(0, 20));
@@ -779,6 +809,16 @@ export const DiceRoller = forwardRef(({ embedded = false, collapsed = false, onT
                                         }
                                     }}
                                     data-testid="chance-switch"
+                                />
+                            </div>
+
+                            {/* Contested / Count Only */}
+                            <div className="flex items-center justify-between">
+                                <label className="text-sm text-zinc-400">Contested / Count Only</label>
+                                <Switch
+                                    checked={countOnly}
+                                    onCheckedChange={setCountOnly}
+                                    data-testid="count-only-switch"
                                 />
                             </div>
 

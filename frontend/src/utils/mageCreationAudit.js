@@ -140,6 +140,11 @@ export const getChargeableMeritDots = (merit = {}) => {
     return getMeritDots(merit);
 };
 
+export const getAdvancementMeritDots = (merit = {}) => {
+    if (isProfessionalTrainingFreeMerit(merit)) return 0;
+    return getMeritDots(merit);
+};
+
 export const getMageMeritCreationDots = (character = {}) => {
     const order = character.order || "";
     const orderStatusName = order ? `Status: ${order}` : "";

@@ -766,6 +766,7 @@ export const CombatTrackerCard = ({
 
     const selectedWeapon = selectedWeaponOption?.weapon || null;
     const selectedWeaponName = selectedWeaponOption?.label || "Unarmed";
+    const selectedWeaponDamage = selectedWeapon?.damage ?? 0;
     const selectedWeaponIndex = selectedWeaponOption?.idx ?? -1;
 
     const canThrowSelectedWeapon =
@@ -1114,10 +1115,12 @@ export const CombatTrackerCard = ({
                             if (!onTriggerDiceRoll) return;
 
                             onTriggerDiceRoll({
-                                pool: attackPool <= 0 ? 1 : attackPool,
-                                chance: attackPool <= 0,
-                                label: `${attackProfile.label} Attack`,
-                                dicePoolBreakdown: `${formatLabel(attackProfile.attribute)} ${attackAttributeValue} + ${formatLabel(attackProfile.skill)} ${attackSkillValue}${attackUntrainedPenalty !== 0 ? ` + Untrained ${attackUntrainedPenalty}` : ""}${modifierValue !== 0 ? ` + Modifier ${modifierValue}` : ""}${attackConditionBreakdown.length > 0 ? ` ${attackConditionBreakdown.map((entry) => `+ ${entry}`).join(" ")}` : ""}${attackProfile.appliesDefense ? ` - Target Defense ${defensePenalty}` : ""}`,
+                                pool: outgoingPool <= 0 ? 1 : outgoingPool,
+                                chance: outgoingPool <= 0,
+                                label: `${formatLabel(attackAttribute)} + ${formatLabel(attackSkill)} Attack`,
+                                dicePoolBreakdown: `${formatLabel(attackAttribute)} ${attackAttributeValue} + ${formatLabel(attackSkill)} ${attackSkillValue}${attackUntrainedPenalty !== 0 ? ` + Untrained ${attackUntrainedPenalty}` : ""} + Modifier ${parseInt(attackModifier, 10) || 0} - Target Defense ${parseInt(targetDefense, 10) || 0}`,
+                                isAttack: true,
+                                weaponDamage: 0,
                                 exceptional_target: 5,
                             });
 

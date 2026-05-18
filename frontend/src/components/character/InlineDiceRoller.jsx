@@ -73,6 +73,7 @@ export const InlineDiceRoller = ({
     onAddCondition,
     onDiceRollResult,
     onAddRecentRoll,
+    onRollComplete = null,
     geistRank = 1,
     woundPenalty = 0,
     currentPlasm = 0,
@@ -93,6 +94,7 @@ export const InlineDiceRoller = ({
     const [spendWillpower, setSpendWillpower] = useState(false);
     const [againRule, setAgainRule] = useState("10");
     const [useRote, setUseRote] = useState(false);
+    const [isContestedRoll, setIsContestedRoll] = useState(false);
     const [diceModifier, setDiceModifier] = useState(0);
     const [selectedEquipKey, setSelectedEquipKey] = useState("__none__");
     const [isRolling, setIsRolling] = useState(false);
@@ -377,22 +379,84 @@ export const InlineDiceRoller = ({
 
     const effectivePool = isComputedChanceDie ? 1 : poolTotal;
 
-    const formatOutcomeLine = (rollResult) => {
+    const formatOutcomeLine = (rollResult, countOnly = false) => {
         const successes = rollResult?.successes || 0;
+        const successText = `${successes} Success${successes === 1 ? "" : "es"}`;
 
         if (rollResult?.is_dramatic_failure) {
-            return `${successes} Success${successes === 1 ? "" : "es"} = Dramatic Failure`;
+            return `${successText} = Dramatic Failure...`;
         }
 
         if (rollResult?.is_exceptional) {
-            return `${successes} Success${successes === 1 ? "" : "es"} = Exceptional Success`;
+            return `${successText} = Exceptional Success!`;
+        }
+
+        if (countOnly) {
+            return successText;
         }
 
         if (successes > 0) {
-            return `${successes} Success${successes === 1 ? "" : "es"} = Success`;
+            return `${successText} = Success`;
         }
 
         return "0 Successes = Failure";
+    };
+
+        const formatPoolPart = (label, value, forceSign = true) => {
+        const numericValue = Number(value) || 0;
+        if (numericValue === 0) return null;
+
+        if (!forceSign) {
+            return `${label} ${numericValue}`;
+        }
+
+        const sign = numericValue > 0 ? "+" : "-";
+        return `${sign} ${label} ${Math.abs(numericValue)}`;
+    };
+
+    const buildRollBreakdown = () => {
+        const parts = [];
+
+        if (rollType === "chance") {
+            return "Chance Die";
+        }
+
+        if (rollType === "attr-attr") {
+            parts.push(formatPoolPart(formatLabel(primaryAttr), primaryAttrValue, false));
+            parts.push(formatPoolPart(formatLabel(secondaryAttr), secondaryAttrValue));
+        }
+
+        if (rollType === "attr-skill") {
+            parts.push(formatPoolPart(formatLabel(primaryAttr), primaryAttrValue, false));
+            parts.push(formatPoolPart(formatLabel(skill), selectedSkillValue));
+            parts.push(formatPoolPart("Untrained", untrainedSkillPenalty));
+            if (useSpecialty) parts.push(formatPoolPart("Specialty", 1));
+            parts.push(formatPoolPart("Remembrance", remembranceBonus));
+            parts.push(formatPoolPart("Small-Framed", smallFramedStealthBonus));
+        }
+
+        if (rollType === "haunt") {
+            parts.push(formatPoolPart("Synergy", synergy, false));
+            parts.push(formatPoolPart(haunt, hauntRating));
+            if (key !== "__none__") parts.push(formatPoolPart(key, keyBonus));
+        }
+
+        const selectedEquipment = selectedEquipKey === "__none__"
+            ? null
+            : equippedEquipmentOptions.find((option) => option.key === selectedEquipKey);
+        const equipmentLabel = (selectedEquipment?.label || "Equipment").replace(/\s*\([+-]?\d+\)\s*$/, "");
+
+        parts.push(formatPoolPart(equipmentLabel, equipMod));
+        parts.push(formatPoolPart("Modifier", manualMod));
+        parts.push(formatPoolPart("Willpower", willpowerBonus));
+        parts.push(formatPoolPart("Wound", woundPenalty));
+        parts.push(formatPoolPart("Sick", sickPenalty));
+        parts.push(formatPoolPart("Guilty", guiltyPenalty));
+        parts.push(formatPoolPart("Shaken", shakenPenalty));
+        parts.push(formatPoolPart("Distracted", distractedPenalty));
+        parts.push(formatPoolPart("Exhausted", exhaustedPenalty));
+
+        return parts.filter(Boolean).join(" ");
     };
 
     useEffect(() => {
@@ -528,9 +592,14 @@ export const InlineDiceRoller = ({
             }
 
             const cleanRollDescription = rollDescription.replace(/\*\*/g, "");
+            const rollBreakdown = buildRollBreakdown();
+            const poolLabel = isComputedChanceDie
+                ? "Chance Die"
+                : `${effectivePool} ${effectivePool === 1 ? "die" : "dice"}`;
+            const transcriptOutcome = formatOutcomeLine(response.data, isContestedRoll);
             const transcript = [
-                `Rolled ${cleanRollDescription} = ${effectivePool} ${effectivePool === 1 ? "die" : "dice"} [${isComputedChanceDie ? "Chance" : `${displayedAgainRule}!`}]`,
-                formatOutcomeLine(response.data),
+                `Rolled ${rollBreakdown || cleanRollDescription} = ${poolLabel} [${isComputedChanceDie ? "Chance" : `${displayedAgainRule}!`}]`,
+                transcriptOutcome,
                 response.data.dice.join(" "),
             ].join("\n");
 
@@ -539,6 +608,8 @@ export const InlineDiceRoller = ({
                 transcript,
                 outcome: formatOutcomeLine(response.data),
             });
+
+            onRollComplete?.();
 
             if (response.data.beat_awarded) {
                 await onAwardBeat();
@@ -883,6 +954,15 @@ export const InlineDiceRoller = ({
                                     checked={useRote}
                                     onCheckedChange={setUseRote}
                                     data-testid="dice-rote-toggle"
+                                />
+                            </div>
+
+                            <div className="flex items-center justify-between text-[10px] text-zinc-500">
+                                <span>Contested / Count Only</span>
+                                <Switch
+                                    checked={isContestedRoll}
+                                    onCheckedChange={setIsContestedRoll}
+                                    data-testid="dice-contested-toggle"
                                 />
                             </div>
                         </div>

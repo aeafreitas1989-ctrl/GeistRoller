@@ -63,17 +63,18 @@ const formatLabel = (str) => {
 
 const formatOutcomeLine = (rollResult) => {
     const successes = rollResult?.successes || 0;
+    const successText = `${successes} Success${successes === 1 ? "" : "es"}`;
 
     if (rollResult?.is_dramatic_failure) {
-        return `${successes} Success${successes === 1 ? "" : "es"} = Dramatic Failure`;
+        return `${successText} = Dramatic Failure...`;
     }
 
     if (rollResult?.is_exceptional) {
-        return `${successes} Success${successes === 1 ? "" : "es"} = Exceptional Success`;
+        return `${successText} = Exceptional Success!`;
     }
 
     if (successes > 0) {
-        return `${successes} Success${successes === 1 ? "" : "es"} = Success`;
+        return `${successText} = Success`;
     }
 
     return "0 Successes = Failure";
@@ -439,9 +440,19 @@ export const DiceRollPopup = ({
                 onDiceRollResult(chatMessage);
             }
 
-            const cleanRollDescription = rollDescription.replace(/\*\*/g, "");
+            const rollBreakdown = [
+                `Synergy ${synergy}`,
+                `+ ${haunt} ${hauntRating}`,
+                ...(key !== "__none__" ? [`+ ${actualKey} ${keyBonus}`] : []),
+                ...(spendWillpower ? ["+ Willpower 3"] : []),
+            ].join(" ");
             const transcript = [
-                `Rolled ${cleanRollDescription} = ${poolTotal} dice [10!]`,
+                `Rolled ${rollBreakdown} = ${poolTotal} dice [10!]`,
+                ...(selectedEnhancements.length > 0 ? [`Enhancements: ${selectedEnhancements.join(", ")}`] : []),
+                ...(willpowerNeeded > 0
+                    ? [`Willpower: spent 1 ${spendWillpower ? "(+3 dice)" : "(avoided Key's Doom)"}`]
+                    : []),
+                ...(key !== "__none__" && !avoidDoom && !spendWillpower ? [`Condition: Doomed (${doomOrigin})`] : []),
                 plasmLine.replace(/\*/g, ""),
                 formatOutcomeLine(patchedResult),
                 patchedResult.dice.join(" "),

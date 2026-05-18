@@ -72,7 +72,8 @@ export const MeritCard = ({ merit, index, onDelete, onUpdate, onRollPerception }
     const minDots = meritDef?.minDots || 1;
     const maxDots = meritDef?.maxDots || 5;
     const isFixedDotMerit = minDots === maxDots;
-    const isLockedMerit = !!merit.locked || merit.source === "order_free" || merit.source === "professional_training_free";
+    const isOrderStatusMerit = merit.source === "order_free" && (merit.name || "").startsWith("Status:");
+    const isLockedMerit = !!merit.locked || merit.source === "professional_training_free" || (merit.source === "order_free" && !isOrderStatusMerit);
     const canEditDots = !isLockedMerit && !isFixedDotMerit;
 
     const handleDotChange = (nextValue) => {
