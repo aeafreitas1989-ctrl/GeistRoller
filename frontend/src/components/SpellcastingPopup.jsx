@@ -110,6 +110,7 @@ export const SpellcastingPopup = ({
     onSpendMana,
     onRollDice,
     onCreateActiveSpell,
+    onAwardSpellcastingExceptionalSuccess,
     onResolveParadoxContainment,
     activeSpellCount = 0,
     orderRoteSkills,
@@ -238,6 +239,12 @@ export const SpellcastingPopup = ({
         }
     }, [isOpen, arcanum, initialPractice, defaultPrimaryFactor, gnosis, effectiveSpellType, roteSkillDots]);
 
+    useEffect(() => {
+        if (!overridePrimaryFactor && primaryFactor === "scale") {
+            setPrimaryFactor(null);
+        }
+    }, [overridePrimaryFactor, primaryFactor]);
+
     // Gnosis-derived data
     const gnosisData = GNOSIS_TABLE[gnosis] || GNOSIS_TABLE[1];
     const maxYantras = gnosisData.yantras;
@@ -323,10 +330,7 @@ export const SpellcastingPopup = ({
 
     // Primary factor gives free levels = spell Arcanum dots - 1. Combined spells use the lowest Arcanum.
     const primaryFreeLevels = Math.max(0, baseArcanumDots - 1);
-    const effectivePrimaryFactor =
-    overridePrimaryFactor && primaryFactor
-        ? (primaryFactor === "potency" ? "duration" : "potency")
-        : primaryFactor;
+    const effectivePrimaryFactor = primaryFactor;
 
     // Dice penalty from factor levels (accounting for primary free levels)
     const calculatePenalty = () => {
@@ -485,6 +489,13 @@ export const SpellcastingPopup = ({
         setSpecialRangeMode((prev) => (prev === mode ? "none" : mode));
     };
 
+    const getPrimaryFactorLabel = (factorName) => {
+        if (factorName === "potency") return "Potency";
+        if (factorName === "duration") return "Duration";
+        if (factorName === "scale") return "Scale";
+        return "Primary Factor";
+    };
+
     const getFactorDescription = (factorName) => {
         const factor = factors[factorName];
         if (!factor) return "";
@@ -593,6 +604,11 @@ export const SpellcastingPopup = ({
     };
 
     const handleCastSpell = () => {
+        if (!effectivePrimaryFactor) {
+            toast.error("Select a Primary Spell Factor before casting.");
+            return;
+        }
+
         if (totalManaCost > 0 && currentMana < totalManaCost) return;
         if (factors.duration.advanced && !spellName.trim()) return;
         if (paradoxTriggered && !paradoxMode) return;
@@ -640,14 +656,14 @@ export const SpellcastingPopup = ({
             ? (isInferior ? "Inferior Arcanum" : "Common Arcanum")
             : "";
 
-        const spentSpellManaSummary = `Spent Mana: ${committedSpellManaCost}${
-            arcanaManaSurchargeSummary ? ` (${arcanaManaSurchargeSummary})` : ""
-        }`;
+        const spentSpellManaSummary = committedSpellManaCost > 0
+            ? `Spent Mana: ${committedSpellManaCost}${
+                arcanaManaSurchargeSummary ? ` (${arcanaManaSurchargeSummary})` : ""
+            }`
+            : "";
 
-        const spellReachSummary = `Spell Reach: ${totalReachUsed} used / ${freeReach} free; ${
-            reachBeyondFree > 0
-                ? `${reachBeyondFree} over free`
-                : `${reachRemaining} free Reach remaining`
+        const spellReachSummary = `Spell Reach: ${totalReachUsed} / ${freeReach} free${
+            reachBeyondFree > 0 ? `; ${reachBeyondFree} over free` : ""
         }`;
 
         const withstandSummary = effectiveWithstand > 0
@@ -656,7 +672,7 @@ export const SpellcastingPopup = ({
 
         const spellSummary = [
             spellReachSummary,
-            spentSpellManaSummary,
+            ...(spentSpellManaSummary ? [spentSpellManaSummary] : []),
             ...(selectedYantrasSummary ? [selectedYantrasSummary] : []),
             ...(ritualSummary ? [ritualSummary] : []),
             ...(combinedSpellSummary ? [combinedSpellSummary] : []),
@@ -685,11 +701,25 @@ export const SpellcastingPopup = ({
                 pool: adjustedPool <= 0 ? 1 : adjustedPool,
                 chance: adjustedPool <= 0,
                 label: castLabel,
+                summaryKey: "spell",
+                summaryLabel: castLabel,
                 exceptional_target: effectiveSpellType === "praxis" ? 3 : 5,
                 dicePoolBreakdown: dicePoolBreakdownParts.join(" + "),
                 spellSummary,
-                onResult: (rollResult) => {
+                requiresSpellExceptionalChoice: true,
+                spellExceptionalManaSpent: totalManaCost,
+                spellPrimaryFactor: effectivePrimaryFactor,
+                spellPrimaryFactorLabel: getPrimaryFactorLabel(effectivePrimaryFactor),
+                onResult: (rollResult, exceptionalChoice = null) => {
                     const spellSucceeded = (rollResult?.successes || 0) >= 1;
+
+                    if (rollResult?.is_exceptional && onAwardSpellcastingExceptionalSuccess) {
+                        onAwardSpellcastingExceptionalSuccess({
+                            manaSpent: totalManaCost,
+                            choiceId: exceptionalChoice?.id || null,
+                        });
+                    }
+
                     if (spellSucceeded && activeSpellData) {
                         onCreateActiveSpell(activeSpellData);
                     }
@@ -806,7 +836,7 @@ export const SpellcastingPopup = ({
         const f = factors[factorName];
         const isRange = factorName === "range";
         const isCasting = factorName === "casting";
-        const hasPrimary = factorName === "potency" || factorName === "duration";
+        const hasPrimary = factorName === "potency" || factorName === "duration" || factorName === "scale";
         const isSelectedPrimary = hasPrimary && primaryFactor === factorName;
         const isEffectivePrimary = hasPrimary && effectivePrimaryFactor === factorName;
         const freeLevelsFromPrimary = isEffectivePrimary ? primaryFreeLevels : 0;
@@ -830,7 +860,7 @@ export const SpellcastingPopup = ({
                 {hasPrimary ? (
                     <Checkbox
                         checked={isSelectedPrimary}
-                        disabled={isSelectedPrimary}
+                        disabled={isSelectedPrimary || (factorName === "scale" && !overridePrimaryFactor)}
                         onCheckedChange={(checked) => {
                             if (checked) {
                                 setPrimaryFactor(factorName);
@@ -1376,6 +1406,12 @@ export const SpellcastingPopup = ({
                         {renderFactorRow("potency", "Potency", true)}
                         {renderFactorRow("duration", "Duration", true)}
                         {renderFactorRow("scale", "Scale", true)}
+
+                        {selectedPractice && !effectivePrimaryFactor && (
+                            <p className="text-[11px] text-amber-400">
+                                Select Potency, Duration, or Scale as the Primary Spell Factor before casting.
+                            </p>
+                        )}
 
                         <div className="mt-2 p-2 bg-zinc-800/30 rounded space-y-1.5">
                             <div className="flex items-center justify-between gap-3">
@@ -1941,6 +1977,7 @@ export const SpellcastingPopup = ({
                         onClick={handleCastSpell}
                         disabled={
                             !selectedPractice ||
+                            !effectivePrimaryFactor ||
                             totalManaCost > currentMana ||
                             (factors.duration.advanced && !spellName.trim()) ||
                             (paradoxTriggered && !paradoxMode)

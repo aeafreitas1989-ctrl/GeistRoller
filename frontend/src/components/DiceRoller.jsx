@@ -10,10 +10,45 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import axios from "axios";
 import { toast } from "sonner";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
+const SPELL_EXCEPTIONAL_CHOICES = [
+    {
+        id: "bonus_factor_step",
+        label: "Bonus step in primary spell factor",
+        transcript: "Chosen benefit: bonus step in the primary spell factor.",
+    },
+    {
+        id: "reach_primary_factor",
+        label: "Reach in primary spell factor",
+        transcript: "Chosen benefit: Reach in the primary spell factor.",
+    },
+    {
+        id: "arcane_beat_condition",
+        label: "Condition for Arcane Beats",
+        transcript: "Chosen benefit: Condition which grants Arcane Beats when resolved.",
+    },
+    {
+        id: "refund_mana",
+        label: "Refund Mana and gain +1 Mana",
+        transcript: "Chosen benefit: all Mana spent on the spell is refunded, and the mage gains +1 Mana.",
+    },
+    {
+        id: "ignore_withstand",
+        label: "Ignore Withstand",
+        transcript: "Chosen benefit: spell ignores Withstand and takes effect at full Potency.",
+    },
+];
 
 export const DiceRoller = forwardRef(({ embedded = false, collapsed = false, onToggleCollapsed = null }, ref) => {
     const [isOpen, setIsOpen] = useState(false);
@@ -32,6 +67,7 @@ export const DiceRoller = forwardRef(({ embedded = false, collapsed = false, onT
     const [rollHistory, setRollHistory] = useState([]);
     const [rollSequence, setRollSequence] = useState([]);
     const [historyToken, setHistoryToken] = useState(0);
+    const [pendingSpellExceptionalChoice, setPendingSpellExceptionalChoice] = useState(null);
 
     // External roll trigger
     const pendingRollRef = useRef(null);
@@ -59,7 +95,7 @@ export const DiceRoller = forwardRef(({ embedded = false, collapsed = false, onT
             await new Promise(resolve => setTimeout(resolve, 500));
             setResult(response.data);
 
-            completedRollRef.current = {
+            const completedPayload = {
                 result: response.data,
                 config: options.summaryConfig || {
                     pool: rollChance ? 1 : rollPool,
@@ -75,10 +111,26 @@ export const DiceRoller = forwardRef(({ embedded = false, collapsed = false, onT
                     options.summaryConfig?.label ||
                     options.summaryLabel ||
                     "Roll",
+                onResult: options.onResult,
             };
 
-            setHistoryToken((prev) => prev + 1);
-            if (options.summaryLabel) {
+            if (
+                response.data?.is_exceptional &&
+                completedPayload.config?.requiresSpellExceptionalChoice &&
+                completedPayload.config?.summaryKey === "spell"
+            ) {
+                setPendingSpellExceptionalChoice(completedPayload);
+            } else {
+                completedRollRef.current = completedPayload;
+                setHistoryToken((prev) => prev + 1);
+            }
+
+            const isPendingSpellExceptionalChoice =
+                response.data?.is_exceptional &&
+                completedPayload.config?.requiresSpellExceptionalChoice &&
+                completedPayload.config?.summaryKey === "spell";
+
+            if (options.summaryLabel && !isPendingSpellExceptionalChoice) {
                 const entry = {
                     key: options.summaryKey || options.summaryLabel,
                     label: options.summaryLabel,
@@ -109,7 +161,10 @@ export const DiceRoller = forwardRef(({ embedded = false, collapsed = false, onT
                 });
             }
 
-            if (typeof options.onResult === "function") {
+            if (
+                typeof options.onResult === "function" &&
+                !(response.data?.is_exceptional && options.summaryConfig?.requiresSpellExceptionalChoice && options.summaryConfig?.summaryKey === "spell")
+            ) {
                 options.onResult(response.data);
             }
         } catch (error) {
@@ -284,42 +339,69 @@ export const DiceRoller = forwardRef(({ embedded = false, collapsed = false, onT
     const countCompletedScrutinyLayers = (layers = []) =>
         layers.filter((layer) => layer.complete).length;
 
-    const applyScrutinyTrackerSuccesses = (rolled, layers, startingOpacity) => {
-        let updatedLayers = cloneScrutinyLayers(layers);
-        let currentLayer = updatedLayers.find((layer) => !layer.complete);
+    const applyScrutinyTrackerSuccesses = (rolled, layers, startingOpacity, carryRemainder = false) => {
+        const updatedLayers = cloneScrutinyLayers(layers);
+        let remaining = Math.max(0, Number(rolled) || 0);
+        let applied = 0;
 
-        if (!currentLayer) {
-            const nextTarget = updatedLayers.length === 0
-                ? startingOpacity
-                : updatedLayers[updatedLayers.length - 1].target - 1;
+        while (remaining > 0) {
+            let currentLayer = updatedLayers.find((layer) => !layer.complete);
 
-            if (nextTarget <= 0) return updatedLayers;
+            if (!currentLayer) {
+                const nextTarget = updatedLayers.length === 0
+                    ? startingOpacity
+                    : updatedLayers[updatedLayers.length - 1].target - 1;
 
-            currentLayer = {
-                successes: 0,
-                target: nextTarget,
-                complete: false,
-            };
+                if (nextTarget <= 0) break;
 
-            updatedLayers.push(currentLayer);
-        }
-
-        currentLayer.successes = Math.min(currentLayer.successes + rolled, currentLayer.target);
-
-        if (currentLayer.successes >= currentLayer.target) {
-            currentLayer.complete = true;
-
-            const nextTarget = currentLayer.target - 1;
-            if (nextTarget > 0) {
-                updatedLayers.push({
+                currentLayer = {
                     successes: 0,
                     target: nextTarget,
                     complete: false,
-                });
+                };
+
+                updatedLayers.push(currentLayer);
             }
+
+            const needed = Math.max(0, currentLayer.target - currentLayer.successes);
+
+            if (needed <= 0) {
+                currentLayer.complete = true;
+                continue;
+            }
+
+            const used = Math.min(remaining, needed);
+            currentLayer.successes += used;
+            applied += used;
+            remaining -= used;
+
+            if (currentLayer.successes >= currentLayer.target) {
+                currentLayer.successes = currentLayer.target;
+                currentLayer.complete = true;
+
+                const nextTarget = currentLayer.target - 1;
+                const hasOpenLayer = updatedLayers.some((layer) => !layer.complete);
+
+                if (nextTarget > 0 && !hasOpenLayer) {
+                    updatedLayers.push({
+                        successes: 0,
+                        target: nextTarget,
+                        complete: false,
+                    });
+                }
+
+                if (carryRemainder) {
+                    continue;
+                }
+            }
+
+            break;
         }
 
-        return updatedLayers;
+        return {
+            layers: updatedLayers,
+            applied,
+        };
     };
 
     const buildScrutinyTrackerSummary = (rollResult, config = {}) => {
@@ -338,7 +420,14 @@ export const DiceRoller = forwardRef(({ embedded = false, collapsed = false, onT
             : [];
 
         const completedBefore = countCompletedScrutinyLayers(activeBeforeLayers);
-        const afterLayers = applyScrutinyTrackerSuccesses(rolled, activeBeforeLayers, startingOpacity);
+        const trackerUpdate = applyScrutinyTrackerSuccesses(
+            rolled,
+            activeBeforeLayers,
+            startingOpacity,
+            !!rollResult?.is_exceptional
+        );
+        const afterLayers = trackerUpdate.layers;
+        const appliedSuccesses = trackerUpdate.applied;
         const completedAfter = countCompletedScrutinyLayers(afterLayers);
         const opacityReduction = Math.max(0, completedAfter - completedBefore);
         const opacityAfter = Math.max(0, opacityBefore - opacityReduction);
@@ -350,7 +439,7 @@ export const DiceRoller = forwardRef(({ embedded = false, collapsed = false, onT
 
         return [
             "Scrutiny Tracker:",
-            `Scrutiny successes applied: ${rolled}`,
+            `Scrutiny successes applied: ${appliedSuccesses}`,
             ...layerLines,
             `Opacity: ${opacityBefore} → ${opacityAfter}`,
         ].join("\n");
@@ -464,6 +553,48 @@ export const DiceRoller = forwardRef(({ embedded = false, collapsed = false, onT
         setRollHistory((prev) => [nextEntry, ...prev].slice(0, 20));
     }, []);
 
+    const getSpellPrimaryFactorLabel = (config = {}) => {
+        if (config.spellPrimaryFactorLabel) return config.spellPrimaryFactorLabel;
+
+        if (config.spellPrimaryFactor === "potency") return "Potency";
+        if (config.spellPrimaryFactor === "duration") return "Duration";
+        if (config.spellPrimaryFactor === "scale") return "Scale";
+
+        return "Primary Factor";
+    };
+
+    const buildSpellExceptionalChoiceTranscript = (choice, config = {}) => {
+        if (!choice) return "";
+
+        const primaryFactorLabel = getSpellPrimaryFactorLabel(config);
+        const manaSpent = Math.max(0, Number(config.spellExceptionalManaSpent) || 0);
+
+        const resourceLines = ["Willpower regained: +1."];
+
+        if (choice.id === "refund_mana") {
+            resourceLines.push(`Mana regained: ${manaSpent} refunded + 1 = ${manaSpent + 1}.`);
+        }
+
+        if (choice.id === "bonus_factor_step") {
+            return [
+                ...resourceLines,
+                `Chosen benefit: +1 ${primaryFactorLabel}.`,
+            ].join("\n");
+        }
+
+        if (choice.id === "reach_primary_factor") {
+            return [
+                ...resourceLines,
+                `Chosen benefit: Advanced ${primaryFactorLabel}.`,
+            ].join("\n");
+        }
+
+        return [
+            ...resourceLines,
+            choice.transcript || "",
+        ].join("\n");
+    };
+    
     const formatTranscriptFromConfig = (rollResult, config = {}) => {
         if (!rollResult) return "";
 
@@ -483,6 +614,17 @@ export const DiceRoller = forwardRef(({ embedded = false, collapsed = false, onT
         const scrutinyTrackerSummary = buildScrutinyTrackerSummary(rollResult, config);
         const countOnlyResult = !!(config.countOnly || config.isAttack || config.scrutinyTracker);
         const outcomeLine = formatOutcomeLine(rollResult, countOnlyResult);
+        const exceptionalChoiceTranscript = buildSpellExceptionalChoiceTranscript(
+            config.exceptionalSuccessChoice,
+            config
+        );
+
+        const exceptionalChoiceLine = rollResult?.is_exceptional && exceptionalChoiceTranscript
+            ? [
+                "Exceptional Spellcasting Success:",
+                exceptionalChoiceTranscript,
+            ].join("\n")
+            : "";
         const attackDamageLine = buildAttackDamageLine(rollResult, config);
         const diceRows = formatDiceRows(rollResult);
 
@@ -491,6 +633,7 @@ export const DiceRoller = forwardRef(({ embedded = false, collapsed = false, onT
             ...(spellSummary ? [spellSummary] : []),
             ...(scrutinyTrackerSummary ? [scrutinyTrackerSummary] : []),
             outcomeLine,
+            ...(exceptionalChoiceLine ? [exceptionalChoiceLine] : []),
             ...(attackDamageLine ? [attackDamageLine] : []),
             ...(diceRows ? [diceRows] : []),
         ].join("\n");
@@ -539,6 +682,47 @@ export const DiceRoller = forwardRef(({ embedded = false, collapsed = false, onT
             }
         );
     }, [rollSequence, result, lastRollConfig, pool, again, chance, countOnly, rollLabel]);
+
+    const resolveSpellExceptionalChoice = (choice) => {
+        if (!pendingSpellExceptionalChoice) return;
+
+        const nextConfig = {
+            ...(pendingSpellExceptionalChoice.config || {}),
+            exceptionalSuccessChoice: choice,
+        };
+
+        completedRollRef.current = {
+            ...pendingSpellExceptionalChoice,
+            config: nextConfig,
+        };
+
+        setRollSequence((prev) => {
+            const entry = {
+                key: nextConfig.summaryKey || "spell",
+                label: nextConfig.summaryLabel || nextConfig.label || "Spell",
+                result: pendingSpellExceptionalChoice.result,
+                config: nextConfig,
+            };
+
+            const existingIndex = prev.findIndex((item) => item.key === entry.key);
+
+            if (existingIndex >= 0) {
+                const next = [...prev];
+                next[existingIndex] = entry;
+                return next;
+            }
+
+            return [...prev, entry];
+        });
+
+        setPendingSpellExceptionalChoice(null);
+
+        if (typeof pendingSpellExceptionalChoice.onResult === "function") {
+            pendingSpellExceptionalChoice.onResult(pendingSpellExceptionalChoice.result, choice);
+        }
+
+        setHistoryToken((prev) => prev + 1);
+    };
 
     const visible = embedded || isOpen;
 
@@ -628,6 +812,30 @@ export const DiceRoller = forwardRef(({ embedded = false, collapsed = false, onT
             }
             data-testid="dice-roller-panel"
         >
+            <Dialog open={!!pendingSpellExceptionalChoice}>
+                <DialogContent className="bg-zinc-950 border-zinc-800 text-zinc-100">
+                    <DialogHeader>
+                        <DialogTitle>Exceptional Spellcasting Success</DialogTitle>
+                        <DialogDescription className="text-zinc-400">
+                            Regain 1 Willpower, then choose one spellcasting benefit before the roll is added to Recent Rolls.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-2">
+                        {SPELL_EXCEPTIONAL_CHOICES.map((choice) => (
+                            <Button
+                                key={choice.id}
+                                type="button"
+                                variant="outline"
+                                className="w-full justify-start text-left border-zinc-700 bg-zinc-900/60 hover:bg-zinc-800"
+                                onClick={() => resolveSpellExceptionalChoice(choice)}
+                            >
+                                {choice.label}
+                            </Button>
+                        ))}
+                    </div>
+                </DialogContent>
+            </Dialog>        
             {/* Header */}
             <div className="flex items-center justify-between p-3 border-b border-zinc-800/50">
                 <div className="flex items-center gap-2">

@@ -65,7 +65,7 @@ export const CombatContent = ({
                                     onClick={() => onHealHealthState("aggravated")}
                                     data-testid="heal-aggravated-btn"
                                 >
-                                    *
+                                    ✱
                                 </Button>
 
                                 <Button

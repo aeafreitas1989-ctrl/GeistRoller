@@ -1239,7 +1239,7 @@ export const CombatTrackerCard = ({
                             onClick={() => onHealHealthState?.("aggravated")}
                             data-testid="combat-heal-aggravated-btn"
                         >
-                            *
+                            ✱
                         </Button>
 
                         <Button

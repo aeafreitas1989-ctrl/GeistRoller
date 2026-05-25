@@ -49,7 +49,7 @@ import {
     ATTRIBUTE_LIST, SKILL_LIST, CEREMONY_DEFINITIONS,
     CEREMONY_SKILL_KEY_MAP,
     MAGE_PATHS, MAGE_ORDERS,
-    PATH_ARCANA, ORDER_ROTE_SKILLS,
+    PATH_ARCANA, ORDER_ROTE_SKILLS, GNOSIS_TABLE,
 } from "../data/character-data";
 import { SpellcastingPopup } from "./SpellcastingPopup";
 
@@ -1633,7 +1633,34 @@ export const CharacterPanel = ({
         const resolve = getNestedValue("attributes", "resolve") || 1;
         const composure = getNestedValue("attributes", "composure") || 1;
         const modifier = getValue("willpower_max_modifier") || 0;
+
         return Math.max(0, resolve + composure + modifier);
+    };
+
+    const awardSpellcastingExceptionalSuccess = ({ manaSpent = 0, choiceId = null } = {}) => {
+        const currentWillpower = Number(getValue("willpower")) || 0;
+        const maxWillpower = calculateWillpowerMax();
+
+        const gnosisLevel = Number(getValue("gnosis")) || 1;
+        const gnosisData = GNOSIS_TABLE[gnosisLevel] || GNOSIS_TABLE[1];
+        const maxMana = Number(gnosisData?.maxMana) || 0;
+        const currentMana = Number(getValue("mana")) || 0;
+
+        const updates = {
+            willpower: Math.min(maxWillpower, currentWillpower + 1),
+        };
+
+        if (choiceId === "refund_mana") {
+            updates.mana = Math.min(maxMana, currentMana + manaSpent + 1);
+        }
+
+        commitCharacterUpdate(updates);
+
+        toast.success("Exceptional Spellcasting Success", {
+            description: choiceId === "refund_mana"
+                ? "Willpower +1. Mana spent on this spell refunded, then +1 Mana."
+                : "Willpower +1. Spellcasting benefit recorded.",
+        });
     };
 
     const getParadoxTaintDuration = (wisdom) => {
@@ -3162,6 +3189,7 @@ export const CharacterPanel = ({
                     firearmsDots={getNestedValue("skills", "firearms") || 0}
                     initialPractice={spellcastingPractice}
                     onCreateActiveSpell={addActiveSpell}
+                    onAwardSpellcastingExceptionalSuccess={awardSpellcastingExceptionalSuccess}
                     activeSpellCount={(activeCharacter?.active_spells || []).filter((entry) => entry?.kind === "spell").length}
                     orderRoteSkills={isMage && getValue("order") ? ORDER_ROTE_SKILLS[getValue("order")] || [] : []}
                     spellType={spellcastingType}

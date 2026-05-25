@@ -337,28 +337,68 @@ const MageSightCard = ({
         setScrutinyLayers([]);
     };
 
-    const applyScrutinySuccesses = (rolled, layers, startingOpacity) => {
-        let updatedLayers = layers.map(l => ({ ...l }));
-        let currentLayer = updatedLayers.find(l => !l.complete);
-        if (!currentLayer) {
-            // Determine the next layer's target. The very first layer's target
-            // equals the starting Opacity. Subsequent layers decrement by 1
-            // once the previous layer is complete.
-            const nextTarget = updatedLayers.length === 0
-                ? startingOpacity
-                : updatedLayers[updatedLayers.length - 1].target - 1;
-            if (nextTarget <= 0) return updatedLayers;
-            currentLayer = { successes: 0, target: nextTarget, complete: false };
-            updatedLayers.push(currentLayer);
-        }
-        currentLayer.successes = Math.min(currentLayer.successes + rolled, currentLayer.target);
-        if (currentLayer.successes >= currentLayer.target) {
-            currentLayer.complete = true;
-            const nextTarget = currentLayer.target - 1;
-            if (nextTarget > 0) {
-                updatedLayers.push({ successes: 0, target: nextTarget, complete: false });
+    const applyScrutinySuccesses = (rolled, layers, startingOpacity, carryRemainder = false) => {
+        const updatedLayers = layers.map((layer) => ({
+            successes: Math.max(0, Number(layer.successes) || 0),
+            target: Math.max(0, Number(layer.target) || 0),
+            complete: !!layer.complete,
+        }));
+
+        let remaining = Math.max(0, Number(rolled) || 0);
+
+        while (remaining > 0) {
+            let currentLayer = updatedLayers.find((layer) => !layer.complete);
+
+            if (!currentLayer) {
+                const nextTarget = updatedLayers.length === 0
+                    ? startingOpacity
+                    : updatedLayers[updatedLayers.length - 1].target - 1;
+
+                if (nextTarget <= 0) break;
+
+                currentLayer = {
+                    successes: 0,
+                    target: nextTarget,
+                    complete: false,
+                };
+
+                updatedLayers.push(currentLayer);
             }
+
+            const needed = Math.max(0, currentLayer.target - currentLayer.successes);
+
+            if (needed <= 0) {
+                currentLayer.complete = true;
+                continue;
+            }
+
+            const used = Math.min(remaining, needed);
+            currentLayer.successes += used;
+            remaining -= used;
+
+            if (currentLayer.successes >= currentLayer.target) {
+                currentLayer.successes = currentLayer.target;
+                currentLayer.complete = true;
+
+                const nextTarget = currentLayer.target - 1;
+                const hasOpenLayer = updatedLayers.some((layer) => !layer.complete);
+
+                if (nextTarget > 0 && !hasOpenLayer) {
+                    updatedLayers.push({
+                        successes: 0,
+                        target: nextTarget,
+                        complete: false,
+                    });
+                }
+
+                if (carryRemainder) {
+                    continue;
+                }
+            }
+
+            break;
         }
+
         return updatedLayers;
     };
 
@@ -427,7 +467,12 @@ const MageSightCard = ({
                 if (rolled > 0) {
                     const prevCompleted = countCompletedLayers(scrutinyLayers);
                     const startingOpacity = scrutinyLayers.length > 0 ? scrutinyLayers[0].target : opacityValue;
-                    const newLayers = applyScrutinySuccesses(rolled, scrutinyLayers, startingOpacity);
+                    const newLayers = applyScrutinySuccesses(
+                        rolled,
+                        scrutinyLayers,
+                        startingOpacity,
+                        !!result?.is_exceptional
+                    );
                     const newCompleted = countCompletedLayers(newLayers);
                     if (newCompleted > prevCompleted) {
                         setOpacity((prev) => String(Math.max(0, (Number.parseInt(prev || "0", 10) || 0) - (newCompleted - prevCompleted))));

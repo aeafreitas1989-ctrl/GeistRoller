@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 export const formatLabel = (value) => value.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
 
 export const HEALTH_STATES = ["empty", "bashing", "lethal", "aggravated"];
-export const HEALTH_SYMBOLS = { bashing: "/", lethal: "X", aggravated: "*" };
+export const HEALTH_SYMBOLS = { bashing: "/", lethal: "X", aggravated: "✱" };
 export const SCOURED_ATTRIBUTE_SYMBOL = "⚡";
 
 export const normalizeHealthBoxes = (boxes, max, fallback = 0) => {
