@@ -223,7 +223,7 @@ export const MageArcanaContent = ({
                                         })}
                                     </SelectContent>
                                 </Select>
-                                <Button variant="ghost" size="sm" onClick={() => openSpellcastingPopup(rote.arcanum, rotePractice, "rote", rote.skill)} className="h-6 px-1.5 text-[10px] text-violet-400 hover:text-violet-300 shrink-0" data-testid={`rote-${index}-cast`}>
+                                <Button variant="ghost" size="sm" onClick={() => openSpellcastingPopup(rote.arcanum, rotePractice, "rote", rote.skill, rote.name || "")} className="h-6 px-1.5 text-[10px] text-violet-400 hover:text-violet-300 shrink-0" data-testid={`rote-${index}-cast`}>
                                     <Sparkles className="w-3 h-3" />
                                 </Button>
                                 <Button variant="ghost" size="sm" onClick={() => { const rotes = (getValue("rotes") || []).filter((_, i) => i !== index); handleChange("rotes", rotes); }} className="h-6 w-6 text-zinc-400 hover:text-red-400 shrink-0" data-testid={`rote-${index}-delete`}>
@@ -323,7 +323,7 @@ export const MageArcanaContent = ({
                                         ))}
                                     </SelectContent>
                                 </Select>
-                                <Button variant="ghost" size="sm" onClick={() => openSpellcastingPopup(praxis.arcanum, praxisPractice, "praxis")} className="h-6 px-1.5 text-[10px] text-teal-400 hover:text-teal-300 shrink-0" data-testid={`praxis-${index}-cast`}>
+                                <Button variant="ghost" size="sm" onClick={() => openSpellcastingPopup(praxis.arcanum, praxisPractice, "praxis", null, praxis.name || "")} className="h-6 px-1.5 text-[10px] text-teal-400 hover:text-teal-300 shrink-0" data-testid={`praxis-${index}-cast`}>
                                     <Sparkles className="w-3 h-3" />
                                 </Button>
                                 <Button variant="ghost" size="sm" onClick={() => { const praxes = (getValue("praxes") || []).filter((_, i) => i !== index); handleChange("praxes", praxes); }} className="h-6 w-6 text-zinc-400 hover:text-red-400 shrink-0" data-testid={`praxis-${index}-delete`}>

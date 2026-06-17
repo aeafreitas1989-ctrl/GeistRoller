@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { GNOSIS_TABLE, YANTRAS } from "@/data/character-data";
 import { YantrasGrid } from "./spellcasting/YantrasGrid";
+import { PrimaryFactorOverride } from "./spellcasting/PrimaryFactorOverride";
 import { toast } from "sonner";
 
 // Practice dot requirements
@@ -116,6 +117,7 @@ export const SpellcastingPopup = ({
     activeSpellCount = 0,
     orderRoteSkills,
     spellType,
+    defaultSpellName = "",
     roteSkillDots,
     isRoteOrderSkill,
     defaultPrimaryFactor = null,
@@ -199,7 +201,7 @@ export const SpellcastingPopup = ({
     useEffect(() => {
         if (isOpen) {
             setSelectedPractice(initialPractice || "");
-            setSpellName("");
+            setSpellName(defaultSpellName || "");
             setFactors({
                 casting: { advanced: false, level: 1 },
                 range: { advanced: false, level: 1 },
@@ -240,7 +242,7 @@ export const SpellcastingPopup = ({
             setCombinedSpellCount(0);
             setCombinedSpellArcana([]);
         }
-    }, [isOpen, arcanum, initialPractice, defaultPrimaryFactor, gnosis, effectiveSpellType, roteSkillDots]);
+    }, [isOpen, arcanum, initialPractice, defaultPrimaryFactor, gnosis, effectiveSpellType, roteSkillDots, defaultSpellName]);
 
     useEffect(() => {
         if (!overridePrimaryFactor && primaryFactor === "scale") {
@@ -1508,73 +1510,14 @@ export const SpellcastingPopup = ({
                     )}
 
                     {/* Primary Factor Override */}
-                    {selectedPractice && (
-                        <div className="p-2 bg-zinc-800/30 rounded space-y-2">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-xs text-zinc-500 uppercase">Primary Factor Override</p>
-                                    <p className="text-[11px] text-zinc-600">
-                                        Spend 1 Reach to override the spell&apos;s normal primary factor
-                                    </p>
-                                </div>
-                                <Checkbox
-                                    checked={overridePrimaryFactor}
-                                    onCheckedChange={(checked) => {
-                                        setOverridePrimaryFactor(!!checked);
-                                        if (!checked) {
-                                            // Restore default primary on un-toggle.
-                                            setPrimaryFactor(defaultPrimaryFactor);
-                                        } else {
-                                            // Pre-select a non-default option if the current primary
-                                            // still equals the default (so the user sees something selected).
-                                            if (primaryFactor === defaultPrimaryFactor) {
-                                                const fallback =
-                                                    defaultPrimaryFactor === "potency" ? "duration" :
-                                                    defaultPrimaryFactor === "duration" ? "potency" :
-                                                    "potency";
-                                                setPrimaryFactor(fallback);
-                                            }
-                                        }
-                                    }}
-                                    className="border-zinc-600 data-[state=checked]:bg-amber-600"
-                                    data-testid="override-primary-factor"
-                                />
-                            </div>
-
-                            {overridePrimaryFactor && (
-                                <div className="space-y-1">
-                                    <p className="text-[10px] text-zinc-500 uppercase tracking-wider">New Primary Factor</p>
-                                    <div className="flex gap-1.5" data-testid="pfo-selector">
-                                        {["potency", "duration", "scale"]
-                                            .filter((f) => f !== defaultPrimaryFactor)
-                                            .map((f) => {
-                                                const active = primaryFactor === f;
-                                                return (
-                                                    <button
-                                                        key={f}
-                                                        type="button"
-                                                        onClick={() => setPrimaryFactor(f)}
-                                                        className={`px-2 py-1 rounded border text-[11px] capitalize ${
-                                                            active
-                                                                ? "bg-amber-700 border-amber-500 text-white"
-                                                                : "bg-zinc-900/40 border-zinc-700 text-zinc-300 hover:bg-zinc-800"
-                                                        }`}
-                                                        data-testid={`pfo-${f}`}
-                                                    >
-                                                        {f}
-                                                    </button>
-                                                );
-                                            })}
-                                    </div>
-                                    {defaultPrimaryFactor && (
-                                        <p className="text-[10px] text-zinc-600">
-                                            Default primary: <span className="capitalize text-zinc-400">{defaultPrimaryFactor}</span>. Scale can never be a default primary.
-                                        </p>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    )}
+                    <PrimaryFactorOverride
+                        selectedPractice={selectedPractice}
+                        overridePrimaryFactor={overridePrimaryFactor}
+                        setOverridePrimaryFactor={setOverridePrimaryFactor}
+                        primaryFactor={primaryFactor}
+                        setPrimaryFactor={setPrimaryFactor}
+                        defaultPrimaryFactor={defaultPrimaryFactor}
+                    />
 
                     {/* Spell Factors */}
                     <div className="space-y-1">

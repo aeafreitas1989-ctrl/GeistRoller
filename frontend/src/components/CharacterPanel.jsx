@@ -162,6 +162,7 @@ export const CharacterPanel = ({
     const [spellcastingPractice, setSpellcastingPractice] = useState(null);
     const [spellcastingType, setSpellcastingType] = useState(null);
     const [spellcastingRoteSkill, setSpellcastingRoteSkill] = useState(null);
+    const [spellcastingDefaultName, setSpellcastingDefaultName] = useState("");
     const [mageSceneParadoxRollsByCharacter, setMageSceneParadoxRollsByCharacter] = useState({});
 
     const getMageSceneParadoxKey = () => activeCharacter?.id || "__active_mage__";
@@ -197,11 +198,12 @@ export const CharacterPanel = ({
     const [arcaneXpApplied, setArcaneXpApplied] = useState(0);
     const [xpPurchaseNote, setXpPurchaseNote] = useState("");
 
-    const openSpellcastingPopup = (arcanum, practice = null, spellType = null, roteSkill = null) => {
+    const openSpellcastingPopup = (arcanum, practice = null, spellType = null, roteSkill = null, defaultName = "") => {
         setSpellcastingArcanum(arcanum);
         setSpellcastingPractice(practice);
         setSpellcastingType(spellType);
         setSpellcastingRoteSkill(roteSkill);
+        setSpellcastingDefaultName(defaultName);
         setSpellcastingOpen(true);
     };
 
@@ -3176,7 +3178,7 @@ export const CharacterPanel = ({
             {isMage && spellcastingArcanum && (
                 <SpellcastingPopup
                     isOpen={spellcastingOpen}
-                    onClose={() => { setSpellcastingOpen(false); setSpellcastingArcanum(null); setSpellcastingPractice(null); setSpellcastingType(null); setSpellcastingRoteSkill(null); }}
+                    onClose={() => { setSpellcastingOpen(false); setSpellcastingArcanum(null); setSpellcastingPractice(null); setSpellcastingType(null); setSpellcastingRoteSkill(null); setSpellcastingDefaultName(""); }}
                     arcanum={spellcastingArcanum}
                     arcanumDots={getNestedValue("arcana", spellcastingArcanum) || 0}
                     allArcana={getValue("arcana") || {}}
@@ -3193,6 +3195,7 @@ export const CharacterPanel = ({
                     activeSpellCount={(activeCharacter?.active_spells || []).filter((entry) => entry?.kind === "spell").length}
                     orderRoteSkills={isMage && getValue("order") ? ORDER_ROTE_SKILLS[getValue("order")] || [] : []}
                     spellType={spellcastingType}
+                    defaultSpellName={spellcastingDefaultName}
                     roteSkillDots={spellcastingRoteSkill ? (getNestedValue("skills", spellcastingRoteSkill) || 0) : 0}
                     isRoteOrderSkill={spellcastingRoteSkill && getValue("order") && (ORDER_ROTE_SKILLS[getValue("order")] || []).includes(spellcastingRoteSkill)}
                     onSpendMana={(amount) => handleChange("mana", Math.max(0, (getValue("mana") || 0) - amount))}

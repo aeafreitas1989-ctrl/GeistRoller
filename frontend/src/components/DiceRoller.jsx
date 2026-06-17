@@ -919,7 +919,7 @@ export const DiceRoller = forwardRef(({ embedded = false, collapsed = false, onT
                                                     size="sm"
                                                     variant="ghost"
                                                     className="h-6 px-2 text-[10px] text-zinc-400 hover:text-zinc-200"
-                                                    onClick={() => copyText(entry.transcript, "Roll copied")}
+                                                    onClick={() => copyText(`${entry.title}\n${entry.transcript}`, "Roll copied")}
                                                     data-testid={`recent-roll-copy-${entry.id}`}
                                                 >
                                                     Copy
