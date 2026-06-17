@@ -767,10 +767,9 @@ export const SpellcastingPopup = ({
             ? `Withstand: ${effectiveWithstand} total; effective Potency ${effectivePotency}${effectivePotency <= 0 ? " (spell active, no effect)" : ""}`
             : "";
 
-        const spellNameSummary = spellName.trim() ? `Spell: ${spellName.trim()}` : "";
+        const spellNameTrimmed = spellName.trim();
 
         const spellSummary = [
-            ...(spellNameSummary ? [spellNameSummary] : []),
             spellReachSummary,
             ...(reachBreakdownLine ? [reachBreakdownLine] : []),
             ...(spentSpellManaSummary ? [spentSpellManaSummary] : []),
@@ -781,7 +780,8 @@ export const SpellcastingPopup = ({
             factorSummary,
         ].join("\n");
 
-        const castLabel = `${arcanum} ${effectiveSpellType === "praxis" ? "Praxis" : effectiveSpellType === "rote" ? "Rote" : "Spell"} (${selectedPractice})`;
+        const baseCastLabel = `${arcanum} ${effectiveSpellType === "praxis" ? "Praxis" : effectiveSpellType === "rote" ? "Rote" : "Spell"} (${selectedPractice})`;
+        const castLabel = spellNameTrimmed || baseCastLabel;
 
         const buildSpellRollConfig = (poolModifier = 0) => {
             const adjustedPool = Math.max(0, finalDicePool + poolModifier);
