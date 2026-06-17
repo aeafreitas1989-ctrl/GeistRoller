@@ -449,6 +449,19 @@ export const SpellcastingPopup = ({
     ];
     const yantraCount = selectedYantraNames.length + (usesRoteMudra ? 1 : 0);
 
+    // Advanced (Instant) Casting Time additional time, by yantra.
+    //   - The first yantra used on a casting does NOT add a turn (it is "free").
+    //   - High Speech is exempt from the free rule and always adds 1 turn,
+    //     even if it is the only yantra used.
+    //   - Runes adds the mage's ritual interval (e.g. "1 hour" at Gnosis 3)
+    //     in addition to any turns.
+    //   - Rote Mudra counts as a non-HS, non-Runes yantra.
+    const hasHighSpeechYantra = selectedYantraNames.includes("High Speech");
+    const hasRunesYantra = selectedYantraNames.includes("Runes");
+    const nonHsYantraCount = yantraCount - (hasHighSpeechYantra ? 1 : 0);
+    const nonHsTurns = Math.max(0, nonHsYantraCount - 1);
+    const advancedCastingTurns = nonHsTurns + (hasHighSpeechYantra ? 1 : 0);
+
     // Dice pool
     const ritualBonus = factors.casting.advanced ? 0 : ritualCastingBonus;
     const baseDicePool = gnosis + baseArcanumDots;
@@ -574,8 +587,13 @@ export const SpellcastingPopup = ({
 
         if (factorName === "casting") {
             if (factor.advanced) {
-                const turns = Math.max(1, yantraCount);
-                return `${turns} turn${turns === 1 ? "" : "s"}`;
+                const turnsLabel = advancedCastingTurns > 0
+                    ? `${advancedCastingTurns} turn${advancedCastingTurns === 1 ? "" : "s"}`
+                    : "Instant";
+                if (hasRunesYantra) {
+                    return `${turnsLabel} + ${gnosisData.ritualInterval}`;
+                }
+                return turnsLabel;
             }
             return `${getCastingTime(gnosis)} Ritual`;
         }
@@ -994,7 +1012,7 @@ export const SpellcastingPopup = ({
 
         let description = "";
         if (isCasting) {
-            description = f.advanced ? "Instant" : `${castingTimeStandard} Ritual`;
+            description = getFactorDescription("casting");
         } else if (isRange) {
             description = getFactorDescription("range");
         } else {
