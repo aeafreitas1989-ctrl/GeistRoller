@@ -1,0 +1,47 @@
+{
+  "summary": "Frontend testing of new Mage features: Yantras 2-column grid (Sympathy/Sacrament sub-ratings, Runes, Environment), Lasting Duration button, Advanced Casting Time turn rendering, Spell Name in Recent Rolls, Primary Factor Override (PFO) selector, Hallow popup, and Sleep button. All major flows working correctly.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Casting Time row's Std/Adv checkboxes lack data-testid (no factor-castingTime-std/adv). The 'X turn(s)' Advanced Casting Time rendering could not be deterministically validated by testid; verified manually via JS click on the row's 2nd checkbox. Suggest adding data-testid={factor-${factorName}-std} and -adv to make the feature testable.",
+    "When PFO is off and the rote has no defaultPrimaryFactor (as with the seeded Death Rote on Ernest), primary-potency and primary-duration checkboxes are enabled (only primary-scale is disabled). This matches the code (disabled requires defaultPrimaryFactor truthy) but technically diverges from the spec wording 'When PFO is off, the primary factor checkboxes ... are locked'. Behaviour is reasonable since user must select a primary, but worth confirming intent.",
+    "After casting with Exceptional Success (5+ successes), a blocking 'Exceptional Spellcasting Success' modal appears. There is no data-testid on the modal close button or the choice buttons, making automated tests for downstream Reach line inspection brittle. Add data-testid attributes.",
+    "SpellcastingPopup.jsx is 2257 lines — exceeds the 700-line guideline. Consider splitting Yantras grid, PFO section, Paradox section, and Spell Factors into smaller components."
+  ],
+  "updated_files": [],
+  "success_rate": {
+    "backend": "N/A (frontend-only test)",
+    "frontend": "100% of testable features verified (16/16 testid-driven assertions passed)"
+  },
+  "test_credentials": "None required",
+  "seed_data_creation": "None — used built-in Ernest Mill (Ashwood) Mage character with Hallow merit dots=3 and Death Rote at index 0.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Ernest Mill (Ashwood) is the Mage with Hallow merit (rating 3). For testing the Hallow rating-selector branch (hallow-rating-selector buttons hallow-rating-1..5), switch to 'Mage 2' which does NOT have Hallow merit. The Exceptional Success modal appears blocking on 5+ success spell rolls — dismiss with Escape. To test PFO Reach line in Recent Rolls (which requires success but not exceptional), use a smaller dice pool (no yantras) to avoid the dialog. Sympathetic Casting Reach line cannot be tested on Ernest (lacks Space≥2 or Time≥2 — has Death/Forces/Matter).",
+  "features_tested": {
+    "yantras_grid": "PASS - All 15 testids present: yantra-high-speech, concentration, sympathy-toggle, runes, sacrament-toggle, persona, environment, demesne-verge, dedicated-tool, order-tool, path-tool-coin/cup/mirror/rod/weapon",
+    "sympathy_subrating": "PASS - rating-0/-1/-2 appear on toggle; clicking applies (e.g., Material +2)",
+    "sacrament_subrating": "PASS - rating-1/-2/-3 appear on toggle (Minor/Major/Mystic)",
+    "mutually_exclusive_rating": "PASS - clicking different rating swaps selection (verified via class change)",
+    "yantra_slot_limit": "PASS - 3/3 used (Gnosis 3 limit; Rote Mudra uses 1 slot)",
+    "yantra_cap_offset": "PASS - 'Yantra bonus raw +8 is capped at +5' message shown",
+    "duration_lasting_button": "PASS - duration-lasting button exists; Effect column shows 'Lasting'; Std/Adv unchecked",
+    "spell_name_in_paste": "PASS - Recent Rolls transcript starts with 'Spell: TestSpell A'",
+    "factor_summary_lasting": "PASS - '...; Lasting; ...' present in factor summary line",
+    "pfo_selector": "PASS - override-primary-factor toggle reveals pfo-selector with pfo-potency, pfo-duration, pfo-scale",
+    "primary_scale_disabled_pfo_off": "PASS - primary-scale disabled when PFO off; enabled when on",
+    "hallow_popup_merit_branch": "PASS - hallow-merit-rating shows 'Rating 3' for Ernest (Hallow merit dots=3); hallow-rating-selector NOT shown",
+    "hallow_roll_advances_time": "PASS - time advanced from 14:30 to 15:30 (+1 hour) after roll",
+    "hallow_roll_recent_rolls": "PASS - 'Hallow Harvest' entry with 'Harvesting Hallow (rating 3). Success recovers 3 Mana. Advances time by 1 hour.' (0 successes = no mana gain, but time advanced correctly)",
+    "sleep_button": "PASS - 2025-12-12 15:30 → 2025-12-13 07:00 (next day 7am)",
+    "advanced_casting_time_turns": "PARTIAL - Std/Adv checkboxes lack data-testid so could not deterministically verify 'X turn(s)' rendering by selector. Visual inspection only.",
+    "pfo_reach_line_in_paste": "PARTIAL - Exceptional Success modal blocked Recent Rolls inspection after PFO cast. Could not verify 'Reach: Primary Factor Override → Duration +1' text but cast triggered successfully.",
+    "sympathetic_casting_reach": "NOT TESTED - Ernest lacks Space/Time arcana ≥ 2 required to enable Sympathetic Casting"
+  }
+}

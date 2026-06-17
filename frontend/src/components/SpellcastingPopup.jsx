@@ -96,6 +96,75 @@ const FACTOR_LEVELS = {
     }
 };
 
+const YantraSingleCheckbox = ({ name, label, bonus, checked, disabled, onToggle }) => (
+    <label
+        className={`flex items-center gap-2 text-xs cursor-pointer p-1.5 rounded ${
+            checked ? "bg-teal-900/20 border border-teal-500/30" : "border border-transparent hover:bg-zinc-800/50"
+        } ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
+    >
+        <Checkbox
+            checked={checked}
+            onCheckedChange={() => !disabled && onToggle(name)}
+            disabled={disabled}
+            className="border-zinc-600 data-[state=checked]:bg-teal-600 h-3.5 w-3.5"
+            data-testid={`yantra-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
+        />
+        <span className="flex-1 text-zinc-300">{label}</span>
+        <span className="text-teal-400 font-mono">+{bonus}</span>
+    </label>
+);
+
+const YantraRatingPicker = ({
+    groupLabel, variants, testIdPrefix, current, isOn, disabled, blockUncheck, onPickVariant, onClear,
+}) => (
+    <div
+        className={`p-1.5 rounded space-y-1 ${
+            isOn ? "bg-teal-900/20 border border-teal-500/30" : "border border-transparent hover:bg-zinc-800/50"
+        } ${disabled ? "opacity-40" : ""}`}
+    >
+        <label className="flex items-center gap-2 text-xs cursor-pointer">
+            <Checkbox
+                checked={isOn}
+                onCheckedChange={(checked) => {
+                    if (disabled) return;
+                    if (!checked) {
+                        if (blockUncheck) return;
+                        onClear();
+                    } else {
+                        onPickVariant(variants[0].name);
+                    }
+                }}
+                disabled={disabled}
+                className="border-zinc-600 data-[state=checked]:bg-teal-600 h-3.5 w-3.5"
+                data-testid={`${testIdPrefix}-toggle`}
+            />
+            <span className="flex-1 text-zinc-300">{groupLabel}</span>
+            {current && (
+                <span className="text-teal-400 font-mono">+{current.bonus}</span>
+            )}
+        </label>
+        {isOn && (
+            <div className="flex gap-1 pl-6">
+                {variants.map((v) => (
+                    <button
+                        key={v.name}
+                        type="button"
+                        onClick={() => onPickVariant(v.name)}
+                        className={`px-2 py-0.5 rounded border text-[10px] ${
+                            current?.name === v.name
+                                ? "bg-teal-700 border-teal-500 text-white"
+                                : "bg-zinc-900/40 border-zinc-700 text-zinc-400 hover:text-zinc-200"
+                        }`}
+                        data-testid={`${testIdPrefix}-rating-${v.bonus}`}
+                    >
+                        {v.shortLabel} +{v.bonus}
+                    </button>
+                ))}
+            </div>
+        )}
+    </div>
+);
+
 export const SpellcastingPopup = ({ 
     isOpen, 
     onClose, 
@@ -134,6 +203,7 @@ export const SpellcastingPopup = ({
         duration: { advanced: false, level: 1 },
         scale: { advanced: false, level: 1 }
     });
+    const [lastingDuration, setLastingDuration] = useState(false);
 
     // Paradox state
     const [paradoxInured, setParadoxInured] = useState(false);
@@ -205,6 +275,7 @@ export const SpellcastingPopup = ({
                 duration: { advanced: false, level: 1 },
                 scale: { advanced: false, level: 1 }
             });
+            setLastingDuration(false);
             setParadoxInured(false);
             setSleeperWitnesses("none");
             setManaMitigation(0);
@@ -313,10 +384,11 @@ export const SpellcastingPopup = ({
     const freeReach = selectedPractice ? Math.max(0, reachArcanumDots - practiceDots + 1) : 0;
     const advancedReachUsed = Object.entries(factors).reduce((sum, [key, value]) => {
         if (!value.advanced) return sum;
+        if (key === "duration" && lastingDuration) return sum;
         if (key === "duration" && matterDurationMana && arcanum === "Matter") return sum;
         return sum + 1;
     }, 0);
-    const indefiniteReach = (factors.duration.advanced && factors.duration.level === 6) ? 1 : 0;
+    const indefiniteReach = (!lastingDuration && factors.duration.advanced && factors.duration.level === 6) ? 1 : 0;
 
     // Current Active Spells increase the Reach cost of any spell cast.
     // At Active Spells = Gnosis, the next spell costs +1 Reach.
@@ -342,7 +414,7 @@ export const SpellcastingPopup = ({
         );
         penalty += potencyPaid * -2;
 
-        const durationPaid = Math.max(
+        const durationPaid = lastingDuration ? 0 : Math.max(
             0,
             factors.duration.level - 1 - (effectivePrimaryFactor === "duration" ? primaryFreeLevels : 0)
         );
@@ -387,9 +459,9 @@ export const SpellcastingPopup = ({
         let cost = 0;
 
         if (effectiveSpellType === "improvised" && !isRuling) cost += 1;
-        if (factors.duration.advanced && factors.duration.level === 6) cost += 1;
-        if (fateDurationBonus > 0) cost += 1;
-        if (matterDurationMana && arcanum === "Matter" && factors.duration.advanced) cost += 1;
+        if (!lastingDuration && factors.duration.advanced && factors.duration.level === 6) cost += 1;
+        if (!lastingDuration && fateDurationBonus > 0) cost += 1;
+        if (!lastingDuration && matterDurationMana && arcanum === "Matter" && factors.duration.advanced) cost += 1;
         if (specialRangeMode !== "none") cost += 1;
 
         return cost;
@@ -501,11 +573,19 @@ export const SpellcastingPopup = ({
         if (!factor) return "";
 
         if (factorName === "casting") {
-            return factor.advanced ? "Instant" : `${getCastingTime(gnosis)} Ritual`;
+            if (factor.advanced) {
+                const turns = Math.max(1, yantraCount);
+                return `${turns} turn${turns === 1 ? "" : "s"}`;
+            }
+            return `${getCastingTime(gnosis)} Ritual`;
         }
 
         if (factorName === "range") {
             return factor.advanced ? "Sensory Range" : "Touch Range / Self";
+        }
+
+        if (factorName === "duration" && lastingDuration) {
+            return "Lasting";
         }
 
         const levels = FACTOR_LEVELS[factorName]?.[factor.advanced ? "advanced" : "standard"];
@@ -539,6 +619,58 @@ export const SpellcastingPopup = ({
         });
     };
 
+    // Set of currently-selected yantra names (excluding empty slots).
+    const selectedNameSet = useMemo(() => new Set(selectedYantras.filter(Boolean)), [selectedYantras]);
+
+    // Toggle a yantra by name. If it would put the user over the slot limit, the
+    // earliest selected yantra (other than the one we're toggling) is replaced.
+    const toggleYantraName = (name) => {
+        setSelectedYantras((prev) => {
+            const filled = prev.filter(Boolean);
+            const isOn = filled.includes(name);
+
+            if (isOn) {
+                // Removing — but Sympathy cannot be removed while a Sympathetic range is active.
+                if (specialRangeMode !== "none" && name.startsWith("Sympathy:")) {
+                    return prev;
+                }
+                const nextFilled = filled.filter((n) => n !== name);
+                return [
+                    ...nextFilled,
+                    ...Array.from({ length: Math.max(0, yantraSlotLimit - nextFilled.length) }, () => ""),
+                ];
+            }
+
+            // Adding — enforce capacity.
+            const nextFilled = [...filled, name];
+            if (nextFilled.length > yantraSlotLimit) {
+                // Drop the oldest one to make room.
+                nextFilled.shift();
+            }
+            return [
+                ...nextFilled,
+                ...Array.from({ length: Math.max(0, yantraSlotLimit - nextFilled.length) }, () => ""),
+            ];
+        });
+    };
+
+    // For Sympathy/Sacrament rating selectors: replaces any current rating with the new one.
+    const setMutuallyExclusiveYantra = (group, name) => {
+        // group is array of names; name is the chosen one (or null to clear)
+        setSelectedYantras((prev) => {
+            const filled = prev.filter(Boolean);
+            const withoutGroup = filled.filter((n) => !group.includes(n));
+            const nextFilled = name ? [...withoutGroup, name] : withoutGroup;
+            const trimmed = nextFilled.length > yantraSlotLimit
+                ? nextFilled.slice(nextFilled.length - yantraSlotLimit)
+                : nextFilled;
+            return [
+                ...trimmed,
+                ...Array.from({ length: Math.max(0, yantraSlotLimit - trimmed.length) }, () => ""),
+            ];
+        });
+    };
+
     const getYantraOptionsForSlot = (index) => {
         const currentValue = selectedYantras[index];
 
@@ -552,19 +684,17 @@ export const SpellcastingPopup = ({
         });
     };
 
+    const SYMPATHY_VARIANTS = ["Sympathy: Material", "Sympathy: Representational", "Sympathy: Symbolic"];
+
     useEffect(() => {
         setSelectedYantras((prev) => {
-            const hasSympathy = prev.includes("Sympathy");
+            const hasSympathy = prev.some((name) => SYMPATHY_VARIANTS.includes(name));
 
             if (specialRangeMode === "none") {
                 if (!hasSympathy) return prev;
 
-                const next = [...prev];
-                const sympathyIndex = next.findIndex((name) => name === "Sympathy");
-                if (sympathyIndex >= 0) {
-                    next[sympathyIndex] = "";
-                }
-                return next;
+                // Note: leave any user-chosen Sympathy variant alone when special range turns off.
+                return prev;
             }
 
             if (hasSympathy) return prev;
@@ -572,7 +702,7 @@ export const SpellcastingPopup = ({
             const emptyIndex = prev.findIndex((name) => !name);
             if (emptyIndex >= 0) {
                 const next = [...prev];
-                next[emptyIndex] = "Sympathy";
+                next[emptyIndex] = "Sympathy: Symbolic";
                 return next;
             }
 
@@ -610,14 +740,14 @@ export const SpellcastingPopup = ({
         }
 
         if (totalManaCost > 0 && currentMana < totalManaCost) return;
-        if (factors.duration.advanced && !spellName.trim()) return;
+        if (!lastingDuration && factors.duration.advanced && !spellName.trim()) return;
         if (paradoxTriggered && !paradoxMode) return;
 
         if (totalManaCost > 0) {
             onSpendMana(totalManaCost);
         }
 
-        const activeSpellData = factors.duration.advanced && onCreateActiveSpell
+        const activeSpellData = !lastingDuration && factors.duration.advanced && onCreateActiveSpell
             ? {
                 id: Date.now(),
                 kind: "spell",
@@ -662,6 +792,22 @@ export const SpellcastingPopup = ({
             }`
             : "";
 
+        // Build Reach breakdown — only categories actually used.
+        const reachCategories = [];
+        if (advancedReachUsed > 0) reachCategories.push(`Advanced Factors +${advancedReachUsed}`);
+        if (indefiniteReach > 0) reachCategories.push(`Indefinite Duration +${indefiniteReach}`);
+        if (changePrimaryReach > 0) {
+            const newPrimaryLabel = getPrimaryFactorLabel(primaryFactor);
+            reachCategories.push(`Primary Factor Override → ${newPrimaryLabel} +${changePrimaryReach}`);
+        }
+        if (spellReach > 0) reachCategories.push(`Spell Options +${spellReach}`);
+        if (specialRangeReach > 0) reachCategories.push(`Sympathetic Casting +${specialRangeReach}`);
+        if (activeSpellReachSurcharge > 0) reachCategories.push(`Active Spell surcharge +${activeSpellReachSurcharge}`);
+
+        const reachBreakdownLine = reachCategories.length > 0
+            ? `Reach: ${reachCategories.join(", ")}`
+            : "";
+
         const spellReachSummary = `Spell Reach: ${totalReachUsed} / ${freeReach} free${
             reachBeyondFree > 0 ? `; ${reachBeyondFree} over free` : ""
         }`;
@@ -670,8 +816,12 @@ export const SpellcastingPopup = ({
             ? `Withstand: ${effectiveWithstand} total; effective Potency ${effectivePotency}${effectivePotency <= 0 ? " (spell active, no effect)" : ""}`
             : "";
 
+        const spellNameSummary = spellName.trim() ? `Spell: ${spellName.trim()}` : "";
+
         const spellSummary = [
+            ...(spellNameSummary ? [spellNameSummary] : []),
             spellReachSummary,
+            ...(reachBreakdownLine ? [reachBreakdownLine] : []),
             ...(spentSpellManaSummary ? [spentSpellManaSummary] : []),
             ...(selectedYantrasSummary ? [selectedYantrasSummary] : []),
             ...(ritualSummary ? [ritualSummary] : []),
@@ -860,7 +1010,11 @@ export const SpellcastingPopup = ({
                 {hasPrimary ? (
                     <Checkbox
                         checked={isSelectedPrimary}
-                        disabled={isSelectedPrimary || (factorName === "scale" && !overridePrimaryFactor)}
+                        disabled={
+                            isSelectedPrimary ||
+                            (factorName === "scale" && !overridePrimaryFactor) ||
+                            (defaultPrimaryFactor && !overridePrimaryFactor)
+                        }
                         onCheckedChange={(checked) => {
                             if (checked) {
                                 setPrimaryFactor(factorName);
@@ -885,6 +1039,28 @@ export const SpellcastingPopup = ({
 
                     {factorName === "duration" && (
                         <div className="flex flex-wrap gap-1 mt-1">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setLastingDuration((prev) => {
+                                        const next = !prev;
+                                        if (next) {
+                                            setFateDurationBonus(0);
+                                            setMatterDurationMana(false);
+                                            updateFactor("duration", { advanced: false, level: 1 });
+                                        }
+                                        return next;
+                                    });
+                                }}
+                                className={`px-1.5 py-0.5 rounded border text-[9px] ${
+                                    lastingDuration
+                                        ? "bg-emerald-900/40 border-emerald-500/50 text-emerald-300"
+                                        : "bg-zinc-900/40 border-zinc-700 text-zinc-400"
+                                }`}
+                                data-testid="duration-lasting"
+                            >
+                                Lasting
+                            </button>
                             {canUseFateDuration && [0, 1, 2, 3].map((bonus) => (
                                 <button
                                     key={`fate-duration-${bonus}`}
@@ -981,19 +1157,25 @@ export const SpellcastingPopup = ({
 
                 <div className="flex justify-center">
                     <Checkbox
-                        checked={!f.advanced}
-                        onCheckedChange={() => updateFactor(factorName, { advanced: false, ...(hasLevels ? { level: 1 } : {}) })}
+                        checked={!f.advanced && !(factorName === "duration" && lastingDuration)}
+                        onCheckedChange={() => {
+                            if (factorName === "duration") setLastingDuration(false);
+                            updateFactor(factorName, { advanced: false, ...(hasLevels ? { level: 1 } : {}) });
+                        }}
                         className="border-zinc-600 data-[state=checked]:bg-violet-600"
-                        disabled={factorName === "range" && specialRangeMode !== "none"}
+                        disabled={(factorName === "range" && specialRangeMode !== "none") || (factorName === "duration" && lastingDuration)}
                     />
                 </div>
 
                 <div className="flex justify-center">
                     <Checkbox
-                        checked={f.advanced}
-                        onCheckedChange={() => updateFactor(factorName, { advanced: true, ...(hasLevels ? { level: 1 } : {}) })}
+                        checked={f.advanced && !(factorName === "duration" && lastingDuration)}
+                        onCheckedChange={() => {
+                            if (factorName === "duration") setLastingDuration(false);
+                            updateFactor(factorName, { advanced: true, ...(hasLevels ? { level: 1 } : {}) });
+                        }}
                         className="border-zinc-600 data-[state=checked]:bg-amber-600"
-                        disabled={factorName === "range" && specialRangeMode !== "none"}
+                        disabled={(factorName === "range" && specialRangeMode !== "none") || (factorName === "duration" && lastingDuration)}
                     />
                 </div>
 
@@ -1004,17 +1186,19 @@ export const SpellcastingPopup = ({
                             size="icon"
                             className="h-5 w-5 text-zinc-400"
                             onClick={() => updateFactor(factorName, { level: Math.max(1, f.level - 1) })}
-                            disabled={f.level <= 1}
+                            disabled={f.level <= 1 || (factorName === "duration" && lastingDuration)}
                         >
                             <Minus className="w-3 h-3" />
                         </Button>
-                        <span className="text-sm font-mono text-violet-300 w-4 text-center">{displayedLevel}</span>
+                        <span className="text-sm font-mono text-violet-300 w-4 text-center">
+                            {factorName === "duration" && lastingDuration ? "—" : displayedLevel}
+                        </span>
                         <Button
                             variant="ghost"
                             size="icon"
                             className="h-5 w-5 text-zinc-400"
                             onClick={() => updateFactor(factorName, { level: Math.min(getMaxLevel(factorName, f.advanced), f.level + 1) })}
-                            disabled={f.level >= getMaxLevel(factorName, f.advanced)}
+                            disabled={f.level >= getMaxLevel(factorName, f.advanced) || (factorName === "duration" && lastingDuration)}
                         >
                             <Plus className="w-3 h-3" />
                         </Button>
@@ -1102,7 +1286,7 @@ export const SpellcastingPopup = ({
                             className="bg-zinc-900/50 border-zinc-700"
                             data-testid="spell-name-input"
                         />
-                        {factors.duration.advanced && !spellName.trim() && (
+                        {!lastingDuration && factors.duration.advanced && !spellName.trim() && (
                             <p className="text-[11px] text-amber-400 mt-1">
                                 Advanced Duration spells need a name to become an Active Spell card.
                             </p>
@@ -1300,7 +1484,7 @@ export const SpellcastingPopup = ({
                                 <div>
                                     <p className="text-xs text-zinc-500 uppercase">Spell Reach</p>
                                     <p className="text-[11px] text-zinc-600">
-                                        Extra Reach required by this spell's own options
+                                        Extra Reach required by this spell&apos;s own options
                                     </p>
                                 </div>
                                 <div className="flex items-center gap-1">
@@ -1372,21 +1556,70 @@ export const SpellcastingPopup = ({
 
                     {/* Primary Factor Override */}
                     {selectedPractice && (
-                        <div className="p-2 bg-zinc-800/30 rounded space-y-1.5">
+                        <div className="p-2 bg-zinc-800/30 rounded space-y-2">
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="text-xs text-zinc-500 uppercase">Primary Factor Override</p>
                                     <p className="text-[11px] text-zinc-600">
-                                        Spend 1 Reach to override the spell's normal primary factor
+                                        Spend 1 Reach to override the spell&apos;s normal primary factor
                                     </p>
                                 </div>
                                 <Checkbox
                                     checked={overridePrimaryFactor}
-                                    onCheckedChange={setOverridePrimaryFactor}
+                                    onCheckedChange={(checked) => {
+                                        setOverridePrimaryFactor(!!checked);
+                                        if (!checked) {
+                                            // Restore default primary on un-toggle.
+                                            setPrimaryFactor(defaultPrimaryFactor);
+                                        } else {
+                                            // Pre-select a non-default option if the current primary
+                                            // still equals the default (so the user sees something selected).
+                                            if (primaryFactor === defaultPrimaryFactor) {
+                                                const fallback =
+                                                    defaultPrimaryFactor === "potency" ? "duration" :
+                                                    defaultPrimaryFactor === "duration" ? "potency" :
+                                                    "potency";
+                                                setPrimaryFactor(fallback);
+                                            }
+                                        }
+                                    }}
                                     className="border-zinc-600 data-[state=checked]:bg-amber-600"
                                     data-testid="override-primary-factor"
                                 />
                             </div>
+
+                            {overridePrimaryFactor && (
+                                <div className="space-y-1">
+                                    <p className="text-[10px] text-zinc-500 uppercase tracking-wider">New Primary Factor</p>
+                                    <div className="flex gap-1.5" data-testid="pfo-selector">
+                                        {["potency", "duration", "scale"]
+                                            .filter((f) => f !== defaultPrimaryFactor)
+                                            .map((f) => {
+                                                const active = primaryFactor === f;
+                                                return (
+                                                    <button
+                                                        key={f}
+                                                        type="button"
+                                                        onClick={() => setPrimaryFactor(f)}
+                                                        className={`px-2 py-1 rounded border text-[11px] capitalize ${
+                                                            active
+                                                                ? "bg-amber-700 border-amber-500 text-white"
+                                                                : "bg-zinc-900/40 border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+                                                        }`}
+                                                        data-testid={`pfo-${f}`}
+                                                    >
+                                                        {f}
+                                                    </button>
+                                                );
+                                            })}
+                                    </div>
+                                    {defaultPrimaryFactor && (
+                                        <p className="text-[10px] text-zinc-600">
+                                            Default primary: <span className="capitalize text-zinc-400">{defaultPrimaryFactor}</span>. Scale can never be a default primary.
+                                        </p>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -1596,52 +1829,81 @@ export const SpellcastingPopup = ({
                             </p>
                         )}
 
-                        <div className="space-y-2">
-                            {Array.from({ length: yantraSlotLimit }).map((_, index) => {
-                                const selectedName = selectedYantras[index] || "";
-                                const selectedData = YANTRAS.find((y) => y.name === selectedName);
-                                const availableOptions = getYantraOptionsForSlot(index);
+                        {(() => {
+                            const slotsFull = selectedNameSet.size >= yantraSlotLimit;
 
-                                return (
-                                    <div key={`yantra-slot-${index}`} className="flex items-center gap-2">
-                                        <span className="w-16 text-[10px] uppercase tracking-wider text-zinc-500">
-                                            Yantra {index + 1}
-                                        </span>
+                            const sympathyVariants = [
+                                { name: "Sympathy: Symbolic", shortLabel: "Symbolic", bonus: 0 },
+                                { name: "Sympathy: Representational", shortLabel: "Repr.", bonus: 1 },
+                                { name: "Sympathy: Material", shortLabel: "Material", bonus: 2 },
+                            ];
+                            const sacramentVariants = [
+                                { name: "Sacrament: Minor", shortLabel: "Minor", bonus: 1 },
+                                { name: "Sacrament: Major", shortLabel: "Major", bonus: 2 },
+                                { name: "Sacrament: Mystic", shortLabel: "Mystic", bonus: 3 },
+                            ];
 
-                                        <Select
-                                            value={selectedName || "__none__"}
-                                            onValueChange={(value) => setYantraSlot(index, value)}
-                                        >
-                                            <SelectTrigger
-                                                className="flex-1 h-8 text-xs bg-zinc-900/50 border-zinc-700"
-                                                data-testid={`yantra-slot-${index + 1}`}
-                                            >
-                                                <SelectValue placeholder="None" />
-                                            </SelectTrigger>
-                                            <SelectContent className="bg-zinc-900 border-zinc-700 z-[200]">
-                                                <SelectItem value="__none__" className="text-xs text-zinc-400">
-                                                    None
-                                                </SelectItem>
+                            const sympathyCurrent = sympathyVariants.find((v) => selectedNameSet.has(v.name)) || null;
+                            const sacramentCurrent = sacramentVariants.find((v) => selectedNameSet.has(v.name)) || null;
 
-                                                {availableOptions.map((yantra) => (
-                                                    <SelectItem
-                                                        key={yantra.name}
-                                                        value={yantra.name}
-                                                        className="text-xs text-zinc-200"
-                                                    >
-                                                        {yantra.name} ({yantra.bonus > 0 ? `+${yantra.bonus}` : "+0"})
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                            const renderSingle = (name, label, bonus) => (
+                                <YantraSingleCheckbox
+                                    key={name}
+                                    name={name}
+                                    label={label}
+                                    bonus={bonus}
+                                    checked={selectedNameSet.has(name)}
+                                    disabled={!selectedNameSet.has(name) && slotsFull}
+                                    onToggle={toggleYantraName}
+                                />
+                            );
 
-                                        <span className="w-10 text-right text-xs font-mono text-teal-400">
-                                            {selectedData ? `+${selectedData.bonus}` : "—"}
-                                        </span>
+                            return (
+                                <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
+                                    {/* Left Column */}
+                                    <div className="space-y-0.5">
+                                        {renderSingle("High Speech", "High Speech", 2)}
+                                        {renderSingle("Concentration", "Concentration", 2)}
+                                        <YantraRatingPicker
+                                            groupLabel="Sympathy"
+                                            variants={sympathyVariants}
+                                            testIdPrefix="yantra-sympathy"
+                                            current={sympathyCurrent}
+                                            isOn={!!sympathyCurrent}
+                                            disabled={!sympathyCurrent && slotsFull}
+                                            blockUncheck={specialRangeMode !== "none"}
+                                            onPickVariant={(name) => setMutuallyExclusiveYantra(sympathyVariants.map((v) => v.name), name)}
+                                            onClear={() => setMutuallyExclusiveYantra(sympathyVariants.map((v) => v.name), null)}
+                                        />
+                                        {renderSingle("Runes", "Runes", 2)}
+                                        <YantraRatingPicker
+                                            groupLabel="Sacrament"
+                                            variants={sacramentVariants}
+                                            testIdPrefix="yantra-sacrament"
+                                            current={sacramentCurrent}
+                                            isOn={!!sacramentCurrent}
+                                            disabled={!sacramentCurrent && slotsFull}
+                                            blockUncheck={false}
+                                            onPickVariant={(name) => setMutuallyExclusiveYantra(sacramentVariants.map((v) => v.name), name)}
+                                            onClear={() => setMutuallyExclusiveYantra(sacramentVariants.map((v) => v.name), null)}
+                                        />
+                                        {renderSingle("Persona", "Persona", 2)}
+                                        {renderSingle("Environment", "Environment", 1)}
+                                        {renderSingle("Demesne/Verge", "Demesne/Verge", 2)}
                                     </div>
-                                );
-                            })}
-                        </div>
+                                    {/* Right Column */}
+                                    <div className="space-y-0.5">
+                                        {renderSingle("Dedicated Tool", "Dedicated Tool", 1)}
+                                        {renderSingle("Order Tool", "Order Tool", 1)}
+                                        {renderSingle("Path Tool: Coin", "Path Tool: Coin", 1)}
+                                        {renderSingle("Path Tool: Cup", "Path Tool: Cup", 1)}
+                                        {renderSingle("Path Tool: Mirror", "Path Tool: Mirror", 1)}
+                                        {renderSingle("Path Tool: Rod", "Path Tool: Rod", 1)}
+                                        {renderSingle("Path Tool: Weapon", "Path Tool: Weapon", 1)}
+                                    </div>
+                                </div>
+                            );
+                        })()}
                     </div>
 
                     {/* Dice Pool Display */}
@@ -1979,7 +2241,7 @@ export const SpellcastingPopup = ({
                             !selectedPractice ||
                             !effectivePrimaryFactor ||
                             totalManaCost > currentMana ||
-                            (factors.duration.advanced && !spellName.trim()) ||
+                            (!lastingDuration && factors.duration.advanced && !spellName.trim()) ||
                             (paradoxTriggered && !paradoxMode)
                         }
                         className="bg-violet-600 hover:bg-violet-500 text-white"
