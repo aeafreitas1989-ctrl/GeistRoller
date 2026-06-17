@@ -254,6 +254,7 @@ class Character(BaseModel):
     aspiration_long: str = ""
     aspiration_burden: str = ""
     notes: str = ""
+    scrutiny_state: Optional[Dict[str, Any]] = None
     scene_tracker: Dict[str, str] = Field(default_factory=lambda: {
         "date": "",
         "time": "",
@@ -358,6 +359,7 @@ class CharacterUpdate(BaseModel):
     aspiration_long: Optional[str] = None
     aspiration_burden: Optional[str] = None
     notes: Optional[str] = None
+    scrutiny_state: Optional[Dict[str, Any]] = None
     scene_tracker: Optional[Dict[str, str]] = None
 
 # Storyteller Settings Models
