@@ -1164,6 +1164,7 @@ export const SpellcastingPopup = ({
                         }}
                         className="border-zinc-600 data-[state=checked]:bg-violet-600"
                         disabled={(factorName === "range" && specialRangeMode !== "none") || (factorName === "duration" && lastingDuration)}
+                        data-testid={`factor-${factorName}-std`}
                     />
                 </div>
 
@@ -1176,6 +1177,7 @@ export const SpellcastingPopup = ({
                         }}
                         className="border-zinc-600 data-[state=checked]:bg-amber-600"
                         disabled={(factorName === "range" && specialRangeMode !== "none") || (factorName === "duration" && lastingDuration)}
+                        data-testid={`factor-${factorName}-adv`}
                     />
                 </div>
 
