@@ -3189,6 +3189,7 @@ export const CharacterPanel = ({
                     currentWisdom={getValue("wisdom") || 7}
                     athleticsDots={getNestedValue("skills", "athletics") || 0}
                     firearmsDots={getNestedValue("skills", "firearms") || 0}
+                    inventoryItems={getValue("inventory_items") || []}
                     initialPractice={spellcastingPractice}
                     onCreateActiveSpell={addActiveSpell}
                     onAwardSpellcastingExceptionalSuccess={awardSpellcastingExceptionalSuccess}

@@ -16,14 +16,9 @@ export const PrimaryFactorOverride = ({
     if (!selectedPractice) return null;
 
     return (
-        <div className="p-2 bg-zinc-800/30 rounded space-y-2">
+                <div className="p-2 bg-zinc-800/30 rounded space-y-2">
             <div className="flex items-center justify-between">
-                <div>
-                    <p className="text-xs text-zinc-500 uppercase">Primary Factor Override</p>
-                    <p className="text-[11px] text-zinc-600">
-                        Spend 1 Reach to override the spell&apos;s normal primary factor
-                    </p>
-                </div>
+                <p className="text-xs text-zinc-500 uppercase">Primary Factor Override</p>
                 <Checkbox
                     checked={overridePrimaryFactor}
                     onCheckedChange={(checked) => {
@@ -71,11 +66,6 @@ export const PrimaryFactorOverride = ({
                                 );
                             })}
                     </div>
-                    {defaultPrimaryFactor && (
-                        <p className="text-[10px] text-zinc-600">
-                            Default primary: <span className="capitalize text-zinc-400">{defaultPrimaryFactor}</span>. Scale can never be a default primary.
-                        </p>
-                    )}
                 </div>
             )}
         </div>

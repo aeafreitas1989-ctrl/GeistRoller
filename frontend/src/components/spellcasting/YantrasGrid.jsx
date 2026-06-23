@@ -124,13 +124,6 @@ export const YantrasGrid = ({
                 </span>
             </div>
 
-            {usesRoteMudra && (
-                <div className="p-2 bg-amber-950/20 border border-amber-500/30 rounded text-xs flex items-center justify-between">
-                    <span className="text-amber-300">Rote Mudra uses 1 Yantra slot</span>
-                    <span className="font-mono text-amber-300">+{roteMudraBonus}</span>
-                </div>
-            )}
-
             {yantraBonusWasCapped && (
                 <p className="text-[11px] text-amber-400">
                     Yantra bonus raw +{rawYantraBonus} is capped at +{yantraBonus}. Cap is +5 after offsetting spell factor penalties.
@@ -140,19 +133,6 @@ export const YantrasGrid = ({
             <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
                 <div className="space-y-0.5">
                     {renderSingle("High Speech", "High Speech", 2)}
-                    {renderSingle("Concentration", "Concentration", 2)}
-                    <YantraRatingPicker
-                        groupLabel="Sympathy"
-                        variants={SYMPATHY_VARIANTS}
-                        testIdPrefix="yantra-sympathy"
-                        current={sympathyCurrent}
-                        isOn={!!sympathyCurrent}
-                        disabled={!sympathyCurrent && slotsFull}
-                        blockUncheck={specialRangeMode !== "none"}
-                        onPickVariant={(name) => setMutuallyExclusiveYantra(SYMPATHY_VARIANTS.map((v) => v.name), name)}
-                        onClear={() => setMutuallyExclusiveYantra(SYMPATHY_VARIANTS.map((v) => v.name), null)}
-                    />
-                    {renderSingle("Runes", "Runes", 2)}
                     <YantraRatingPicker
                         groupLabel="Sacrament"
                         variants={SACRAMENT_VARIANTS}
@@ -164,18 +144,41 @@ export const YantrasGrid = ({
                         onPickVariant={(name) => setMutuallyExclusiveYantra(SACRAMENT_VARIANTS.map((v) => v.name), name)}
                         onClear={() => setMutuallyExclusiveYantra(SACRAMENT_VARIANTS.map((v) => v.name), null)}
                     />
+                    {renderSingle("Concentration", "Concentration", 2)}
+                    {renderSingle("Runes", "Runes", 2)}
+                    <YantraRatingPicker
+                        groupLabel="Sympathy"
+                        variants={SYMPATHY_VARIANTS}
+                        testIdPrefix="yantra-sympathy"
+                        current={sympathyCurrent}
+                        isOn={!!sympathyCurrent}
+                        disabled={!sympathyCurrent && slotsFull}
+                        blockUncheck={specialRangeMode !== "none"}
+                        onPickVariant={(name) => setMutuallyExclusiveYantra(SYMPATHY_VARIANTS.map((v) => v.name), name)}
+                        onClear={() => setMutuallyExclusiveYantra(SYMPATHY_VARIANTS.map((v) => v.name), null)}
+                    />
                     {renderSingle("Persona", "Persona", 2)}
                     {renderSingle("Environment", "Environment", 1)}
                     {renderSingle("Demesne/Verge", "Demesne/Verge", 2)}
                 </div>
                 <div className="space-y-0.5">
                     {renderSingle("Dedicated Tool", "Dedicated Tool", 1)}
-                    {renderSingle("Order Tool", "Order Tool", 1)}
                     {renderSingle("Path Tool: Coin", "Path Tool: Coin", 1)}
                     {renderSingle("Path Tool: Cup", "Path Tool: Cup", 1)}
                     {renderSingle("Path Tool: Mirror", "Path Tool: Mirror", 1)}
                     {renderSingle("Path Tool: Rod", "Path Tool: Rod", 1)}
                     {renderSingle("Path Tool: Weapon", "Path Tool: Weapon", 1)}
+                    {renderSingle("Order Tool", "Order Tool", 1)}
+                    {usesRoteMudra && (
+                        <div
+                            className="flex items-center gap-2 text-xs p-1.5"
+                            data-testid="yantra-rote-mudra"
+                        >
+                            <span className="h-3.5 w-3.5 shrink-0" />
+                            <span className="flex-1 text-amber-300">Rote Mudra</span>
+                            <span className="text-amber-300 font-mono">+{roteMudraBonus}</span>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

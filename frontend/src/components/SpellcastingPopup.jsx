@@ -28,13 +28,95 @@ const ARCANA_NAMES = [
 
 const WITHSTAND_TRAITS = [
     { value: "none", label: "None" },
-    { value: "stamina", label: "Stamina" },
-    { value: "resolve", label: "Resolve" },
-    { value: "composure", label: "Composure" },
+    { value: "resistance", label: "Resistance" },
     { value: "defense", label: "Defense" },
-    { value: "arcanum", label: "Arcanum" },
-    { value: "custom", label: "Custom" },
+    { value: "tolerance_trait", label: "Tolerance Trait" },
+    { value: "other", label: "Other" },
 ];
+
+const normalizeYantraText = (value) =>
+    String(value || "").trim().toLowerCase();
+
+const compareYantraLabelsAlphabetically = (a, b) =>
+    String(a || "").localeCompare(
+        String(b || ""),
+        undefined,
+        { sensitivity: "base", numeric: true }
+    );
+
+const getSelectedYantraToolType = (yantraName) => {
+    const normalized = normalizeYantraText(yantraName);
+
+    if (normalized === "dedicated tool") return "dedicated";
+    if (normalized === "order tool") return "order";
+
+    const pathToolMatch = normalized.match(/^path tool:\s*(.+)$/);
+    if (pathToolMatch) return pathToolMatch[1].trim();
+
+    return null;
+};
+
+const getInventoryYantraToolType = (item) => {
+    const kind = normalizeYantraText(item?.yantra?.kind);
+    const explicitToolType = normalizeYantraText(item?.yantra?.tool_type);
+    const name = normalizeYantraText(item?.name);
+
+    if (kind === "sacrament") return "sacrament";
+    if (explicitToolType) return explicitToolType;
+    if (name.includes("dedicated")) return "dedicated";
+
+    // Existing older Yantra records without tool_type are displayed as Coin elsewhere.
+    return "coin";
+};
+
+const isInventoryYantraDedicated = (item) => {
+    const explicitToolType = normalizeYantraText(item?.yantra?.tool_type);
+    const name = normalizeYantraText(item?.name);
+
+    return (
+        item?.yantra?.dedicated === true ||
+        explicitToolType === "dedicated" ||
+        name.includes("dedicated")
+    );
+};
+
+const getInventoryYantraLabel = (yantraName, inventoryItems) => {
+    const selectedToolType = getSelectedYantraToolType(yantraName);
+    if (!selectedToolType) return yantraName;
+
+    const matchingInventoryYantras = (inventoryItems || [])
+        .filter((item) => normalizeYantraText(item?.type) === "yantra")
+        .filter((item) => {
+            if (selectedToolType === "dedicated") {
+                return isInventoryYantraDedicated(item);
+            }
+
+            return getInventoryYantraToolType(item) === selectedToolType;
+        })
+        .filter((item) => String(item?.name || "").trim())
+        .sort((a, b) => {
+            if (!!a?.equipped !== !!b?.equipped) {
+                return a?.equipped ? -1 : 1;
+            }
+
+            return normalizeYantraText(a?.name || "Unnamed").localeCompare(
+                normalizeYantraText(b?.name || "Unnamed"),
+                undefined,
+                { sensitivity: "base", numeric: true }
+            );
+        });
+
+    const displayToolType =
+        selectedToolType === "dedicated"
+            ? "Dedicated"
+            : selectedToolType.charAt(0).toUpperCase() + selectedToolType.slice(1);
+
+    if (matchingInventoryYantras.length === 0) {
+        return displayToolType;
+    }
+
+    return `${displayToolType} (${matchingInventoryYantras[0].name})`;
+};
 
 const getCastingTime = (gnosis) => {
     if (gnosis <= 2) return "3 hours";
@@ -125,6 +207,7 @@ export const SpellcastingPopup = ({
     allArcana = {},
     athleticsDots = 0,
     firearmsDots = 0,
+    inventoryItems = [],
     previousParadoxRolls = 0,
     onPreviousParadoxRollsChange,
     onResetPreviousParadoxRolls
@@ -379,9 +462,9 @@ export const SpellcastingPopup = ({
     const yantraBonus = Math.min(rawYantraBonus, yantraBonusCap);
     const yantraBonusWasCapped = rawYantraBonus > yantraBonus;
     const selectedYantraLabels = [
-        ...selectedYantraNames,
+        ...selectedYantraNames.map((name) => getInventoryYantraLabel(name, inventoryItems)),
         ...(usesRoteMudra ? [`Rote Mudra +${roteMudraBonus}`] : []),
-    ];
+    ].sort(compareYantraLabelsAlphabetically);
     const yantraCount = selectedYantraNames.length + (usesRoteMudra ? 1 : 0);
 
     // Advanced (Instant) Casting Time additional time, by yantra.
@@ -471,7 +554,7 @@ export const SpellcastingPopup = ({
     const effectivePotency = Math.max(0, basePotency - effectiveWithstand);
     const withstandLabel = withstandTrait === "none"
         ? "None"
-        : WITHSTAND_TRAITS.find((entry) => entry.value === withstandTrait)?.label || "Custom";
+        : WITHSTAND_TRAITS.find((entry) => entry.value === withstandTrait)?.label || "Other";
 
     const aimedAthletics = Number(athleticsDots) || 0;
     const aimedFirearms = Number(firearmsDots) || 0;
@@ -1098,102 +1181,6 @@ export const SpellcastingPopup = ({
                         </Select>
                     </div>
 
-                    {/* Combined Spell */}
-                    {selectedPractice && maxCombinedSpellCount > 0 && (
-                        <div className="p-2 bg-zinc-800/30 rounded space-y-2">
-                            <div className="flex items-center justify-between gap-3">
-                                <div>
-                                    <p className="text-xs text-zinc-500 uppercase">Combined Spell</p>
-                                    <p className="text-[11px] text-zinc-600">
-                                        Add extra spells. Each extra spell is -2 dice. Base pool uses the lowest Arcanum used.
-                                    </p>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-6 w-6 text-zinc-400"
-                                        onClick={() => setCombinedSpellCount(Math.max(0, combinedSpellCount - 1))}
-                                        disabled={combinedSpellCount <= 0}
-                                        data-testid="combined-spell-decrease"
-                                    >
-                                        <Minus className="w-3 h-3" />
-                                    </Button>
-                                    <span className="font-mono text-amber-400 w-12 text-center">
-                                        {combinedSpellCount}/{maxCombinedSpellCount}
-                                    </span>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-6 w-6 text-zinc-400"
-                                        onClick={() => setCombinedSpellCount(Math.min(maxCombinedSpellCount, combinedSpellCount + 1))}
-                                        disabled={combinedSpellCount >= maxCombinedSpellCount}
-                                        data-testid="combined-spell-increase"
-                                    >
-                                        <Plus className="w-3 h-3" />
-                                    </Button>
-                                </div>
-                            </div>
-
-                            {combinedSpellCount > 0 && (
-                                <div className="space-y-2 pt-2 border-t border-zinc-700/50">
-                                    {Array.from({ length: combinedSpellCount }).map((_, index) => {
-                                        const selectedArcanaName = selectedCombinedArcana[index] || arcanum;
-                                        const selectedDots = getArcanaDotsForCombinedSpell(selectedArcanaName);
-
-                                        return (
-                                            <div key={`combined-spell-${index}`} className="flex items-center gap-2">
-                                                <span className="w-20 text-[10px] uppercase tracking-wider text-zinc-500">
-                                                    Spell {index + 2}
-                                                </span>
-                                                <Select
-                                                    value={selectedArcanaName}
-                                                    onValueChange={(value) => {
-                                                        setCombinedSpellArcana((prev) => {
-                                                            const next = [...prev];
-                                                            next[index] = value;
-                                                            return next;
-                                                        });
-                                                    }}
-                                                >
-                                                    <SelectTrigger
-                                                        className="flex-1 h-8 text-xs bg-zinc-900/50 border-zinc-700"
-                                                        data-testid={`combined-spell-arcana-${index + 1}`}
-                                                    >
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent className="bg-zinc-900 border-zinc-700 z-[200]">
-                                                        {availableCombinedArcana.map((arcanaData) => (
-                                                            <SelectItem
-                                                                key={arcanaData.name}
-                                                                value={arcanaData.name}
-                                                                className="text-xs text-zinc-200"
-                                                            >
-                                                                {arcanaData.name} {arcanaData.dots}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                                <span className="w-12 text-right text-xs font-mono text-violet-300">
-                                                    {selectedDots} dot{selectedDots === 1 ? "" : "s"}
-                                                </span>
-                                            </div>
-                                        );
-                                    })}
-
-                                    <div className="flex justify-between text-xs">
-                                        <span className="text-zinc-500">Combined penalty</span>
-                                        <span className="font-mono text-red-400">{combinedSpellPenalty} dice</span>
-                                    </div>
-                                    <div className="flex justify-between text-xs">
-                                        <span className="text-zinc-500">Lowest Arcanum used</span>
-                                        <span className="font-mono text-violet-300">{combinedLowestArcanumDots}</span>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    )}
-
                     {/* Reach Display */}
                     {selectedPractice && (
                         <div className="p-2 bg-zinc-800/50 rounded text-sm space-y-1.5">
@@ -1259,93 +1246,6 @@ export const SpellcastingPopup = ({
                             )}
                         </div>
                     )}
-
-                    {/* Spell Reach */}
-                    {selectedPractice && (
-                        <div className="p-2 bg-zinc-800/30 rounded space-y-1.5">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-xs text-zinc-500 uppercase">Spell Reach</p>
-                                    <p className="text-[11px] text-zinc-600">
-                                        Extra Reach required by this spell&apos;s own options
-                                    </p>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-6 w-6 text-zinc-400"
-                                        onClick={() => setSpellReach(Math.max(0, spellReach - 1))}
-                                        disabled={spellReach <= 0}
-                                        data-testid="spell-reach-decrease"
-                                    >
-                                        <Minus className="w-3 h-3" />
-                                    </Button>
-                                    <span className="font-mono text-amber-400 w-8 text-center">
-                                        {spellReach}
-                                    </span>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-6 w-6 text-zinc-400"
-                                        onClick={() => setSpellReach(spellReach + 1)}
-                                        data-testid="spell-reach-increase"
-                                    >
-                                        <Plus className="w-3 h-3" />
-                                    </Button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Additional Mana */}
-                    {selectedPractice && (
-                        <div className="p-2 bg-zinc-800/30 rounded space-y-1.5">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <p className="text-xs text-zinc-500 uppercase">Add Mana</p>
-                                    <p className="text-[11px] text-zinc-600">
-                                        Manual Mana for spell options, aggravated damage, or other extra costs
-                                    </p>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-6 w-6 text-zinc-400"
-                                        onClick={() => setAdditionalMana(Math.max(0, additionalMana - 1))}
-                                        disabled={additionalMana <= 0}
-                                        data-testid="additional-mana-decrease"
-                                    >
-                                        <Minus className="w-3 h-3" />
-                                    </Button>
-                                    <span className="font-mono text-violet-400 w-8 text-center">
-                                        {additionalMana}
-                                    </span>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-6 w-6 text-zinc-400"
-                                        onClick={() => setAdditionalMana(additionalMana + 1)}
-                                        disabled={committedSpellManaCost >= currentMana}
-                                        data-testid="additional-mana-increase"
-                                    >
-                                        <Plus className="w-3 h-3" />
-                                    </Button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Primary Factor Override */}
-                    <PrimaryFactorOverride
-                        selectedPractice={selectedPractice}
-                        overridePrimaryFactor={overridePrimaryFactor}
-                        setOverridePrimaryFactor={setOverridePrimaryFactor}
-                        primaryFactor={primaryFactor}
-                        setPrimaryFactor={setPrimaryFactor}
-                        defaultPrimaryFactor={defaultPrimaryFactor}
-                    />
 
                     {/* Spell Factors */}
                     <div className="space-y-1">
@@ -1413,120 +1313,256 @@ export const SpellcastingPopup = ({
                         </div>
                     </div>
 
-                    {/* Withstand */}
-                    <div className="p-2 bg-zinc-800/30 rounded space-y-2">
-                        <div className="flex items-center justify-between gap-3">
-                            <div>
-                                <p className="text-xs text-zinc-500 uppercase">Withstand</p>
-                                <p className="text-[11px] text-zinc-600">
-                                    Manual tracker. Withstand reduces Potency, not the casting pool.
-                                </p>
+                    {/* Spell Options */}
+                    {selectedPractice && (
+                        <div className="grid grid-cols-2 gap-2">
+                            <div className="p-2 bg-zinc-800/30 rounded space-y-2">
+                                <div className="flex items-center justify-between gap-3">
+                                    <p className="text-xs text-zinc-500 uppercase">Combined Spell</p>
+                                    <div className="flex items-center gap-1">
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-6 w-6 text-zinc-400"
+                                            onClick={() => setCombinedSpellCount(Math.max(0, combinedSpellCount - 1))}
+                                            disabled={combinedSpellCount <= 0 || maxCombinedSpellCount <= 0}
+                                            data-testid="combined-spell-decrease"
+                                        >
+                                            <Minus className="w-3 h-3" />
+                                        </Button>
+                                        <span className="font-mono text-amber-400 w-12 text-center">
+                                            {combinedSpellCount}/{maxCombinedSpellCount}
+                                        </span>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-6 w-6 text-zinc-400"
+                                            onClick={() => setCombinedSpellCount(Math.min(maxCombinedSpellCount, combinedSpellCount + 1))}
+                                            disabled={combinedSpellCount >= maxCombinedSpellCount || maxCombinedSpellCount <= 0}
+                                            data-testid="combined-spell-increase"
+                                        >
+                                            <Plus className="w-3 h-3" />
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                {combinedSpellCount > 0 && (
+                                    <div className="space-y-2 pt-2 border-t border-zinc-700/50">
+                                        {Array.from({ length: combinedSpellCount }).map((_, index) => {
+                                            const selectedArcanaName = selectedCombinedArcana[index] || arcanum;
+                                            const selectedDots = getArcanaDotsForCombinedSpell(selectedArcanaName);
+
+                                            return (
+                                                <div key={`combined-spell-${index}`} className="flex items-center gap-2">
+                                                    <span className="w-20 text-[10px] uppercase tracking-wider text-zinc-500">
+                                                        Spell {index + 2}
+                                                    </span>
+                                                    <Select
+                                                        value={selectedArcanaName}
+                                                        onValueChange={(value) => {
+                                                            setCombinedSpellArcana((prev) => {
+                                                                const next = [...prev];
+                                                                next[index] = value;
+                                                                return next;
+                                                            });
+                                                        }}
+                                                    >
+                                                        <SelectTrigger
+                                                            className="flex-1 h-8 text-xs bg-zinc-900/50 border-zinc-700"
+                                                            data-testid={`combined-spell-arcana-${index + 1}`}
+                                                        >
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent className="bg-zinc-900 border-zinc-700 z-[200]">
+                                                            {availableCombinedArcana.map((arcanaData) => (
+                                                                <SelectItem
+                                                                    key={arcanaData.name}
+                                                                    value={arcanaData.name}
+                                                                    className="text-xs text-zinc-200"
+                                                                >
+                                                                    {arcanaData.name} {arcanaData.dots}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <span className="w-12 text-right text-xs font-mono text-violet-300">
+                                                        {selectedDots} dot{selectedDots === 1 ? "" : "s"}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
+
+                                        <div className="flex justify-between text-xs">
+                                            <span className="text-zinc-500">Combined penalty</span>
+                                            <span className="font-mono text-red-400">{combinedSpellPenalty} dice</span>
+                                        </div>
+                                        <div className="flex justify-between text-xs">
+                                            <span className="text-zinc-500">Lowest Arcanum used</span>
+                                            <span className="font-mono text-violet-300">{combinedLowestArcanumDots}</span>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
-                            <div className="text-right text-xs">
-                                <div className="text-zinc-500">Effective Potency</div>
-                                <div className={`font-mono ${effectivePotency > 0 ? "text-teal-400" : "text-red-400"}`}>
-                                    {effectivePotency}/{basePotency}
+
+                            <div className="p-2 bg-zinc-800/30 rounded space-y-1.5">
+                                <div className="flex items-center justify-between">
+                                    <p className="text-xs text-zinc-500 uppercase">Spell Reach</p>
+                                    <div className="flex items-center gap-1">
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-6 w-6 text-zinc-400"
+                                            onClick={() => setSpellReach(Math.max(0, spellReach - 1))}
+                                            disabled={spellReach <= 0}
+                                            data-testid="spell-reach-decrease"
+                                        >
+                                            <Minus className="w-3 h-3" />
+                                        </Button>
+                                        <span className="font-mono text-amber-400 w-8 text-center">
+                                            {spellReach}
+                                        </span>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-6 w-6 text-zinc-400"
+                                            onClick={() => setSpellReach(spellReach + 1)}
+                                            data-testid="spell-reach-increase"
+                                        >
+                                            <Plus className="w-3 h-3" />
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <div className="grid grid-cols-[1fr_90px] gap-2 items-center">
-                            <Select value={withstandTrait} onValueChange={setWithstandTrait}>
-                                <SelectTrigger className="h-8 text-xs bg-zinc-900/50 border-zinc-700" data-testid="withstand-trait-select">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent className="bg-zinc-900 border-zinc-700 z-[200]">
-                                    {WITHSTAND_TRAITS.map((trait) => (
-                                        <SelectItem key={trait.value} value={trait.value} className="text-xs text-zinc-200">
-                                            {trait.label}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            <div className="p-2 bg-zinc-800/30 rounded space-y-1.5">
+                                <div className="flex items-center justify-between">
+                                    <p className="text-xs text-zinc-500 uppercase">Add Mana</p>
+                                    <div className="flex items-center gap-1">
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-6 w-6 text-zinc-400"
+                                            onClick={() => setAdditionalMana(Math.max(0, additionalMana - 1))}
+                                            disabled={additionalMana <= 0}
+                                            data-testid="additional-mana-decrease"
+                                        >
+                                            <Minus className="w-3 h-3" />
+                                        </Button>
+                                        <span className="font-mono text-violet-400 w-8 text-center">
+                                            {additionalMana}
+                                        </span>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-6 w-6 text-zinc-400"
+                                            onClick={() => setAdditionalMana(additionalMana + 1)}
+                                            disabled={committedSpellManaCost >= currentMana}
+                                            data-testid="additional-mana-increase"
+                                        >
+                                            <Plus className="w-3 h-3" />
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
 
-                            <Input
-                                type="number"
-                                min="0"
-                                value={withstandValue}
-                                onChange={(event) => setWithstandValue(Math.max(0, Number(event.target.value) || 0))}
-                                disabled={withstandTrait === "none"}
-                                className="h-8 text-xs bg-zinc-900/50 border-zinc-700 text-right font-mono"
-                                data-testid="withstand-value-input"
+                            <PrimaryFactorOverride
+                                selectedPractice={selectedPractice}
+                                overridePrimaryFactor={overridePrimaryFactor}
+                                setOverridePrimaryFactor={setOverridePrimaryFactor}
+                                primaryFactor={primaryFactor}
+                                setPrimaryFactor={setPrimaryFactor}
+                                defaultPrimaryFactor={defaultPrimaryFactor}
                             />
                         </div>
-
-                        {(effectiveWithstand > 0 || sympatheticWithstandValue > 0) && (
-                            <div className="space-y-1 text-xs">
-                                {manualWithstandValue > 0 && (
-                                    <div className="flex justify-between">
-                                        <span className="text-zinc-500">{withstandLabel}</span>
-                                        <span className="font-mono text-amber-400">{manualWithstandValue}</span>
-                                    </div>
-                                )}
-                                {sympatheticWithstandValue > 0 && (
-                                    <div className="flex justify-between">
-                                        <span className="text-zinc-500">Sympathetic Withstand</span>
-                                        <span className="font-mono text-amber-400">{sympatheticWithstandValue}</span>
-                                    </div>
-                                )}
-                                <div className="flex justify-between pt-1 border-t border-zinc-700/50">
-                                    <span className="text-zinc-400">Total Withstand</span>
-                                    <span className="font-mono text-amber-400">{effectiveWithstand}</span>
+                    )}
+                    
+                    {/* Withstand + Aimed Spell */}
+                    <div className="grid grid-cols-2 gap-2 items-stretch">
+                        {/* Withstand */}
+                        <div className={`p-2 bg-zinc-800/30 rounded h-full grid grid-rows-[28px_32px_20px] gap-2 ${isTouchSelfRange ? "" : "col-span-2"}`}>
+                            <div className="h-7 flex items-center justify-between gap-3">
+                                <p className="text-xs text-zinc-500 uppercase">Withstand</p>
+                                <div className="h-7 w-[100px] px-2 rounded border border-amber-800 bg-amber-900/50 flex items-center justify-center gap-1 text-xs text-amber-500 shrink-0">
+                                    <span>Potency</span>
+                                    <span className="font-mono text-violet-300">{basePotency}</span>
                                 </div>
-                                {effectivePotency <= 0 && (
-                                    <p className="text-[11px] text-red-400">
-                                        Potency is reduced to 0: the spell may be active but has no effect.
-                                    </p>
-                                )}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Aimed Spell */}
-                    {isTouchSelfRange && (
-                        <div className="p-2 bg-zinc-800/30 rounded space-y-2">
-                            <div className="flex items-center justify-between gap-3">
-                                <div>
-                                    <p className="text-xs text-zinc-500 uppercase">Aimed Spell</p>
-                                    <p className="text-[11px] text-zinc-600">
-                                        Use only for Touch/Self Range spells thrown or fired at a target.
-                                    </p>
-                                </div>
-                                <Button
-                                    type="button"
-                                    size="sm"
-                                    className="h-7 px-2 text-xs bg-violet-700 hover:bg-violet-600"
-                                    onClick={handleRollAimedSpell}
-                                    data-testid="roll-aimed-spell-btn"
-                                >
-                                    Roll Aimed Spell
-                                </Button>
                             </div>
 
-                            <div className="grid grid-cols-[1fr_90px] gap-2 items-center">
-                                <div className="text-xs text-zinc-400">
-                                    Pool: <span className="font-mono text-violet-300">Gnosis {gnosis} + {aimedSkillName} {aimedSkillDots} - Defense</span>
-                                </div>
+                            <div className="grid grid-cols-[minmax(0,1fr)_72px] gap-2 items-center">
+                                <Select value={withstandTrait} onValueChange={setWithstandTrait}>
+                                    <SelectTrigger className="h-8 text-xs bg-zinc-900/50 border-zinc-700" data-testid="withstand-trait-select">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-zinc-900 border-zinc-700 z-[200]">
+                                        {WITHSTAND_TRAITS.map((trait) => (
+                                            <SelectItem key={trait.value} value={trait.value} className="text-xs text-zinc-200">
+                                                {trait.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+
                                 <Input
                                     type="number"
                                     min="0"
-                                    value={aimedTargetDefense}
-                                    onChange={(event) => setAimedTargetDefense(Math.max(0, Number(event.target.value) || 0))}
+                                    value={withstandValue}
+                                    onChange={(event) => setWithstandValue(Math.max(0, Number(event.target.value) || 0))}
+                                    disabled={withstandTrait === "none"}
                                     className="h-8 text-xs bg-zinc-900/50 border-zinc-700 text-right font-mono"
-                                    data-testid="aimed-target-defense-input"
+                                    data-testid="withstand-value-input"
                                 />
                             </div>
 
-                            <div className="flex justify-between text-xs text-zinc-500">
-                                <span>Short {aimedRangeBands.short}</span>
-                                <span>Medium {aimedRangeBands.medium}</span>
-                                <span>Long {aimedRangeBands.long}</span>
-                                <span className={`font-mono ${aimedSpellPoolRaw > 0 ? "text-teal-400" : "text-amber-400"}`}>
-                                    {aimedSpellPoolRaw > 0 ? `${aimedSpellPoolRaw} dice` : "Chance Die"}
+                            <div className="h-5 flex items-center justify-between text-xs">
+                                <span className="text-zinc-500">Effective Potency</span>
+                                <span className={`font-mono ${effectivePotency > 0 ? "text-teal-400" : "text-red-400"}`}>
+                                    {effectivePotency}
                                 </span>
                             </div>
                         </div>
-                    )}
+
+                        {/* Aimed Spell */}
+                        {isTouchSelfRange && (
+                            <div className="p-2 bg-zinc-800/30 rounded h-full grid grid-rows-[28px_32px_20px] gap-2">
+                                <div className="h-7 flex items-center justify-between gap-3">
+                                    <p className="text-xs text-zinc-500 uppercase">Aimed Spell</p>
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        className="h-7 w-[120px] px-2 text-xs bg-violet-700 hover:bg-violet-600"
+                                        onClick={handleRollAimedSpell}
+                                        data-testid="roll-aimed-spell-btn"
+                                    >
+                                        Roll Aimed Spell
+                                    </Button>
+                                </div>
+
+                                <div className="grid grid-cols-[minmax(0,1fr)_72px] gap-2 items-center">
+                                    <div className="text-[10px] text-zinc-400 whitespace-nowrap overflow-hidden">
+                                        <span className="font-mono text-violet-300">Gnosis {gnosis} + {aimedSkillName} {aimedSkillDots} - Defense</span>
+                                    </div>
+
+                                    <Input
+                                        type="number"
+                                        min="0"
+                                        value={aimedTargetDefense}
+                                        onChange={(event) => setAimedTargetDefense(Math.max(0, Number(event.target.value) || 0))}
+                                        className="h-8 text-xs bg-zinc-900/50 border-zinc-700 text-right font-mono"
+                                        data-testid="aimed-target-defense-input"
+                                    />
+                                </div>
+
+                                <div className="h-5 flex items-center justify-between gap-2 text-xs text-zinc-500">
+                                    <span>Short {aimedRangeBands.short}</span>
+                                    <span>Medium {aimedRangeBands.medium}</span>
+                                    <span>Long {aimedRangeBands.long}</span>
+                                    <span className={`font-mono ${aimedSpellPoolRaw > 0 ? "text-teal-400" : "text-amber-400"}`}>
+                                        {aimedSpellPoolRaw > 0 ? `${aimedSpellPoolRaw} dice` : "Chance Die"}
+                                    </span>
+                                </div>
+                            </div>
+                        )}
+                    </div>
 
                     {/* Yantras Section */}
                     <YantrasGrid
