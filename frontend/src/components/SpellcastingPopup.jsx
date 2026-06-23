@@ -1,12 +1,13 @@
 import { useState, useEffect, useMemo } from "react";
-import { X, Minus, Plus, Sparkles, Zap, Shield, Eye } from "lucide-react";
+import { X, Minus, Plus, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { GNOSIS_TABLE, YANTRAS } from "@/data/character-data";
 import { YantrasGrid } from "./spellcasting/YantrasGrid";
 import { PrimaryFactorOverride } from "./spellcasting/PrimaryFactorOverride";
+import { FactorRow } from "./spellcasting/FactorRow";
+import { ParadoxSection } from "./spellcasting/ParadoxSection";
 import { toast } from "sonner";
 
 // Practice dot requirements
@@ -783,7 +784,8 @@ export const SpellcastingPopup = ({
         ].join("\n");
 
         const baseCastLabel = `${arcanum} ${effectiveSpellType === "praxis" ? "Praxis" : effectiveSpellType === "rote" ? "Rote" : "Spell"} (${selectedPractice})`;
-        const castLabel = spellNameTrimmed || baseCastLabel;
+        const defaultSpellNameTrimmed = (defaultSpellName || "").trim();
+        const castLabel = spellNameTrimmed || defaultSpellNameTrimmed || baseCastLabel;
 
         const buildSpellRollConfig = (poolModifier = 0) => {
             const adjustedPool = Math.max(0, finalDicePool + poolModifier);
@@ -934,270 +936,96 @@ export const SpellcastingPopup = ({
 
     const castingTimeStandard = getCastingTime(gnosis);
 
-    // Helper to render a factor row
+    // Helper to render a factor row using the FactorRow component
     const renderFactorRow = (factorName, label, hasLevels) => {
         const f = factors[factorName];
-        const isRange = factorName === "range";
-        const isCasting = factorName === "casting";
         const hasPrimary = factorName === "potency" || factorName === "duration" || factorName === "scale";
         const isSelectedPrimary = hasPrimary && primaryFactor === factorName;
         const isEffectivePrimary = hasPrimary && effectivePrimaryFactor === factorName;
         const freeLevelsFromPrimary = isEffectivePrimary ? primaryFreeLevels : 0;
         const displayedLevel = factorName === "duration" ? getDisplayedDurationLevel() : f.level;
-
-        let description = "";
-        if (isCasting) {
-            description = getFactorDescription("casting");
-        } else if (isRange) {
-            description = getFactorDescription("range");
-        } else {
-            description = getFactorDescription(factorName);
-        }
+        const description = getFactorDescription(factorName);
 
         const paidLevels = hasLevels
             ? Math.max(0, f.level - 1 - freeLevelsFromPrimary)
             : 0;
 
+        const isDuration = factorName === "duration";
+        const isRange = factorName === "range";
+
+        const canTogglePrimary = !(
+            isSelectedPrimary ||
+            (factorName === "scale" && !overridePrimaryFactor) ||
+            (defaultPrimaryFactor && !overridePrimaryFactor)
+        );
+
+        const standardOrAdvancedDisabled =
+            (isRange && specialRangeMode !== "none") || (isDuration && lastingDuration);
+
         return (
-            <div key={factorName} className="grid grid-cols-[20px_170px_50px_50px_50px_1fr] gap-1.5 items-center p-2 bg-zinc-800/30 rounded text-sm">
-                {hasPrimary ? (
-                    <Checkbox
-                        checked={isSelectedPrimary}
-                        disabled={
-                            isSelectedPrimary ||
-                            (factorName === "scale" && !overridePrimaryFactor) ||
-                            (defaultPrimaryFactor && !overridePrimaryFactor)
+            <FactorRow
+                key={factorName}
+                factorName={factorName}
+                label={label}
+                hasLevels={hasLevels}
+                factor={f}
+                displayedLevel={displayedLevel}
+                description={description}
+                paidLevels={paidLevels}
+                freeLevelsFromPrimary={freeLevelsFromPrimary}
+                isSelectedPrimary={isSelectedPrimary}
+                isEffectivePrimary={isEffectivePrimary}
+                hasPrimary={hasPrimary}
+                canTogglePrimary={canTogglePrimary}
+                onSelectPrimary={setPrimaryFactor}
+                overridePrimaryFactor={overridePrimaryFactor}
+                onToggleStandard={() => {
+                    if (isDuration) setLastingDuration(false);
+                    updateFactor(factorName, { advanced: false, ...(hasLevels ? { level: 1 } : {}) });
+                }}
+                onToggleAdvanced={() => {
+                    if (isDuration) setLastingDuration(false);
+                    updateFactor(factorName, { advanced: true, ...(hasLevels ? { level: 1 } : {}) });
+                }}
+                onDecreaseLevel={() => updateFactor(factorName, { level: Math.max(1, f.level - 1) })}
+                onIncreaseLevel={() => updateFactor(factorName, { level: Math.min(getMaxLevel(factorName, f.advanced), f.level + 1) })}
+                canDecreaseLevel={f.level > 1}
+                canIncreaseLevel={f.level < getMaxLevel(factorName, f.advanced)}
+                standardDisabled={standardOrAdvancedDisabled}
+                advancedDisabled={standardOrAdvancedDisabled}
+                levelDisabled={isDuration && lastingDuration}
+                ritualCastingBonus={ritualCastingBonus}
+                onDecreaseRitualBonus={() => setRitualCastingBonus(Math.max(0, ritualCastingBonus - 1))}
+                onIncreaseRitualBonus={() => setRitualCastingBonus(Math.min(5, ritualCastingBonus + 1))}
+                canDecreaseRitualBonus={ritualCastingBonus > 0}
+                canIncreaseRitualBonus={ritualCastingBonus < 5}
+                lastingDuration={lastingDuration}
+                onToggleLasting={() => {
+                    setLastingDuration((prev) => {
+                        const next = !prev;
+                        if (next) {
+                            setFateDurationBonus(0);
+                            setMatterDurationMana(false);
+                            updateFactor("duration", { advanced: false, level: 1 });
                         }
-                        onCheckedChange={(checked) => {
-                            if (checked) {
-                                setPrimaryFactor(factorName);
-                            }
-                        }}
-                        className="border-zinc-600 data-[state=checked]:bg-teal-600 h-3.5 w-3.5"
-                        data-testid={`primary-${factorName}`}
-                    />
-                ) : (
-                    <span />
-                )}
-
-                <div className="text-xs">
-                    <div className="text-zinc-300">
-                        {label}
-                        {isEffectivePrimary && (
-                            <span className="text-teal-400 text-[9px] ml-1">
-                                {overridePrimaryFactor ? "PFO" : "P"}
-                            </span>
-                        )}
-                    </div>
-
-                    {factorName === "duration" && (
-                        <div className="flex flex-wrap gap-1 mt-1">
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setLastingDuration((prev) => {
-                                        const next = !prev;
-                                        if (next) {
-                                            setFateDurationBonus(0);
-                                            setMatterDurationMana(false);
-                                            updateFactor("duration", { advanced: false, level: 1 });
-                                        }
-                                        return next;
-                                    });
-                                }}
-                                className={`px-1.5 py-0.5 rounded border text-[9px] ${
-                                    lastingDuration
-                                        ? "bg-emerald-900/40 border-emerald-500/50 text-emerald-300"
-                                        : "bg-zinc-900/40 border-zinc-700 text-zinc-400"
-                                }`}
-                                data-testid="duration-lasting"
-                            >
-                                Lasting
-                            </button>
-                            {canUseFateDuration && [0, 1, 2, 3].map((bonus) => (
-                                <button
-                                    key={`fate-duration-${bonus}`}
-                                    type="button"
-                                    onClick={() => setFateDurationBonus(bonus)}
-                                    className={`px-1.5 py-0.5 rounded border text-[9px] ${
-                                        fateDurationBonus === bonus
-                                            ? "bg-blue-900/40 border-blue-500/50 text-blue-300"
-                                            : "bg-zinc-900/40 border-zinc-700 text-zinc-400"
-                                    }`}
-                                    data-testid={`fate-duration-${bonus}`}
-                                >
-                                    F{bonus === 0 ? "0" : `+${bonus}`}
-                                </button>
-                            ))}
-
-                            {canUseMatterDurationMana && (
-                                <button
-                                    type="button"
-                                    onClick={() => setMatterDurationMana((prev) => !prev)}
-                                    className={`px-1.5 py-0.5 rounded border text-[9px] ${
-                                        matterDurationMana
-                                            ? "bg-amber-900/40 border-amber-500/50 text-amber-300"
-                                            : "bg-zinc-900/40 border-zinc-700 text-zinc-400"
-                                    }`}
-                                    data-testid="matter-duration-mana"
-                                >
-                                    Matter 2
-                                </button>
-                            )}
-                        </div>
-                    )}
-
-                    {factorName === "range" && (
-                        <div className="flex flex-wrap gap-1 mt-1">
-                            {canUseSpaceSympathetic && (
-                                <button
-                                    type="button"
-                                    onClick={() => activateSpecialRange("space")}
-                                    className={`px-1.5 py-0.5 rounded border text-[9px] ${
-                                        specialRangeMode === "space"
-                                            ? "bg-blue-900/40 border-blue-500/50 text-blue-300"
-                                            : "bg-zinc-900/40 border-zinc-700 text-zinc-400"
-                                    }`}
-                                    data-testid="space-sympathetic-range"
-                                >
-                                    Space 2
-                                </button>
-                            )}
-
-                            {canUseTimeSympathetic && (
-                                <button
-                                    type="button"
-                                    onClick={() => activateSpecialRange("time")}
-                                    className={`px-1.5 py-0.5 rounded border text-[9px] ${
-                                        specialRangeMode === "time"
-                                            ? "bg-blue-900/40 border-blue-500/50 text-blue-300"
-                                            : "bg-zinc-900/40 border-zinc-700 text-zinc-400"
-                                    }`}
-                                    data-testid="time-sympathetic-time"
-                                >
-                                    Time 2
-                                </button>
-                            )}
-
-                            {specialRangeMode !== "none" && (
-                                <div className="flex items-center gap-0.5">
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-4 w-4 text-zinc-400"
-                                        onClick={() => setSympatheticWithstand(Math.max(0, sympatheticWithstand - 1))}
-                                        disabled={sympatheticWithstand <= 0}
-                                    >
-                                        <Minus className="w-2.5 h-2.5" />
-                                    </Button>
-                                    <span className="w-4 text-center text-[10px] font-mono text-violet-300">
-                                        {sympatheticWithstand}
-                                    </span>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-4 w-4 text-zinc-400"
-                                        onClick={() => setSympatheticWithstand(Math.min(5, sympatheticWithstand + 1))}
-                                        disabled={sympatheticWithstand >= 5}
-                                    >
-                                        <Plus className="w-2.5 h-2.5" />
-                                    </Button>
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </div>
-
-                <div className="flex justify-center">
-                    <Checkbox
-                        checked={!f.advanced && !(factorName === "duration" && lastingDuration)}
-                        onCheckedChange={() => {
-                            if (factorName === "duration") setLastingDuration(false);
-                            updateFactor(factorName, { advanced: false, ...(hasLevels ? { level: 1 } : {}) });
-                        }}
-                        className="border-zinc-600 data-[state=checked]:bg-violet-600"
-                        disabled={(factorName === "range" && specialRangeMode !== "none") || (factorName === "duration" && lastingDuration)}
-                        data-testid={`factor-${factorName}-std`}
-                    />
-                </div>
-
-                <div className="flex justify-center">
-                    <Checkbox
-                        checked={f.advanced && !(factorName === "duration" && lastingDuration)}
-                        onCheckedChange={() => {
-                            if (factorName === "duration") setLastingDuration(false);
-                            updateFactor(factorName, { advanced: true, ...(hasLevels ? { level: 1 } : {}) });
-                        }}
-                        className="border-zinc-600 data-[state=checked]:bg-amber-600"
-                        disabled={(factorName === "range" && specialRangeMode !== "none") || (factorName === "duration" && lastingDuration)}
-                        data-testid={`factor-${factorName}-adv`}
-                    />
-                </div>
-
-                {hasLevels ? (
-                    <div className="flex items-center justify-center gap-0.5">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-5 w-5 text-zinc-400"
-                            onClick={() => updateFactor(factorName, { level: Math.max(1, f.level - 1) })}
-                            disabled={f.level <= 1 || (factorName === "duration" && lastingDuration)}
-                        >
-                            <Minus className="w-3 h-3" />
-                        </Button>
-                        <span className="text-sm font-mono text-violet-300 w-4 text-center">
-                            {factorName === "duration" && lastingDuration ? "—" : displayedLevel}
-                        </span>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-5 w-5 text-zinc-400"
-                            onClick={() => updateFactor(factorName, { level: Math.min(getMaxLevel(factorName, f.advanced), f.level + 1) })}
-                            disabled={f.level >= getMaxLevel(factorName, f.advanced) || (factorName === "duration" && lastingDuration)}
-                        >
-                            <Plus className="w-3 h-3" />
-                        </Button>
-                    </div>
-                ) : isCasting && !f.advanced ? (
-                    <div className="flex items-center justify-center gap-0.5">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-5 w-5 text-zinc-400"
-                            onClick={() => setRitualCastingBonus(Math.max(0, ritualCastingBonus - 1))}
-                            disabled={ritualCastingBonus <= 0}
-                            data-testid="ritual-casting-decrease"
-                        >
-                            <Minus className="w-3 h-3" />
-                        </Button>
-                        <span className="text-sm font-mono text-violet-300 w-4 text-center">{ritualCastingBonus}</span>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-5 w-5 text-zinc-400"
-                            onClick={() => setRitualCastingBonus(Math.min(5, ritualCastingBonus + 1))}
-                            disabled={ritualCastingBonus >= 5}
-                            data-testid="ritual-casting-increase"
-                        >
-                            <Plus className="w-3 h-3" />
-                        </Button>
-                    </div>
-                ) : (
-                    <span className="text-center text-zinc-500">-</span>
-                )}
-
-                <span className="text-xs text-zinc-400 truncate">
-                    {description}
-                    {f.advanced && factorName !== "duration" && <span className="text-amber-400 ml-1">(+1R)</span>}
-                    {f.advanced && factorName === "duration" && !matterDurationMana && <span className="text-amber-400 ml-1">(+1R)</span>}
-                    {f.advanced && factorName === "duration" && matterDurationMana && arcanum === "Matter" && <span className="text-blue-400 ml-1">(+1 Mana)</span>}
-                    {factorName === "range" && specialRangeMode !== "none" && <span className="text-blue-400 ml-1">(+1 Mana, +1 Reach)</span>}
-                    {factorName === "duration" && fateDurationBonus > 0 && <span className="text-blue-400 ml-1">(+{fateDurationBonus} lvl, +1 Mana)</span>}
-                    {isCasting && !f.advanced && ritualCastingBonus > 0 && <span className="text-teal-400 ml-1">(+{ritualCastingBonus}d)</span>}
-                    {hasLevels && paidLevels > 0 && <span className="text-red-400 ml-1">(-{paidLevels * 2}d)</span>}
-                    {hasLevels && freeLevelsFromPrimary > 0 && f.level > 1 && <span className="text-teal-400 ml-1">(+{Math.min(freeLevelsFromPrimary, f.level - 1)}free)</span>}
-                </span>
-            </div>
+                        return next;
+                    });
+                }}
+                canUseFateDuration={canUseFateDuration}
+                fateDurationBonus={fateDurationBonus}
+                onSetFateDurationBonus={setFateDurationBonus}
+                canUseMatterDurationMana={canUseMatterDurationMana}
+                matterDurationMana={matterDurationMana}
+                onToggleMatterDurationMana={() => setMatterDurationMana((prev) => !prev)}
+                arcanum={arcanum}
+                canUseSpaceSympathetic={canUseSpaceSympathetic}
+                canUseTimeSympathetic={canUseTimeSympathetic}
+                specialRangeMode={specialRangeMode}
+                onActivateSpecialRange={activateSpecialRange}
+                sympatheticWithstand={sympatheticWithstand}
+                onDecreaseSympatheticWithstand={() => setSympatheticWithstand(Math.max(0, sympatheticWithstand - 1))}
+                onIncreaseSympatheticWithstand={() => setSympatheticWithstand(Math.min(5, sympatheticWithstand + 1))}
+            />
         );
     };
 
@@ -1731,243 +1559,34 @@ export const SpellcastingPopup = ({
                     </div>
 
                     {/* Paradox Section */}
-                    {selectedPractice && (
-                        <div className={`p-3 rounded space-y-3 border ${
-                            paradoxTriggered
-                                ? "bg-red-950/20 border-red-500/40"
-                                : "bg-zinc-800/30 border-zinc-700/50"
-                        }`}>
-                            <div className="flex items-center gap-2">
-                                <Zap className={`w-4 h-4 ${paradoxTriggered ? "text-red-400" : "text-zinc-500"}`} />
-                                <p className={`text-xs uppercase font-bold ${paradoxTriggered ? "text-red-400" : "text-zinc-500"}`}>
-                                    Paradox
-                                </p>
-                            </div>
-
-                            {/* Base paradox from Reach */}
-                            <div className="text-xs text-zinc-400">
-                                {reachBeyondFree > 0 ? (
-                                    <span>
-                                        <span className="text-red-400 font-mono">{reachBeyondFree}</span> Reach over
-                                        {" x "}<span className="font-mono">{paradoxDiePerReach}</span> die/Reach (Gnosis {gnosis})
-                                        {" = "}<span className="text-red-400 font-mono font-bold">{baseParadoxDice}</span> base dice
-                                    </span>
-                                ) : (
-                                    <span className="text-zinc-500">No Reach beyond free - no Paradox risk</span>
-                                )}
-                            </div>
-
-                            {/* Modifiers */}
-                            {paradoxTriggered && (
-                                <>
-                                    <div className="space-y-1.5">
-                                        <p className="text-[10px] text-zinc-500 uppercase">Modifiers</p>
-                                        <div className="grid grid-cols-2 gap-1.5">
-                                            <label className="flex items-center gap-2 text-xs cursor-pointer" data-testid="paradox-inured">
-                                                <Checkbox
-                                                    checked={paradoxInured}
-                                                    onCheckedChange={setParadoxInured}
-                                                    className="border-zinc-600 data-[state=checked]:bg-red-600 h-3.5 w-3.5"
-                                                />
-                                                <span className="text-zinc-300">Inured to spell</span>
-                                                <span className="text-red-400 font-mono ml-auto">+2</span>
-                                            </label>
-                                            <label className="flex items-center gap-2 text-xs cursor-pointer" data-testid="paradox-sleepers">
-                                                <Checkbox
-                                                    checked={sleeperWitnesses !== "none"}
-                                                    onCheckedChange={(checked) => setSleeperWitnesses(checked ? "few" : "none")}
-                                                    className="border-zinc-600 data-[state=checked]:bg-red-600 h-3.5 w-3.5"
-                                                />
-                                                <span className="text-zinc-300">Sleeper witnesses</span>
-                                                <span className="text-red-400 font-mono ml-auto">+1</span>
-                                            </label>
-                                        </div>
-
-                                        {/* Sleeper witness scale */}
-                                        {sleeperWitnesses !== "none" && (
-                                            <div className="flex items-center gap-2 pl-6">
-                                                <Eye className="w-3 h-3 text-zinc-500" />
-                                                <Select value={sleeperWitnesses} onValueChange={setSleeperWitnesses}>
-                                                    <SelectTrigger className="h-7 w-40 text-xs bg-zinc-900/50 border-zinc-700" data-testid="sleeper-scale-select">
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent className="bg-zinc-900 border-zinc-700 z-[200]">
-                                                        <SelectItem value="few" className="text-xs text-zinc-200">Few (9-again)</SelectItem>
-                                                        <SelectItem value="large" className="text-xs text-zinc-200">Large group (8-again)</SelectItem>
-                                                        <SelectItem value="crowd" className="text-xs text-zinc-200">Full crowd (Rote)</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                                <span className="text-[10px] text-zinc-500">on Paradox roll</span>
-                                            </div>
-                                        )}
-
-                                        {/* Dedicated tool indicator */}
-                                        {hasDedicatedTool && (
-                                            <div className="flex items-center gap-2 text-xs pl-1">
-                                                <Shield className="w-3 h-3 text-teal-500" />
-                                                <span className="text-zinc-300">Dedicated Magical Tool</span>
-                                                <span className="text-teal-400 font-mono ml-auto">-2</span>
-                                                <span className="text-[10px] text-zinc-500">(from Yantras)</span>
-                                            </div>
-                                        )}
-
-                                        {/* Previous Paradox rolls */}
-                                        <div className="flex items-center gap-2 text-xs">
-                                            <span className="text-zinc-400">Previous Paradox rolls this scene:</span>
-                                            <div className="flex items-center gap-1 ml-auto">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-5 w-5 text-zinc-400"
-                                                    onClick={() => setPreviousParadoxRolls((current) => Math.max(0, current - 1))}
-                                                    disabled={scenePreviousParadoxRolls <= 0}
-                                                    data-testid="prev-paradox-decrease"
-                                                >
-                                                    <Minus className="w-3 h-3" />
-                                                </Button>
-
-                                                <span className="font-mono text-red-400 w-4 text-center">
-                                                    {scenePreviousParadoxRolls}
-                                                </span>
-
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-5 w-5 text-zinc-400"
-                                                    onClick={() => setPreviousParadoxRolls((current) => current + 1)}
-                                                    data-testid="prev-paradox-increase"
-                                                >
-                                                    <Plus className="w-3 h-3" />
-                                                </Button>
-
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="h-5 px-2 text-[10px] text-zinc-500 hover:text-zinc-200"
-                                                    onClick={resetPreviousParadoxRolls}
-                                                    disabled={scenePreviousParadoxRolls <= 0}
-                                                    data-testid="prev-paradox-reset"
-                                                >
-                                                    Reset
-                                                </Button>
-
-                                                {scenePreviousParadoxRolls > 0 && (
-                                                    <span className="text-red-400 font-mono">+{scenePreviousParadoxRolls}</span>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Paradox pool before mana */}
-                                    <div className="text-xs text-zinc-400 pt-1 border-t border-zinc-700/50">
-                                        Pool before Mana: <span className="font-mono text-red-400">{Math.max(0, paradoxAfterModifiers)}</span>
-                                        {paradoxAfterModifiers < baseParadoxDice && (
-                                            <span className="text-zinc-500 ml-1">
-                                                ({baseParadoxDice}{paradoxModifiers >= 0 ? "+" : ""}{paradoxModifiers})
-                                            </span>
-                                        )}
-                                    </div>
-
-                                    {/* Mana mitigation */}
-                                    <div className="p-2 bg-zinc-900/50 rounded space-y-1.5" data-testid="mana-mitigation-section">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-xs text-zinc-300 font-medium">Spend Mana to mitigate Paradox</span>
-                                            <span className="text-[10px] text-zinc-500">
-                                                -1 die per Mana (max {maxManaMitigation}/turn)
-                                            </span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <Button variant="ghost" size="icon" className="h-6 w-6 text-zinc-400"
-                                                onClick={() => setManaMitigation(Math.max(0, manaMitigation - 1))}
-                                                disabled={manaMitigation <= 0}
-                                                data-testid="mana-mitigation-decrease"
-                                            ><Minus className="w-3 h-3" /></Button>
-                                            <div className="flex-1 h-2 bg-zinc-800 rounded-full overflow-hidden">
-                                                <div
-                                                    className="h-full bg-violet-500 transition-all"
-                                                    style={{ width: maxManaMitigation > 0 ? `${(actualManaMitigation / maxManaMitigation) * 100}%` : "0%" }}
-                                                />
-                                            </div>
-                                            <Button variant="ghost" size="icon" className="h-6 w-6 text-zinc-400"
-                                                onClick={() => setManaMitigation(Math.min(maxManaMitigation, manaMitigation + 1))}
-                                                disabled={manaMitigation >= maxManaMitigation || maxManaMitigation <= 0}
-                                                data-testid="mana-mitigation-increase"
-                                            ><Plus className="w-3 h-3" /></Button>
-                                            <span className="font-mono text-violet-400 text-sm w-8 text-right">{actualManaMitigation}</span>
-                                        </div>
-                                    </div>
-
-                                    {/* Final Paradox */}
-                                    <div className={`p-2 rounded text-center ${
-                                        paradoxIsChanceDie ? "bg-amber-900/30 border border-amber-500/40" : "bg-red-900/30 border border-red-500/40"
-                                    }`} data-testid="final-paradox-display">
-                                        {paradoxIsChanceDie ? (
-                                            <div>
-                                                <p className="text-amber-400 font-bold text-sm">CHANCE DIE</p>
-                                                <p className="text-[10px] text-amber-300/70">
-                                                    Paradox was triggered - reduced to 0 by Mana, rolls as Chance Die
-                                                </p>
-                                            </div>
-                                        ) : (
-                                            <div>
-                                                <p className="text-red-400 font-bold text-sm">
-                                                    {finalParadoxPool} Paradox {finalParadoxPool === 1 ? "Die" : "Dice"}
-                                                </p>
-                                                {sleeperWitnesses !== "none" && (
-                                                    <p className="text-[10px] text-red-300/70">
-                                                        Paradox roll quality: {paradoxRollQuality.desc}
-                                                    </p>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                    {paradoxTriggered && (
-                                        <div className="p-2 bg-zinc-900/50 rounded space-y-2" data-testid="paradox-mode-section">
-                                            <p className="text-xs text-zinc-300 font-medium">Resolve Paradox before the spell roll</p>
-
-                                            <div className="grid grid-cols-2 gap-2">
-                                                <Button
-                                                    type="button"
-                                                    variant={paradoxMode === "release" ? "default" : "outline"}
-                                                    onClick={() => setParadoxMode("release")}
-                                                    className={paradoxMode === "release"
-                                                        ? "bg-red-600 hover:bg-red-500 text-white"
-                                                        : "border-zinc-700 text-zinc-300"}
-                                                    data-testid="paradox-mode-release"
-                                                >
-                                                    Release
-                                                </Button>
-
-                                                <Button
-                                                    type="button"
-                                                    variant={paradoxMode === "contain" ? "default" : "outline"}
-                                                    onClick={() => setParadoxMode("contain")}
-                                                    className={paradoxMode === "contain"
-                                                        ? "bg-amber-600 hover:bg-amber-500 text-black"
-                                                        : "border-zinc-700 text-zinc-300"}
-                                                    data-testid="paradox-mode-contain"
-                                                >
-                                                    Contain
-                                                </Button>
-                                            </div>
-
-                                            {paradoxMode === "release" && (
-                                                <p className="text-[11px] text-zinc-500">
-                                                    Roll Paradox first. Each Paradox success gives -1 die to the spell.
-                                                </p>
-                                            )}
-
-                                            {paradoxMode === "contain" && (
-                                                <p className="text-[11px] text-zinc-500">
-                                                    Roll Paradox vs Wisdom. Each Wisdom success cancels one Paradox success and deals 1 Bashing. Any Paradox success left gives Paradox Taint.
-                                                </p>
-                                            )}
-                                        </div>
-                                    )}
-                                </>
-                            )}
-                        </div>
-                    )}
+                    <ParadoxSection
+                        selectedPractice={selectedPractice}
+                        paradoxTriggered={paradoxTriggered}
+                        reachBeyondFree={reachBeyondFree}
+                        paradoxDiePerReach={paradoxDiePerReach}
+                        gnosis={gnosis}
+                        baseParadoxDice={baseParadoxDice}
+                        paradoxInured={paradoxInured}
+                        setParadoxInured={setParadoxInured}
+                        sleeperWitnesses={sleeperWitnesses}
+                        setSleeperWitnesses={setSleeperWitnesses}
+                        hasDedicatedTool={hasDedicatedTool}
+                        scenePreviousParadoxRolls={scenePreviousParadoxRolls}
+                        onPrevParadoxIncrease={() => setPreviousParadoxRolls((current) => current + 1)}
+                        onPrevParadoxDecrease={() => setPreviousParadoxRolls((current) => Math.max(0, current - 1))}
+                        onPrevParadoxReset={resetPreviousParadoxRolls}
+                        paradoxAfterModifiers={paradoxAfterModifiers}
+                        paradoxModifiers={paradoxModifiers}
+                        maxManaMitigation={maxManaMitigation}
+                        manaMitigation={manaMitigation}
+                        setManaMitigation={setManaMitigation}
+                        actualManaMitigation={actualManaMitigation}
+                        paradoxIsChanceDie={paradoxIsChanceDie}
+                        finalParadoxPool={finalParadoxPool}
+                        paradoxRollQuality={paradoxRollQuality}
+                        paradoxMode={paradoxMode}
+                        setParadoxMode={setParadoxMode}
+                    />
 
                     {/* Summary */}
                     <div className="p-3 bg-zinc-800/50 rounded space-y-1.5">

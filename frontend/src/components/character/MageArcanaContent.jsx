@@ -94,6 +94,7 @@ export const MageArcanaContent = ({
                                         onClick={() => arcanumRating > 0 && openSpellcastingPopup(arcanum)}
                                         disabled={arcanumRating === 0}
                                         className={`text-xs shrink-0 ${labelColor} ${arcanumRating > 0 ? 'hover:text-violet-300 cursor-pointer' : 'cursor-default'}`}
+                                        data-testid={`arcanum-${arcanum.toLowerCase()}-cast`}
                                     >
                                         {arcanum}
                                         {isRuling && <span className="ml-1 text-[9px] text-blue-500">(R)</span>}
@@ -106,6 +107,7 @@ export const MageArcanaContent = ({
                                                     key={idx}
                                                     onClick={() => openSpellcastingPopup(arcanum, practice)}
                                                     className="text-[8px] px-1 py-0.5 rounded bg-violet-900/30 text-violet-400 hover:bg-violet-800/50 hover:text-violet-300 transition-colors"
+                                                    data-testid={`arcanum-${arcanum.toLowerCase()}-practice-${practice.toLowerCase()}-cast`}
                                                 >
                                                     {practice}
                                                 </button>
@@ -223,7 +225,7 @@ export const MageArcanaContent = ({
                                         })}
                                     </SelectContent>
                                 </Select>
-                                <Button variant="ghost" size="sm" onClick={() => openSpellcastingPopup(rote.arcanum, rotePractice, "rote", rote.skill, rote.name || "")} className="h-6 px-1.5 text-[10px] text-violet-400 hover:text-violet-300 shrink-0" data-testid={`rote-${index}-cast`}>
+                                <Button variant="ghost" size="sm" onClick={() => openSpellcastingPopup(rote.arcanum, rotePractice, "rote", rote.skill, rote.spell || "")} className="h-6 px-1.5 text-[10px] text-violet-400 hover:text-violet-300 shrink-0" data-testid={`rote-${index}-cast`}>
                                     <Sparkles className="w-3 h-3" />
                                 </Button>
                                 <Button variant="ghost" size="sm" onClick={() => { const rotes = (getValue("rotes") || []).filter((_, i) => i !== index); handleChange("rotes", rotes); }} className="h-6 w-6 text-zinc-400 hover:text-red-400 shrink-0" data-testid={`rote-${index}-delete`}>
@@ -323,7 +325,7 @@ export const MageArcanaContent = ({
                                         ))}
                                     </SelectContent>
                                 </Select>
-                                <Button variant="ghost" size="sm" onClick={() => openSpellcastingPopup(praxis.arcanum, praxisPractice, "praxis", null, praxis.name || "")} className="h-6 px-1.5 text-[10px] text-teal-400 hover:text-teal-300 shrink-0" data-testid={`praxis-${index}-cast`}>
+                                <Button variant="ghost" size="sm" onClick={() => openSpellcastingPopup(praxis.arcanum, praxisPractice, "praxis", null, praxis.spell || "")} className="h-6 px-1.5 text-[10px] text-teal-400 hover:text-teal-300 shrink-0" data-testid={`praxis-${index}-cast`}>
                                     <Sparkles className="w-3 h-3" />
                                 </Button>
                                 <Button variant="ghost" size="sm" onClick={() => { const praxes = (getValue("praxes") || []).filter((_, i) => i !== index); handleChange("praxes", praxes); }} className="h-6 w-6 text-zinc-400 hover:text-red-400 shrink-0" data-testid={`praxis-${index}-delete`}>
