@@ -222,6 +222,7 @@ export const GameCardsPanel = ({
     onRelinquishActiveSpell,
     onRelinquishActiveSpellSafely,
     onGenerateCaseTruth,
+    onAddRecentRoll,
     onTriggerDiceRoll,
     onApplyIncomingDamage,
     onUpdateCharacter,
@@ -348,6 +349,7 @@ export const GameCardsPanel = ({
     const armorBallistic = equippedArmor?.armor?.ballistic ?? 0;
     const baseDefense = Math.min(dexterity, wits) + athletics + mageArmorDefenseBonus;
     const normalDefense = hasCondition("Blinded") ? Math.max(0, Math.floor(baseDefense / 2)) : baseDefense;
+
     const initiativeModifier = dexterity + composure;
     const baseSpeed = strength + dexterity + 5;
     const speed = hasCondition("Leg Wrack") ? Math.max(1, Math.floor(baseSpeed / 2)) : baseSpeed;
@@ -538,6 +540,7 @@ export const GameCardsPanel = ({
                                     activeMageArmorName={activeMageArmorName}
                                     activeMageArmorDots={activeMageArmorDots}
                                     onTriggerDiceRoll={onTriggerDiceRoll}
+                                    onAddRecentRoll={onAddRecentRoll}
                                     onApplyIncomingDamage={onApplyIncomingDamage}
                                     onUpdateCharacter={onUpdateCharacter}
                                     healthBoxes={healthBoxes}

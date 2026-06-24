@@ -695,6 +695,7 @@ export const CombatTrackerCard = ({
     activeMageArmorName,
     activeMageArmorDots,
     onTriggerDiceRoll,
+    onAddRecentRoll,
     onApplyIncomingDamage,
     onUpdateCharacter,
     healthBoxes,
@@ -769,14 +770,73 @@ export const CombatTrackerCard = ({
     const selectedWeaponDamage = selectedWeapon?.damage ?? 0;
     const selectedWeaponIndex = selectedWeaponOption?.idx ?? -1;
 
+    // Weapon Initiative applies only when that weapon is selected in Outgoing Attack.
+    const selectedWeaponInitiativeModifier = selectedWeaponOption
+        ? Number(selectedWeapon?.initiative) || 0
+        : 0;
+
+    const baseInitiativeModifier = Number(initiativeModifier) || 0;
+    const effectiveInitiativeModifier = baseInitiativeModifier + selectedWeaponInitiativeModifier;
+
+    const formatSignedMathTerm = (value) => {
+        const numeric = Number(value) || 0;
+        return numeric >= 0 ? `+ ${numeric}` : `- ${Math.abs(numeric)}`;
+    };
+
+    const formatNamedModifierTerm = (name, value) => {
+        const numeric = Number(value) || 0;
+        const sign = numeric >= 0 ? "+" : "-";
+        return `+ ${name} ${sign}${Math.abs(numeric)}`;
+    };
+
     const canThrowSelectedWeapon =
         !!selectedWeapon &&
         (selectedWeapon.kind ?? "melee") === "melee" &&
         (selectedWeapon.size ?? 1) === 1;
 
+    const formatSignedModifier = (value) =>
+        value >= 0 ? `+${value}` : `${value}`;
+
     const rollInitiative = () => {
         const die = Math.floor(Math.random() * 10) + 1;
-        setInitiativeRoll({ die, modifier: initiativeModifier, total: die + initiativeModifier });
+        const total = die + effectiveInitiativeModifier;
+
+        const hasSelectedWeaponInitiative =
+            !!selectedWeaponOption && selectedWeaponInitiativeModifier !== 0;
+
+        const rollBreakdown = [
+            "d10",
+            formatSignedMathTerm(baseInitiativeModifier),
+            ...(hasSelectedWeaponInitiative
+                ? [formatNamedModifierTerm(selectedWeaponName, selectedWeaponInitiativeModifier)]
+                : []),
+        ].join(" ");
+
+        const resultBreakdown = [
+            String(die),
+            formatSignedMathTerm(baseInitiativeModifier),
+            ...(hasSelectedWeaponInitiative
+                ? [formatSignedMathTerm(selectedWeaponInitiativeModifier)]
+                : []),
+        ].join(" ");
+
+        setInitiativeRoll({
+            die,
+            modifier: effectiveInitiativeModifier,
+            baseModifier: baseInitiativeModifier,
+            weaponModifier: selectedWeaponInitiativeModifier,
+            weaponName: hasSelectedWeaponInitiative ? selectedWeaponName : null,
+            total,
+        });
+
+        onAddRecentRoll?.({
+            title: "Initiative",
+            transcript: [
+                `Roll: ${rollBreakdown}`,
+                `Result: ${resultBreakdown} = ${total}`,
+            ].join("\n"),
+            outcome: `Current Initiative ${total}`,
+        });
     };
 
     const handleToggleMageArmor = async (arcanum) => {
@@ -804,6 +864,7 @@ export const CombatTrackerCard = ({
 
     useEffect(() => {
         setCurrentDefense(normalDefense);
+        setInitiativeRoll(null);
         setSelectedWeaponKey("__unarmed__");
         setAttackMode("unarmed");
         setTargetDefense("0");
@@ -811,7 +872,6 @@ export const CombatTrackerCard = ({
         setIncomingDamage("1");
         setIncomingType("bashing");
         setIncomingSource("general");
-        rollInitiative();
     }, [activeCharacter?.id, normalDefense, initiativeModifier]);
 
     useEffect(() => {
@@ -830,6 +890,30 @@ export const CombatTrackerCard = ({
             setAttackMode("melee");
         }
     }, [selectedWeaponOption, selectedWeaponKey]);
+
+    useEffect(() => {
+        setInitiativeRoll((prev) => {
+            if (!prev) return prev;
+
+            return {
+                ...prev,
+                modifier: effectiveInitiativeModifier,
+                baseModifier: baseInitiativeModifier,
+                weaponModifier: selectedWeaponInitiativeModifier,
+                weaponName:
+                    selectedWeaponOption && selectedWeaponInitiativeModifier !== 0
+                        ? selectedWeaponName
+                        : null,
+                total: prev.die + effectiveInitiativeModifier,
+            };
+        });
+    }, [
+        effectiveInitiativeModifier,
+        baseInitiativeModifier,
+        selectedWeaponInitiativeModifier,
+        selectedWeaponKey,
+        selectedWeaponName,
+    ]);
 
     const attackProfile = (() => {
         if (!selectedWeaponOption) {
@@ -941,7 +1025,7 @@ export const CombatTrackerCard = ({
                     >
                         <div className="flex items-center justify-between">
                             <span className="text-zinc-500">Initiative</span>
-                            <span className="font-mono text-teal-400">{initiativeModifier}</span>
+                            <span className="font-mono text-teal-400">{effectiveInitiativeModifier}</span>
                         </div>
                     </button>
                 </div>
@@ -961,12 +1045,17 @@ export const CombatTrackerCard = ({
                         </div>
                     </div>
 
-                    <div className="rounded-sm border p-2 bg-zinc-900/30 border-zinc-800">
+                    <button
+                        type="button"
+                        onClick={() => setInitiativeRoll(null)}
+                        className="rounded-sm border p-2 text-left transition-all bg-zinc-900/30 border-zinc-800 hover:border-zinc-600"
+                        data-testid="combat-card-current-initiative-btn"
+                    >
                         <div className="flex items-center justify-between">
-                            <span className="text-zinc-500">Current Init</span>
-                            <span className="font-mono text-teal-400">{initiativeRoll?.total ?? "x"}</span>
+                            <span className="text-zinc-500">Current Initiative</span>
+                            <span className="font-mono text-teal-400">{initiativeRoll?.total ?? ""}</span>
                         </div>
-                    </div>
+                    </button>
                 </div>
 
                 <div className="grid grid-cols-3 gap-2 text-xs">

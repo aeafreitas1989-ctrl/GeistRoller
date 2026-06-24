@@ -33,6 +33,12 @@ const YANTRA_TOOL_ORDER = {
 const normalizeInventoryText = (value) =>
     String(value || "").trim().toLowerCase();
 
+const clampInventoryNumber = (value, min, max, fallback = min) => {
+    const parsed = parseInt(value, 10);
+    const safe = Number.isFinite(parsed) ? parsed : fallback;
+    return Math.min(max, Math.max(min, safe));
+};
+
 const compareInventoryNames = (a, b) =>
     normalizeInventoryText(a?.name || "Unnamed").localeCompare(
         normalizeInventoryText(b?.name || "Unnamed"),
@@ -534,18 +540,85 @@ export const CombatContent = ({
                                                 </div>
                                             </div>
                                         )}
-                                        <div className="grid grid-cols-3 gap-2">
+                                        <div className="grid grid-cols-4 gap-2">
                                             <div>
                                                 <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Damage</label>
-                                                <Input type="number" min={1} max={5} value={invDraft.weapon.damage} onChange={(e) => setInvDraft((prev) => ({ ...prev, weapon: { ...prev.weapon, damage: Math.min(5, Math.max(1, parseInt(e.target.value, 10) || 1)) } }))} className="h-7 input-geist text-xs" />
+                                                <Input
+                                                    type="number"
+                                                    min={0}
+                                                    max={5}
+                                                    value={invDraft.weapon.damage ?? 0}
+                                                    onChange={(e) =>
+                                                        setInvDraft((prev) => ({
+                                                            ...prev,
+                                                            weapon: {
+                                                                ...prev.weapon,
+                                                                damage: clampInventoryNumber(e.target.value, 0, 5, 0),
+                                                            },
+                                                        }))
+                                                    }
+                                                    className="h-7 input-geist text-xs"
+                                                />
                                             </div>
+
+                                            <div>
+                                                <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Initiative</label>
+                                                <Input
+                                                    type="number"
+                                                    min={-6}
+                                                    max={0}
+                                                    value={invDraft.weapon.initiative ?? 0}
+                                                    onChange={(e) =>
+                                                        setInvDraft((prev) => ({
+                                                            ...prev,
+                                                            weapon: {
+                                                                ...prev.weapon,
+                                                                initiative: clampInventoryNumber(e.target.value, -6, 0, 0),
+                                                            },
+                                                        }))
+                                                    }
+                                                    className="h-7 input-geist text-xs"
+                                                />
+                                            </div>
+
                                             <div>
                                                 <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Strength</label>
-                                                <Input type="number" min={0} max={5} value={invDraft.weapon.strength} onChange={(e) => setInvDraft((prev) => ({ ...prev, weapon: { ...prev.weapon, strength: Math.min(5, Math.max(0, parseInt(e.target.value, 10) || 0)) } }))} className="h-7 input-geist text-xs" />
+                                                <Input
+                                                    type="number"
+                                                    min={0}
+                                                    max={5}
+                                                    value={invDraft.weapon.strength}
+                                                    onChange={(e) =>
+                                                        setInvDraft((prev) => ({
+                                                            ...prev,
+                                                            weapon: {
+                                                                ...prev.weapon,
+                                                                strength: clampInventoryNumber(e.target.value, 0, 5, 0),
+                                                            },
+                                                        }))
+                                                    }
+                                                    className="h-7 input-geist text-xs"
+                                                />
                                             </div>
+
                                             <div>
                                                 <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Size</label>
-                                                <Input type="number" min={1} max={5} value={invDraft.weapon.size} onChange={(e) => setInvDraft((prev) => ({ ...prev, weapon: { ...prev.weapon, size: Math.min(5, Math.max(1, parseInt(e.target.value, 10) || 1)) } }))} className="h-7 input-geist text-xs" />
+                                                <Input
+                                                    type="number"
+                                                    min={1}
+                                                    max={5}
+                                                    value={invDraft.weapon.size}
+                                                    onChange={(e) =>
+                                                        setInvDraft((prev) => ({
+                                                            ...prev,
+                                                            weapon: {
+                                                                ...prev.weapon,
+                                                                size: clampInventoryNumber(e.target.value, 1, 5, 1),
+                                                            },
+                                                        }))
+                                                    }
+                                                    className="h-7 input-geist text-xs"
+                                                />
                                             </div>
                                         </div>
                                         <div>
@@ -641,21 +714,21 @@ export const CombatContent = ({
                                         <div className="grid grid-cols-2 gap-2">
                                             <div>
                                                 <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Bonus</label>
-                                                <Input type="number" min={0} max={5} value={invDraft.equipment.bonus} onChange={(e) => setInvDraft((prev) => ({ ...prev, equipment: { ...prev.equipment, bonus: Math.min(5, Math.max(0, parseInt(e.target.value, 10) || 0)) } }))} className="h-7 input-geist text-xs" />
+                                                <Input type="number" min={5} max={5} value={invDraft.equipment.bonus} onChange={(e) => setInvDraft((prev) => ({ ...prev, equipment: { ...prev.equipment, bonus: clampInventoryNumber(e.target.value, -5, 5, 1), }, })) } className="h-7 input-geist text-xs" />
                                             </div>
                                             <div>
                                                 <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Durability</label>
-                                                <Input type="number" min={0} max={5} value={invDraft.equipment.durability} onChange={(e) => setInvDraft((prev) => ({ ...prev, equipment: { ...prev.equipment, durability: Math.min(5, Math.max(0, parseInt(e.target.value, 10) || 0)) } }))} className="h-7 input-geist text-xs" />
+                                                <Input type="number" min={1} max={5} value={invDraft.equipment.durability} onChange={(e) => setInvDraft((prev) => ({ ...prev, equipment: { ...prev.equipment, durability: clampInventoryNumber(e.target.value, 1, 5, 1), }, })) } className="h-7 input-geist text-xs" />
                                             </div>
                                         </div>
                                         <div className="grid grid-cols-2 gap-2">
                                             <div>
                                                 <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Size</label>
-                                                <Input type="number" min={1} max={5} value={invDraft.equipment.size} onChange={(e) => setInvDraft((prev) => ({ ...prev, equipment: { ...prev.equipment, size: Math.min(5, Math.max(1, parseInt(e.target.value, 10) || 1)) } }))} className="h-7 input-geist text-xs" />
+                                                <Input type="number" min={1} max={20} value={invDraft.equipment.size} onChange={(e) => setInvDraft((prev) => ({ ...prev, equipment: { ...prev.equipment, size: clampInventoryNumber(e.target.value, 1, 20, 1), }, }))} className="h-7 input-geist text-xs" />
                                             </div>
                                             <div>
                                                 <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Structure</label>
-                                                <Input type="number" min={1} max={10} value={invDraft.equipment.structure} onChange={(e) => setInvDraft((prev) => ({ ...prev, equipment: { ...prev.equipment, structure: Math.min(10, Math.max(1, parseInt(e.target.value, 10) || 1)) } }))} className="h-7 input-geist text-xs" />
+                                                <Input type="number" min={1} max={25} value={invDraft.equipment.structure} onChange={(e) => setInvDraft((prev) => ({ ...prev, equipment: { ...prev.equipment, structure: clampInventoryNumber(e.target.value, 1, 25, 1), }, }))} className="h-7 input-geist text-xs" />
                                             </div>
                                         </div>
                                         <div>
@@ -852,25 +925,55 @@ export const CombatContent = ({
                                         </Select>
 
                                         {it.type === "weapon" && (
-                                            <div className="col-span-2 grid grid-cols-3 gap-2">
+                                            <div className="col-span-2 grid grid-cols-4 gap-2">
                                                 <Input
                                                     type="number"
-                                                    value={it.weapon?.damage ?? 1}
-                                                    onChange={(e) => updateInventoryItemNested(idx, "weapon", { damage: parseInt(e.target.value, 10) || 0 })}
+                                                    min={0}
+                                                    max={5}
+                                                    value={it.weapon?.damage ?? 0}
+                                                    onChange={(e) =>
+                                                        updateInventoryItemNested(idx, "weapon", {
+                                                            damage: clampInventoryNumber(e.target.value, 0, 5, 0),
+                                                        })
+                                                    }
                                                     className="h-7 input-geist text-xs"
                                                     placeholder="Damage"
                                                 />
+
+                                                <Input
+                                                    type="number"
+                                                    min={-6}
+                                                    max={0}
+                                                    value={it.weapon?.initiative ?? 0}
+                                                    onChange={(e) =>
+                                                        updateInventoryItemNested(idx, "weapon", {
+                                                            initiative: clampInventoryNumber(e.target.value, -6, 0, 0),
+                                                        })
+                                                    }
+                                                    className="h-7 input-geist text-xs"
+                                                    placeholder="Init."
+                                                />
+
                                                 <Input
                                                     type="number"
                                                     value={it.weapon?.strength ?? 0}
-                                                    onChange={(e) => updateInventoryItemNested(idx, "weapon", { strength: parseInt(e.target.value, 10) || 0 })}
+                                                    onChange={(e) =>
+                                                        updateInventoryItemNested(idx, "weapon", {
+                                                            strength: parseInt(e.target.value, 10) || 0,
+                                                        })
+                                                    }
                                                     className="h-7 input-geist text-xs"
                                                     placeholder="Strength"
                                                 />
+
                                                 <Input
                                                     type="number"
                                                     value={it.weapon?.size ?? 1}
-                                                    onChange={(e) => updateInventoryItemNested(idx, "weapon", { size: parseInt(e.target.value, 10) || 0 })}
+                                                    onChange={(e) =>
+                                                        updateInventoryItemNested(idx, "weapon", {
+                                                            size: parseInt(e.target.value, 10) || 0,
+                                                        })
+                                                    }
                                                     className="h-7 input-geist text-xs"
                                                     placeholder="Size"
                                                 />
@@ -914,29 +1017,45 @@ export const CombatContent = ({
                                             <div className="col-span-2 grid grid-cols-4 gap-2">
                                                 <Input
                                                     type="number"
+                                                    min={-5}
+                                                    max={5}
                                                     value={it.equipment?.bonus ?? 0}
-                                                    onChange={(e) => updateInventoryItemNested(idx, "equipment", { bonus: parseInt(e.target.value, 10) || 0 })}
+                                                    onChange={(e) => updateInventoryItemNested(idx, "equipment", { bonus: clampInventoryNumber(e.target.value, -5, 5, 1) || 0 })}
                                                     className="h-7 input-geist text-xs"
                                                     placeholder="Bonus"
                                                 />
                                                 <Input
                                                     type="number"
-                                                    value={it.equipment?.durability ?? 0}
-                                                    onChange={(e) => updateInventoryItemNested(idx, "equipment", { durability: parseInt(e.target.value, 10) || 0 })}
+                                                    min={1}
+                                                    max={5}
+                                                    value={it.equipment?.durability ?? 1}
+                                                    onChange={(e) => updateInventoryItemNested(idx, "equipment", { durability: clampInventoryNumber(e.target.value, 1, 5, 1) || 0 })}
                                                     className="h-7 input-geist text-xs"
                                                     placeholder="Dur."
                                                 />
                                                 <Input
                                                     type="number"
+                                                    min={1}
+                                                    max={20}
                                                     value={it.equipment?.size ?? 1}
-                                                    onChange={(e) => updateInventoryItemNested(idx, "equipment", { size: parseInt(e.target.value, 10) || 0 })}
+                                                    onChange={(e) =>
+                                                        updateInventoryItemNested(idx, "equipment", {
+                                                            size: clampInventoryNumber(e.target.value, 1, 20, 1),
+                                                        })
+                                                    }
                                                     className="h-7 input-geist text-xs"
                                                     placeholder="Size"
                                                 />
                                                 <Input
                                                     type="number"
+                                                    min={1}
+                                                    max={25}
                                                     value={it.equipment?.structure ?? 1}
-                                                    onChange={(e) => updateInventoryItemNested(idx, "equipment", { structure: parseInt(e.target.value, 10) || 0 })}
+                                                    onChange={(e) =>
+                                                        updateInventoryItemNested(idx, "equipment", {
+                                                            structure: clampInventoryNumber(e.target.value, 1, 25, 1),
+                                                        })
+                                                    }
                                                     className="h-7 input-geist text-xs"
                                                     placeholder="Str."
                                                 />
@@ -1020,10 +1139,11 @@ export const CombatContent = ({
                                         </div>
 
                                         {it.type === "weapon" && (
-                                            <div className="mt-2 grid grid-cols-3 gap-1 text-[12px] text-zinc-500">
-                                                <span>Damage {it.weapon?.damage ?? 1}</span>
-                                                <span>Size {it.weapon?.size ?? 1}</span>
+                                            <div className="mt-2 grid grid-cols-4 gap-1 text-[12px] text-zinc-500">
+                                                <span>Damage {it.weapon?.damage ?? 0}</span>
+                                                <span>Initiative {it.weapon?.initiative ?? 0}</span>
                                                 <span>Strength {it.weapon?.strength ?? 0}</span>
+                                                <span>Size {it.weapon?.size ?? 1}</span>
                                             </div>
                                         )}
 

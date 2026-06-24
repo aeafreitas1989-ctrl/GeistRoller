@@ -591,6 +591,7 @@ export const StorytellerPage = () => {
                                     onDeleteCharacter={deleteCharacter}
                                     onTriggerDiceRoll={triggerDiceRoll}
                                     onAddRecentRoll={addRecentRoll}
+                                    onAddRecentRoll={addRecentRoll}
                                     onCreateActiveSpell={addActiveSpell}
                                     onImportCharacter={importCharacter}
                                     onAdvanceTime={handleAdvanceTime}
@@ -616,6 +617,7 @@ export const StorytellerPage = () => {
                                     onRelinquishActiveSpell={relinquishActiveSpell}
                                     onRelinquishActiveSpellSafely={relinquishActiveSpellSafely}
                                     onTriggerDiceRoll={triggerDiceRoll}
+                                    onAddRecentRoll={addRecentRoll}
                                     onApplyIncomingDamage={applyIncomingCombatDamage}
                                     onUpdateCharacter={updateCharacter}
                                     healthBoxes={combatHealthBoxes}
