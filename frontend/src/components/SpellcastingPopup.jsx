@@ -164,7 +164,7 @@ const FACTOR_LEVELS = {
     },
     scale: {
         standard: [
-            { level: 1, targets: "1 subject (Size 5)", area: "1m area" },
+            { level: 1, targets: "1 subject (Size 5)", area: "1m radius" },
             { level: 2, targets: "2 subjects (Size 6)", area: "small room" },
             { level: 3, targets: "4 subjects (Size 7)", area: "large room" },
             { level: 4, targets: "8 subjects (Size 8)", area: "single floor" },
