@@ -598,7 +598,7 @@ export const SpellcastingPopup = ({
         return "Primary Factor";
     };
 
-    const getFactorDescription = (factorName) => {
+    const getFactorDescription = (factorName, advancedOverride = null) => {
         const factor = factors[factorName];
         if (!factor) return "";
         
