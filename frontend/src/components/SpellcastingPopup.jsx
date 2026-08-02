@@ -601,9 +601,11 @@ export const SpellcastingPopup = ({
     const getFactorDescription = (factorName) => {
         const factor = factors[factorName];
         if (!factor) return "";
+        
+        const isAdvanced = advancedOverride ?? factor.advanced;
 
         if (factorName === "casting") {
-            if (factor.advanced) {
+            if (isAdvanced) {
                 // Base Instant casting always takes 1 turn. Each yantra after the
                 // first adds 1 turn; High Speech is exempt from the "first free"
                 // rule and always adds 1 extra turn.
@@ -618,14 +620,14 @@ export const SpellcastingPopup = ({
         }
 
         if (factorName === "range") {
-            return factor.advanced ? "Sensory Range" : "Touch Range / Self";
+            return isAdvanced ? "Sensory Range" : "Touch Range / Self";
         }
 
         if (factorName === "duration" && lastingDuration) {
             return "Lasting";
         }
 
-        const levels = FACTOR_LEVELS[factorName]?.[factor.advanced ? "advanced" : "standard"];
+        const levels = FACTOR_LEVELS[factorName]?.[isAdvanced ? "advanced" : "standard"];
         const levelData = levels?.[factor.level - 1];
 
         if (factorName === "scale") {
@@ -799,13 +801,31 @@ export const SpellcastingPopup = ({
             }
             : null;
 
-        const factorSummary = [
+        const buildFactorSummary = (advancePrimaryFactor = false) => [
             getFactorDescription("casting"),
             getFactorDescription("range"),
-            getFactorDescription("potency"),
-            getFactorDescription("duration"),
-            getFactorDescription("scale"),
+            getFactorDescription(
+                "potency",
+                advancePrimaryFactor && effectivePrimaryFactor === "potency"
+                    ? true
+                    : null
+            ),
+            getFactorDescription(
+                "duration",
+                advancePrimaryFactor && effectivePrimaryFactor === "duration"
+                    ? true
+                    : null
+            ),
+            getFactorDescription(
+                "scale",
+                advancePrimaryFactor && effectivePrimaryFactor === "scale"
+                    ? true
+                    : null
+            ),
         ].join("; ");
+        
+        const factorSummary = buildFactorSummary(false);
+        const advancedPrimaryFactorSummary = buildFactorSummary(true);
 
         const selectedYantrasSummary = selectedYantraLabels.length > 0
             ? `Yantras: ${selectedYantraLabels.join(", ")}${yantraBonusWasCapped ? `; raw +${rawYantraBonus}, capped at +${yantraBonus}` : ""}`
@@ -855,7 +875,7 @@ export const SpellcastingPopup = ({
 
         const spellNameTrimmed = spellName.trim();
 
-        const spellSummary = [
+        const buildSpellSummary = (factorLine) => [
             spellReachSummary,
             ...(reachBreakdownLine ? [reachBreakdownLine] : []),
             ...(spentSpellManaSummary ? [spentSpellManaSummary] : []),
@@ -863,8 +883,14 @@ export const SpellcastingPopup = ({
             ...(ritualSummary ? [ritualSummary] : []),
             ...(combinedSpellSummary ? [combinedSpellSummary] : []),
             ...(withstandSummary ? [withstandSummary] : []),
-            factorSummary,
+            factorLine,
         ].join("\n");
+        
+        const spellSummary = buildSpellSummary(factorSummary);
+        
+        const spellSummaryWithAdvancedPrimaryFactor = buildSpellSummary(
+            advancedPrimaryFactorSummary
+        );
 
         const baseCastLabel = `${arcanum} ${effectiveSpellType === "praxis" ? "Praxis" : effectiveSpellType === "rote" ? "Rote" : "Spell"} (${selectedPractice})`;
         const defaultSpellNameTrimmed = (defaultSpellName || "").trim();
@@ -894,6 +920,7 @@ export const SpellcastingPopup = ({
                 exceptional_target: effectiveSpellType === "praxis" ? 3 : 5,
                 dicePoolBreakdown: dicePoolBreakdownParts.join(" + "),
                 spellSummary,
+                spellSummaryWithAdvancedPrimaryFactor,
                 requiresSpellExceptionalChoice: true,
                 spellExceptionalManaSpent: totalManaCost,
                 spellPrimaryFactor: effectivePrimaryFactor,
