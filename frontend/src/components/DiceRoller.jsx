@@ -610,7 +610,12 @@ export const DiceRoller = forwardRef(({ embedded = false, collapsed = false, onT
             config.label ||
             (config.chance ? "Chance Die" : `${poolSize} dice`);
 
-        const spellSummary = config.spellSummary || "";
+        const spellSummary =
+            config.exceptionalSuccessChoice?.id === "reach_primary_factor"
+                ? config.spellSummaryWithAdvancedPrimaryFactor ||
+                  config.spellSummary ||
+                  ""
+                : config.spellSummary || "";
         const scrutinyTrackerSummary = buildScrutinyTrackerSummary(rollResult, config);
         const countOnlyResult = !!(config.countOnly || config.isAttack || config.scrutinyTracker);
         const outcomeLine = formatOutcomeLine(rollResult, countOnlyResult);
