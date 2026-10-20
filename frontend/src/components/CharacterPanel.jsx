@@ -49,7 +49,7 @@ import {
     ATTRIBUTE_LIST, SKILL_LIST, CEREMONY_DEFINITIONS,
     CEREMONY_SKILL_KEY_MAP,
     MAGE_PATHS, MAGE_ORDERS,
-    PATH_ARCANA, ORDER_ROTE_SKILLS, GNOSIS_TABLE,
+    ARCANA, PATH_ARCANA, ORDER_ROTE_SKILLS, GNOSIS_TABLE,
 } from "../data/character-data";
 import { SpellcastingPopup } from "./SpellcastingPopup";
 
