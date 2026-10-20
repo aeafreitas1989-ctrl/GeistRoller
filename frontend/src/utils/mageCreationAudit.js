@@ -397,9 +397,16 @@ export const validateMageCreation = (character = {}) => {
 export const getArcanumUntrainedLimit = (character = {}, arcanum) => {
     const pathData = character.path_arcana_override || MAGE_PATH_ARCANA[character.path] || null;
     const ruling = pathData?.ruling || character.ruling_arcana || [];
+    const legacyRuling = character.legacy_ruling_arcanum || "";
     const inferior = pathData?.inferior || character.inferior_arcanum || "";
 
-    if (Array.isArray(ruling) && ruling.includes(arcanum)) return 5;
+    if (
+        (Array.isArray(ruling) && ruling.includes(arcanum)) ||
+        legacyRuling === arcanum
+    ) {
+        return 5;
+    }
+
     if (inferior === arcanum) return 2;
     return 4;
 };
