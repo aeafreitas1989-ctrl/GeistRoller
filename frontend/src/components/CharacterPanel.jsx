@@ -354,8 +354,11 @@ export const CharacterPanel = ({
         return value;
     };
 
-    const openAdvancementPurchase = (purchase) => {
-        const cost = calculateMagePurchaseCost(activeCharacter || {}, purchase);
+        const openAdvancementPurchase = (purchase) => {
+                const cost = calculateMagePurchaseCost(
+            { ...(activeCharacter || {}), ...pendingChanges },
+            purchase
+        );
         const maxArcaneApplied = cost.allowsArcane
             ? Math.min(Number(activeCharacter?.arcane_experience) || 0, Number(cost.flexible ?? cost.experience) || 0)
             : 0;
@@ -769,10 +772,39 @@ export const CharacterPanel = ({
             }
         }
 
+        const currentPath =
+            pendingChanges.path ??
+            activeCharacter?.path ??
+            "";
+
+        const pathRulingArcana =
+            PATH_ARCANA[currentPath]?.ruling || [];
+
+        const legacyRulingArcanum =
+            pendingChanges.legacy_ruling_arcanum ??
+            activeCharacter?.legacy_ruling_arcanum ??
+            "";
+
+        const legacyOverlapReward =
+            pendingPurchase.trait_type === "arcanum" &&
+            pendingPurchase.trait_key === legacyRulingArcanum &&
+            pathRulingArcana.includes(legacyRulingArcanum)
+                ? Math.max(
+                    0,
+                    (Number(pendingPurchase.to) || 0) -
+                    (Number(pendingPurchase.from) || 0)
+                )
+                : 0;
+        
         const updates = {
             ...purchasePatch,
             experience: Math.max(0, (activeCharacter?.experience || 0) - ledgerEntry.cost.experience),
-            arcane_experience: Math.max(0, (activeCharacter?.arcane_experience || 0) - ledgerEntry.cost.arcane_experience),
+            arcane_experience:
+                Math.max(
+                    0,
+                    (activeCharacter?.arcane_experience || 0) -
+                    ledgerEntry.cost.arcane_experience
+                ) + legacyOverlapReward,
             spent_experience: (activeCharacter?.spent_experience || 0) + ledgerEntry.cost.experience,
             spent_arcane_experience: (activeCharacter?.spent_arcane_experience || 0) + ledgerEntry.cost.arcane_experience,
             advancement_ledger: [...currentLedger, ledgerEntry],
@@ -783,7 +815,11 @@ export const CharacterPanel = ({
         setArcaneXpApplied(0);
         setXpPurchaseNote("");
         setXpPurchaseOpen(false);
-        toast.success("XP purchase recorded.");
+        toast.success(
+            legacyOverlapReward > 0
+            ? `XP purchase recorded. Legacy overlap awarded ${legacyOverlapReward} Arcane XP.`
+            : "XP purchase recorded."
+        );
     };
 
     const lockMageCharacter = async (validationFromPanel = null) => {
@@ -867,6 +903,8 @@ export const CharacterPanel = ({
             addSection("Mage");
             addLine("Path", character.path);
             addLine("Order", character.order);
+            addLine("Legacy", character.legacy);
+            addLine("Legacy Ruling Arcanum", character.legacy_ruling_arcanum);
             addLine("Gnosis", character.gnosis);
             addLine("Wisdom", character.wisdom);
             addLine("Mana", character.mana);
@@ -2917,8 +2955,16 @@ export const CharacterPanel = ({
                     arcanumDots={getNestedValue("arcana", spellcastingArcanum) || 0}
                     allArcana={getValue("arcana") || {}}
                     gnosis={getValue("gnosis") || 1}
-                    isRuling={getValue("path") && PATH_ARCANA[getValue("path")]?.ruling?.includes(spellcastingArcanum)}
-                    isInferior={getValue("path") && PATH_ARCANA[getValue("path")]?.inferior === spellcastingArcanum}
+                    isRuling={
+                        (getValue("path") &&
+                            PATH_ARCANA[getValue("path")]?.ruling?.includes(spellcastingArcanum)) ||
+                        getValue("legacy_ruling_arcanum") === spellcastingArcanum
+                    }
+                    isInferior={
+                        getValue("path") &&
+                        PATH_ARCANA[getValue("path")]?.inferior === spellcastingArcanum &&
+                        getValue("legacy_ruling_arcanum") !== spellcastingArcanum
+                    }
                     currentMana={getValue("mana") || 0}
                     currentWisdom={getValue("wisdom") || 7}
                     athleticsDots={getNestedValue("skills", "athletics") || 0}
