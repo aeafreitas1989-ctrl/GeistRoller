@@ -2270,6 +2270,60 @@ export const CharacterPanel = ({
                                     )}
                                 </div>
                             </div>
+                                                        {isMage && (
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label className="text-[10px] text-zinc-500 uppercase tracking-wider">
+                                            Legacy
+                                        </label>
+                                        <Input
+                                            value={getValue("legacy") || ""}
+                                            onChange={(e) => handleChange("legacy", e.target.value)}
+                                            className="input-geist h-8 text-sm mt-0.5"
+                                            placeholder="Legacy name"
+                                            data-testid="character-legacy-input"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="text-[10px] text-zinc-500 uppercase tracking-wider">
+                                            Ruling Arcanum
+                                        </label>
+                                        <Select
+                                            value={getValue("legacy_ruling_arcanum") || "__none__"}
+                                            onValueChange={(value) =>
+                                                handleChange(
+                                                    "legacy_ruling_arcanum",
+                                                    value === "__none__" ? "" : value
+                                                )
+                                            }
+                                        >
+                                            <SelectTrigger
+                                                className="bg-zinc-900/50 border-zinc-800 h-8 text-sm mt-0.5"
+                                                data-testid="character-legacy-ruling-arcanum-select"
+                                            >
+                                                <SelectValue placeholder="Select..." />
+                                            </SelectTrigger>
+
+                                            <SelectContent className="bg-zinc-900 border-zinc-800">
+                                                <SelectItem value="__none__" className="text-zinc-400">
+                                                    None
+                                                </SelectItem>
+
+                                                {ARCANA.map((arcanum) => (
+                                                    <SelectItem
+                                                        key={arcanum}
+                                                        value={arcanum}
+                                                        className="text-zinc-200"
+                                                    >
+                                                        {arcanum}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+                            )}
                             <div className="grid grid-cols-2 gap-2">
                                 <div>
                                     <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Virtue</label>
