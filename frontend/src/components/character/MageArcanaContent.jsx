@@ -23,7 +23,28 @@ export const MageArcanaContent = ({
     getValue, getNestedValue, handleChange, handleNestedChange,
     openSpellcastingPopup, onTriggerDiceRoll, onActivateMageEffect,
 }) => {
-        const currentMana = getValue("mana") || 0;
+    const currentMana = getValue("mana") || 0;
+    const currentArcana = getValue("arcana") || {};
+    const learnedAttainments = Array.isArray(getValue("attainments"))
+        ? getValue("attainments")
+        : [];
+
+    const addLearnedAttainment = () => {
+        handleChange("attainments", [...learnedAttainments, ""]);
+    };
+
+    const updateLearnedAttainment = (index, value) => {
+        const next = [...learnedAttainments];
+        next[index] = value;
+        handleChange("attainments", next);
+    };
+
+    const removeLearnedAttainment = (index) => {
+        handleChange(
+            "attainments",
+            learnedAttainments.filter((_, attainmentIndex) => attainmentIndex !== index)
+        );
+    };
     const currentArcana = getValue("arcana") || {};
 
     const getAttainmentLabel = (att) =>
