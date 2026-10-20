@@ -39,10 +39,15 @@ export const MageArcanaContent = ({
                 <div className="space-y-1">
                     {ARCANA.map((arcanum) => {
                         const arcanumRating = getNestedValue("arcana", arcanum) || 0;
-                                                const selectedPath = getValue("path");
+                        const selectedPath = getValue("path");
                         const pathData = selectedPath ? PATH_ARCANA[selectedPath] : null;
-                        const isRuling = pathData?.ruling?.includes(arcanum);
-                        const isInferior = pathData?.inferior === arcanum;
+                        const legacyRuling = getValue("legacy_ruling_arcanum") || "";
+                        const isRuling =
+                            pathData?.ruling?.includes(arcanum) ||
+                            legacyRuling === arcanum;
+                        const isInferior =
+                            pathData?.inferior === arcanum &&
+                            !isRuling;
 
                         let labelColor = arcanumRating > 0 ? "text-zinc-400" : "text-zinc-600";
                         if (isRuling) labelColor = "text-blue-400 font-medium";
