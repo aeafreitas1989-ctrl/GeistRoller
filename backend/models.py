@@ -119,6 +119,8 @@ class Character(BaseModel):
     # Mage-specific fields
     path: str = ""  # Acanthus, Mastigos, Moros, Obrimos, Thyrsus
     order: str = ""  # Adamantine Arrow, Guardians of the Veil, Mysterium, Silver Ladder, Free Council
+    legacy: str = ""
+    legacy_ruling_arcanum: str = ""
     obsession: str = ""  # Mage's Obsession (legacy single field)
     obsessions: List[str] = Field(default_factory=list)
     creation_mode: str = "active"
@@ -235,6 +237,8 @@ class CharacterUpdate(BaseModel):
     geist_rank: Optional[int] = None
     path: Optional[str] = None  # Mage path
     order: Optional[str] = None  # Mage order
+    legacy: Optional[str] = None
+    legacy_ruling_arcanum: Optional[str] = None
     obsession: Optional[str] = None  # Mage obsession legacy single field
     obsessions: Optional[List[str]] = None
     creation_mode: Optional[str] = None
