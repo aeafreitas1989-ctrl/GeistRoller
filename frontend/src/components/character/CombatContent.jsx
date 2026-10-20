@@ -714,7 +714,7 @@ export const CombatContent = ({
                                         <div className="grid grid-cols-2 gap-2">
                                             <div>
                                                 <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Bonus</label>
-                                                <Input type="number" min={5} max={5} value={invDraft.equipment.bonus} onChange={(e) => setInvDraft((prev) => ({ ...prev, equipment: { ...prev.equipment, bonus: clampInventoryNumber(e.target.value, -5, 5, 1), }, })) } className="h-7 input-geist text-xs" />
+                                                <Input type="number" min={-5} max={5} value={invDraft.equipment.bonus} onChange={(e) => setInvDraft((prev) => ({ ...prev, equipment: { ...prev.equipment, bonus: clampInventoryNumber(e.target.value, -5, 5, 1), }, })) } className="h-7 input-geist text-xs" />
                                             </div>
                                             <div>
                                                 <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Durability</label>
