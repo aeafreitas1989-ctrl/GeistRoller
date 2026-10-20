@@ -1,14 +1,14 @@
 import "@/App.css";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
-import { StorytellerPage } from "@/pages/StorytellerPage";
+import { CharacterSheetPage } from "@/pages/CharacterSheetPage";
 
 function App() {
     return (
         <div className="App">
             <BrowserRouter>
                 <Routes>
-                    <Route path="/" element={<StorytellerPage />} />
+                    <Route path="/" element={<CharacterSheetPage />} />
                 </Routes>
             </BrowserRouter>
             <Toaster 

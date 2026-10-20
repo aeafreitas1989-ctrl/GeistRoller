@@ -1,10 +1,10 @@
-import { Plus, Trash2, Sparkles, Dices, Zap } from "lucide-react";
+import { Plus, Trash2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { ARCANA, MAGE_ATTAINMENTS, MAGE_PATHS, PATH_ARCANA, ORDER_ROTE_SKILLS, ARCANA_PRACTICES, SKILL_LIST } from "../../data/character-data";
+import { ARCANA, PATH_ARCANA, ORDER_ROTE_SKILLS, ARCANA_PRACTICES, SKILL_LIST } from "../../data/character-data";
 import { StatDots, formatLabel } from "./StatComponents";
+import { MageAttainmentsContent } from "./MageAttainmentsContent";
 
 const getPracticesForDots = (dots = 1) => {
     const cappedDots = Math.max(1, dots || 1);
@@ -21,57 +21,8 @@ const getPracticesForDots = (dots = 1) => {
 
 export const MageArcanaContent = ({
     getValue, getNestedValue, handleChange, handleNestedChange,
-    openSpellcastingPopup, onTriggerDiceRoll, onActivateMageEffect,
+    openSpellcastingPopup, onTriggerDiceRoll,
 }) => {
-    const currentMana = getValue("mana") || 0;
-    const currentArcana = getValue("arcana") || {};
-    const learnedAttainments = Array.isArray(getValue("attainments"))
-        ? getValue("attainments")
-        : [];
-
-    const addLearnedAttainment = () => {
-        handleChange("attainments", [...learnedAttainments, ""]);
-    };
-
-    const updateLearnedAttainment = (index, value) => {
-        const next = [...learnedAttainments];
-        next[index] = value;
-        handleChange("attainments", next);
-    };
-
-    const removeLearnedAttainment = (index) => {
-        handleChange(
-            "attainments",
-            learnedAttainments.filter((_, attainmentIndex) => attainmentIndex !== index)
-        );
-    };
-    const currentArcana = getValue("arcana") || {};
-
-    const getAttainmentLabel = (att) =>
-        att.name.split(" / ")[0].replace(` ${att.arcanum}`, "").replace(" Armor", "");
-
-    const getAttainmentDescription = (att) =>
-        att.dot === 2 && att.description.includes(";")
-            ? att.description.split(";")[0].trim()
-            : att.description;
-
-    const TWILIGHT_EFFECTS = {
-        Death: {
-            attainmentName: "Eyes of the Dead",
-            effectName: "Tangible to Ghost Twilight",
-            description: "You can perceive and physically interact with ghosts and ghostly ephemera in Twilight.",
-        },
-        Mind: {
-            attainmentName: "Mind's Eye",
-            effectName: "Tangible to Goetic Twilight",
-            description: "You can perceive and physically interact with Goetia and projecting minds in Twilight.",
-        },
-        Spirit: {
-            attainmentName: "Spirit Eyes",
-            effectName: "Tangible to Spirit Twilight",
-            description: "You can perceive and physically interact with spirits and spirit ephemera in Twilight.",
-        },
-    };
     return (
         <>
             {/* Arcana for Mages */}
@@ -360,126 +311,11 @@ export const MageArcanaContent = ({
             </div>
 
             {/* Attainments */}
-            <div>
-                <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-2">Attainments</p>
-                {(() => {
-                    const arcanaValues = getValue("arcana") || {};
-                    const arcanaWithDots = ARCANA.filter(a => (arcanaValues[a] || 0) >= 1);
-                    const arcanaWith3 = ARCANA.filter(a => (arcanaValues[a] || 0) >= 3);
-                    const namedAttainments = [];
-
-                    ARCANA.forEach(arcanum => {
-                        const rating = arcanaValues[arcanum] || 0;
-                        for (let dot = 2; dot <= rating; dot++) {
-                            const att = MAGE_ATTAINMENTS[arcanum]?.[dot];
-                            if (att && !att.name.includes("Counterspell") && !att.name.includes("Targeted Summoning") && !att.name.includes("Create Rote")) {
-                                namedAttainments.push({ arcanum, dot, ...att });
-                            }
-                        }
-                    });
-
-                    if (arcanaWithDots.length === 0) {
-                        return <p className="text-[10px] text-zinc-600 italic">Gain Arcana dots to unlock attainments</p>;
-                    }
-
-                    return (
-                        <div className="flex gap-4">
-                            <div className="space-y-1.5 shrink-0">
-                                <TooltipProvider>
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <button
-                                                onClick={() => {
-                                                    const bestArcanum = arcanaWithDots.reduce((best, a) => (arcanaValues[a] || 0) > (arcanaValues[best] || 0) ? a : best, arcanaWithDots[0]);
-                                                    if (onTriggerDiceRoll) onTriggerDiceRoll({ pool: (getValue("gnosis") || 1) + (arcanaValues[bestArcanum] || 0), label: `Counterspell (${arcanaWithDots.join(", ")})` });
-                                                }}
-                                                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded border bg-violet-900/30 border-violet-500/40 text-violet-300 hover:bg-violet-800/40 transition-colors"
-                                                data-testid="counterspell-btn"
-                                            >
-                                                <Dices className="w-3 h-3" />
-                                                Counterspell
-                                            </button>
-                                        </TooltipTrigger>
-                                        <TooltipContent className="bg-zinc-900 border-zinc-700 max-w-xs">
-                                            <p className="text-xs text-zinc-300">Counter spells of: {arcanaWithDots.join(", ")}. Roll Gnosis + Arcanum in a Clash of Wills.</p>
-                                        </TooltipContent>
-                                    </Tooltip>
-                                </TooltipProvider>
-
-                                {arcanaWith3.length > 0 && (
-                                    <TooltipProvider>
-                                        <Tooltip>
-                                            <TooltipTrigger asChild>
-                                                <button
-                                                    className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs rounded border bg-teal-900/30 border-teal-500/40 text-teal-300 hover:bg-teal-800/40 transition-colors"
-                                                    data-testid="targeted-summoning-btn"
-                                                >
-                                                    <Zap className="w-3 h-3" />
-                                                    Targeted Summoning
-                                                </button>
-                                            </TooltipTrigger>
-                                            <TooltipContent className="bg-zinc-900 border-zinc-700 max-w-xs">
-                                                <p className="text-xs text-zinc-300">Summon Supernal beings with: {arcanaWith3.join(", ")}</p>
-                                            </TooltipContent>
-                                        </Tooltip>
-                                    </TooltipProvider>
-                                )}
-                            </div>
-
-                            {namedAttainments.length > 0 && (
-                                <div className="flex flex-wrap gap-1 flex-1 content-start">
-                                    {namedAttainments.map((att, i) => {
-                                        const twilightEffect = att.dot === 2 ? TWILIGHT_EFFECTS[att.arcanum] : null;
-                                        const isClickableTwilight = !!twilightEffect;
-                                        const label = getAttainmentLabel(att);
-
-                                        return (
-                                            <TooltipProvider key={i}>
-                                                <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                        {isClickableTwilight ? (
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => onActivateMageEffect?.({
-                                                                    type: "twilight",
-                                                                    arcanum: att.arcanum,
-                                                                    attainmentName: twilightEffect.attainmentName,
-                                                                    effectName: twilightEffect.effectName,
-                                                                    description: twilightEffect.description,
-                                                                })}
-                                                                disabled={currentMana < 1}
-                                                                className="inline-flex items-center gap-1 px-2 py-1 text-[10px] rounded bg-zinc-800/50 border border-zinc-700/50 text-zinc-300 hover:border-teal-500/50 hover:text-teal-300 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                                                                data-testid={`attainment-${att.arcanum.toLowerCase()}-btn`}
-                                                            >
-                                                                <span className="text-violet-400 font-mono">{"●".repeat(att.dot)}</span>
-                                                                {label}
-                                                            </button>
-                                                        ) : (
-                                                            <span className="inline-flex items-center gap-1 px-2 py-1 text-[10px] rounded bg-zinc-800/50 border border-zinc-700/50 text-zinc-300 cursor-help">
-                                                                <span className="text-violet-400 font-mono">{"●".repeat(att.dot)}</span>
-                                                                {label}
-                                                            </span>
-                                                        )}
-                                                    </TooltipTrigger>
-                                                    <TooltipContent className="bg-zinc-900 border-zinc-700 max-w-xs">
-                                                        <p className="text-xs font-medium text-violet-300">{att.arcanum} ({att.dot})</p>
-                                                        <p className="text-xs text-zinc-300">{getAttainmentDescription(att)}</p>
-                                                        {isClickableTwilight && (
-                                                            <p className="text-[11px] text-teal-400 mt-1">
-                                                                Spend 1 Mana: add “{twilightEffect.effectName}” to Active Spells & Effects.
-                                                            </p>
-                                                        )}
-                                                    </TooltipContent>
-                                                </Tooltip>
-                                            </TooltipProvider>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </div>
-                    );
-                })()}
-            </div>
+            <MageAttainmentsContent
+                getValue={getValue}
+                handleChange={handleChange}
+                onTriggerDiceRoll={onTriggerDiceRoll}
+            />
         </>
     );
 };

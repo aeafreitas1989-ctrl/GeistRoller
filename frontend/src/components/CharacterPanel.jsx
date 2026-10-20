@@ -68,6 +68,7 @@ import { GeistRemembranceContent } from "./character/GeistRemembranceContent";
 import { MeritsContent } from "./character/MeritsContent";
 import { CombatContent } from "./character/CombatContent";
 import { CharacterCreationAuditPanel } from "./character/CharacterCreationAuditPanel";
+import { CharacterGoalsContent } from "./character/CharacterGoalsContent";
 import {
     PROFESSIONAL_TRAINING_RULES,
     calculateMagePurchaseCost,
@@ -81,19 +82,6 @@ import {
 } from "@/utils/mageCreationAudit";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
-
-const MAGE_SIGHT_DESCRIPTIONS = {
-    Death: "Death Sight reveals the Anchor Condition, manifested ghosts, and related deathly phenomena. At a glance, the mage can tell whether a person has a soul and whether a body is truly dead.",
-    Fate: "Fate Sight reveals when someone experiences a dramatic failure or exceptional success. It also reveals the presence and use of a Destiny, but not the details of that Destiny.",
-    Forces: "Forces Sight reveals motion, environmental Tilts, fire, electricity, and other physical hazards. It also allows the mage to tell at a glance whether a device is powered.",
-    Life: "Life Sight reveals signs of life and allows the mage to tell at a glance whether a body is alive and how badly a living being is injured. Toxins, diseases, and Personal Tilts are also apparent.",
-    Matter: "Matter Sight reveals the Structure and Durability of an object, along with its value and quality.",
-    Mind: "Mind Sight reveals the presence of thinking beings and allows the mage to tell at a glance whether someone is asleep, comatose, awake, meditating, or projecting into the Astral. It also reveals when an observed being gains or spends Willpower.",
-    Prime: "Prime Sight reveals anything the mage can use as a Yantra, as well as the presence of Awakened spells and Attainment effects. It also allows the mage to recognize tass and determine when they are within a Hallow or Node.",
-    Space: "Space Sight reveals distances, range bands, and cover, allowing the mage to judge situational bonuses and penalties before acting. It also reveals spatial distortions, scrying windows, and Irises.",
-    Spirit: "Spirit Sight reveals the strength of the local Gauntlet, the presence and nature of the Resonance Condition, other sources of Essence, and manifested spirits and related phenomena.",
-    Time: "Time Sight reveals subtle temporal changes, allowing the mage to know the Initiative of all combatants. It also reveals when someone is about to act, even reflexively, and detects temporal distortions and signs of travel into the past.",
-};
 
 export const CharacterPanel = ({
     characters,
@@ -584,6 +572,30 @@ export const CharacterPanel = ({
                 trait_type: "praxis",
                 trait_key: added.spell || "praxis",
                 label: `Praxis: ${added.spell || "New Praxis"}`,
+                from: currentList.length,
+                to: nextList.length,
+                apply: { kind: "field", field, value },
+            });
+            return true;
+        }
+
+        if (field === "attainments" && nextList.length > currentList.length) {
+            const added = nextList[nextList.length - 1] || {};
+            const isTutored =
+                typeof added === "object" && added !== null
+                    ? added.tutored !== false
+                    : true;
+            const name =
+                typeof added === "string"
+                    ? added
+                    : (added.name || "New Attainment");
+
+            openAdvancementPurchase({
+                trait_type: isTutored
+                    ? "legacy_attainment_tutored"
+                    : "legacy_attainment_no_tutor",
+                trait_key: name,
+                label: `Legacy Attainment: ${name}`,
                 from: currentList.length,
                 to: nextList.length,
                 apply: { kind: "field", field, value },
@@ -1083,95 +1095,6 @@ export const CharacterPanel = ({
         const hasTo = entry.to !== null && entry.to !== undefined;
         if (hasFrom && hasTo) return `${entry.from} → ${entry.to}`;
         return "";
-    };
-
-    const activateMageEffect = async ({ type, arcanum, attainmentName, effectName, description, path, extraArcanum }) => {
-        const currentActiveSpells = activeCharacter?.active_spells || [];
-        const currentMana = getValue("mana") || 0;
-
-        if (type === "twilight") {
-            if (currentMana < 1) {
-                toast.error("Not enough Mana");
-                return;
-            }
-
-            const effectKey = `twilight-${arcanum.toLowerCase()}`;
-
-            if (currentActiveSpells.some((spell) => spell.effect_key === effectKey)) {
-                toast.info(`${effectName} is already active.`);
-                return;
-            }
-
-            await onUpdateCharacter({
-                mana: Math.max(0, currentMana - 1),
-                active_spells: [
-                    ...currentActiveSpells,
-                    {
-                        id: Date.now(),
-                        kind: "effect",
-                        effect_key: effectKey,
-                        name: effectName,
-                        arcanum,
-                        practice: "Attainment",
-                        subtitle: `${arcanum} • ${attainmentName}`,
-                        description,
-                    },
-                ],
-            });
-
-            return;
-        }
-
-        if (type === "mageSight") {
-            const currentPath = path || getValue("path");
-            const rulingArcana = PATH_ARCANA[currentPath]?.ruling || [];
-
-            if (!currentPath || rulingArcana.length === 0) {
-                return;
-            }
-
-            const existingMageSight = currentActiveSpells.find((spell) => spell.effect_key === "mage-sight");
-            const existingExtras = Array.isArray(existingMageSight?.extra_arcana) ? existingMageSight.extra_arcana : [];
-
-            let nextExtras = [];
-
-            if (extraArcanum) {
-                if (existingExtras.includes(extraArcanum)) {
-                    toast.info(`${extraArcanum} Mage Sight is already active.`);
-                    return;
-                }
-
-                if (currentMana < 1) {
-                    toast.error("Not enough Mana");
-                    return;
-                }
-
-                nextExtras = [...existingExtras, extraArcanum];
-            }
-
-            const activeArcana = [...rulingArcana, ...nextExtras];
-            const plusLabel = nextExtras.length > 0 ? ` + ${nextExtras.join(" + ")}` : "";
-
-            await onUpdateCharacter({
-                ...(extraArcanum ? { mana: Math.max(0, currentMana - 1) } : {}),
-                active_spells: [
-                    ...currentActiveSpells.filter((spell) => spell.effect_key !== "mage-sight"),
-                    {
-                        id: existingMageSight?.id || Date.now(),
-                        kind: "effect",
-                        effect_key: "mage-sight",
-                        name: `Mage Sight: ${currentPath}${plusLabel}`,
-                        arcanum: activeArcana.join(", "),
-                        practice: "Mage Sight",
-                        subtitle: `${currentPath} • ${activeArcana.join(", ")}`,
-                        description: activeArcana
-                            .map((name) => `${name}: ${MAGE_SIGHT_DESCRIPTIONS[name]}`)
-                            .join("\n"),
-                        extra_arcana: nextExtras,
-                    },
-                ],
-            });
-        }
     };
 
     // Inventory helpers
@@ -2358,263 +2281,21 @@ export const CharacterPanel = ({
                                 </div>
                             </div>
 
-                            {/* Aspirations */}
-                            <div className="mb-4">
-                                <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2">
-                                    Aspirations
-                                </div>
-
-                                <div className="space-y-2">
-                                    <div>
-                                        <div className="flex items-center gap-2 mt-1">
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="h-7 px-2 text-[10px] text-zinc-400 hover:text-zinc-200"
-                                                onClick={() => fulfillAspiration("aspiration_short_1")}
-                                                data-testid="aspiration-short-1-fulfilled"
-                                            >
-                                                SHORT-TERM
-                                            </Button>
-                                            <Input
-                                                value={getValue("aspiration_short_1") || ""}
-                                                onChange={(e) => handleChange("aspiration_short_1", e.target.value)}
-                                                className="h-7 input-geist text-xs flex-1"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <div className="flex items-center gap-2 mt-1">
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="h-7 px-2 text-[10px] text-zinc-400 hover:text-zinc-200"
-                                                onClick={() => fulfillAspiration("aspiration_short_2")}
-                                                data-testid="aspiration-short-1-fulfilled"
-                                            >
-                                                SHORT-TERM
-                                            </Button>
-                                            <Input
-                                                value={getValue("aspiration_short_2") || ""}
-                                                onChange={(e) => handleChange("aspiration_short_2", e.target.value)}
-                                                className="h-7 input-geist text-xs flex-1"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <div className="flex items-center gap-2 mt-1">
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="h-7 px-2 text-[10px] text-zinc-400 hover:text-zinc-200"
-                                                onClick={() => fulfillAspiration("aspiration_long")}
-                                                data-testid="aspiration-long-progressed"
-                                            >
-                                                LONG-TERM
-                                            </Button>
-                                            <Input
-                                                value={getValue("aspiration_long") || ""}
-                                                onChange={(e) => handleChange("aspiration_long", e.target.value)}
-                                                className="h-7 input-geist text-xs flex-1"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {isMage ? (
-                                        <div className="space-y-1">
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-[10px] text-violet-400 uppercase tracking-wider">Obsessions</span>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="h-6 px-2 text-[10px] text-violet-400 hover:text-violet-300"
-                                                    onClick={addObsession}
-                                                    data-testid="add-obsession-btn"
-                                                >
-                                                    <Plus className="w-3 h-3 mr-1" /> Add
-                                                </Button>
-                                            </div>
-                                            {getObsessions().map((obsession, index) => (
-                                                <div key={index} className="flex items-center gap-2 mt-1">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="h-7 px-2 text-[10px] text-zinc-400 hover:text-violet-300"
-                                                        onClick={() => fulfillObsession(index)}
-                                                        data-testid={`obsession-${index}-progressed`}
-                                                    >
-                                                        OBSESSION {index + 1}
-                                                    </Button>
-                                                    <Input
-                                                        value={obsession || ""}
-                                                        onChange={(e) => updateObsession(index, e.target.value)}
-                                                        className="h-7 input-geist text-xs flex-1"
-                                                        placeholder="Mage Obsession"
-                                                        data-testid={`obsession-${index}-input`}
-                                                    />
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="h-7 w-7 p-0 text-zinc-500 hover:text-red-400"
-                                                        onClick={() => removeObsession(index)}
-                                                        disabled={getObsessions().length <= 1}
-                                                        data-testid={`obsession-${index}-remove`}
-                                                    >
-                                                        <X className="w-3 h-3" />
-                                                    </Button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <div>
-                                            <div className="flex items-center gap-2 mt-1">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="h-7 px-2 text-[10px] text-zinc-400 hover:text-zinc-200"
-                                                    onClick={() => fulfillAspiration("aspiration_burden")}
-                                                    data-testid="aspiration-burden-progressed"
-                                                >
-                                                    BURDEN
-                                                </Button>
-                                                <Input
-                                                    value={getValue("aspiration_burden") || ""}
-                                                    onChange={(e) => handleChange("aspiration_burden", e.target.value)}
-                                                    className="h-7 input-geist text-xs flex-1"
-                                                />
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Beats & Experience */}
-                            <div className="p-3 bg-amber-950/20 border border-amber-500/30 rounded-sm">
-                                <div className="flex items-center justify-between mb-2">
-                                    <label className="text-[10px] text-amber-400 uppercase tracking-wider flex items-center gap-1">
-                                        <Star className="w-3 h-3" /> Beats & Experience
-                                    </label>
-                                </div>
-                                <div className="flex items-center gap-4">
-                                    <div className="flex-1">
-                                        <div className="flex items-center justify-between text-xs mb-1">
-                                            <span className="text-zinc-400">Beats</span>
-                                            <div className="flex items-center gap-2">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="h-6 w-6 p-0 text-zinc-400 hover:text-zinc-200"
-                                                    onClick={removeBeat}
-                                                    disabled={(getValue("beats") || 0) <= 0}
-                                                    data-testid="beats-minus"
-                                                >
-                                                    <Minus className="w-3 h-3" />
-                                                </Button>
-
-                                                <span className="font-mono text-amber-300">{getValue("beats") || 0}/5</span>
-
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="h-6 w-6 p-0 text-zinc-400 hover:text-zinc-200"
-                                                    onClick={awardBeat}
-                                                    data-testid="beats-plus"
-                                                >
-                                                    <Plus className="w-3 h-3" />
-                                                </Button>
-                                            </div>
-                                        </div>
-                                        <div className="flex gap-0.5">
-                                            {[0, 1, 2, 3, 4].map((i) => (
-                                                <div
-                                                    key={i}
-                                                    className={`w-4 h-4 rounded-full border transition-all ${
-                                                        i < (getValue("beats") || 0)
-                                                            ? "bg-amber-500/50 border-amber-500"
-                                                            : "bg-zinc-900 border-zinc-700"
-                                                    }`}
-                                                    data-testid={`beat-${i}`}
-                                                />
-                                            ))}
-                                        </div>
-                                    </div>
-                                    <div className="flex-1">
-                                        <div className="flex items-center justify-between text-xs mb-1">
-                                            <span className="text-zinc-400">Experience</span>
-                                            <span className="font-mono text-teal-300">{getValue("experience") || 0}</span>
-                                        </div>
-                                        <Input
-                                            type="number"
-                                            min={0}
-                                            value={getValue("experience") || 0}
-                                            onChange={(e) => handleChange("experience", Math.max(0, parseInt(e.target.value) || 0))}
-                                            className="h-6 w-16 text-center input-geist text-xs"
-                                            data-testid="experience-input-header"
-                                        />
-                                    </div>
-                                </div>
-                                {isMage && (
-                                    <div className="mt-3 pt-3 border-t border-amber-900/40 flex items-center gap-4">
-                                        <div className="flex-1">
-                                            <div className="flex items-center justify-between text-xs mb-1">
-                                                <span className="text-zinc-400">Arcane Beats</span>
-                                                <div className="flex items-center gap-2">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="h-6 w-6 p-0 text-zinc-400 hover:text-zinc-200"
-                                                        onClick={removeArcaneBeat}
-                                                        disabled={(getValue("arcane_beats") || 0) <= 0}
-                                                        data-testid="arcane-beats-minus"
-                                                    >
-                                                        <Minus className="w-3 h-3" />
-                                                    </Button>
-                                                    <span className="font-mono text-violet-300">{getValue("arcane_beats") || 0}/5</span>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="h-6 w-6 p-0 text-zinc-400 hover:text-zinc-200"
-                                                        onClick={awardArcaneBeat}
-                                                        data-testid="arcane-beats-plus"
-                                                    >
-                                                        <Plus className="w-3 h-3" />
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                            <div className="flex gap-0.5">
-                                                {[0, 1, 2, 3, 4].map((i) => (
-                                                    <div
-                                                        key={i}
-                                                        className={`w-4 h-4 rounded-full border transition-all ${
-                                                            i < (getValue("arcane_beats") || 0)
-                                                                ? "bg-violet-500/50 border-violet-500"
-                                                                : "bg-zinc-900 border-zinc-700"
-                                                        }`}
-                                                        data-testid={`arcane-beat-${i}`}
-                                                    />
-                                                ))}
-                                            </div>
-                                        </div>
-                                        <div className="flex-1">
-                                            <div className="flex items-center justify-between text-xs mb-1">
-                                                <span className="text-zinc-400">Arcane XP</span>
-                                                <span className="font-mono text-violet-300">{getValue("arcane_experience") || 0}</span>
-                                            </div>
-                                            <Input
-                                                type="number"
-                                                min={0}
-                                                value={getValue("arcane_experience") || 0}
-                                                onChange={(e) => handleChange("arcane_experience", Math.max(0, parseInt(e.target.value) || 0))}
-                                                className="h-6 w-16 text-center input-geist text-xs"
-                                                data-testid="arcane-experience-input-header"
-                                            />
-                                        </div>
-                                    </div>
-                                )}
-                                <p className="text-[10px] text-zinc-600 mt-2 italic">5 Beats = 1 Experience. 5 Arcane Beats = 1 Arcane Experience.</p>
-                            </div>
+                            <CharacterGoalsContent
+                                isMage={isMage}
+                                getValue={getValue}
+                                handleChange={handleChange}
+                                fulfillAspiration={fulfillAspiration}
+                                getObsessions={getObsessions}
+                                addObsession={addObsession}
+                                updateObsession={updateObsession}
+                                removeObsession={removeObsession}
+                                fulfillObsession={fulfillObsession}
+                                removeBeat={removeBeat}
+                                awardBeat={awardBeat}
+                                removeArcaneBeat={removeArcaneBeat}
+                                awardArcaneBeat={awardArcaneBeat}
+                            />
                         </CollapsibleContent>
                     </Collapsible>
 
@@ -2840,7 +2521,6 @@ export const CharacterPanel = ({
                                     handleNestedChange={handleNestedChange}
                                     openSpellcastingPopup={openSpellcastingPopup}
                                     onTriggerDiceRoll={onTriggerDiceRoll}
-                                    onActivateMageEffect={activateMageEffect}
                                 />
                             ) : (
                                 <GeistHauntsContent

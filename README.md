@@ -1,133 +1,121 @@
-# Geist: The Sin-Eaters — AI Storyteller
+# GeistRoller
 
-An AI-powered Storyteller for **Geist: the Sin-Eaters 2nd Edition**, where the AI takes the role of the Storyteller with full access to the rules of the game.
+A personal digital character-sheet and dice-rolling tool for **Geist: The Sin-Eaters 2nd Edition** and **Mage: The Awakening 2nd Edition**.
 
-Built with React, FastAPI, and MongoDB.
-
----
+Built with React, FastAPI, and MongoDB. The application does not use an AI Storyteller or any external LLM service.
 
 ## Features
 
-- AI Storyteller with deep knowledge of Geist 2e rules, Haunts, Keys, Conditions, and character mechanics
-- Interactive digital character sheet with full Sin-Eater stats
-- Card-based tracking for Conditions, Haunts, Keys, Merits, Ceremonies, and Mementos
-- Dice roller with game-specific logic (10-again, rote, chance die, Haunt activation)
-- Clickable roll suggestions embedded in AI responses
-- End-of-Chapter Beat calculation
-- Session & Campaign management
-- Dark gothic horror UI
+- Separate Geist and Mage character templates
+- Chronicles of Darkness d10 roller with 8/9/10-again, rote quality, chance dice, and configurable exceptional-success thresholds
+- Mage Arcana, Rotes, Praxes, Arcana Attainments, learned/Legacy Attainments, spell Factors, Reach, Paradox, Mana, Yantras, Mage Armor, and Mage Sight tools
+- Geist Haunts, Keys, Mementos, Ceremonies, Synergy, Plasm, and Remembrance tracking
+- Attributes, Skills, Merits, Aspirations, Conditions, inventory, armor, health, Willpower, Beats, and Experience
+- Character JSON import/export
+- Manual campaign data API retained for future/local campaign tracking
 
----
-
-## Quick Start (Docker Compose)
+## Quick start with Docker
 
 ### Prerequisites
-- [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/)
-- An [Emergent LLM Key](https://emergentagent.com) for AI features
 
-### 1. Clone & configure
+- Docker Desktop / Docker Compose
+- Git
+
+### 1. Clone and configure
 
 ```bash
 git clone <your-repo-url>
-cd <repo-folder>
+cd GeistRoller
+```
+
+PowerShell:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Linux/macOS:
+
+```bash
 cp .env.example .env
 ```
 
-Edit `.env` and add your Emergent LLM key:
+The default local configuration is:
 
+```env
+MONGO_URL=mongodb://mongo:27017
+DB_NAME=geist_storyteller
+CORS_ORIGINS=*
 ```
-EMERGENT_LLM_KEY=sk-emergent-xxxxxxxxxxxxxxxx
-```
+
+`DB_NAME=geist_storyteller` is intentionally retained so existing local Docker data continues to use the same database.
 
 ### 2. Run
 
 ```bash
-docker-compose up --build
+docker compose up --build -d
 ```
 
-The app will be available at **http://localhost:8001**.
+Open **http://localhost:8001**.
 
 ### 3. Stop
 
 ```bash
-docker-compose down
+docker compose down
 ```
 
-Data persists in a Docker volume (`mongo_data`). To wipe data:
+MongoDB data persists in the `mongo_data` Docker volume. To deliberately erase it:
+
 ```bash
-docker-compose down -v
+docker compose down -v
 ```
-
----
-
-## Deploy to a Cloud Service
-
-The single `Dockerfile` bundles frontend + backend into one container. You can deploy it to any service that supports Docker containers.
-
-### Requirements
-- A MongoDB instance (e.g., [MongoDB Atlas](https://www.mongodb.com/atlas) free tier)
-- Set these environment variables on your hosting platform:
-
-| Variable | Description |
-|---|---|
-| `MONGO_URL` | MongoDB connection string (e.g., `mongodb+srv://user:pass@cluster.mongodb.net`) |
-| `DB_NAME` | Database name (default: `geist_storyteller`) |
-| `EMERGENT_LLM_KEY` | Your Emergent LLM key for AI features |
-| `CORS_ORIGINS` | Allowed origins (set to `*` or your domain) |
-
-### Example: Railway / Render / Fly.io
-
-1. Push your repo to GitHub
-2. Connect the repo to your hosting platform
-3. Set the environment variables above
-4. Deploy — the Dockerfile will be detected automatically
-5. Expose port **8001**
-
----
 
 ## Development
 
-### Backend (FastAPI)
+### Backend
+
 ```bash
+pip install -r backend/requirements.txt
+pytest backend/tests -q
 cd backend
-pip install -r requirements.txt --extra-index-url https://d33sy5i8bnduwe.cloudfront.net/simple/
 uvicorn server:app --reload --port 8001
 ```
 
-### Frontend (React)
+### Frontend
+
 ```bash
 cd frontend
+corepack enable
 yarn install
-REACT_APP_BACKEND_URL=http://localhost:8001 yarn start
+yarn build
 ```
 
----
+For local frontend development against a separately running backend, set `REACT_APP_BACKEND_URL=http://localhost:8001`.
 
-## Project Structure
+## Project structure
 
-```
-├── Dockerfile              # Multi-stage build (React + FastAPI)
-├── docker-compose.yml      # App + MongoDB
-├── .env.example            # Environment variable template
+```text
+├── Dockerfile
+├── docker-compose.yml
+├── .env.example
 ├── backend/
-│   ├── server.py           # FastAPI routes + static file serving
-│   ├── models.py           # Pydantic data models
-│   ├── ai_prompts.py       # AI system prompts & context builders
-│   ├── campaign_utils.py   # Campaign helper functions
-│   ├── database.py         # MongoDB connection
-│   └── requirements.txt
+│   ├── server.py
+│   ├── models.py
+│   ├── dice_engine.py
+│   ├── database.py
+│   ├── requirements.txt
+│   └── tests/
 └── frontend/
     ├── src/
-    │   ├── data/            # Static game data (Haunts, Keys, Merits, etc.)
-    │   ├── components/      # React components
-    │   │   ├── character/   # Character sheet sub-components
-    │   │   └── cards/       # Game card sub-components
+    │   ├── data/
+    │   ├── components/
+    │   │   ├── character/
+    │   │   └── cards/
     │   └── pages/
-    └── package.json
+    ├── package.json
+    └── yarn.lock
 ```
 
----
+## Notes
 
-## License
-
-This project is a fan-made tool for personal use with the Geist: the Sin-Eaters tabletop RPG by Onyx Path Publishing. All game content belongs to its respective copyright holders.
+This is a fan-made personal-use tool. Game content and trademarks belong to their respective rights holders.

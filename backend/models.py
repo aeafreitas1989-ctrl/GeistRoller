@@ -4,53 +4,6 @@ import uuid
 from datetime import datetime, timezone
 
 
-class Message(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    role: str  # 'user', 'storyteller', or 'system'
-    content: str
-    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
-
-class Session(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    title: str = "New Session"
-    campaign_id: Optional[str] = None
-    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
-    updated_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
-    messages: List[Message] = []
-    session_truth: str = ""
-    case_truth: str = ""
-
-class SessionCreate(BaseModel):
-    title: Optional[str] = "New Session"
-    campaign_id: Optional[str] = None
-
-class SessionUpdate(BaseModel):
-    title: Optional[str] = None
-    campaign_id: Optional[str] = None
-
-class SessionTitleSuggestionRequest(BaseModel):
-    include_campaign_context: bool = True
-
-class SessionTitleSuggestionResponse(BaseModel):
-    title: str
-
-class CaseTruthUpdate(BaseModel):
-    case_truth: str
-
-class GenerateCaseTruthRequest(BaseModel):
-    premise: str = ""
-
-class MessageCreate(BaseModel):
-    content: str
-    character_context: Optional[Dict[str, Any]] = None
-    storyteller_settings: Optional[Dict[str, Any]] = None
-
-class SystemMessageCreate(BaseModel):
-    content: str
-
-
 # Campaign Models
 
 class CampaignFaction(BaseModel):
@@ -96,16 +49,8 @@ class JournalEntry(BaseModel):
     npcs_encountered: List[str] = Field(default_factory=list)
     mysteries_uncovered: List[str] = Field(default_factory=list)
 
-class PendingJournalUpdate(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
-    update_type: str
-    data: Dict[str, Any]
-    ai_reasoning: str = ""
-
 class CampaignJournal(BaseModel):
     entries: List[JournalEntry] = Field(default_factory=list)
-    pending_updates: List[PendingJournalUpdate] = Field(default_factory=list)
 
 class Campaign(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -131,16 +76,7 @@ class CampaignUpdate(BaseModel):
     factions: Optional[List[Dict[str, Any]]] = None
     recurring_npcs: Optional[List[Dict[str, Any]]] = None
     plot_threads: Optional[List[Dict[str, Any]]] = None
-
-class JournalUpdateApproval(BaseModel):
-    update_id: str
-    approved: bool
-    modified_data: Optional[Dict[str, Any]] = None
-
-class GenerateJournalRequest(BaseModel):
-    session_id: str
-    force_regenerate: bool = False
-
+    journal: Optional[Dict[str, Any]] = None
 
 # Condition Model
 
@@ -170,7 +106,7 @@ class Character(BaseModel):
     arcana: Dict[str, int] = Field(default_factory=dict)  # e.g., {"Death": 2, "Spirit": 3}
     rotes: List[Dict[str, Any]] = Field(default_factory=list)  # [{spell, arcanum, dots, skill}]
     praxes: List[Dict[str, Any]] = Field(default_factory=list)  # [{spell, arcanum, dots}]
-    attainments: List[str] = Field(default_factory=list)  # auto-calculated from arcana
+    attainments: List[Any] = Field(default_factory=list)  # learned/custom Attainments; Arcana Attainments are derived in the UI
     concept: str = ""
     geist_name: str = ""
     geist_description: str = ""
@@ -287,7 +223,7 @@ class CharacterUpdate(BaseModel):
     arcana: Optional[Dict[str, int]] = None
     rotes: Optional[List[Dict[str, Any]]] = None
     praxes: Optional[List[Dict[str, Any]]] = None
-    attainments: Optional[List[str]] = None
+    attainments: Optional[List[Any]] = None
     concept: Optional[str] = None
     geist_name: Optional[str] = None
     geist_description: Optional[str] = None
@@ -362,60 +298,14 @@ class CharacterUpdate(BaseModel):
     scrutiny_state: Optional[Dict[str, Any]] = None
     scene_tracker: Optional[Dict[str, str]] = None
 
-# Storyteller Settings Models
-
-class StorytellerSettings(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-    scene_summary_level: str = "standard"
-    suggest_rolls: bool = True
-    include_modifiers: bool = True
-    supernatural_presence: str = "average"
-    escalation_speed: str = "gradual"
-    opposition_competence: str = "competent"
-    lethality_bias: str = "neutral"
-    raw_strictness: str = "raw_with_interpretation"
-    storyteller_doctrine: str = ""
-    tone_description: str = ""
-    chronicle_scope: str = ""
-    setting_constraints: str = ""
-    npc_behavioral_rules: str = ""
-    writing_style: str = ""
-    additional_info: str = ""
-    external_llm_provider: str = ""
-    external_llm_api_key: str = ""
-    external_llm_model: str = ""
-    external_llm_base_url: str = ""
-
-class StorytellerSettingsUpdate(BaseModel):
-    scene_summary_level: Optional[str] = None
-    suggest_rolls: Optional[bool] = None
-    include_modifiers: Optional[bool] = None
-    supernatural_presence: Optional[str] = None
-    escalation_speed: Optional[str] = None
-    opposition_competence: Optional[str] = None
-    lethality_bias: Optional[str] = None
-    raw_strictness: Optional[str] = None
-    storyteller_doctrine: Optional[str] = None
-    tone_description: Optional[str] = None
-    chronicle_scope: Optional[str] = None
-    setting_constraints: Optional[str] = None
-    npc_behavioral_rules: Optional[str] = None
-    writing_style: Optional[str] = None
-    additional_info: Optional[str] = None
-    external_llm_provider: Optional[str] = None
-    external_llm_api_key: Optional[str] = None
-    external_llm_model: Optional[str] = None
-    external_llm_base_url: Optional[str] = None
-
-
 # Dice Models
 
 class DiceRollRequest(BaseModel):
-    pool: int
-    again: int = 10
+    pool: int = Field(ge=0, le=100)
+    again: int = Field(default=10, ge=8, le=10)
     rote: bool = False
     chance: bool = False
-    exceptional_target: int = 5
+    exceptional_target: int = Field(default=5, ge=1, le=100)
 
 class DiceRollResult(BaseModel):
     dice: List[int]

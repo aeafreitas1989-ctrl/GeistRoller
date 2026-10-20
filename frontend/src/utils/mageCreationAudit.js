@@ -433,6 +433,14 @@ export const calculateMagePurchaseCost = (character = {}, purchase = {}) => {
         return { experience: 0, arcane_experience: MAGE_XP_COSTS.praxis.arcane_experience };
     }
 
+    if (purchase.trait_type === "legacy_attainment_tutored") {
+        return { ...MAGE_XP_COSTS.legacy_attainment_tutored };
+    }
+
+    if (purchase.trait_type === "legacy_attainment_no_tutor") {
+        return { ...MAGE_XP_COSTS.legacy_attainment_no_tutor };
+    }
+
     if (purchase.trait_type === "wisdom") {
         return { experience: 0, arcane_experience: MAGE_XP_COSTS.wisdom.arcane_experience * steps };
     }

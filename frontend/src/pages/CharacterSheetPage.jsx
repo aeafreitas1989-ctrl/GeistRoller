@@ -10,7 +10,7 @@ import { advanceSceneTime, sleepUntilMorning } from "@/utils/timeUtils";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
-export const StorytellerPage = () => {
+export const CharacterSheetPage = () => {
     const [characters, setCharacters] = useState([]);
     const [activeCharacter, setActiveCharacter] = useState(null);
     const [rollColumnCollapsed, setRollColumnCollapsed] = useState(false);
@@ -315,7 +315,7 @@ export const StorytellerPage = () => {
         });
     };
 
-    // Fetch sessions and campaigns on mount
+    // Fetch characters on mount
     useEffect(() => {
         fetchCharacters();
     }, []);
@@ -567,7 +567,7 @@ export const StorytellerPage = () => {
     };
 
     return (
-        <div className="app-container" data-testid="storyteller-page">
+        <div className="app-container" data-testid="character-sheet-page">
             {/* Main Content - Character and Cards always visible */}
             <div className="main-content overflow-y-auto">
                 <div
@@ -590,7 +590,6 @@ export const StorytellerPage = () => {
                                     onUpdateCharacter={updateCharacter}
                                     onDeleteCharacter={deleteCharacter}
                                     onTriggerDiceRoll={triggerDiceRoll}
-                                    onAddRecentRoll={addRecentRoll}
                                     onAddRecentRoll={addRecentRoll}
                                     onCreateActiveSpell={addActiveSpell}
                                     onImportCharacter={importCharacter}

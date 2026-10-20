@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Trash2, ChevronDown, ChevronRight, Book, Globe, Users, MapPin, Sparkles, Check, X, RefreshCw, Scroll, AlertTriangle, Pencil } from "lucide-react";
+import { Plus, Trash2, ChevronDown, ChevronRight, Book, Globe, Users, MapPin, Sparkles, Check, X, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -43,14 +43,9 @@ const getCategoryStyle = (cat) => {
 export const CampaignPanel = ({
     campaign,
     onUpdateCampaign,
-    onGenerateJournal,
-    onApproveJournalUpdate,
-    activeSession,
-    isGeneratingJournal,
 }) => {
     const [openSections, setOpenSections] = useState({
         journal: true,
-        pendingUpdates: true,
         worldState: false,
         factions: false,
         npcs: false,
@@ -131,30 +126,7 @@ export const CampaignPanel = ({
         setEditingFact({ fact: "", category: "general" });
     };
 
-    const journal = campaign.journal || { entries: [], pending_updates: [] };
-    const pendingUpdates = journal.pending_updates || [];
-
-    const getUpdateTypeIcon = (type) => {
-        switch (type) {
-            case "journal_entry": return <Scroll className="w-3 h-3" />;
-            case "world_state": return <Globe className="w-3 h-3" />;
-            case "npc": return <Users className="w-3 h-3" />;
-            case "faction": return <MapPin className="w-3 h-3" />;
-            case "plot_thread": return <Sparkles className="w-3 h-3" />;
-            default: return <Book className="w-3 h-3" />;
-        }
-    };
-
-    const getUpdateTypeLabel = (type) => {
-        switch (type) {
-            case "journal_entry": return "Journal Entry";
-            case "world_state": return "World Fact";
-            case "npc": return "New NPC";
-            case "faction": return "New Faction";
-            case "plot_thread": return "Plot Thread";
-            default: return type;
-        }
-    };
+    const journal = campaign.journal || { entries: [] };
 
     return (
         <ScrollArea className="h-full" data-testid="campaign-panel">
@@ -166,94 +138,6 @@ export const CampaignPanel = ({
                         <p className="text-sm text-zinc-400 mt-1">{campaign.description}</p>
                     )}
                 </div>
-
-                {/* Pending Updates (AI Suggestions) */}
-                {pendingUpdates.length > 0 && (
-                    <Collapsible
-                        open={openSections.pendingUpdates}
-                        onOpenChange={() => toggleSection("pendingUpdates")}
-                        className="bg-amber-950/20 border border-amber-500/30 rounded-sm"
-                        data-testid="campaign-pending-updates"
-                    >
-                        <CollapsibleTrigger className="w-full flex items-center justify-between p-3">
-                            <div className="flex items-center gap-2">
-                                <AlertTriangle className="w-4 h-4 text-amber-400" />
-                                <span className="text-xs font-mono uppercase tracking-wider text-amber-300">
-                                    Pending Updates ({pendingUpdates.length})
-                                </span>
-                            </div>
-                            {openSections.pendingUpdates ? (
-                                <ChevronDown className="w-4 h-4 text-amber-400" />
-                            ) : (
-                                <ChevronRight className="w-4 h-4 text-amber-400" />
-                            )}
-                        </CollapsibleTrigger>
-                        <CollapsibleContent className="px-3 pb-3 space-y-2">
-                            <p className="text-xs text-amber-200/70 mb-2">
-                                AI-suggested updates from your sessions. Review and approve or reject.
-                            </p>
-                            {pendingUpdates.map((update) => (
-                                <div 
-                                    key={update.id} 
-                                    className="bg-zinc-900/50 rounded-sm p-3 border border-zinc-800/50"
-                                    data-testid={`pending-update-${update.id}`}
-                                >
-                                    <div className="flex items-center justify-between mb-2">
-                                        <div className="flex items-center gap-2">
-                                            {getUpdateTypeIcon(update.update_type)}
-                                            <span className="text-xs font-mono text-amber-300">
-                                                {getUpdateTypeLabel(update.update_type)}
-                                            </span>
-                                        </div>
-                                        <div className="flex items-center gap-1">
-                                            <Button
-                                                size="icon"
-                                                variant="ghost"
-                                                className="h-6 w-6 text-green-400 hover:text-green-300 hover:bg-green-900/30"
-                                                onClick={() => onApproveJournalUpdate(update.id, true)}
-                                                data-testid={`approve-update-${update.id}`}
-                                            >
-                                                <Check className="w-3 h-3" />
-                                            </Button>
-                                            <Button
-                                                size="icon"
-                                                variant="ghost"
-                                                className="h-6 w-6 text-red-400 hover:text-red-300 hover:bg-red-900/30"
-                                                onClick={() => onApproveJournalUpdate(update.id, false)}
-                                                data-testid={`reject-update-${update.id}`}
-                                            >
-                                                <X className="w-3 h-3" />
-                                            </Button>
-                                        </div>
-                                    </div>
-                                    <div className="text-sm text-zinc-300">
-                                        {update.update_type === "journal_entry" ? (
-                                            <div>
-                                                <p className="font-medium">{update.data?.session_title}</p>
-                                                <p className="text-zinc-400 text-xs mt-1">{update.data?.summary?.slice(0, 200)}...</p>
-                                            </div>
-                                        ) : update.update_type === "npc" ? (
-                                            <p><strong>{update.data?.name}</strong>: {update.data?.description}</p>
-                                        ) : update.update_type === "faction" ? (
-                                            <p><strong>{update.data?.name}</strong> [{update.data?.relationship}]: {update.data?.description}</p>
-                                        ) : update.update_type === "plot_thread" ? (
-                                            <p><strong>{update.data?.title}</strong>: {update.data?.description}</p>
-                                        ) : update.update_type === "world_state" ? (
-                                            <p>[{update.data?.category}] {update.data?.fact}</p>
-                                        ) : (
-                                            <p>{JSON.stringify(update.data)}</p>
-                                        )}
-                                    </div>
-                                    {update.ai_reasoning && (
-                                        <p className="text-xs text-zinc-500 mt-2 italic">
-                                            AI: {update.ai_reasoning}
-                                        </p>
-                                    )}
-                                </div>
-                            ))}
-                        </CollapsibleContent>
-                    </Collapsible>
-                )}
 
                 {/* Campaign Journal */}
                 <Collapsible
@@ -276,21 +160,9 @@ export const CampaignPanel = ({
                         )}
                     </CollapsibleTrigger>
                     <CollapsibleContent className="px-3 pb-3 space-y-3">
-                        {activeSession && (
-                            <Button
-                                onClick={onGenerateJournal}
-                                disabled={isGeneratingJournal}
-                                className="w-full btn-secondary text-xs"
-                                data-testid="generate-journal-btn"
-                            >
-                                <RefreshCw className={`w-3 h-3 mr-2 ${isGeneratingJournal ? 'animate-spin' : ''}`} />
-                                {isGeneratingJournal ? "Generating..." : "Update Journal from Session"}
-                            </Button>
-                        )}
-                        
-                        {(journal.entries || []).length === 0 ? (
+{(journal.entries || []).length === 0 ? (
                             <p className="text-sm text-zinc-500 text-center py-4">
-                                No journal entries yet. Complete a session to generate entries.
+                                No journal entries yet.
                             </p>
                         ) : (
                             <div className="space-y-2">
