@@ -14,27 +14,56 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { toast } from "sonner";
 import { ARCANA, MAGE_ATTAINMENTS, PATH_ARCANA } from "../../data/character-data";
 import { LegacyAttainmentsSection } from "./LegacyAttainmentsSection";
 
 const UTILITY_ATTAINMENTS = [
     { arcanum: "Death", name: "Eyes of the Dead" },
+    { arcanum: "Fate", name: "Conditional Duration" },
     { arcanum: "Forces", name: "Precise Force" },
+    { arcanum: "Life", name: "Improved Pattern Restoration" },
     { arcanum: "Matter", name: "Permanence" },
+    { arcanum: "Mind", name: "Mind's Eye" },
+    { arcanum: "Prime", name: "Universal Counterspell" },
+    { arcanum: "Space", name: "Sympathetic Range" },
+    { arcanum: "Spirit", name: "Spirit Eyes" },
+    { arcanum: "Time", name: "Temporal Sympathy" },
 ];
 
+const UTILITY_DESCRIPTIONS = {
+    Death:
+        "Peripheral Death Sight reacts to ghosts and deathly Twilight. Active Death Sight automatically sees souls and ghosts in Twilight. Spend 1 Mana to interact with ghosts for the scene.",
+    Forces:
+        "After spending a full turn calculating the action, gain 9-Again on an applicable physical attack or projectile/aimed kinetic force. Against a stationary object, ignore 2 Durability and a successful hit inflicts +2 Structure damage; against a stationary armored target, a successful strike destroys and ignores 1/1 armor.",
+    Life:
+        "Pattern Restoration improves to 1 Mana per bashing wound and 2 Mana per lethal wound. Scouring a Physical Attribute no longer reduces derived traits based on that Attribute.",
+    Mind:
+        "Peripheral Mind Sight reacts to Goetia, Astral beings, and Twilight projections. Active Mind Sight automatically sees Goetia and projecting beings in Twilight. Spend 1 Mana to interact with Goetia for the scene.",
+    Spirit:
+        "Peripheral Spirit Sight reacts to spirits and spiritual Twilight. Active Spirit Sight automatically sees spirits and projecting beings in Twilight. Spend 1 Mana to interact with spirits for the scene.",
+};
+
 const getUtilityDescription = (arcanum) =>
-    MAGE_ATTAINMENTS?.[arcanum]?.[2]?.description || "";
+    UTILITY_DESCRIPTIONS[arcanum] ||
+    MAGE_ATTAINMENTS?.[arcanum]?.[2]?.description ||
+    "";
 
 export const MageAttainmentsContent = ({
     getValue,
     handleChange,
     onTriggerDiceRoll,
+    onUpdateCharacter,
+    onAddRecentRoll,
 }) => {
     const arcana = getValue("arcana") || {};
     const gnosis = Math.max(1, Number(getValue("gnosis")) || 1);
     const path = getValue("path") || "";
     const pathRuling = PATH_ARCANA[path]?.ruling || [];
+    const currentMana = Math.max(0, Number(getValue("mana")) || 0);
+    const activeSpells = Array.isArray(getValue("active_spells"))
+        ? getValue("active_spells")
+        : [];
 
     const counterspellArcana = ARCANA.filter(
         (arcanum) => (arcana[arcanum] || 0) >= 1
@@ -58,6 +87,79 @@ export const MageAttainmentsContent = ({
     const unlockedUtilityAttainments = UTILITY_ATTAINMENTS.filter(
         ({ arcanum }) => (arcana[arcanum] || 0) >= 2
     );
+
+    const hasActiveEffect = (effectKey) =>
+        activeSpells.some((effect) => effect?.effect_key === effectKey);
+
+    const commitImmediate = async (patch) => {
+        if (typeof onUpdateCharacter === "function") {
+            await onUpdateCharacter(patch);
+            return;
+        }
+
+        Object.entries(patch).forEach(([field, value]) => {
+            handleChange(field, value);
+        });
+    };
+
+    const activateTwilightInteraction = async ({
+        effectKey,
+        name,
+        arcanum,
+        targetLabel,
+    }) => {
+        if (hasActiveEffect(effectKey)) return;
+
+        if (currentMana < 1) {
+            toast.error("Not enough Mana.");
+            return;
+        }
+
+        const effect = {
+            id: `attainment-${effectKey}-${Date.now()}`,
+            kind: "effect",
+            effect_key: effectKey,
+            name: `${name} — Interaction`,
+            subtitle: `${arcanum} 2 Attainment`,
+            duration: "Scene",
+            description:
+                `You can speak with, touch, and strike ${targetLabel} for the rest of the scene. ` +
+                `This also leaves you vulnerable to their interaction.`,
+        };
+
+        await commitImmediate({
+            mana: currentMana - 1,
+            active_spells: [...activeSpells, effect],
+        });
+
+        toast.success(`${name} interaction activated for the scene.`);
+    };
+
+    const preparePreciseForce = async () => {
+        const effectKey = "precise-force-prepared";
+
+        if (hasActiveEffect(effectKey)) return;
+
+        const effect = {
+            id: `attainment-${effectKey}-${Date.now()}`,
+            kind: "effect",
+            effect_key: effectKey,
+            name: "Precise Force — Prepared",
+            subtitle: "Forces 2 Attainment",
+            duration: "Next applicable attack",
+            description:
+                "A full turn has been spent calculating the action. The next applicable physical attack " +
+                "uses 9-Again. Against a stationary object, ignore 2 Durability and a successful hit deals " +
+                "+2 Structure damage. Against a stationary armored target, a successful strike destroys " +
+                "and ignores 1/1 armor.",
+        };
+
+        await commitImmediate({
+            active_spells: [...activeSpells, effect],
+        });
+
+        toast.success("Precise Force prepared.");
+    };
 
     const triggerCounterspell = (arcanum, universal = false) => {
         const rating = Math.max(1, Number(arcana[arcanum]) || 1);
@@ -89,6 +191,116 @@ export const MageAttainmentsContent = ({
                 `Extended Supernal summoning. ${primary} is the Path Ruling Arcanum; ` +
                 `${secondary} is specified as the second Arcanum. Cost: 2 Mana.`,
         });
+    };
+
+    const renderUtilityAttainment = ({ arcanum, name }) => {
+        const isEyesOfDead = arcanum === "Death";
+        const isPreciseForce = arcanum === "Forces";
+        const isPatternRestoration = arcanum === "Life";
+        const isMindsEye = arcanum === "Mind";
+        const isSpiritEyes = arcanum === "Spirit";
+
+        const deathActive = hasActiveEffect("eyes-of-the-dead-interaction");
+        const mindActive = hasActiveEffect("minds-eye-interaction");
+        const spiritActive = hasActiveEffect("spirit-eyes-interaction");
+        const precisePrepared = hasActiveEffect("precise-force-prepared");
+
+        let action = null;
+
+        if (isEyesOfDead) {
+            action = {
+                label: deathActive ? "Active" : "Interact · 1 Mana",
+                disabled: deathActive || currentMana < 1,
+                onClick: () =>
+                    activateTwilightInteraction({
+                        effectKey: "eyes-of-the-dead-interaction",
+                        name,
+                        arcanum,
+                        targetLabel: "ghosts and souls in Twilight",
+                    }),
+            };
+        }
+
+        if (isMindsEye) {
+            action = {
+                label: mindActive ? "Active" : "Interact · 1 Mana",
+                disabled: mindActive || currentMana < 1,
+                onClick: () =>
+                    activateTwilightInteraction({
+                        effectKey: "minds-eye-interaction",
+                        name,
+                        arcanum,
+                        targetLabel: "Goetia and projecting beings in Mental Twilight",
+                    }),
+            };
+        }
+
+        if (isSpiritEyes) {
+            action = {
+                label: spiritActive ? "Active" : "Interact · 1 Mana",
+                disabled: spiritActive || currentMana < 1,
+                onClick: () =>
+                    activateTwilightInteraction({
+                        effectKey: "spirit-eyes-interaction",
+                        name,
+                        arcanum,
+                        targetLabel: "spirits and projecting beings in spiritual Twilight",
+                    }),
+            };
+        }
+
+        if (isPreciseForce) {
+            action = {
+                label: precisePrepared ? "Prepared" : "Prepare",
+                disabled: precisePrepared,
+                onClick: preparePreciseForce,
+            };
+        }
+
+        return (
+            <TooltipProvider key={arcanum}>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <div className="inline-flex items-center gap-1 rounded border border-zinc-700/50 bg-zinc-800/50 px-2 py-1 text-[10px] text-zinc-300">
+                            <span className="font-mono text-violet-400">●●</span>
+                            <span>{name}</span>
+
+                            {action && (
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="ml-1 h-5 px-1.5 text-[9px] text-teal-300 hover:bg-teal-950/30 hover:text-teal-200 disabled:opacity-40"
+                                    disabled={action.disabled}
+                                    onClick={(event) => {
+                                        event.preventDefault();
+                                        event.stopPropagation();
+                                        action.onClick();
+                                    }}
+                                    data-testid={`utility-attainment-${arcanum.toLowerCase()}-action`}
+                                >
+                                    {action.label}
+                                </Button>
+                            )}
+
+                            {isPatternRestoration && (
+                                <span className="ml-1 text-[9px] text-emerald-400">
+                                    Combat
+                                </span>
+                            )}
+                        </div>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-sm border-zinc-700 bg-zinc-900">
+                        <p className="text-xs font-medium text-violet-300">
+                            {arcanum} 2 — {name}
+                        </p>
+                        <p className="mt-1 text-xs text-zinc-300">
+                            {getUtilityDescription(arcanum)}
+                        </p>
+                    </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
+        );
     };
 
     return (
@@ -196,29 +408,10 @@ export const MageAttainmentsContent = ({
                     <div className="flex flex-1 flex-wrap content-start gap-1">
                         {unlockedUtilityAttainments.length === 0 ? (
                             <span className="text-[10px] italic text-zinc-600">
-                                Death 2, Forces 2, or Matter 2 unlocks the utility attainments shown here.
+                                Raise an Arcanum to 2 dots to unlock its Lesser Utility Attainment.
                             </span>
                         ) : (
-                            unlockedUtilityAttainments.map(({ arcanum, name }) => (
-                                <TooltipProvider key={arcanum}>
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <span className="inline-flex cursor-help items-center gap-1 rounded border border-zinc-700/50 bg-zinc-800/50 px-2 py-1 text-[10px] text-zinc-300">
-                                                <span className="font-mono text-violet-400">●●</span>
-                                                {name}
-                                            </span>
-                                        </TooltipTrigger>
-                                        <TooltipContent className="max-w-xs border-zinc-700 bg-zinc-900">
-                                            <p className="text-xs font-medium text-violet-300">
-                                                {arcanum} 2
-                                            </p>
-                                            <p className="text-xs text-zinc-300">
-                                                {getUtilityDescription(arcanum)}
-                                            </p>
-                                        </TooltipContent>
-                                    </Tooltip>
-                                </TooltipProvider>
-                            ))
+                            unlockedUtilityAttainments.map(renderUtilityAttainment)
                         )}
                     </div>
                 </div>
@@ -227,6 +420,8 @@ export const MageAttainmentsContent = ({
             <LegacyAttainmentsSection
                 getValue={getValue}
                 handleChange={handleChange}
+                onUpdateCharacter={onUpdateCharacter}
+                onAddRecentRoll={onAddRecentRoll}
             />
         </div>
     );
