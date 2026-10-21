@@ -584,14 +584,66 @@ export const CharacterPanel = ({
 
         if (field === "attainments" && nextList.length > currentList.length) {
             const added = nextList[nextList.length - 1] || {};
+
             const isTutored =
                 typeof added === "object" && added !== null
                     ? added.tutored !== false
                     : true;
+
             const name =
                 typeof added === "string"
                     ? added
                     : (added.name || "New Attainment");
+
+            const replicatedPraxes = [
+                added?.primary_effect?.replicates_praxis || null,
+                added?.secondary_effect?.enabled
+                    ? added?.secondary_effect?.replicates_praxis || null
+                    : null,
+            ].filter(Boolean);
+
+            const currentPraxes = Array.isArray(activeCharacter?.praxes)
+                ? [...activeCharacter.praxes]
+                : [];
+
+            const remainingPraxes = [...currentPraxes];
+
+            const praxisMatchesSnapshot = (praxis, snapshot) => {
+                if (!praxis || !snapshot) return false;
+
+                if (snapshot.id && praxis.id) {
+                    return snapshot.id === praxis.id;
+                }
+
+                return (
+                    (praxis.spell || "") === (snapshot.spell || "") &&
+                    (praxis.arcanum || "") === (snapshot.arcanum || "") &&
+                    Math.max(1, Number(praxis.dots) || 1) ===
+                        Math.max(1, Number(snapshot.dots) || 1) &&
+                    (praxis.practice || "") === (snapshot.practice || "")
+                );
+            };
+
+            let praxisRefund = 0;
+
+            replicatedPraxes.forEach((snapshot) => {
+                const praxisIndex = remainingPraxes.findIndex((praxis) =>
+                    praxisMatchesSnapshot(praxis, snapshot)
+                );
+
+                if (praxisIndex >= 0) {
+                    remainingPraxes.splice(praxisIndex, 1);
+                    praxisRefund += 1;
+                }
+            });
+
+            const patch = {
+                attainments: value,
+            };
+
+            if (praxisRefund > 0) {
+                patch.praxes = remainingPraxes;
+            }
 
             openAdvancementPurchase({
                 trait_type: isTutored
@@ -601,8 +653,13 @@ export const CharacterPanel = ({
                 label: `Legacy Attainment: ${name}`,
                 from: currentList.length,
                 to: nextList.length,
-                apply: { kind: "field", field, value },
+                praxis_refund: praxisRefund,
+                apply: {
+                    kind: "patch",
+                    patch,
+                },
             });
+
             return true;
         }
 
@@ -746,17 +803,46 @@ export const CharacterPanel = ({
         if (!pendingPurchase) return;
 
         const cost = pendingPurchase.cost || calculateMagePurchaseCost(activeCharacter || {}, pendingPurchase);
+        const praxisRefund =
+            pendingPurchase.trait_type?.startsWith("legacy_attainment")
+                ? Math.max(0, Number(pendingPurchase.praxis_refund) || 0)
+                : 0;
         const safeArcaneApplied = Math.min(
             pendingPurchase.maxArcaneApplied || 0,
             Math.max(0, Number(arcaneXpApplied) || 0)
         );
 
-        if (!canAffordMagePurchase(activeCharacter || {}, cost, safeArcaneApplied)) {
+        const characterForAffordability = {
+            ...(activeCharacter || {}),
+            arcane_experience:
+                (Number(activeCharacter?.arcane_experience) || 0) +
+                praxisRefund,
+        };
+
+        if (!canAffordMagePurchase(characterForAffordability, cost, safeArcaneApplied)) {
             toast.error("Not enough XP for this purchase.");
             return;
         }
 
-        const ledgerEntry = makeLedgerEntry({ ...pendingPurchase, note: xpPurchaseNote }, cost, safeArcaneApplied);
+        const praxisRefundNote =
+            praxisRefund > 0
+                ? `${praxisRefund} ${praxisRefund === 1 ? "Praxis" : "Praxes"} converted into Legacy ${praxisRefund === 1 ? "effect" : "effects"}; refunded ${praxisRefund} Arcane XP.`
+                : "";
+
+        const combinedPurchaseNote = [
+            xpPurchaseNote?.trim(),
+            praxisRefundNote,
+        ].filter(Boolean).join(" ");
+
+        const ledgerEntry = makeLedgerEntry(
+            {
+                ...pendingPurchase,
+                note: combinedPurchaseNote,
+            },
+            cost,
+            safeArcaneApplied
+        );
+
         const currentLedger = activeCharacter?.advancement_ledger || [];
         const purchasePatch = applyPurchasePatch(pendingPurchase);
 
@@ -804,9 +890,16 @@ export const CharacterPanel = ({
                     0,
                     (activeCharacter?.arcane_experience || 0) -
                     ledgerEntry.cost.arcane_experience
-                ) + legacyOverlapReward,
+                ) +
+                legacyOverlapReward +
+                praxisRefund,
             spent_experience: (activeCharacter?.spent_experience || 0) + ledgerEntry.cost.experience,
-            spent_arcane_experience: (activeCharacter?.spent_arcane_experience || 0) + ledgerEntry.cost.arcane_experience,
+            spent_arcane_experience: Math.max(
+                0,
+                (activeCharacter?.spent_arcane_experience || 0) +
+                ledgerEntry.cost.arcane_experience -
+                praxisRefund
+            ),
             advancement_ledger: [...currentLedger, ledgerEntry],
         };
 
@@ -815,10 +908,24 @@ export const CharacterPanel = ({
         setArcaneXpApplied(0);
         setXpPurchaseNote("");
         setXpPurchaseOpen(false);
+        const purchaseMessages = [];
+
+        if (legacyOverlapReward > 0) {
+            purchaseMessages.push(
+                `Legacy overlap awarded ${legacyOverlapReward} Arcane XP.`
+            );
+        }
+
+        if (praxisRefund > 0) {
+            purchaseMessages.push(
+                `${praxisRefund} ${praxisRefund === 1 ? "Praxis" : "Praxes"} removed and ${praxisRefund} Arcane XP refunded.`
+            );
+        }
+
         toast.success(
-            legacyOverlapReward > 0
-            ? `XP purchase recorded. Legacy overlap awarded ${legacyOverlapReward} Arcane XP.`
-            : "XP purchase recorded."
+            purchaseMessages.length > 0
+                ? `XP purchase recorded. ${purchaseMessages.join(" ")}`
+                : "XP purchase recorded."
         );
     };
 
