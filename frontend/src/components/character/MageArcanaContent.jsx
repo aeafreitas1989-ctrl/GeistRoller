@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Plus, Trash2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,11 +20,71 @@ const getPracticesForDots = (dots = 1) => {
     return [...new Set(practices)];
 };
 
+const makePraxisId = () =>
+    globalThis.crypto?.randomUUID?.() ||
+    `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+const createPraxisDraft = () => ({
+    id: makePraxisId(),
+    spell: "",
+    arcanum: "Death",
+    dots: 1,
+    practice: getPracticesForDots(1)[0] || "",
+});
+
 export const MageArcanaContent = ({
     getValue, getNestedValue, handleChange, handleNestedChange,
     openSpellcastingPopup, onTriggerDiceRoll, onUpdateCharacter,
     onAddRecentRoll,
 }) => {
+    const [praxisDraft, setPraxisDraft] = useState(null);
+
+    const learnedPraxes = Array.isArray(getValue("praxes"))
+        ? getValue("praxes")
+        : [];
+
+    /*
+     * Once the purchase is confirmed, the Praxis with this ID
+     * appears in the character's actual Praxis list. At that point
+     * the local draft is considered finished automatically.
+     *
+     * If the XP purchase is cancelled, it does NOT appear there,
+     * so the draft remains available for another attempt.
+     */
+    const activePraxisDraft =
+        praxisDraft &&
+        !learnedPraxes.some(
+            (praxis) =>
+                praxis?.id &&
+                praxis.id === praxisDraft.id
+        )
+            ? praxisDraft
+            : null;
+
+    const updatePraxisDraft = (patch) => {
+        setPraxisDraft((current) =>
+            current
+                ? {
+                      ...current,
+                      ...patch,
+                  }
+                : current
+        );
+    };
+
+    const learnPraxisDraft = () => {
+        if (!activePraxisDraft) return;
+        if (!activePraxisDraft.spell.trim()) return;
+
+        handleChange("praxes", [
+            ...learnedPraxes,
+            {
+                ...activePraxisDraft,
+                spell: activePraxisDraft.spell.trim(),
+            },
+        ]);
+    };
+
     return (
         <>
             {/* Arcana for Mages */}
@@ -220,23 +281,187 @@ export const MageArcanaContent = ({
             <div>
                 <div className="flex items-center justify-between mb-1">
                     <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Praxes</p>
-                    <Button 
-                        size="sm" 
-                        onClick={() => {
-                            const praxes = getValue("praxes") || [];
-                            handleChange("praxes", [...praxes, { spell: "", arcanum: "Death", dots: 1, practice: getPracticesForDots(1)[0] || "", }]);
-                        }} 
-                        className="h-5 px-2 text-[10px] btn-secondary" 
+                    <Button
+                        size="sm"
+                        onClick={() =>
+                            setPraxisDraft(createPraxisDraft())
+                        }
+                        disabled={!!activePraxisDraft}
+                        className="h-5 px-2 text-[10px] btn-secondary"
                         data-testid="add-praxis-btn"
                     >
-                        <Plus className="w-3 h-3 mr-1" /> Add
+                        <Plus className="w-3 h-3 mr-1" />
+                        Add
                     </Button>
                 </div>
                 <div className="space-y-2">
-                    {(getValue("praxes") || []).length === 0 ? (
-                        <p className="text-[10px] text-zinc-600 italic">No praxes learned</p>
+                    {activePraxisDraft && (() => {
+                        const draftPracticeOptions =
+                            getPracticesForDots(
+                                activePraxisDraft.dots || 1
+                            );
+
+                        const draftPractice =
+                            activePraxisDraft.practice ||
+                            draftPracticeOptions[0] ||
+                            "";
+
+                        return (
+                            <div
+                                className="p-2 bg-violet-950/20 border border-violet-700/50 rounded-sm space-y-2"
+                                data-testid="praxis-draft"
+                            >
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[10px] uppercase tracking-wider text-violet-300">
+                                        New Praxis
+                                    </span>
+
+                                    <span className="text-[9px] text-zinc-500">
+                                        Configure before purchasing
+                                    </span>
+                                </div>
+
+                                <div className="flex items-center gap-1.5">
+                                    <Input
+                                        value={activePraxisDraft.spell}
+                                        onChange={(e) =>
+                                            updatePraxisDraft({
+                                                spell: e.target.value,
+                                            })
+                                        }
+                                        placeholder="Spell"
+                                        className="input-geist h-6 text-xs flex-1 min-w-0"
+                                        data-testid="praxis-draft-spell"
+                                    />
+
+                                    <Select
+                                        value={
+                                            activePraxisDraft.arcanum ||
+                                            "Death"
+                                        }
+                                        onValueChange={(value) =>
+                                            updatePraxisDraft({
+                                                arcanum: value,
+                                            })
+                                        }
+                                    >
+                                        <SelectTrigger
+                                            className="h-6 w-[80px] bg-zinc-900/50 border-zinc-800 text-[10px] shrink-0"
+                                            data-testid="praxis-draft-arcanum"
+                                        >
+                                            <SelectValue />
+                                        </SelectTrigger>
+
+                                        <SelectContent className="bg-zinc-900 border-zinc-800">
+                                            {ARCANA.map((arcanum) => (
+                                                <SelectItem
+                                                    key={arcanum}
+                                                    value={arcanum}
+                                                    className="text-xs"
+                                                >
+                                                    {arcanum}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+
+                                    <StatDots
+                                        value={
+                                            activePraxisDraft.dots || 1
+                                        }
+                                        max={5}
+                                        onChange={(dots) => {
+                                            const nextPracticeOptions =
+                                                getPracticesForDots(dots);
+
+                                            const nextPractice =
+                                                nextPracticeOptions.includes(
+                                                    activePraxisDraft.practice
+                                                )
+                                                    ? activePraxisDraft.practice
+                                                    : (
+                                                        nextPracticeOptions[0] ||
+                                                        ""
+                                                    );
+
+                                            updatePraxisDraft({
+                                                dots,
+                                                practice: nextPractice,
+                                            });
+                                        }}
+                                        color="violet"
+                                        size="small"
+                                        testIdPrefix="praxis-draft-dots"
+                                    />
+
+                                    <Select
+                                        value={draftPractice}
+                                        onValueChange={(practice) =>
+                                            updatePraxisDraft({
+                                                practice,
+                                            })
+                                        }
+                                    >
+                                        <SelectTrigger
+                                            className="h-6 w-[110px] bg-zinc-900/50 border-zinc-800 text-[10px] shrink-0"
+                                            data-testid="praxis-draft-practice"
+                                        >
+                                            <SelectValue />
+                                        </SelectTrigger>
+
+                                        <SelectContent className="bg-zinc-900 border-zinc-800">
+                                            {draftPracticeOptions.map(
+                                                (practice) => (
+                                                    <SelectItem
+                                                        key={practice}
+                                                        value={practice}
+                                                        className="text-xs"
+                                                    >
+                                                        {practice}
+                                                    </SelectItem>
+                                                )
+                                            )}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="flex justify-end gap-2">
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-6 px-2 text-[10px] text-zinc-400 hover:text-zinc-200"
+                                        onClick={() =>
+                                            setPraxisDraft(null)
+                                        }
+                                        data-testid="cancel-praxis-draft-btn"
+                                    >
+                                        Cancel
+                                    </Button>
+
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        className="h-6 px-2 text-[10px] bg-violet-800 hover:bg-violet-700 text-white"
+                                        disabled={
+                                            !activePraxisDraft.spell.trim() ||
+                                            !activePraxisDraft.practice
+                                        }
+                                        onClick={learnPraxisDraft}
+                                        data-testid="learn-praxis-btn"
+                                    >
+                                        Learn Praxis
+                                    </Button>
+                                </div>
+                            </div>
+                        );
+                    })()}
+                    {learnedPraxes.length === 0 && !activePraxisDraft ? (
+                        <p className="text-[10px] text-zinc-600 italic">
+                            No praxes learned
+                        </p>
                     ) : (
-                        (getValue("praxes") || []).map((praxis, index) => {
+                        learnedPraxes.map((praxis, index) => {
                             const praxisPracticeOptions = getPracticesForDots(praxis.dots || 1);
                             const praxisPractice = praxis.practice || praxisPracticeOptions[0] || "";
 
