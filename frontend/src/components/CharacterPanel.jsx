@@ -2720,6 +2720,7 @@ export const CharacterPanel = ({
                                     handleNestedChange={handleNestedChange}
                                     openSpellcastingPopup={openSpellcastingPopup}
                                     onTriggerDiceRoll={onTriggerDiceRoll}
+                                    onUpdateCharacter={onUpdateCharacter}
                                 />
                             ) : (
                                 <GeistHauntsContent
