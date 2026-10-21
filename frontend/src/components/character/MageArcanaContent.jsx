@@ -22,6 +22,7 @@ const getPracticesForDots = (dots = 1) => {
 export const MageArcanaContent = ({
     getValue, getNestedValue, handleChange, handleNestedChange,
     openSpellcastingPopup, onTriggerDiceRoll, onUpdateCharacter,
+    onAddRecentRoll,
 }) => {
     return (
         <>
@@ -321,6 +322,7 @@ export const MageArcanaContent = ({
                 handleChange={handleChange}
                 onTriggerDiceRoll={onTriggerDiceRoll}
                 onUpdateCharacter={onUpdateCharacter}
+                onAddRecentRoll={onAddRecentRoll}
             />
         </>
     );
