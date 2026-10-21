@@ -3,6 +3,7 @@ import { Pencil, Play, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import {
     Dialog,
@@ -60,19 +61,52 @@ const DURATION_LEVELS = {
 
 const SCALE_LEVELS = {
     standard: [
-        "1 subject (Size 5) / 1m radius",
-        "2 subjects (Size 6) / small room",
-        "4 subjects (Size 7) / large room",
-        "8 subjects (Size 8) / single floor",
-        "16 subjects (Size 9) / ballroom",
+        {
+            subjects: "1 subject (Size 5)",
+            area: "1m radius",
+        },
+        {
+            subjects: "2 subjects (Size 6)",
+            area: "small room",
+        },
+        {
+            subjects: "4 subjects (Size 7)",
+            area: "large room",
+        },
+        {
+            subjects: "8 subjects (Size 8)",
+            area: "single floor",
+        },
+        {
+            subjects: "16 subjects (Size 9)",
+            area: "ballroom",
+        },
     ],
     advanced: [
-        "5 subjects (Size 5) / large house",
-        "10 subjects (Size 10) / small warehouse",
-        "20 subjects (Size 15) / supermarket",
-        "40 subjects (Size 20) / shopping mall",
-        "80 subjects (Size 25) / city block",
-        "160 subjects (Size 30) / neighbourhood",
+        {
+            subjects: "5 subjects (Size 5)",
+            area: "large house",
+        },
+        {
+            subjects: "10 subjects (Size 10)",
+            area: "small warehouse",
+        },
+        {
+            subjects: "20 subjects (Size 15)",
+            area: "supermarket",
+        },
+        {
+            subjects: "40 subjects (Size 20)",
+            area: "shopping mall",
+        },
+        {
+            subjects: "80 subjects (Size 25)",
+            area: "city block",
+        },
+        {
+            subjects: "160 subjects (Size 30)",
+            area: "neighbourhood",
+        },
     ],
 };
 
@@ -82,6 +116,7 @@ const makeId = () =>
 
 const createReach = () => ({
     casting_time: false,
+    sensory_range: false,
     advanced_duration: false,
     advanced_scale: false,
     advanced_potency: false,
@@ -95,14 +130,40 @@ const createAdjustments = () => ({
     scale: 0,
 });
 
+const createFactorValues = () => ({
+    potency: 1,
+    duration: 1,
+    scale: 1,
+});
+
+const normalizeFactorValues = (values = null) => {
+    if (!values || typeof values !== "object") return null;
+
+    return {
+        potency: Math.max(1, Number(values.potency) || 1),
+        duration: Math.max(1, Number(values.duration) || 1),
+        scale: Math.max(1, Number(values.scale) || 1),
+    };
+};
+
 const createEffect = ({ enabled = true, arcanum = "" } = {}) => ({
     enabled,
     spell: "",
     arcanum,
     practice: "",
     replicates_praxis: null,
+
     primary_factor: "potency",
+
+    factor_values: createFactorValues(),
+
+    scale_mode: "subjects",
+
+    notes: "",
+
     reach: createReach(),
+
+    // Kept only so older saved Attainments can be migrated.
     adjustments: createAdjustments(),
 });
 
@@ -129,23 +190,61 @@ const normalizeAdjustments = (adjustments = {}) => ({
     scale: Number(adjustments?.scale) || 0,
 });
 
-const normalizeEffect = (effect = {}, defaults = {}) => ({
-    ...createEffect(defaults),
-    ...(effect || {}),
-    enabled: effect?.enabled ?? defaults.enabled ?? true,
-    spell: effect?.spell || "",
-    arcanum: effect?.arcanum || defaults.arcanum || "",
-    practice: effect?.practice || "",
-    replicates_praxis:
-        effect?.replicates_praxis && typeof effect.replicates_praxis === "object"
-            ? { ...effect.replicates_praxis }
-            : null,
-    primary_factor: ["potency", "duration"].includes(effect?.primary_factor)
-        ? effect.primary_factor
-        : "potency",
-    reach: normalizeReach(effect?.reach),
-    adjustments: normalizeAdjustments(effect?.adjustments),
-});
+const normalizeEffect = (effect = {}, defaults = {}) => {
+    const normalizedReach = normalizeReach({
+        ...(effect?.reach || {}),
+
+        // Compatibility with the separate range field discussed earlier.
+        sensory_range:
+            effect?.reach?.sensory_range ??
+            (effect?.range === "sensory"),
+    });
+
+    return {
+        ...createEffect(defaults),
+        ...(effect || {}),
+
+        enabled:
+            effect?.enabled ??
+            defaults.enabled ??
+            true,
+
+        spell: effect?.spell || "",
+
+        arcanum:
+            effect?.arcanum ||
+            defaults.arcanum ||
+            "",
+
+        practice: effect?.practice || "",
+
+        replicates_praxis:
+            effect?.replicates_praxis &&
+            typeof effect.replicates_praxis === "object"
+                ? { ...effect.replicates_praxis }
+                : null,
+
+        primary_factor:
+            ["potency", "duration"].includes(effect?.primary_factor)
+                ? effect.primary_factor
+                : "potency",
+
+        factor_values:
+            normalizeFactorValues(effect?.factor_values),
+
+        scale_mode:
+            effect?.scale_mode === "area"
+                ? "area"
+                : "subjects",
+
+        notes: effect?.notes || "",
+
+        reach: normalizedReach,
+
+        adjustments:
+            normalizeAdjustments(effect?.adjustments),
+    };
+};
 
 const normalizeAttainment = (attainment, index) => {
     if (typeof attainment === "string") {
@@ -228,6 +327,7 @@ const getReachUsed = (effect = {}) => {
 
     return [
         reach.casting_time,
+        reach.sensory_range,
         reach.advanced_duration,
         reach.advanced_scale,
         reach.advanced_potency,
@@ -235,83 +335,335 @@ const getReachUsed = (effect = {}) => {
     ].filter(Boolean).length;
 };
 
-const getFactorRanks = (effect, arcanumDots) => {
-    const safeDots = Math.max(1, Number(arcanumDots) || 1);
-    const secondaryRank = 1 + Math.floor(safeDots / 2);
-    const primaryFactor = effect?.primary_factor === "duration" ? "duration" : "potency";
-    const adjustments = normalizeAdjustments(effect?.adjustments);
+const getFactorLimits = (effect, arcanumDots) => {
+    const normalizedEffect = normalizeEffect(effect);
 
-    const potencyBase = primaryFactor === "potency" ? safeDots : secondaryRank;
-    const durationBase = primaryFactor === "duration" ? safeDots : secondaryRank;
-    const scaleBase = secondaryRank;
+    const safeDots =
+        Math.max(1, Number(arcanumDots) || 1);
+
+    const secondaryMax =
+        1 + Math.floor(safeDots / 2);
+
+    const primaryFactor =
+        normalizedEffect.primary_factor === "duration"
+            ? "duration"
+            : "potency";
+
+    const potencyMax =
+        primaryFactor === "potency"
+            ? safeDots
+            : secondaryMax;
+
+    const durationMax =
+        primaryFactor === "duration"
+            ? safeDots
+            : secondaryMax;
+
+    const scaleMax = secondaryMax;
+
+    const durationTableMax =
+        normalizedEffect.reach.advanced_duration
+            ? DURATION_LEVELS.advanced.length
+            : DURATION_LEVELS.standard.length;
+
+    const scaleTableMax =
+        normalizedEffect.reach.advanced_scale
+            ? SCALE_LEVELS.advanced.length
+            : SCALE_LEVELS.standard.length;
 
     return {
-        potency: clamp(potencyBase + adjustments.potency, 1, 5),
-        duration: clamp(durationBase + adjustments.duration, 1, 7),
-        scale: clamp(scaleBase + adjustments.scale, 1, 6),
+        potency: clamp(
+            potencyMax,
+            1,
+            5
+        ),
+
+        duration: clamp(
+            durationMax,
+            1,
+            durationTableMax
+        ),
+
+        scale: clamp(
+            scaleMax,
+            1,
+            scaleTableMax
+        ),
     };
 };
 
-const getDerivedEffect = ({ effect, attainmentLevel, arcanumDots }) => {
+const getFactorValues = (effect, arcanumDots) => {
     const normalizedEffect = normalizeEffect(effect);
-    const fixedReach = getFixedReach(attainmentLevel, normalizedEffect.practice);
-    const reachUsed = getReachUsed(normalizedEffect);
-    const ranks = getFactorRanks(normalizedEffect, arcanumDots);
-    const durationMode = normalizedEffect.reach.advanced_duration ? "advanced" : "standard";
-    const scaleMode = normalizedEffect.reach.advanced_scale ? "advanced" : "standard";
-    const durationTable = DURATION_LEVELS[durationMode];
-    const scaleTable = SCALE_LEVELS[scaleMode];
-    const durationIndex = clamp(ranks.duration, 1, durationTable.length) - 1;
-    const scaleIndex = clamp(ranks.scale, 1, scaleTable.length) - 1;
+
+    const limits =
+        getFactorLimits(normalizedEffect, arcanumDots);
+
+    /*
+     * New Attainments store explicit values.
+     */
+    if (normalizedEffect.factor_values) {
+        return {
+            limits,
+
+            values: {
+                potency: clamp(
+                    normalizedEffect.factor_values.potency,
+                    1,
+                    limits.potency
+                ),
+
+                duration: clamp(
+                    normalizedEffect.factor_values.duration,
+                    1,
+                    limits.duration
+                ),
+
+                scale: clamp(
+                    normalizedEffect.factor_values.scale,
+                    1,
+                    limits.scale
+                ),
+            },
+        };
+    }
+
+    /*
+     * Compatibility with Attainments created using the
+     * previous +/- adjustment system.
+     */
+    const safeDots =
+        Math.max(1, Number(arcanumDots) || 1);
+
+    const secondaryMax =
+        1 + Math.floor(safeDots / 2);
+
+    const primaryFactor =
+        normalizedEffect.primary_factor === "duration"
+            ? "duration"
+            : "potency";
+
+    const oldBase = {
+        potency:
+            primaryFactor === "potency"
+                ? safeDots
+                : secondaryMax,
+
+        duration:
+            primaryFactor === "duration"
+                ? safeDots
+                : secondaryMax,
+
+        scale: secondaryMax,
+    };
+
+    const oldAdjustments =
+        normalizeAdjustments(
+            normalizedEffect.adjustments
+        );
 
     return {
-        castingTime: normalizedEffect.reach.casting_time
-            ? "Instant action"
-            : "1 scene preparation",
-        potency: normalizedEffect.reach.advanced_potency
-            ? `Potency ${ranks.potency} (+2 Withstand)`
-            : `Potency ${ranks.potency}`,
-        duration: durationTable[durationIndex],
-        scale: scaleTable[scaleIndex],
+        limits,
+
+        values: {
+            potency: clamp(
+                oldBase.potency +
+                    oldAdjustments.potency,
+                1,
+                limits.potency
+            ),
+
+            duration: clamp(
+                oldBase.duration +
+                    oldAdjustments.duration,
+                1,
+                limits.duration
+            ),
+
+            scale: clamp(
+                oldBase.scale +
+                    oldAdjustments.scale,
+                1,
+                limits.scale
+            ),
+        },
+    };
+};
+
+const getDerivedEffect = ({
+    effect,
+    attainmentLevel,
+    arcanumDots,
+}) => {
+    const normalizedEffect =
+        normalizeEffect(effect);
+
+    const fixedReach =
+        getFixedReach(
+            attainmentLevel,
+            normalizedEffect.practice
+        );
+
+    const reachUsed =
+        getReachUsed(normalizedEffect);
+
+    const {
+        values: factors,
+        limits: factorLimits,
+    } = getFactorValues(
+        normalizedEffect,
+        arcanumDots
+    );
+
+    const durationMode =
+        normalizedEffect.reach.advanced_duration
+            ? "advanced"
+            : "standard";
+
+    const scaleMode =
+        normalizedEffect.reach.advanced_scale
+            ? "advanced"
+            : "standard";
+
+    const durationTable =
+        DURATION_LEVELS[durationMode];
+
+    const scaleTable =
+        SCALE_LEVELS[scaleMode];
+
+    const durationIndex =
+        clamp(
+            factors.duration,
+            1,
+            durationTable.length
+        ) - 1;
+
+    const scaleIndex =
+        clamp(
+            factors.scale,
+            1,
+            scaleTable.length
+        ) - 1;
+
+    const scaleEntry =
+        scaleTable[scaleIndex];
+
+    return {
+        castingTime:
+            normalizedEffect.reach.casting_time
+                ? "Instant action"
+                : "1 scene preparation",
+
+        range:
+            normalizedEffect.reach.sensory_range
+                ? "Sensory"
+                : "Touch",
+
+        potency:
+            normalizedEffect.reach.advanced_potency
+                ? `Potency ${factors.potency} (+2 Withstand)`
+                : `Potency ${factors.potency}`,
+
+        duration:
+            durationTable[durationIndex],
+
+        scaleMode:
+            normalizedEffect.scale_mode,
+
+        scale:
+            normalizedEffect.scale_mode === "area"
+                ? scaleEntry.area
+                : scaleEntry.subjects,
+
+        factorValues: factors,
+
+        factorLimits,
+
         fixedReach,
+
         reachUsed,
-        reachValid: fixedReach > 0 && reachUsed <= fixedReach,
+
+        reachValid:
+            fixedReach > 0 &&
+            reachUsed <= fixedReach,
+
         practiceValid:
             !!normalizedEffect.practice &&
-            getPracticeDots(normalizedEffect.practice) <= Math.max(1, Number(attainmentLevel) || 1),
+            getPracticeDots(
+                normalizedEffect.practice
+            ) <=
+                Math.max(
+                    1,
+                    Number(attainmentLevel) || 1
+                ),
+
         optionText:
-            normalizedEffect.reach.option && normalizedEffect.reach.option_text.trim()
+            normalizedEffect.reach.option &&
+            normalizedEffect.reach.option_text.trim()
                 ? normalizedEffect.reach.option_text.trim()
                 : "",
     };
 };
 
-const FactorAdjuster = ({ label, value, onChange }) => (
-    <div className="flex items-center justify-between gap-2 rounded-sm border border-zinc-800 bg-zinc-950/40 px-2 py-1.5">
-        <span className="text-[10px] uppercase tracking-wider text-zinc-500">{label}</span>
-        <div className="flex items-center gap-1">
-            <Button
-                type="button"
-                variant="outline"
-                className="h-6 w-6 p-0 border-zinc-700 bg-zinc-900 text-zinc-300"
-                onClick={() => onChange(Math.max(-4, Number(value || 0) - 1))}
-            >
-                −
-            </Button>
-            <span className="w-8 text-center text-xs font-mono text-amber-300">
-                {Number(value || 0) > 0 ? `+${Number(value || 0)}` : Number(value || 0)}
+const FactorAdjuster = ({
+    label,
+    value,
+    max,
+    onChange,
+}) => {
+    const safeValue =
+        clamp(value, 1, max);
+
+    return (
+        <div className="flex items-center justify-between gap-2 rounded-sm border border-zinc-800 bg-zinc-950/40 px-2 py-1.5">
+            <span className="text-[10px] uppercase tracking-wider text-zinc-500">
+                {label}
             </span>
-            <Button
-                type="button"
-                variant="outline"
-                className="h-6 w-6 p-0 border-zinc-700 bg-zinc-900 text-zinc-300"
-                onClick={() => onChange(Math.min(4, Number(value || 0) + 1))}
-            >
-                +
-            </Button>
+
+            <div className="flex items-center gap-1">
+                <Button
+                    type="button"
+                    variant="outline"
+                    className="h-6 w-6 p-0 border-zinc-700 bg-zinc-900 text-zinc-300"
+                    disabled={safeValue <= 1}
+                    onClick={() =>
+                        onChange(
+                            Math.max(
+                                1,
+                                safeValue - 1
+                            )
+                        )
+                    }
+                >
+                    −
+                </Button>
+
+                <span className="w-14 text-center text-xs font-mono text-amber-300">
+                    {safeValue}
+                    <span className="text-zinc-600">
+                        {" "}/ {max}
+                    </span>
+                </span>
+
+                <Button
+                    type="button"
+                    variant="outline"
+                    className="h-6 w-6 p-0 border-zinc-700 bg-zinc-900 text-zinc-300"
+                    disabled={safeValue >= max}
+                    onClick={() =>
+                        onChange(
+                            Math.min(
+                                max,
+                                safeValue + 1
+                            )
+                        )
+                    }
+                >
+                    +
+                </Button>
+            </div>
         </div>
-    </div>
-);
+    );
+};
 
 const ReachToggle = ({ label, checked, onCheckedChange }) => (
     <label className="flex items-center gap-2 text-[10px] text-zinc-300">
@@ -338,10 +690,44 @@ const DerivedBox = ({ effect, level, arcanumDots }) => {
                 </span>
             </div>
             <div className="mt-1.5 grid grid-cols-2 gap-x-3 gap-y-1 text-[10px] text-zinc-300">
-                <div>Casting Time: <span className="text-zinc-100">{derived.castingTime}</span></div>
-                <div>Potency: <span className="text-zinc-100">{derived.potency}</span></div>
-                <div>Duration: <span className="text-zinc-100">{derived.duration}</span></div>
-                <div>Scale: <span className="text-zinc-100">{derived.scale}</span></div>
+                <div>
+                    Casting Time:{" "}
+                    <span className="text-zinc-100">
+                        {derived.castingTime}
+                    </span>
+                </div>
+
+                <div>
+                    Range:{" "}
+                    <span className="text-zinc-100">
+                        {derived.range}
+                    </span>
+                </div>
+
+                <div>
+                    Potency:{" "}
+                    <span className="text-zinc-100">
+                        {derived.potency}
+                    </span>
+                </div>
+
+                <div>
+                    Duration:{" "}
+                    <span className="text-zinc-100">
+                        {derived.duration}
+                    </span>
+                </div>
+
+                <div>
+                    Scale (
+                    {derived.scaleMode === "area"
+                        ? "AoE"
+                        : "Subject"}
+                    ):{" "}
+                    <span className="text-zinc-100">
+                        {derived.scale}
+                    </span>
+                </div>
             </div>
             {derived.optionText && (
                 <div className="mt-1.5 text-[10px] text-amber-300">
@@ -373,23 +759,72 @@ const EffectEditor = ({
     otherReplicatedPraxis,
     secondary = false,
 }) => {
-    const updateReach = (key, value) =>
-        onChange({
+    const updateReach = (key, value) => {
+        const nextEffect = {
             ...effect,
+
             reach: {
                 ...normalizeReach(effect.reach),
                 [key]: value,
             },
-        });
+        };
 
-    const updateAdjustment = (key, value) =>
+        const nextFactorState =
+            getFactorValues(
+                nextEffect,
+                arcanumDots
+            );
+
+        onChange({
+            ...nextEffect,
+            factor_values:
+                nextFactorState.values,
+        });
+    };
+
+    const factorState =
+        getFactorValues(
+            effect,
+            arcanumDots
+        );
+
+    const updateFactorValue = (
+        key,
+        value
+    ) => {
         onChange({
             ...effect,
-            adjustments: {
-                ...normalizeAdjustments(effect.adjustments),
-                [key]: value,
+
+            factor_values: {
+                ...factorState.values,
+
+                [key]: clamp(
+                    value,
+                    1,
+                    factorState.limits[key]
+                ),
             },
         });
+    };
+
+    const updatePrimaryFactor = (value) => {
+        const nextEffect = {
+            ...effect,
+            primary_factor: value,
+        };
+
+        const nextFactorState =
+            getFactorValues(
+                nextEffect,
+                arcanumDots
+            );
+
+        onChange({
+            ...nextEffect,
+            factor_values:
+                nextFactorState.values,
+        });
+    };
 
     const selectedPraxisIndex = findPraxisIndex(praxes, effect.replicates_praxis);
 
@@ -501,12 +936,7 @@ const EffectEditor = ({
                                 </label>
                                 <Select
                                     value={effect.arcanum || "__none__"}
-                                    onValueChange={(value) =>
-                                        onChange({
-                                            ...effect,
-                                            arcanum: value === "__none__" ? "" : value,
-                                        })
-                                    }
+                                    onValueChange={updatePrimaryFactor}
                                 >
                                     <SelectTrigger className="mt-0.5 h-8 border-zinc-700 bg-zinc-900/50 text-xs">
                                         <SelectValue placeholder="Select..." />
@@ -596,6 +1026,18 @@ const EffectEditor = ({
                                 onCheckedChange={(checked) => updateReach("casting_time", checked)}
                             />
                             <ReachToggle
+                                label="Sensory Range"
+                                checked={
+                                    effect.reach?.sensory_range
+                                }
+                                onCheckedChange={(checked) =>
+                                    updateReach(
+                                        "sensory_range",
+                                        checked
+                                    )
+                                }
+                            />
+                            <ReachToggle
                                 label="Advanced Duration"
                                 checked={effect.reach?.advanced_duration}
                                 onCheckedChange={(checked) => updateReach("advanced_duration", checked)}
@@ -628,33 +1070,131 @@ const EffectEditor = ({
                     </div>
 
                     <div>
-                        <div className="mb-1 text-[10px] uppercase tracking-wider text-zinc-500">
-                            Manual Factor Adjustment
+                        <div className="mb-1 flex items-center justify-between">
+                            <span className="text-[10px] uppercase tracking-wider text-zinc-500">
+                                Factor Adjustment
+                            </span>
+
+                            <span className="text-[9px] text-zinc-600">
+                                1 to maximum allowed
+                            </span>
                         </div>
+
+                        <div className="mb-2 flex items-center justify-between rounded-sm border border-zinc-800 bg-zinc-950/40 px-2 py-1.5">
+                            <span className="text-[10px] uppercase tracking-wider text-zinc-500">
+                                Scale
+                            </span>
+
+                            <div className="flex items-center gap-2">
+                                <span
+                                    className={`text-[10px] ${
+                                        effect.scale_mode !== "area"
+                                            ? "text-violet-300"
+                                            : "text-zinc-600"
+                                    }`}
+                                >
+                                    Subject
+                                </span>
+
+                                <Switch
+                                    checked={
+                                        effect.scale_mode ===
+                                        "area"
+                                    }
+                                    onCheckedChange={(checked) =>
+                                        onChange({
+                                            ...effect,
+
+                                            scale_mode: checked
+                                                ? "area"
+                                                : "subjects",
+                                        })
+                                    }
+                                />
+
+                                <span
+                                    className={`text-[10px] ${
+                                        effect.scale_mode === "area"
+                                            ? "text-violet-300"
+                                            : "text-zinc-600"
+                                    }`}
+                                >
+                                    AoE
+                                </span>
+                            </div>
+                        </div>
+
                         <div className="grid grid-cols-3 gap-2">
                             <FactorAdjuster
                                 label="Potency"
-                                value={effect.adjustments?.potency}
-                                onChange={(value) => updateAdjustment("potency", value)}
+                                value={
+                                    factorState.values.potency
+                                }
+                                max={
+                                    factorState.limits.potency
+                                }
+                                onChange={(value) =>
+                                    updateFactorValue(
+                                        "potency",
+                                        value
+                                    )
+                                }
                             />
+
                             <FactorAdjuster
                                 label="Duration"
-                                value={effect.adjustments?.duration}
-                                onChange={(value) => updateAdjustment("duration", value)}
+                                value={
+                                    factorState.values.duration
+                                }
+                                max={
+                                    factorState.limits.duration
+                                }
+                                onChange={(value) =>
+                                    updateFactorValue(
+                                        "duration",
+                                        value
+                                    )
+                                }
                             />
+
                             <FactorAdjuster
                                 label="Scale"
-                                value={effect.adjustments?.scale}
-                                onChange={(value) => updateAdjustment("scale", value)}
+                                value={
+                                    factorState.values.scale
+                                }
+                                max={
+                                    factorState.limits.scale
+                                }
+                                onChange={(value) =>
+                                    updateFactorValue(
+                                        "scale",
+                                        value
+                                    )
+                                }
                             />
                         </div>
-                        <p className="mt-1 text-[9px] text-amber-500/80">
-                            These +/− controls are manual overrides for atypical or table-specific Legacy designs;
-                            increases are not automatically granted by the standard Legacy rules.
-                        </p>
                     </div>
 
                     <DerivedBox effect={effect} level={level} arcanumDots={arcanumDots} />
+                    <div>
+                        <label className="text-[10px] uppercase tracking-wider text-zinc-500">
+                            Notes
+                        </label>
+
+                        <Textarea
+                            value={effect.notes || ""}
+                            onChange={(event) =>
+                                onChange({
+                                    ...effect,
+                                    notes:
+                                        event.target.value,
+                                })
+                            }
+                            placeholder="Effect-specific rules, limitations, targets, conditions, or other notes..."
+                            className="mt-0.5 min-h-[70px] bg-zinc-950/50 border-zinc-800 text-xs text-zinc-200"
+                            data-testid={`legacy-${secondary ? "secondary" : "primary"}-effect-notes`}
+                        />
+                    </div>
                 </>
             )}
         </div>
@@ -671,11 +1211,54 @@ const ActivationEffectSummary = ({ title, effect, level, arcanumDots, arcanum })
                 {effect.spell || "Unnamed effect"} · {arcanum || "No Arcanum"} · {effect.practice || "No Practice"}
             </div>
             <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-zinc-300">
-                <div>Casting Time: <span className="text-zinc-100">{derived.castingTime}</span></div>
-                <div>{derived.potency}</div>
-                <div>Duration: <span className="text-zinc-100">{derived.duration}</span></div>
-                <div>Scale: <span className="text-zinc-100">{derived.scale}</span></div>
+                <div>
+                    Casting Time:{" "}
+                    <span className="text-zinc-100">
+                        {derived.castingTime}
+                    </span>
+                </div>
+
+                <div>
+                    Range:{" "}
+                    <span className="text-zinc-100">
+                        {derived.range}
+                    </span>
+                </div>
+
+                <div>
+                    {derived.potency}
+                </div>
+
+                <div>
+                    Duration:{" "}
+                    <span className="text-zinc-100">
+                        {derived.duration}
+                    </span>
+                </div>
+
+                <div>
+                    Scale (
+                    {derived.scaleMode === "area"
+                        ? "AoE"
+                        : "Subject"}
+                    ):{" "}
+                    <span className="text-zinc-100">
+                        {derived.scale}
+                    </span>
+                </div>
             </div>
+
+            {effect.notes?.trim() && (
+                <div className="mt-2 rounded-sm border border-zinc-800 bg-zinc-950/40 p-2">
+                    <div className="text-[10px] uppercase tracking-wider text-zinc-500">
+                        Notes
+                    </div>
+
+                    <div className="mt-1 whitespace-pre-wrap text-xs text-zinc-300">
+                        {effect.notes.trim()}
+                    </div>
+                </div>
+            )}
             {derived.optionText && (
                 <div className="mt-2 text-xs text-amber-300">Reach option: {derived.optionText}</div>
             )}
@@ -683,7 +1266,12 @@ const ActivationEffectSummary = ({ title, effect, level, arcanumDots, arcanum })
     );
 };
 
-export const LegacyAttainmentsSection = ({ getValue, handleChange }) => {
+export const LegacyAttainmentsSection = ({
+    getValue,
+    handleChange,
+    onUpdateCharacter,
+    onAddRecentRoll,
+}) => {
     const [editorOpen, setEditorOpen] = useState(false);
     const [editingIndex, setEditingIndex] = useState(null);
     const [draft, setDraft] = useState(createDefaultAttainment);
@@ -827,11 +1415,194 @@ export const LegacyAttainmentsSection = ({ getValue, handleChange }) => {
         };
     };
 
-    const activate = (attainment, includeSecondary) => {
+    const activate = async (attainment, includeSecondary) => {
         const state = getActivationState(attainment);
+
         if (!state.primaryReady) return;
         if (includeSecondary && !state.secondaryReady) return;
 
+        const buildActivatedEffect = ({
+            label,
+            effect,
+            arcanum,
+            arcanumDots,
+        }) => {
+            const derived = getDerivedEffect({
+                effect,
+                attainmentLevel: attainment.level,
+                arcanumDots,
+            });
+
+            return {
+                label,
+                effect,
+                arcanum,
+                arcanumDots,
+                derived,
+            };
+        };
+
+        const activatedEffects = [
+            buildActivatedEffect({
+                label: "Primary Effect",
+                effect: attainment.primary_effect,
+                arcanum: legacyRulingArcanum,
+                arcanumDots: state.primaryDots,
+            }),
+
+            ...(includeSecondary
+                ? [
+                    buildActivatedEffect({
+                        label: "Secondary Effect",
+                        effect: attainment.secondary_effect,
+                        arcanum: state.secondaryArcanum,
+                        arcanumDots: state.secondaryDots,
+                    }),
+                ]
+                : []),
+        ];
+
+        const advancedDurationEffects = activatedEffects.filter(
+            ({ effect }) => !!effect?.reach?.advanced_duration
+        );
+
+        const immediateEffects = activatedEffects.filter(
+            ({ effect }) => !effect?.reach?.advanced_duration
+        );
+
+        /*
+        * ADVANCED DURATION
+        *
+        * Add to Active Spells & Effects.
+        *
+        * IMPORTANT:
+        * kind = "effect", not "spell".
+        * Therefore these DO NOT count against the Mage's
+        * maximum number of active spells.
+        */
+        if (advancedDurationEffects.length > 0) {
+            const currentActiveEffects = Array.isArray(getValue("active_spells"))
+                ? getValue("active_spells")
+                : [];
+
+            const newActiveEffects = advancedDurationEffects.map(
+                ({ label, effect, arcanum, derived }) => ({
+                    id: `legacy-${attainment.id}-${label
+                        .toLowerCase()
+                        .replace(/\s+/g, "-")}-${makeId()}`,
+
+                    kind: "effect",
+
+                    effect_key: `legacy-attainment-${attainment.id}-${label
+                        .toLowerCase()
+                        .replace(/\s+/g, "-")}-${Date.now()}`,
+
+                    source: "legacy_attainment",
+
+                    counts_toward_active_spell_limit: false,
+
+                    legacy_attainment_id: attainment.id,
+
+                    name: `${attainment.name} — ${label}`,
+
+                    subtitle:
+                        `${legacyName || "Legacy"} • ` +
+                        `${arcanum} ${attainment.level}`,
+
+                    arcanum,
+
+                    practice: effect.practice,
+
+                    potency: derived.potency.replace(/^Potency\s*/i, ""),
+
+                    duration: derived.duration,
+
+                    scale: derived.scale,
+
+                    description: [
+                        `Spell: ${effect.spell || "Unnamed effect"}`,
+                        `Casting Time: ${derived.castingTime}`,
+                        "Automatic Legacy Attainment activation — no spellcasting roll.",
+                        derived.optionText
+                            ? `Reach option: ${derived.optionText}`
+                            : null,
+                    ]
+                        .filter(Boolean)
+                        .join("\n"),
+                })
+            );
+
+            const nextActiveEffects = [
+                ...currentActiveEffects,
+                ...newActiveEffects,
+            ];
+
+            if (typeof onUpdateCharacter === "function") {
+                await onUpdateCharacter({
+                    active_spells: nextActiveEffects,
+                });
+            } else {
+                handleChange("active_spells", nextActiveEffects);
+            }
+        }
+
+        /*
+        * STANDARD / NON-ADVANCED DURATION
+        *
+        * No persistent effect card is required, so record the
+        * automatic activation in Last Rolls instead.
+        */
+        if (immediateEffects.length > 0 && typeof onAddRecentRoll === "function") {
+            const effectBlocks = immediateEffects.map(
+                ({ label, effect, arcanum, derived }) =>
+                    [
+                        label,
+                        `Spell: ${effect.spell || "Unnamed effect"}`,
+                        `Arcanum: ${arcanum}`,
+                        `Practice: ${effect.practice || "—"}`,
+                        `Casting Time: ${derived.castingTime}`,
+                        derived.potency,
+                        `Duration: ${derived.duration}`,
+                        `Scale: ${derived.scale}`,
+                        derived.optionText
+                            ? `Reach option: ${derived.optionText}`
+                            : null,
+                    ]
+                        .filter(Boolean)
+                        .join("\n")
+            );
+
+            const advancedNote =
+                advancedDurationEffects.length > 0
+                    ? [
+                        "",
+                        `${advancedDurationEffects.length} Advanced Duration ${
+                            advancedDurationEffects.length === 1
+                                ? "effect was"
+                                : "effects were"
+                        } added to Active Spells & Effects.`,
+                    ].join("\n")
+                    : "";
+
+            onAddRecentRoll({
+                title: `Legacy Attainment — ${attainment.name}`,
+                transcript: [
+                    "No roll — Legacy Attainment activates automatically.",
+                    legacyName ? `Legacy: ${legacyName}` : null,
+                    `Attainment Level: ${attainment.level}`,
+                    "",
+                    effectBlocks.join("\n\n"),
+                    advancedNote,
+                ]
+                    .filter((line) => line !== null && line !== undefined)
+                    .join("\n"),
+                outcome: "Activated automatically",
+            });
+        }
+
+        /*
+        * Keep the existing activation dialog as immediate feedback.
+        */
         setActivation({
             attainment,
             includeSecondary,
