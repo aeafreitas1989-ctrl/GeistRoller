@@ -731,6 +731,12 @@ export const CombatTrackerCard = ({
     const currentWillpower = activeCharacter?.willpower || 0;
     const currentMana = activeCharacter?.mana || 0;
 
+    const preciseForceEffect = (activeCharacter?.active_spells || []).find(
+        (effect) => effect?.effect_key === "precise-force-prepared"
+    );
+
+    const preciseForcePrepared = !!preciseForceEffect;
+
     const equippedArmor =
         (activeCharacter?.inventory_items || []).find((it) => it?.type === "armor" && !!it?.equipped) || null;
     const equippedArmorName = equippedArmor?.name || null;
@@ -998,14 +1004,26 @@ export const CombatTrackerCard = ({
 
                     <button
                         type="button"
-                        onClick={() => {
+                        onClick={async () => {
                             if (!onTriggerDiceRoll || currentDefense <= 0) return;
                             onTriggerDiceRoll({
                                 pool: currentDefense * 2,
                                 label: `Dodge (${currentDefense} Defense × 2)`,
                                 dicePoolBreakdown: `Dodge ${currentDefense} × 2`,
                                 exceptional_target: 5,
+                                again: preciseForcePrepared ? 9 : 10,
                             });
+                            if (
+                                preciseForcePrepared &&
+                                preciseForceEffect?.id &&
+                                typeof onUpdateCharacter === "function"
+                            ) {
+                                await onUpdateCharacter({
+                                    active_spells: (activeCharacter?.active_spells || []).filter(
+                                        (effect) => effect.id !== preciseForceEffect.id
+                                    ),
+                                });
+                            }
                         }}
                         disabled={currentDefense <= 0}
                         className="rounded-sm border p-2 text-left transition-all bg-zinc-900/50 border-zinc-800 hover:border-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed"
@@ -1204,8 +1222,8 @@ export const CombatTrackerCard = ({
                             if (!onTriggerDiceRoll) return;
 
                             onTriggerDiceRoll({
-                                pool: outgoingPool <= 0 ? 1 : outgoingPool,
-                                chance: outgoingPool <= 0,
+                                pool: attackPool <= 0 ? 1 : attackPool,
+                                chance: attackPool <= 0,
                                 label: `${formatLabel(attackAttribute)} + ${formatLabel(attackSkill)} Attack`,
                                 dicePoolBreakdown: `${formatLabel(attackAttribute)} ${attackAttributeValue} + ${formatLabel(attackSkill)} ${attackSkillValue}${attackUntrainedPenalty !== 0 ? ` + Untrained ${attackUntrainedPenalty}` : ""} + Modifier ${parseInt(attackModifier, 10) || 0} - Target Defense ${parseInt(targetDefense, 10) || 0}`,
                                 isAttack: true,
@@ -1351,7 +1369,37 @@ export const CombatTrackerCard = ({
                             /
                         </Button>
 
-                        {isMage && (
+                        {isMage && (activeCharacter?.arcana?.Life || 0) >= 2 ? (
+                            <>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="h-6 px-2 text-[10px] bg-amber-900/30 border-amber-500/30 text-amber-300 hover:bg-amber-800/40"
+                                    onClick={() => onPatternRestoration?.("bashing")}
+                                    disabled={
+                                        currentMana < 1 ||
+                                        !healthBoxes.includes("bashing")
+                                    }
+                                    data-testid="combat-pattern-restoration-bashing-btn"
+                                >
+                                    Pattern Restoration / · 1 Mana
+                                </Button>
+
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="h-6 px-2 text-[10px] bg-rose-900/30 border-rose-500/30 text-rose-300 hover:bg-rose-800/40"
+                                    onClick={() => onPatternRestoration?.("lethal")}
+                                    disabled={
+                                        currentMana < 2 ||
+                                        !healthBoxes.includes("lethal")
+                                    }
+                                    data-testid="combat-pattern-restoration-lethal-btn"
+                                >
+                                    Pattern Restoration X · 2 Mana
+                                </Button>
+                            </>
+                        ) : isMage ? (
                             <Button
                                 type="button"
                                 variant="outline"
@@ -1360,9 +1408,9 @@ export const CombatTrackerCard = ({
                                 disabled={patternRestorationDisabled}
                                 data-testid="combat-pattern-restoration-btn"
                             >
-                                Pattern Restoration
+                                Pattern Restoration · 3 Mana
                             </Button>
-                        )}
+                        ) : null}
                     </div>
 
                     {woundPenalty < 0 && (
