@@ -652,7 +652,7 @@ export const ActiveSpellCard = ({ spell, onDispel, onRelinquish, onRelinquishSaf
                     onClick={() => onDispel?.(spell.id)}
                     data-testid={`active-spell-dispel-${spell.id}`}
                 >
-                    Dispel
+                    {isEffect ? "End Effect" : "Dispel"}
                 </Button>
 
                 {!isEffect && onRelinquish && (
