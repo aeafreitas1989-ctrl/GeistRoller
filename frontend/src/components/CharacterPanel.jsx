@@ -2721,6 +2721,7 @@ export const CharacterPanel = ({
                                     openSpellcastingPopup={openSpellcastingPopup}
                                     onTriggerDiceRoll={onTriggerDiceRoll}
                                     onUpdateCharacter={onUpdateCharacter}
+                                    onAddRecentRoll={onAddRecentRoll}
                                 />
                             ) : (
                                 <GeistHauntsContent
