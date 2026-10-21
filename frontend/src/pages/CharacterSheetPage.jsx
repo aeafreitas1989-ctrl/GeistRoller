@@ -210,38 +210,76 @@ export const CharacterSheetPage = () => {
         });
     };
 
-    const handlePatternRestoration = async () => {
+    const handlePatternRestoration = async (damageType = null) => {
         if (!activeCharacter || activeCharacter.character_type !== "mage") return;
 
-        const currentMana = activeCharacter?.mana || 0;
-        if (currentMana < 3) return;
+        const currentMana = Number(activeCharacter?.mana) || 0;
+        const hasImprovedPatternRestoration =
+            (activeCharacter?.arcana?.Life || 0) >= 2;
 
         const counts = getHealthCounts(combatHealthBoxes);
 
-        if (counts.lethal > 0) {
-            counts.lethal -= 1;
-        } else if (counts.bashing > 0) {
-            counts.bashing -= 1;
-        } else {
+        const selectedType =
+            damageType ||
+            (counts.lethal > 0
+                ? "lethal"
+                : counts.bashing > 0
+                ? "bashing"
+                : null);
+
+        if (!selectedType) return;
+
+        if (selectedType === "lethal" && counts.lethal <= 0) return;
+        if (selectedType === "bashing" && counts.bashing <= 0) return;
+
+        const manaCost = hasImprovedPatternRestoration
+            ? selectedType === "bashing"
+                ? 1
+                : 2
+            : 3;
+
+        if (currentMana < manaCost) {
+            toast.error(`Pattern Restoration requires ${manaCost} Mana.`);
             return;
         }
 
+        if (selectedType === "lethal") {
+            counts.lethal -= 1;
+        } else {
+            counts.bashing -= 1;
+        }
+
         const updatedBoxes = buildHealthBoxes(counts, combatMaxHealth);
-        const filled = updatedBoxes.filter((state) => state !== "empty").length;
+        const filled = updatedBoxes.filter(
+            (state) => state !== "empty"
+        ).length;
 
         await updateCharacter({
-            mana: currentMana - 3,
+            mana: currentMana - manaCost,
             health_boxes: updatedBoxes,
             health: filled,
         });
+
+        toast.success(
+            `Healed 1 ${selectedType} wound for ${manaCost} Mana.`
+        );
     };
 
     const patternRestorationDisabled =
         activeCharacter?.character_type !== "mage" ||
-        (activeCharacter?.mana || 0) < 3 ||
         (() => {
-            const c = getHealthCounts(combatHealthBoxes);
-            return c.lethal + c.bashing === 0;
+            const counts = getHealthCounts(combatHealthBoxes);
+            const hasDamage = counts.lethal + counts.bashing > 0;
+
+            const hasImproved =
+                (activeCharacter?.arcana?.Life || 0) >= 2;
+
+            const minimumMana = hasImproved ? 1 : 3;
+
+            return (
+                !hasDamage ||
+                (activeCharacter?.mana || 0) < minimumMana
+            );
         })();
 
     const handleCombatEndTurn = async () => {
