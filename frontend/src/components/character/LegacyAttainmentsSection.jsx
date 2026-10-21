@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Pencil, Play, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -100,6 +100,7 @@ const createEffect = ({ enabled = true, arcanum = "" } = {}) => ({
     spell: "",
     arcanum,
     practice: "",
+    replicates_praxis: null,
     primary_factor: "potency",
     reach: createReach(),
     adjustments: createAdjustments(),
@@ -109,7 +110,6 @@ const createDefaultAttainment = () => ({
     id: makeId(),
     name: "",
     level: 1,
-    replicates_praxis: "",
     tutored: true,
     primary_effect: createEffect({ enabled: true }),
     secondary_effect: createEffect({ enabled: false }),
@@ -136,6 +136,10 @@ const normalizeEffect = (effect = {}, defaults = {}) => ({
     spell: effect?.spell || "",
     arcanum: effect?.arcanum || defaults.arcanum || "",
     practice: effect?.practice || "",
+    replicates_praxis:
+        effect?.replicates_praxis && typeof effect.replicates_praxis === "object"
+            ? { ...effect.replicates_praxis }
+            : null,
     primary_factor: ["potency", "duration"].includes(effect?.primary_factor)
         ? effect.primary_factor
         : "potency",
@@ -160,12 +164,50 @@ const normalizeAttainment = (attainment, index) => {
         id: safe.id || `legacy-attainment-${index}`,
         name: safe.name || "",
         level: Math.min(5, Math.max(1, Number(safe.level) || 1)),
-        replicates_praxis: safe.replicates_praxis || "",
         tutored: safe.tutored !== false,
-        primary_effect: normalizeEffect(safe.primary_effect, { enabled: true }),
+        primary_effect: normalizeEffect(
+            {
+                ...(safe.primary_effect || {}),
+                ...(
+                    safe.replicates_praxis && !safe.primary_effect?.replicates_praxis
+                        ? { replicates_praxis: { spell: safe.replicates_praxis } }
+                        : {}
+                ),
+            },
+            { enabled: true }
+        ),
         secondary_effect: normalizeEffect(safe.secondary_effect, { enabled: false }),
     };
 };
+
+const snapshotPraxis = (praxis = {}) => ({
+    id: praxis?.id || "",
+    spell: praxis?.spell || "",
+    arcanum: praxis?.arcanum || "",
+    dots: Math.max(1, Number(praxis?.dots) || 1),
+    practice: praxis?.practice || "",
+});
+
+const praxisMatchesSnapshot = (praxis = {}, snapshot = null) => {
+    if (!snapshot) return false;
+
+    if (snapshot.id && praxis?.id) {
+        return snapshot.id === praxis.id;
+    }
+
+    return (
+        (praxis?.spell || "") === (snapshot.spell || "") &&
+        (praxis?.arcanum || "") === (snapshot.arcanum || "") &&
+        Math.max(1, Number(praxis?.dots) || 1) ===
+            Math.max(1, Number(snapshot.dots) || 1) &&
+        (praxis?.practice || "") === (snapshot.practice || "")
+    );
+};
+
+const findPraxisIndex = (praxes = [], snapshot = null) =>
+    snapshot
+        ? praxes.findIndex((praxis) => praxisMatchesSnapshot(praxis, snapshot))
+        : -1;
 
 const clamp = (value, min, max) =>
     Math.min(max, Math.max(min, Number(value) || min));
@@ -327,6 +369,8 @@ const EffectEditor = ({
     level,
     arcanumDots,
     primaryArcanum,
+    praxes,
+    otherReplicatedPraxis,
     secondary = false,
 }) => {
     const updateReach = (key, value) =>
@@ -346,6 +390,37 @@ const EffectEditor = ({
                 [key]: value,
             },
         });
+
+    const selectedPraxisIndex = findPraxisIndex(praxes, effect.replicates_praxis);
+
+    const selectReplicatedPraxis = (value) => {
+        if (value === "__none__") {
+            onChange({
+                ...effect,
+                replicates_praxis: null,
+            });
+            return;
+        }
+
+        const praxis = praxes[Number(value)];
+        if (!praxis) return;
+
+        const snapshot = snapshotPraxis(praxis);
+
+        onChange({
+            ...effect,
+            replicates_praxis: snapshot,
+            spell: praxis.spell || effect.spell,
+            practice: praxis.practice || effect.practice,
+            ...(secondary && praxis.arcanum ? { arcanum: praxis.arcanum } : {}),
+        });
+    };
+
+    const primaryPraxisMismatch =
+        !secondary &&
+        !!effect.replicates_praxis?.arcanum &&
+        !!primaryArcanum &&
+        effect.replicates_praxis.arcanum !== primaryArcanum;
 
     return (
         <div className="space-y-2 rounded-sm border border-zinc-800 bg-zinc-950/30 p-2.5">
@@ -371,6 +446,53 @@ const EffectEditor = ({
 
             {(!secondary || effect.enabled) && (
                 <>
+                    <div>
+                        <label className="text-[10px] uppercase tracking-wider text-zinc-500">
+                            Replicates Praxis
+                        </label>
+                        <Select
+                            value={selectedPraxisIndex >= 0 ? String(selectedPraxisIndex) : "__none__"}
+                            onValueChange={selectReplicatedPraxis}
+                        >
+                            <SelectTrigger className="mt-0.5 h-8 border-zinc-700 bg-zinc-900/50 text-xs">
+                                <SelectValue placeholder="None / custom effect" />
+                            </SelectTrigger>
+                            <SelectContent className="max-h-64 border-zinc-700 bg-zinc-900">
+                                <SelectItem value="__none__" className="text-zinc-400">
+                                    None / custom effect
+                                </SelectItem>
+                                {praxes.map((praxis, index) => {
+                                    const snapshot = snapshotPraxis(praxis);
+                                    const usedByOtherEffect =
+                                        !!otherReplicatedPraxis &&
+                                        praxisMatchesSnapshot(praxis, otherReplicatedPraxis);
+
+                                    return (
+                                        <SelectItem
+                                            key={`${praxis?.id || praxis?.spell || "praxis"}-${index}`}
+                                            value={String(index)}
+                                            disabled={usedByOtherEffect}
+                                            className="text-xs"
+                                        >
+                                            {praxis?.spell || `Praxis ${index + 1}`}
+                                            {praxis?.arcanum ? ` — ${praxis.arcanum}` : ""}
+                                            {usedByOtherEffect ? " — already used by other effect" : ""}
+                                        </SelectItem>
+                                    );
+                                })}
+                            </SelectContent>
+                        </Select>
+                        <p className="mt-1 text-[9px] text-zinc-600">
+                            When this Attainment is purchased, the selected Praxis is removed and refunds 1 Arcane XP.
+                        </p>
+                    </div>
+
+                    {primaryPraxisMismatch && (
+                        <div className="rounded-sm border border-red-800/50 bg-red-950/20 p-2 text-[10px] text-red-300">
+                            This Praxis uses {effect.replicates_praxis.arcanum}, but a Primary Effect must use the Legacy Ruling Arcanum ({primaryArcanum}).
+                        </div>
+                    )}
+
                     <div className={`grid gap-2 ${secondary ? "grid-cols-3" : "grid-cols-2"}`}>
                         {secondary && (
                             <div>
@@ -574,11 +696,6 @@ export const LegacyAttainmentsSection = ({ getValue, handleChange }) => {
     const rawAttainments = Array.isArray(getValue("attainments")) ? getValue("attainments") : [];
     const attainments = rawAttainments.map(normalizeAttainment);
 
-    const selectedPraxisIndex = useMemo(() => {
-        if (!draft.replicates_praxis) return "__none__";
-        const index = praxes.findIndex((praxis) => (praxis?.spell || "") === draft.replicates_praxis);
-        return index >= 0 ? String(index) : "__none__";
-    }, [draft.replicates_praxis, praxes]);
 
     const openAdd = () => {
         setEditingIndex(null);
@@ -595,25 +712,6 @@ export const LegacyAttainmentsSection = ({ getValue, handleChange }) => {
     const updateDraftEffect = (key, nextEffect) =>
         setDraft((previous) => ({ ...previous, [key]: nextEffect }));
 
-    const selectPraxis = (value) => {
-        if (value === "__none__") {
-            setDraft((previous) => ({ ...previous, replicates_praxis: "" }));
-            return;
-        }
-
-        const praxis = praxes[Number(value)];
-        if (!praxis) return;
-
-        setDraft((previous) => ({
-            ...previous,
-            replicates_praxis: praxis.spell || `Praxis ${Number(value) + 1}`,
-            primary_effect: {
-                ...previous.primary_effect,
-                spell: praxis.spell || previous.primary_effect.spell,
-                practice: praxis.practice || previous.primary_effect.practice,
-            },
-        }));
-    };
 
     const primaryArcanumDots = Math.max(0, Number(arcana[legacyRulingArcanum]) || 0);
     const draftPrimaryDerived = getDerivedEffect({
@@ -635,7 +733,11 @@ export const LegacyAttainmentsSection = ({ getValue, handleChange }) => {
         !!draft.primary_effect?.spell?.trim() &&
         !!draft.primary_effect?.practice &&
         draftPrimaryDerived.practiceValid &&
-        draftPrimaryDerived.reachValid;
+        draftPrimaryDerived.reachValid &&
+        (
+            !draft.primary_effect?.replicates_praxis?.arcanum ||
+            draft.primary_effect.replicates_praxis.arcanum === legacyRulingArcanum
+        );
 
     const secondaryConfigured =
         !draft.secondary_effect?.enabled ||
@@ -658,7 +760,6 @@ export const LegacyAttainmentsSection = ({ getValue, handleChange }) => {
                 id: draft.id || makeId(),
                 name: draft.name.trim(),
                 level: Math.min(5, Math.max(1, Number(draft.level) || 1)),
-                replicates_praxis: draft.replicates_praxis || "",
                 tutored: draft.tutored !== false,
                 primary_effect: normalizeEffect(draft.primary_effect, { enabled: true }),
                 secondary_effect: normalizeEffect(draft.secondary_effect, { enabled: false }),
@@ -787,15 +888,13 @@ export const LegacyAttainmentsSection = ({ getValue, handleChange }) => {
                                                 {attainment.tutored ? "Tutored" : "Untutored"}
                                             </span>
                                         </div>
-                                        {attainment.replicates_praxis && (
-                                            <div className="mt-0.5 text-[10px] text-zinc-500">
-                                                Replicates Praxis: {attainment.replicates_praxis}
-                                            </div>
-                                        )}
                                         <div className="mt-1 text-[10px] text-zinc-400">
                                             Primary: {attainment.primary_effect?.spell || "—"}
                                             {attainment.primary_effect?.practice
                                                 ? ` · ${attainment.primary_effect.practice}`
+                                                : ""}
+                                            {attainment.primary_effect?.replicates_praxis?.spell
+                                                ? ` · Replicates Praxis: ${attainment.primary_effect.replicates_praxis.spell}`
                                                 : ""}
                                         </div>
                                         {attainment.secondary_effect?.enabled && (
@@ -806,6 +905,9 @@ export const LegacyAttainmentsSection = ({ getValue, handleChange }) => {
                                                     : ""}
                                                 {attainment.secondary_effect?.practice
                                                     ? ` · ${attainment.secondary_effect.practice}`
+                                                    : ""}
+                                                {attainment.secondary_effect?.replicates_praxis?.spell
+                                                    ? ` · Replicates Praxis: ${attainment.secondary_effect.replicates_praxis.spell}`
                                                     : ""}
                                             </div>
                                         )}
@@ -905,62 +1007,28 @@ export const LegacyAttainmentsSection = ({ getValue, handleChange }) => {
                             />
                         </div>
 
-                        <div className="grid grid-cols-2 gap-2">
-                            <div>
-                                <label className="text-[10px] uppercase tracking-wider text-zinc-500">
-                                    Attainment Level
-                                </label>
-                                <Select
-                                    value={String(draft.level)}
-                                    onValueChange={(value) =>
-                                        setDraft((previous) => ({ ...previous, level: Number(value) }))
-                                    }
-                                >
-                                    <SelectTrigger className="mt-0.5 h-8 border-zinc-700 bg-zinc-900/50 text-xs">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent className="border-zinc-700 bg-zinc-900">
-                                        {[1, 2, 3, 4, 5].map((level) => (
-                                            <SelectItem key={level} value={String(level)} className="text-xs">
-                                                {level} — {"●".repeat(level)}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            <div>
-                                <label className="text-[10px] uppercase tracking-wider text-zinc-500">
-                                    Replicates Praxis
-                                </label>
-                                <Select value={selectedPraxisIndex} onValueChange={selectPraxis}>
-                                    <SelectTrigger className="mt-0.5 h-8 border-zinc-700 bg-zinc-900/50 text-xs">
-                                        <SelectValue placeholder="None / custom" />
-                                    </SelectTrigger>
-                                    <SelectContent className="max-h-64 border-zinc-700 bg-zinc-900">
-                                        <SelectItem value="__none__" className="text-zinc-400">
-                                            None / custom
+                        <div>
+                            <label className="text-[10px] uppercase tracking-wider text-zinc-500">
+                                Attainment Level
+                            </label>
+                            <Select
+                                value={String(draft.level)}
+                                onValueChange={(value) =>
+                                    setDraft((previous) => ({ ...previous, level: Number(value) }))
+                                }
+                            >
+                                <SelectTrigger className="mt-0.5 h-8 border-zinc-700 bg-zinc-900/50 text-xs">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="border-zinc-700 bg-zinc-900">
+                                    {[1, 2, 3, 4, 5].map((level) => (
+                                        <SelectItem key={level} value={String(level)} className="text-xs">
+                                            {level} — {"●".repeat(level)}
                                         </SelectItem>
-                                        {praxes.map((praxis, index) => (
-                                            <SelectItem key={`${praxis?.spell || "praxis"}-${index}`} value={String(index)} className="text-xs">
-                                                {praxis?.spell || `Praxis ${index + 1}`}
-                                                {praxis?.arcanum ? ` — ${praxis.arcanum}` : ""}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
-
-                        {draft.replicates_praxis && (() => {
-                            const praxis = praxes[Number(selectedPraxisIndex)];
-                            if (!praxis?.arcanum || !legacyRulingArcanum || praxis.arcanum === legacyRulingArcanum) return null;
-                            return (
-                                <div className="rounded-sm border border-amber-800/50 bg-amber-950/20 p-2 text-[10px] text-amber-300">
-                                    The selected Praxis uses {praxis.arcanum}, while this Legacy&apos;s Ruling Arcanum is {legacyRulingArcanum}.
-                                </div>
-                            );
-                        })()}
 
                         <div className="flex items-center justify-between rounded-sm border border-zinc-800 bg-zinc-950/40 p-2">
                             <div>
@@ -984,6 +1052,8 @@ export const LegacyAttainmentsSection = ({ getValue, handleChange }) => {
                             level={draft.level}
                             arcanumDots={primaryArcanumDots || draft.level}
                             primaryArcanum={legacyRulingArcanum}
+                            praxes={praxes}
+                            otherReplicatedPraxis={draft.secondary_effect?.replicates_praxis}
                         />
 
                         <EffectEditor
@@ -993,6 +1063,8 @@ export const LegacyAttainmentsSection = ({ getValue, handleChange }) => {
                             level={draft.level}
                             arcanumDots={draftSecondaryArcanumDots || draft.level}
                             primaryArcanum={legacyRulingArcanum}
+                            praxes={praxes}
+                            otherReplicatedPraxis={draft.primary_effect?.replicates_praxis}
                             secondary
                         />
 
