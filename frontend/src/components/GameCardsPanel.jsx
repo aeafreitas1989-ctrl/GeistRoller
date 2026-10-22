@@ -33,13 +33,17 @@ import {
 
 import {
     CONDITION_DEFINITIONS, HAUNT_DEFINITIONS, KEY_DEFINITIONS, KEY_NAMES,
-    MERIT_DEFINITIONS, MERIT_CATEGORIES, MERIT_CATEGORY_COLORS,
     CEREMONY_DEFINITIONS, CardTypeColors,
     PERSON_TYPE_OPTIONS, PERSON_SUBTYPE_OPTIONS,
     PLACE_STATUS_OPTIONS, PERSON_STATUS_OPTIONS, PERSON_RELATIONSHIP_OPTIONS,
 } from "../data/cards-data";
 
-import { ARCANA, PATH_ARCANA } from "../data/character-data";
+import {
+    ARCANA,
+    PATH_ARCANA,
+    MERIT_LIST,
+    getMeritCategory,
+} from "../data/character-data";
 
 import {
     MeritCard, CeremonyCard, PlacePersonCard, ConditionCard, HauntCard, KeyCard, ActiveSpellCard, CombatTrackerCard,
@@ -205,6 +209,16 @@ const buildWeatherConditions = (tracker) => {
 
     return conditions;
 };
+
+const MERIT_CARD_DEFINITIONS = Object.fromEntries(
+    MERIT_LIST.map((merit) => [
+        merit.name,
+        {
+            ...merit,
+            category: getMeritCategory(merit.name),
+        },
+    ])
+);
 
 export const GameCardsPanel = ({ 
     activeCharacter,
@@ -738,11 +752,23 @@ export const GameCardsPanel = ({
                                 </div>
                             ) : (
                                 <div className="space-y-2" data-testid="merits-list">
-                                    {characterMerits.map((merit) => (
+                                    {characterMerits.map((merit, index) => (
                                         <MeritCard
-                                            key={merit.name}
+                                            key={
+                                                merit.id ||
+                                                `${merit.name}-${merit.specialty || "default"}-${index}`
+                                            }
                                             merit={merit}
-                                            definition={MERIT_DEFINITIONS[merit.name]}
+                                            definition={
+                                                MERIT_CARD_DEFINITIONS[merit.name] || {
+                                                    category: "Other",
+                                                    maxDots: Math.max(
+                                                        5,
+                                                        Number(merit.dots) || 0
+                                                    ),
+                                                    description: merit.description || "",
+                                                }
+                                            }
                                         />
                                     ))}
                                 </div>
