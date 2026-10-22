@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { KEYS, KEY_UNLOCK_ATTRIBUTES, SKILL_LIST, MERIT_LIST } from "../../data/character-data";
+import { KEYS, KEY_UNLOCK_ATTRIBUTES, SKILL_LIST, MERIT_LIST, getMeritCategory } from "../../data/character-data";
 import { StatDots, formatLabel } from "./StatComponents";
 
 export const MementoCard = ({ memento, index, onUpdate, onDelete }) => {
@@ -69,6 +69,7 @@ export const MementoCard = ({ memento, index, onUpdate, onDelete }) => {
 
 export const MeritCard = ({ merit, index, onDelete, onUpdate, onRollPerception }) => {
     const meritDef = MERIT_LIST.find((entry) => entry.name === merit.name);
+    const meritCategory = getMeritCategory(merit.name);
     const minDots = meritDef?.minDots || 1;
     const maxDots = meritDef?.maxDots || 5;
     const isFixedDotMerit = minDots === maxDots;
@@ -93,9 +94,17 @@ export const MeritCard = ({ merit, index, onDelete, onUpdate, onRollPerception }
         <div className="bg-zinc-800/50 border border-zinc-700 rounded-sm p-2 relative group space-y-2">
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-xs text-zinc-300 truncate">
-                        {merit.specialty ? `${merit.name}: ${merit.specialty}` : merit.name}
-                    </span>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="text-xs text-zinc-300 truncate">
+                            {merit.specialty
+                                ? `${merit.name}: ${merit.specialty}`
+                                : merit.name}
+                        </span>
+                    
+                        <span className="shrink-0 px-1 py-0.5 rounded bg-zinc-900/70 border border-zinc-700 text-[8px] uppercase tracking-wider text-zinc-500">
+                            {meritCategory}
+                        </span>
+                    </div>
 
                     <StatDots
                         value={merit.dots || 0}
