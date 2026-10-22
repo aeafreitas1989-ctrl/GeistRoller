@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { MERIT_LIST, CEREMONY_LIST } from "../../data/character-data";
+import { MERIT_LIST, CEREMONY_LIST, getMeritCategory } from "../../data/character-data";
 import { StatDots } from "./StatComponents";
 import { MeritCard, CeremonyCard } from "./CardComponents";
 
@@ -55,7 +55,15 @@ export const MeritsContent = ({
                                 <SelectContent className="bg-zinc-900 border-zinc-800 max-h-[200px]">
                                     {MERIT_LIST.map((m) => (
                                         <SelectItem key={m.name} value={m.name} className="text-zinc-200">
-                                            {m.name} ({getMeritDotDisplay(m)})
+                                            <div className="flex items-center justify-between gap-3 w-full">
+                                                <span>
+                                                    {m.name} ({getMeritDotDisplay(m)})
+                                                </span>
+                                        
+                                                <span className="text-[9px] text-zinc-500 uppercase tracking-wider">
+                                                    {getMeritCategory(m.name)}
+                                                </span>
+                                            </div>
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
