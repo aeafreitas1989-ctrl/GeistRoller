@@ -375,6 +375,7 @@ export const MERIT_CATEGORY_COLORS = {
     "Mental": "bg-blue-900/40 border-blue-500/40 text-blue-300",
     "Physical": "bg-amber-900/40 border-amber-500/40 text-amber-300",
     "Fighting": "bg-red-900/60 border-red-500/60 text-red-300",
+    "Other": "bg-zinc-800/60 border-zinc-600/50 text-zinc-300",
 };
 
 // Ceremony definitions
