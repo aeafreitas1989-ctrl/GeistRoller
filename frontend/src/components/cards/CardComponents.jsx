@@ -17,7 +17,12 @@ import { HealthTrack } from "../character/StatComponents";
 
 export const MeritCard = ({ merit, definition }) => {
     const [expanded, setExpanded] = useState(false);
-    const categoryColor = MERIT_CATEGORY_COLORS[definition?.category] || MERIT_CATEGORY_COLORS["Social"];
+    const category =
+        definition?.category || "Other";
+    
+    const categoryColor =
+        MERIT_CATEGORY_COLORS[category] ||
+        MERIT_CATEGORY_COLORS.Other;
     const dots = merit.dots || 0;
     
     return (
@@ -29,16 +34,20 @@ export const MeritCard = ({ merit, definition }) => {
             <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                        <h4 className={`text-sm font-medium ${CardTypeColors.merit.text}`}>{merit.name}</h4>
+                        <h4 className={`text-sm font-medium ${CardTypeColors.merit.text}`}>
+                            {merit.specialty
+                                ? `${merit.name}: ${merit.specialty}`
+                                : merit.name}
+                        </h4>
                         <span className="text-amber-400 text-xs tracking-tight">
                             {"●".repeat(dots)}{"○".repeat((definition?.maxDots || 5) - dots)}
                         </span>
                     </div>
-                    {definition?.category && (
-                        <span className={`inline-block mt-1 px-1.5 py-0.5 text-[9px] uppercase tracking-wider rounded border ${categoryColor}`}>
-                            {definition.category}
-                        </span>
-                    )}
+                    <span
+                        className={`inline-block mt-1 px-1.5 py-0.5 text-[9px] uppercase tracking-wider rounded border ${categoryColor}`}
+                    >
+                        {category}
+                    </span>
                 </div>
                 <ChevronDown className={`w-4 h-4 text-zinc-500 flex-shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`} />
             </div>
