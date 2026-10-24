@@ -107,6 +107,7 @@ class Character(BaseModel):
     rotes: List[Dict[str, Any]] = Field(default_factory=list)  # [{spell, arcanum, dots, skill}]
     praxes: List[Dict[str, Any]] = Field(default_factory=list)  # [{spell, arcanum, dots}]
     attainments: List[Any] = Field(default_factory=list)  # learned/custom Attainments; Arcana Attainments are derived in the UI
+    familiar: Dict[str, Any] = Field(default_factory=dict)
     concept: str = ""
     geist_name: str = ""
     geist_description: str = ""
@@ -226,6 +227,7 @@ class CharacterUpdate(BaseModel):
     rotes: Optional[List[Dict[str, Any]]] = None
     praxes: Optional[List[Dict[str, Any]]] = None
     attainments: Optional[List[Any]] = None
+    familiar: Optional[Dict[str, Any]] = None
     concept: Optional[str] = None
     geist_name: Optional[str] = None
     geist_description: Optional[str] = None
@@ -318,3 +320,4 @@ class DiceRollResult(BaseModel):
     is_dramatic_failure: bool
     beat_awarded: bool
     description: str
+
