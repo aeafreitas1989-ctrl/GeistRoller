@@ -1,54 +1,13 @@
 // Geist: The Sin-Eaters - Cards Panel Data Constants
 
-export const CONDITION_DEFINITIONS = {
-    // Tilts (Combat)
-    "Arm Wrack": { type: "tilt", description: "Your arm is damaged. -2 to actions using that arm.", resolution: "Healed or combat ends." },
-    "Beaten Down": { type: "tilt", description: "You've taken enough damage to lose the will to fight.", resolution: "Combat ends or you're given a chance to surrender." },
-    "Blinded": { type: "tilt", description: "You cannot see. -3 to vision-based actions, Defense halved.", resolution: "Effect ends or you adapt." },
-    "Deafened": { type: "tilt", description: "You cannot hear. Automatically fail hearing-based rolls.", resolution: "Effect ends." },
-    "Immobilized": { type: "tilt", description: "You cannot move from your current position.", resolution: "Break free or effect ends." },
-    "Knocked Down": { type: "tilt", description: "You're on the ground. Standing is an action.", resolution: "Stand up." },
-    "Leg Wrack": { type: "tilt", description: "Your leg is damaged. Speed halved, -2 to movement actions.", resolution: "Healed or combat ends." },
-    "Poisoned (Moderate)": { type: "tilt", description: "Moderate poison. Take 1 bashing damage at the end of each turn until treated or the toxin runs its course.", resolution: "Toxin runs its course or is treated." },
-    "Poisoned (Grave)": { type: "tilt", description: "Grave poison. Take 1 lethal damage at the end of each turn until treated or the toxin runs its course.", resolution: "Toxin runs its course or is treated." },    "Stunned": { type: "tilt", description: "You lose your next action.", resolution: "Lose an action." },
-    "Sick": { type: "tilt", description: "You are ill. -1 to all actions.", resolution: "Rest and recovery." },
-    
-    // Conditions (Persistent and Regular)
-    "Broken": { type: "condition", description: "Your will is shattered. Cannot spend Willpower.", resolution: "Achieve a meaningful victory or time passes." },
-    "Deprived": { type: "condition", description: "You lack something essential. -1 to all rolls.", resolution: "Obtain what you need." },
-    "Distracted": { type: "condition", description: "Constant confusion and distractions buffet your character from all sides. You cannot take extended actions, and suffer a -2 die penalty to all rolls involving perception, concentration, and precision.", resolution: "Leaving the swarm." },
-    "Exhausted": { type: "condition", description: "Your character has been run ragged and desperately needs a good rest. She suffers a -2 penalty to all physical actions and rolls to remain conscious.", resolution: "The character has restful sleep." },
-    "Fugue": { type: "condition", description: "You've lost time and memory. Disoriented and confused.", resolution: "Piece together what happened." },
-    "Guilty": { type: "condition", description: "Your conscience weighs on you. -2 to Subterfuge.", resolution: "Make amends or confess." },
-    "Informed": { type: "condition", description: "You have useful information. +2 to one relevant roll.", resolution: "Use the bonus or the info becomes irrelevant." },
-    "Inspired": { type: "condition", description: "You're driven to succeed. +2 to one roll related to your inspiration.", resolution: "Use the bonus or inspiration fades." },
-    "Leveraged": { type: "condition", description: "Someone has something on you. They get +2 to Social rolls against you.", resolution: "Remove their leverage or give in." },
-    "Lost": { type: "condition", description: "Your character has no idea where she is, or how to reach her target. She cannot make any headway toward her goal without first navigating and finding out where she is. This requires a successful Wits + Streetwise action (in the city) or Wits + Survival action (in the wilderness).", resolution: "Abandoning the goal, successfully navigating." },
-    "Madness": { type: "condition", description: "Your grip on reality is slipping.", resolution: "Professional help or time." },
-    "Obsession": { type: "condition", description: "You're fixated on something. -2 to unrelated Mental rolls.", resolution: "Fulfill the obsession or dramatically fail because of it." },
-    "Shaken": { type: "condition", description: "-2 to Resolve or Composure rolls. Caused by fear or supernatural terror.", resolution: "Regain Willpower from Virtue/Vice, or confront the source." },
-    "Spooked": { type: "condition", description: "Something supernatural has rattled you. -1 to Composure rolls.", resolution: "Succeed on a Composure roll in a safe environment." },
-    "Swooned": { type: "condition", description: "You're romantically captivated. +2 to help them, -2 to act against them.", resolution: "They reject you or the feeling fades naturally." },
-    
-    // Geist-Specific Conditions
-    "Doomed": { type: "geist", origin: "Key Doom", description: "A Key's Doom hangs over you. Cannot use that Key until resolved.", resolution: "Suffer the Doom's effects." },
-    "Boneyard": { type: "geist", description: "Area is infused with Plasm. Perfect awareness, ghosts have Open Condition.", resolution: "Leave area, fall unconscious, or Geist's Ban/Bane." },
-    "Caul": { type: "geist", description: "Merged with Geist. Spend charges for exceptional successes, ignore wounds, use Geist Attributes.", resolution: "Charges spent or Geist crisis." },
-    "Curse": { type: "geist", description: "Cursed with misfortune. Charges can impose -2 penalties.", resolution: "Charges spent or countered by another Sin-Eater." },
-    "Dirge": { type: "geist", description: "Compelled by haunting song. +2 acting with song's intent, costs Willpower to resist.", resolution: "Sin-Eater stops singing." },
-    "Marionette": { type: "geist", description: "Actions controlled by Sin-Eater. Can contest with Strength + Stamina.", resolution: "Scene ends or line of sight broken." },
-    "Memoria": { type: "geist", description: "Reliving traumatic memories. 8-again on investigation, learn leverage.", resolution: "Charges spent or Geist's Ban/Bane." },
-    "Oracle": { type: "geist", description: "Consulting the Underworld. Insensate while active, can answer questions.", resolution: "Charges spent or damage taken." },
-    "Rage": { type: "geist", description: "Channeling violent instincts. Unarmed attacks gain weapon damage.", resolution: "Scene ends or Geist's Ban/Bane." },
-    "Shroud": { type: "geist", description: "Cloaked in Geist. No need to eat/sleep/breathe, can enter Twilight.", resolution: "Charges spent or drawing significant attention." },
-    "Tomb": { type: "geist", description: "Object/person restored from the past. Precise replica.", resolution: "Duration ends or Geist's Ban." },
-    "Actor": { type: "geist", description: "Bound to a role in a Memoria vision. Actions dictated by the Echo.", resolution: "Breaking point command or lethal damage." },
-    "Servant": { type: "geist", description: "Obeys commands but otherwise free to act/speak.", resolution: "Scene ends." },
-    
-    // Liminal Aura (Ephemeral Conditions)
-    "Anchor": { type: "condition", origin: "Liminal Aura", description: "The subject of this Condition (usually a location or object, rarely a person) falls within a ghost’s sphere of influence. Ghosts within (Rank × 3) yards of their Anchors do not suffer Essence bleed.", resolution: "Destroying the Anchor, resolving the ghost’s unfinished business, or the Anchor being removed." },
-    "Controlled": { type: "condition", origin: "Liminal Aura", description: "The ghost has fully conditioned a target, making them ready for permanent possession. The target must already have the Open Condition tagged to the ghost attempting possession.", resolution: "Ending the Claimed Condition removes this Condition, reverting the subject back to Open." },
-    "Open": { type: "condition", origin: "Liminal Aura", description: "A target has been conditioned to accept a ghost’s influence. The Anchor Condition must exist on the same phenomenon.", resolution: "If the Anchor Condition is removed, the Open Condition also ends." },
+import {
+    CONDITION_DEFINITIONS,
+    CONDITION_FILTER_OPTIONS,
+} from "./conditions-data";
+
+export {
+    CONDITION_DEFINITIONS,
+    CONDITION_FILTER_OPTIONS,
 };
 
 // Haunt definitions - Geist: the Sin-Eaters 2nd Edition
@@ -488,6 +447,7 @@ export const PERSON_STATUS_STYLES = {
 };
 
 export const PERSON_RELATIONSHIP_OPTIONS = [
+    "Bonded",
     "Friendly",
     "Hostile",
     "Intimate",
@@ -496,10 +456,10 @@ export const PERSON_RELATIONSHIP_OPTIONS = [
 ];
 
 export const PERSON_RELATIONSHIP_STYLES = {
+    Bonded:      "bg-cyan-900/50 border-cyan-500/50 text-cyan-300",
     Hostile:     "bg-red-900/40 border-red-500/40 text-red-300",
     Suspicious:  "bg-orange-900/40 border-orange-500/40 text-orange-300",
     Neutral:     "bg-zinc-800/60 border-zinc-600/40 text-zinc-200",
     Friendly:    "bg-green-900/50 border-green-500/50 text-green-300",
     Intimate:    "bg-pink-900/50 border-pink-500/50 text-pink-300",
 };
-
