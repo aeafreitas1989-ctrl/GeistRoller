@@ -66,6 +66,7 @@ import { GeistSynergyContent } from "./character/GeistSynergyContent";
 import { GeistHauntsContent } from "./character/GeistHauntsContent";
 import { GeistRemembranceContent } from "./character/GeistRemembranceContent";
 import { MeritsContent } from "./character/MeritsContent";
+import { FamiliarContent } from "./character/FamiliarContent";
 import { CombatContent } from "./character/CombatContent";
 import { CharacterCreationAuditPanel } from "./character/CharacterCreationAuditPanel";
 import { CharacterGoalsContent } from "./character/CharacterGoalsContent";
@@ -101,6 +102,7 @@ export const CharacterPanel = ({
         geist: false,
         attributesSkills: false,
         merits: false,
+        familiar: false,
         inventory: false,
         sinEater: false,
         powers: false,
@@ -1946,6 +1948,8 @@ export const CharacterPanel = ({
 
     // Merits management
     const meritsList = getValue("merits_list") || [];
+    const familiarMerit = meritsList.find((merit) => (merit?.name || "") === "Familiar" && Number(merit?.dots) >= 2);
+    const familiarDots = Number(familiarMerit?.dots) || 0;
     const sheetHasGiant = (meritsList || []).some((m) => (m?.name || "") === "Giant");
     const sheetHasSmallFramed = (meritsList || []).some((m) => (m?.name || "") === "Small-Framed");
     const effectiveSize = 5 + (sheetHasGiant ? 1 : 0) + (sheetHasSmallFramed ? -1 : 0);
@@ -2170,6 +2174,7 @@ export const CharacterPanel = ({
     // Determine character type
     const characterType = activeCharacter.character_type || "geist";
     const isMage = characterType === "mage";
+    const hasFamiliar = isMage && familiarDots >= 2;
 
     // Mage Armor bonuses for Defense and Armor stats
     const activeMageArmorName = isMage ? (getValue("active_mage_armor") || null) : null;
@@ -2758,6 +2763,62 @@ export const CharacterPanel = ({
                             />
                         </CollapsibleContent>
                     </Collapsible>
+
+                    {/* Familiar - only visible when Mage has Familiar Merit */}
+                    {hasFamiliar && (
+                        <Collapsible
+                            open={
+                                expandedSections.familiar
+                            }
+                        >
+                            <CollapsibleTrigger
+                                onClick={() =>
+                                    toggleSection(
+                                        "familiar"
+                                    )
+                                }
+                                className="flex items-center justify-between w-full p-2 rounded-sm bg-indigo-900/20 border border-indigo-500/30 hover:bg-indigo-900/30"
+                                data-testid="section-toggle-familiar"
+                            >
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs font-mono uppercase tracking-wider text-indigo-300">
+                                        Familiar
+                                    </span>
+
+                                    <span className="text-[10px] font-mono text-indigo-500">
+                                        Rank{" "}
+                                        {familiarDots >=
+                                        4
+                                            ? 2
+                                            : 1}
+                                    </span>
+                                </div>
+
+                                {expandedSections.familiar ? (
+                                    <ChevronDown className="w-4 h-4 text-indigo-400" />
+                                ) : (
+                                    <ChevronRight className="w-4 h-4 text-indigo-400" />
+                                )}
+                            </CollapsibleTrigger>
+
+                            <CollapsibleContent className="pt-2">
+                                <FamiliarContent
+                                    getValue={
+                                        getValue
+                                    }
+                                    handleChange={
+                                        handleChange
+                                    }
+                                    familiarDots={
+                                        familiarDots
+                                    }
+                                    onTriggerDiceRoll={
+                                        onTriggerDiceRoll
+                                    }
+                                />
+                            </CollapsibleContent>
+                        </Collapsible>
+                    )}                    
 
                     {/* Notes / XP Expenditure */}
                     <Collapsible
