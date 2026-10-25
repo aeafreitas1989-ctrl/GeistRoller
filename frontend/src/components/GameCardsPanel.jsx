@@ -259,6 +259,7 @@ export const GameCardsPanel = ({
     const [newPlaceRelationship, setNewPlaceRelationship] = useState("");
     const [newPersonType, setNewPersonType] = useState("Mundane");
     const [newPersonSubtype, setNewPersonSubtype] = useState("Aware");
+    const [newAnimalSpecies, setNewAnimalSpecies] = useState("");
     const [openSections, setOpenSections] = useState({
         sessionSummary: false,
         caseTruth: false,
@@ -377,19 +378,67 @@ export const GameCardsPanel = ({
     }, [activeCharacter?.merits_list]);
 
     const handleAddPlacePerson = () => {
-        if (!newPlaceName.trim()) return;
+        if (!newPlaceName.trim()) {
+            return;
+        }
+
+        const isPerson =
+            newPlaceType === "person";
+
+        const isAnimal =
+            newPlaceType === "animal";
+
+        const isNpc =
+            isPerson || isAnimal;
+
         const newEntry = {
             id: Date.now(),
-            name: newPlaceName.trim(),
-            type: newPlaceType,
-            description: newPlaceDescription.trim(),
-            status: newPlaceStatus.trim(),
-            relationship: newPlaceType === "person" ? newPlaceRelationship : "",
-            person_type: newPlaceType === "person" ? newPersonType : "",
-            person_subtype: newPlaceType === "person" ? newPersonSubtype : "",
+
+            name:
+                newPlaceName.trim(),
+
+            type:
+                newPlaceType,
+
+            description:
+                newPlaceDescription.trim(),
+
+            status:
+                newPlaceStatus.trim(),
+
+            relationship:
+                isNpc
+                    ? newPlaceRelationship
+                    : "",
+
+            person_type:
+                isPerson
+                    ? newPersonType
+                    : "",
+
+            person_subtype:
+                isPerson
+                    ? newPersonSubtype
+                    : "",
+
+            species:
+                isAnimal
+                    ? newAnimalSpecies.trim()
+                    : "",
         };
-        const updated = [...placesPeople, newEntry].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+
+        const updated = [
+            ...placesPeople,
+            newEntry,
+        ].sort(
+            (a, b) =>
+                (a.name || "").localeCompare(
+                    b.name || ""
+                )
+        );
+
         onUpdatePlacesPeople(updated);
+
         setNewPlaceName("");
         setNewPlaceType("place");
         setNewPlaceDescription("");
@@ -397,6 +446,7 @@ export const GameCardsPanel = ({
         setNewPlaceRelationship("");
         setNewPersonType("Mundane");
         setNewPersonSubtype("Aware");
+        setNewAnimalSpecies("");
         setShowAddPlacePerson(false);
     };
 
@@ -576,6 +626,7 @@ export const GameCardsPanel = ({
                     <ConditionsSection
                         open={openSections.conditions}
                         onToggle={() => toggleSection("conditions")}
+                        activeCharacter={activeCharacter}
                         activeConditions={activeConditions}
                         onAddCondition={onAddCondition}
                         onRemoveCondition={onRemoveCondition}
@@ -778,137 +829,400 @@ export const GameCardsPanel = ({
 
                     <Collapsible
                         open={openSections.places}
-                        onOpenChange={() => toggleSection("places")}
+                        onOpenChange={() =>
+                            toggleSection("places")
+                        }
                         className="bg-zinc-900/40 border border-zinc-800 rounded-sm"
                         data-testid="cards-section-places"
                     >
-                        <CollapsibleTrigger className="w-full flex items-center justify-between p-3" data-testid="cards-section-places-toggle">
+                        <CollapsibleTrigger
+                            className="w-full flex items-center justify-between p-3"
+                            data-testid="cards-section-places-toggle"
+                        >
                             <div className="flex items-center gap-2">
-                                <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">Places & People</span>
-                                <span className="text-[10px] text-zinc-500">{placesPeople.length}</span>
+                                <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">
+                                    Places & NPCs
+                                </span>
+
+                                <span className="text-[10px] text-zinc-500">
+                                    {placesPeople.length}
+                                </span>
                             </div>
+
                             {openSections.places ? (
                                 <ChevronDown className="w-4 h-4 text-zinc-500" />
                             ) : (
                                 <ChevronRight className="w-4 h-4 text-zinc-500" />
                             )}
                         </CollapsibleTrigger>
+
                         <CollapsibleContent className="px-3 pb-3">
                             <div className="space-y-3">
-                                <Dialog open={showAddPlacePerson} onOpenChange={setShowAddPlacePerson}>
+
+                                <Dialog
+                                    open={
+                                        showAddPlacePerson
+                                    }
+                                    onOpenChange={
+                                        setShowAddPlacePerson
+                                    }
+                                >
                                     <DialogTrigger asChild>
-                                        <Button className="w-full btn-secondary" data-testid="add-place-person-btn">
+                                        <Button
+                                            className="w-full btn-secondary"
+                                            data-testid="add-place-person-btn"
+                                        >
                                             <Plus className="w-4 h-4 mr-2" />
-                                            Add Place or Person
+                                            Add Place or NPC
                                         </Button>
                                     </DialogTrigger>
+
                                     <DialogContent className="bg-zinc-900 border-zinc-800 max-w-lg">
                                         <DialogHeader>
-                                            <DialogTitle className="text-zinc-100 font-heading">Add Place or Person</DialogTitle>
+                                            <DialogTitle className="text-zinc-100 font-heading">
+                                                Add Place or NPC
+                                            </DialogTitle>
+
                                             <DialogDescription className="text-zinc-400">
-                                                Track important locations and NPCs.
+                                                Track important locations,
+                                                people, and animals.
                                             </DialogDescription>
                                         </DialogHeader>
+
                                         <div className="space-y-3">
+
+                                            {/* Name */}
                                             <Input
                                                 placeholder="Name"
-                                                value={newPlaceName}
-                                                onChange={(e) => setNewPlaceName(e.target.value)}
+                                                value={
+                                                    newPlaceName
+                                                }
+                                                onChange={(
+                                                    event
+                                                ) =>
+                                                    setNewPlaceName(
+                                                        event.target
+                                                            .value
+                                                    )
+                                                }
                                                 className="input-geist"
                                                 data-testid="place-person-name-input"
                                             />
-                                            <Select value={newPlaceType} onValueChange={setNewPlaceType}>
-                                                <SelectTrigger className="bg-zinc-900/50 border-zinc-800" data-testid="place-person-type-select">
+
+                                            {/* Entry Type */}
+                                            <Select
+                                                value={
+                                                    newPlaceType
+                                                }
+                                                onValueChange={(
+                                                    value
+                                                ) => {
+                                                    setNewPlaceType(
+                                                        value
+                                                    );
+
+                                                    setNewPlaceStatus(
+                                                        ""
+                                                    );
+
+                                                    setNewPlaceRelationship(
+                                                        ""
+                                                    );
+                                                }}
+                                            >
+                                                <SelectTrigger
+                                                    className="bg-zinc-900/50 border-zinc-800"
+                                                    data-testid="place-person-type-select"
+                                                >
                                                     <SelectValue placeholder="Type" />
                                                 </SelectTrigger>
+
                                                 <SelectContent className="bg-zinc-900 border-zinc-800">
-                                                    <SelectItem value="place" className="text-zinc-200">Place</SelectItem>
-                                                    <SelectItem value="person" className="text-zinc-200">Person</SelectItem>
+                                                    <SelectItem
+                                                        value="place"
+                                                        className="text-zinc-200"
+                                                    >
+                                                        Place
+                                                    </SelectItem>
+
+                                                    <SelectItem
+                                                        value="person"
+                                                        className="text-zinc-200"
+                                                    >
+                                                        Person
+                                                    </SelectItem>
+
+                                                    <SelectItem
+                                                        value="animal"
+                                                        className="text-zinc-200"
+                                                    >
+                                                        Animal
+                                                    </SelectItem>
                                                 </SelectContent>
                                             </Select>
-                                            {newPlaceType === "person" && (
+
+                                            {/* Person Type / Subtype */}
+                                            {newPlaceType ===
+                                                "person" && (
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                                     <div>
-                                                        <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Type</label>
+                                                        <label className="text-[10px] text-zinc-500 uppercase tracking-wider">
+                                                            Type
+                                                        </label>
+
                                                         <Select
-                                                            value={newPersonType}
-                                                            onValueChange={(v) => {
-                                                                setNewPersonType(v);
-                                                                setNewPersonSubtype(PERSON_SUBTYPE_OPTIONS[v]?.[0] || "");
+                                                            value={
+                                                                newPersonType
+                                                            }
+                                                            onValueChange={(
+                                                                value
+                                                            ) => {
+                                                                setNewPersonType(
+                                                                    value
+                                                                );
+
+                                                                setNewPersonSubtype(
+                                                                    PERSON_SUBTYPE_OPTIONS[
+                                                                        value
+                                                                    ]?.[0] ||
+                                                                        ""
+                                                                );
                                                             }}
                                                         >
-                                                            <SelectTrigger className="bg-zinc-900/50 border-zinc-800" data-testid="place-person-person-type-select">
+                                                            <SelectTrigger
+                                                                className="bg-zinc-900/50 border-zinc-800"
+                                                                data-testid="place-person-person-type-select"
+                                                            >
                                                                 <SelectValue placeholder="Type" />
                                                             </SelectTrigger>
+
                                                             <SelectContent className="bg-zinc-900 border-zinc-800">
-                                                                {PERSON_TYPE_OPTIONS.map((option) => (
-                                                                    <SelectItem key={option} value={option} className="text-zinc-200">
-                                                                        {option}
-                                                                    </SelectItem>
-                                                                ))}
+                                                                {PERSON_TYPE_OPTIONS.map(
+                                                                    (
+                                                                        option
+                                                                    ) => (
+                                                                        <SelectItem
+                                                                            key={
+                                                                                option
+                                                                            }
+                                                                            value={
+                                                                                option
+                                                                            }
+                                                                            className="text-zinc-200"
+                                                                        >
+                                                                            {
+                                                                                option
+                                                                            }
+                                                                        </SelectItem>
+                                                                    )
+                                                                )}
                                                             </SelectContent>
                                                         </Select>
                                                     </div>
+
                                                     <div>
-                                                        <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Subtype</label>
-                                                        <Select value={newPersonSubtype} onValueChange={setNewPersonSubtype}>
-                                                            <SelectTrigger className="bg-zinc-900/50 border-zinc-800" data-testid="place-person-person-subtype-select">
+                                                        <label className="text-[10px] text-zinc-500 uppercase tracking-wider">
+                                                            Subtype
+                                                        </label>
+
+                                                        <Select
+                                                            value={
+                                                                newPersonSubtype
+                                                            }
+                                                            onValueChange={
+                                                                setNewPersonSubtype
+                                                            }
+                                                        >
+                                                            <SelectTrigger
+                                                                className="bg-zinc-900/50 border-zinc-800"
+                                                                data-testid="place-person-person-subtype-select"
+                                                            >
                                                                 <SelectValue placeholder="Subtype" />
                                                             </SelectTrigger>
+
                                                             <SelectContent className="bg-zinc-900 border-zinc-800">
-                                                                {(PERSON_SUBTYPE_OPTIONS[newPersonType] || []).map((option) => (
-                                                                    <SelectItem key={option} value={option} className="text-zinc-200">
-                                                                        {option}
-                                                                    </SelectItem>
-                                                                ))}
+                                                                {(
+                                                                    PERSON_SUBTYPE_OPTIONS[
+                                                                        newPersonType
+                                                                    ] ||
+                                                                    []
+                                                                ).map(
+                                                                    (
+                                                                        option
+                                                                    ) => (
+                                                                        <SelectItem
+                                                                            key={
+                                                                                option
+                                                                            }
+                                                                            value={
+                                                                                option
+                                                                            }
+                                                                            className="text-zinc-200"
+                                                                        >
+                                                                            {
+                                                                                option
+                                                                            }
+                                                                        </SelectItem>
+                                                                    )
+                                                                )}
                                                             </SelectContent>
                                                         </Select>
                                                     </div>
                                                 </div>
                                             )}
+
+                                            {/* Animal Species */}
+                                            {newPlaceType ===
+                                                "animal" && (
+                                                <div>
+                                                    <label className="text-[10px] text-zinc-500 uppercase tracking-wider">
+                                                        Species
+                                                    </label>
+
+                                                    <Input
+                                                        value={
+                                                            newAnimalSpecies
+                                                        }
+                                                        onChange={(
+                                                            event
+                                                        ) =>
+                                                            setNewAnimalSpecies(
+                                                                event
+                                                                    .target
+                                                                    .value
+                                                            )
+                                                        }
+                                                        placeholder="e.g., Dog, Cat, Horse"
+                                                        className="input-geist mt-0.5"
+                                                        data-testid="place-animal-species-input"
+                                                    />
+                                                </div>
+                                            )}
+
+                                            {/* Description */}
                                             <Textarea
                                                 placeholder="Description"
-                                                value={newPlaceDescription}
-                                                onChange={(e) => setNewPlaceDescription(e.target.value)}
+                                                value={
+                                                    newPlaceDescription
+                                                }
+                                                onChange={(
+                                                    event
+                                                ) =>
+                                                    setNewPlaceDescription(
+                                                        event.target
+                                                            .value
+                                                    )
+                                                }
                                                 className="input-geist min-h-[60px]"
                                                 data-testid="place-person-description-input"
                                             />
+
+                                            {/* Status */}
                                             <div>
-                                                <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Status</label>
-                                                <Select value={newPlaceStatus} onValueChange={setNewPlaceStatus}>
-                                                    <SelectTrigger className="bg-zinc-900/50 border-zinc-800" data-testid="place-person-status-select">
+                                                <label className="text-[10px] text-zinc-500 uppercase tracking-wider">
+                                                    Status
+                                                </label>
+
+                                                <Select
+                                                    value={
+                                                        newPlaceStatus
+                                                    }
+                                                    onValueChange={
+                                                        setNewPlaceStatus
+                                                    }
+                                                >
+                                                    <SelectTrigger
+                                                        className="bg-zinc-900/50 border-zinc-800"
+                                                        data-testid="place-person-status-select"
+                                                    >
                                                         <SelectValue placeholder="Select status" />
                                                     </SelectTrigger>
+
                                                     <SelectContent className="bg-zinc-900 border-zinc-800">
-                                                        {(newPlaceType === "place" ? PLACE_STATUS_OPTIONS : PERSON_STATUS_OPTIONS).map((option) => (
-                                                            <SelectItem key={option} value={option} className="text-zinc-200">
-                                                                {option}
-                                                            </SelectItem>
-                                                        ))}
+                                                        {(
+                                                            newPlaceType ===
+                                                            "place"
+                                                                ? PLACE_STATUS_OPTIONS
+                                                                : PERSON_STATUS_OPTIONS
+                                                        ).map(
+                                                            (
+                                                                option
+                                                            ) => (
+                                                                <SelectItem
+                                                                    key={
+                                                                        option
+                                                                    }
+                                                                    value={
+                                                                        option
+                                                                    }
+                                                                    className="text-zinc-200"
+                                                                >
+                                                                    {
+                                                                        option
+                                                                    }
+                                                                </SelectItem>
+                                                            )
+                                                        )}
                                                     </SelectContent>
                                                 </Select>
                                             </div>
-                                            {newPlaceType === "person" && (
+
+                                            {/* Relationship — Person / Animal */}
+                                            {newPlaceType !==
+                                                "place" && (
                                                 <div>
-                                                    <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Relationship</label>
-                                                    <Select value={newPlaceRelationship} onValueChange={setNewPlaceRelationship}>
-                                                        <SelectTrigger className="bg-zinc-900/50 border-zinc-800" data-testid="place-person-relationship-select">
+                                                    <label className="text-[10px] text-zinc-500 uppercase tracking-wider">
+                                                        Relationship
+                                                    </label>
+
+                                                    <Select
+                                                        value={
+                                                            newPlaceRelationship
+                                                        }
+                                                        onValueChange={
+                                                            setNewPlaceRelationship
+                                                        }
+                                                    >
+                                                        <SelectTrigger
+                                                            className="bg-zinc-900/50 border-zinc-800"
+                                                            data-testid="place-person-relationship-select"
+                                                        >
                                                             <SelectValue placeholder="Select relationship" />
                                                         </SelectTrigger>
+
                                                         <SelectContent className="bg-zinc-900 border-zinc-800">
-                                                            {PERSON_RELATIONSHIP_OPTIONS.map((option) => (
-                                                                <SelectItem key={option} value={option} className="text-zinc-200">
-                                                                    {option}
-                                                                </SelectItem>
-                                                            ))}
+                                                            {PERSON_RELATIONSHIP_OPTIONS.map(
+                                                                (
+                                                                    option
+                                                                ) => (
+                                                                    <SelectItem
+                                                                        key={
+                                                                            option
+                                                                        }
+                                                                        value={
+                                                                            option
+                                                                        }
+                                                                        className="text-zinc-200"
+                                                                    >
+                                                                        {
+                                                                            option
+                                                                        }
+                                                                    </SelectItem>
+                                                                )
+                                                            )}
                                                         </SelectContent>
                                                     </Select>
                                                 </div>
                                             )}
+
                                             <Button
-                                                onClick={handleAddPlacePerson}
+                                                onClick={
+                                                    handleAddPlacePerson
+                                                }
                                                 className="w-full btn-primary"
-                                                disabled={!newPlaceName.trim()}
+                                                disabled={
+                                                    !newPlaceName.trim()
+                                                }
                                                 data-testid="place-person-save-btn"
                                             >
                                                 Add Entry
@@ -917,21 +1231,49 @@ export const GameCardsPanel = ({
                                     </DialogContent>
                                 </Dialog>
 
-                                {sortedPlacesPeople.length === 0 ? (
+                                {sortedPlacesPeople.length ===
+                                0 ? (
                                     <div className="text-center py-8">
-                                        <p className="text-zinc-500 text-sm">No places or people yet</p>
-                                        <p className="text-zinc-600 text-xs mt-1">Add notable NPCs and locations</p>
+                                        <p className="text-zinc-500 text-sm">
+                                            No places or NPCs yet
+                                        </p>
+
+                                        <p className="text-zinc-600 text-xs mt-1">
+                                            Add notable people,
+                                            animals, and locations
+                                        </p>
                                     </div>
                                 ) : (
-                                    <div className="space-y-2" data-testid="places-people-list">
-                                        {sortedPlacesPeople.map((entry) => (
-                                            <PlacePersonCard
-                                                key={entry.id || entry.name}
-                                                entry={entry}
-                                                onUpdate={(updates) => handleUpdatePlacePerson(entry.id, updates)}
-                                                onDelete={() => handleDeletePlacePerson(entry.id)}
-                                            />
-                                        ))}
+                                    <div
+                                        className="space-y-2"
+                                        data-testid="places-people-list"
+                                    >
+                                        {sortedPlacesPeople.map(
+                                            (entry) => (
+                                                <PlacePersonCard
+                                                    key={
+                                                        entry.id ||
+                                                        entry.name
+                                                    }
+                                                    entry={
+                                                        entry
+                                                    }
+                                                    onUpdate={(
+                                                        updates
+                                                    ) =>
+                                                        handleUpdatePlacePerson(
+                                                            entry.id,
+                                                            updates
+                                                        )
+                                                    }
+                                                    onDelete={() =>
+                                                        handleDeletePlacePerson(
+                                                            entry.id
+                                                        )
+                                                    }
+                                                />
+                                            )
+                                        )}
                                     </div>
                                 )}
                             </div>
