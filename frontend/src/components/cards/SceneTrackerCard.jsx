@@ -1,6 +1,7 @@
-import { CalendarDays, Clock3, Cloud, Thermometer, Leaf, Wind, Gauge, Droplets } from "lucide-react";
+import { CalendarDays, Clock3, Cloud, Thermometer, Leaf, Wind, Gauge, Droplets, MapPin, Building2, ShieldCheck, } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const CLOUD_COVER_OPTIONS = [
@@ -35,9 +36,18 @@ const WIND_OPTIONS = [
     { value: "gale", label: "🌀 Gale" },
 ];
 
+const LOCATION_TYPE_OPTIONS = [
+    { value: "exterior", label: "Exterior" },
+    { value: "interior", label: "Interior" },
+    { value: "underground", label: "Underground" },
+    { value: "vehicle", label: "Vehicle" },
+    { value: "other", label: "Other" },
+];
+
 export const SceneTrackerCard = ({
     sceneTracker,
     updateSceneTracker,
+    placeOptions = [],
     sceneTemperature,
     sceneSeason,
     getSeasonColorClass,
@@ -45,8 +55,99 @@ export const SceneTrackerCard = ({
     getTemperatureColorClass,
     getTemperatureCondition,
 }) => (
-    <div className="bg-zinc-900/40 border border-zinc-800 rounded-sm px-3 py-2.5 space-y-3">
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-2">
+        <div className="bg-zinc-900/40 border border-zinc-800 rounded-sm px-3 py-2.5 space-y-3">
+
+            {/* Location */}
+            <div className="grid grid-cols-1 md:grid-cols-[minmax(0,2fr)_minmax(150px,1fr)_110px] gap-2">
+
+                {/* Location name */}
+                <div className="space-y-1">
+                    <label className="text-[10px] uppercase tracking-wider text-zinc-500 flex items-center gap-1">
+                        <MapPin className="w-3 h-3" />
+                        Location
+                    </label>
+
+                    <Input
+                        list="scene-place-options"
+                        value={sceneTracker.location_name || ""}
+                        onChange={(event) =>
+                            updateSceneTracker({
+                                location_name: event.target.value,
+                            })
+                        }
+                        placeholder="Current Location"
+                        className="input-geist h-8"
+                        data-testid="scene-location-input"
+                    />
+
+                    <datalist id="scene-place-options">
+                        {placeOptions.map((place) => (
+                            <option
+                                key={place.id || place.name}
+                                value={place.name}
+                            />
+                        ))}
+                    </datalist>
+                </div>
+
+                {/* Location type */}
+                <div className="space-y-1">
+                    <label className="text-[10px] uppercase tracking-wider text-zinc-500 flex items-center gap-1">
+                        <Building2 className="w-3 h-3" />
+                        Type
+                    </label>
+
+                    <Select
+                        value={sceneTracker.location_type || "exterior"}
+                        onValueChange={(value) =>
+                            updateSceneTracker({
+                                location_type: value,
+                            })
+                        }
+                    >
+                        <SelectTrigger
+                            className="h-8 bg-zinc-900/50 border-zinc-800 text-xs"
+                            data-testid="scene-location-type-select"
+                        >
+                            <SelectValue />
+                        </SelectTrigger>
+
+                        <SelectContent className="bg-zinc-900 border-zinc-800">
+                            {LOCATION_TYPE_OPTIONS.map((option) => (
+                                <SelectItem
+                                    key={option.value}
+                                    value={option.value}
+                                    className="text-xs text-zinc-200"
+                                >
+                                    {option.label}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+
+                {/* Shelter */}
+                <div className="space-y-1">
+                    <label className="text-[10px] uppercase tracking-wider text-zinc-500 flex items-center gap-1">
+                        <ShieldCheck className="w-3 h-3" />
+                        Shelter
+                    </label>
+
+                    <div className="h-8 flex items-center justify-center rounded-sm border border-zinc-800 bg-zinc-900/50">
+                        <Checkbox
+                            checked={Boolean(sceneTracker.sheltered)}
+                            onCheckedChange={(checked) =>
+                                updateSceneTracker({
+                                    sheltered: checked === true,
+                                })
+                            }
+                            data-testid="scene-shelter-checkbox"
+                        />
+                    </div>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-2">
             <div className="space-y-1">
                 <label className="text-[10px] uppercase tracking-wider text-zinc-500 flex items-center gap-1">
                     <CalendarDays className="w-3 h-3" /> Date
