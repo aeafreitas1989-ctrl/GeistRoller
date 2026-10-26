@@ -53,6 +53,13 @@ const CONDITION_GROUP_LABELS = {
     "tilt-personal": "Personal Tilts",
 };
 
+const SHELTER_MITIGATED_TILTS = new Set([
+    "Extreme Cold",
+    "Extreme Heat",
+    "Heavy Rain",
+    "Heavy Winds",
+    "Blizzard",
+]);
 
 export const ConditionsSection = ({
     open,
@@ -302,7 +309,23 @@ export const ConditionsSection = ({
             return groups;
         }, [filteredConditions]);
 
-    const getSelectedTarget = () => {
+        const getSceneTarget = () => {
+            const tracker =
+                activeCharacter?.scene_tracker ||
+                {};
+
+            return {
+                target_type: "scene",
+
+                target_id: "scene",
+
+                target_name:
+                    tracker.location_name?.trim() ||
+                    "Current Location",
+            };
+        };
+        
+        const getSelectedTarget = () => {
         if (
             conditionTarget === "familiar" &&
             hasFamiliar
@@ -395,8 +418,28 @@ export const ConditionsSection = ({
                         : "Condition"
                 );
 
+            const isEnvironmentalTilt =
+                condition.group ===
+                "tilt-environmental";
+
             const target =
-                getSelectedTarget();
+                isEnvironmentalTilt
+                    ? getSceneTarget()
+                    : getSelectedTarget();
+
+            const sceneSheltered =
+                Boolean(
+                    activeCharacter
+                        ?.scene_tracker
+                        ?.sheltered
+                );
+
+            const mitigatedByShelter =
+                isEnvironmentalTilt &&
+                sceneSheltered &&
+                SHELTER_MITIGATED_TILTS.has(
+                    displayName
+                );
 
             const effect =
                 condition.effect ||
@@ -433,6 +476,15 @@ export const ConditionsSection = ({
                 resolution:
                     condition.resolution ||
                     "",
+
+                shelter_mitigates:
+                    isEnvironmentalTilt &&
+                    SHELTER_MITIGATED_TILTS.has(
+                        displayName
+                    ),
+
+                mitigated_by_shelter:
+                    mitigatedByShelter,
 
                 origin:
                     originOverride ||
@@ -649,7 +701,7 @@ export const ConditionsSection = ({
 
                                 <div>
                                     <label className="text-[10px] uppercase tracking-wider text-zinc-500">
-                                        Target
+                                        Personal Target
                                     </label>
 
                                     <Select
@@ -715,6 +767,9 @@ export const ConditionsSection = ({
                                             )}
                                         </SelectContent>
                                     </Select>
+                                    <p className="text-[9px] text-zinc-600 mt-1">
+                                        Environmental Tilts automatically affect the current Location.
+                                    </p>
                                 </div>
 
                                 {/* Sorted catalogue */}
@@ -898,6 +953,15 @@ export const ConditionsSection = ({
                                         persistent={
                                             Boolean(
                                                 condition.persistent
+                                            )
+                                        }
+                                        group={
+                                            condition.group ||
+                                            ""
+                                        }
+                                        mitigatedByShelter={
+                                            Boolean(
+                                                condition.mitigated_by_shelter
                                             )
                                         }
                                         splat={
