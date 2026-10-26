@@ -194,7 +194,10 @@ class Character(BaseModel):
     aspiration_burden: str = ""
     notes: str = ""
     scrutiny_state: Optional[Dict[str, Any]] = None
-    scene_tracker: Dict[str, str] = Field(default_factory=lambda: {
+    scene_tracker: Dict[str, Any] = Field(default_factory=lambda: {
+        "location_name": "",
+        "location_type": "exterior",
+        "sheltered": False,
         "date": "",
         "time": "",
         "season": "autumn",
@@ -302,7 +305,7 @@ class CharacterUpdate(BaseModel):
     aspiration_burden: Optional[str] = None
     notes: Optional[str] = None
     scrutiny_state: Optional[Dict[str, Any]] = None
-    scene_tracker: Optional[Dict[str, str]] = None
+    scene_tracker: Optional[Dict[str, Any]] = None
 
 # Dice Models
 
@@ -320,4 +323,3 @@ class DiceRollResult(BaseModel):
     is_dramatic_failure: bool
     beat_awarded: bool
     description: str
-
