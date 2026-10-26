@@ -54,6 +54,9 @@ import { ConditionsSection } from "./game-cards/ConditionsSection";
 import { ActiveSpellsSection } from "./game-cards/ActiveSpellsSection";
 
 const DEFAULT_SCENE_TRACKER = {
+    location_name: "",
+    location_type: "exterior",
+    sheltered: false,
     date: "",
     time: "",
     temperature: "15",
@@ -124,86 +127,174 @@ const getTemperatureIconClass = (temp) => {
 
 const WEATHER_CONDITION_ORIGIN = "Weather";
 
+const SHELTER_MITIGATED_TILTS = new Set([
+    "Extreme Cold",
+    "Extreme Heat",
+    "Heavy Rain",
+    "Heavy Winds",
+    "Blizzard",
+]);
+
 const buildWeatherConditions = (tracker) => {
-    const temp = getTemperatureValue(tracker.temperature);
-    const precipitation = tracker.precipitation || "dry";
-    const intensity = tracker.intensity || "none";
-    const wind = tracker.wind || "calm";
+    const temp =
+        getTemperatureValue(
+            tracker.temperature
+        );
+
+    const precipitation =
+        tracker.precipitation ||
+        "dry";
+
+    const intensity =
+        tracker.intensity ||
+        "none";
+
+    const wind =
+        tracker.wind ||
+        "calm";
+
+    const locationName =
+        tracker.location_name?.trim() ||
+        "Current Location";
+
+    const sheltered =
+        Boolean(
+            tracker.sheltered
+        );
 
     const conditions = [];
 
-    if (temp < 0) {
+    const addEnvironmentalTilt = ({
+        name,
+        description,
+        resolution,
+    }) => {
         conditions.push({
-            name: "Extreme Cold",
+            name,
             type: "tilt",
-            description: "Sub-zero weather exposure.",
-            resolution: "Leave the weather, gain shelter, or wait for conditions to improve.",
-            origin: WEATHER_CONDITION_ORIGIN,
+            group: "tilt-environmental",
+
+            description,
+            effect: description,
+            resolution,
+
+            origin:
+                WEATHER_CONDITION_ORIGIN,
+
+            target_type: "scene",
+            target_id: "scene",
+            target_name:
+                locationName,
+
             weather_auto: true,
+
+            shelter_mitigates:
+                SHELTER_MITIGATED_TILTS.has(
+                    name
+                ),
+
+            mitigated_by_shelter:
+                sheltered &&
+                SHELTER_MITIGATED_TILTS.has(
+                    name
+                ),
+        });
+    };
+
+    if (temp < 0) {
+        addEnvironmentalTilt({
+            name: "Extreme Cold",
+
+            description:
+                "Sub-zero weather exposure.",
+
+            resolution:
+                "Leave the weather, gain shelter, or wait for conditions to improve.",
         });
     }
 
     if (temp > 40) {
-        conditions.push({
+        addEnvironmentalTilt({
             name: "Extreme Heat",
-            type: "tilt",
-            description: "Dangerous heat exposure.",
-            resolution: "Leave the weather, gain shelter, cool down, or wait for conditions to improve.",
-            origin: WEATHER_CONDITION_ORIGIN,
-            weather_auto: true,
+
+            description:
+                "Dangerous heat exposure.",
+
+            resolution:
+                "Leave the weather, gain shelter, cool down, or wait for conditions to improve.",
         });
     }
 
-    if (precipitation === "rain" && intensity === "heavy") {
-        conditions.push({
+    if (
+        precipitation === "rain" &&
+        intensity === "heavy"
+    ) {
+        addEnvironmentalTilt({
             name: "Heavy Rain",
-            type: "tilt",
-            description: "Visibility and movement are impaired by heavy rainfall.",
-            resolution: "Leave the weather, gain shelter, or wait for conditions to improve.",
-            origin: WEATHER_CONDITION_ORIGIN,
-            weather_auto: true,
+
+            description:
+                "Visibility and movement are impaired by heavy rainfall.",
+
+            resolution:
+                "Leave the weather, gain shelter, or wait for conditions to improve.",
         });
     }
 
-    if (precipitation === "rain" && intensity === "violent") {
-        conditions.push({
+    if (
+        precipitation === "rain" &&
+        intensity === "violent"
+    ) {
+        addEnvironmentalTilt({
             name: "Heavy Rain",
-            type: "tilt",
-            description: "Visibility and movement are impaired by violent rainfall.",
-            resolution: "Leave the weather, gain shelter, or wait for conditions to improve.",
-            origin: WEATHER_CONDITION_ORIGIN,
-            weather_auto: true,
+
+            description:
+                "Visibility and movement are impaired by violent rainfall.",
+
+            resolution:
+                "Leave the weather, gain shelter, or wait for conditions to improve.",
         });
 
-        conditions.push({
+        addEnvironmentalTilt({
             name: "Flooded",
-            type: "tilt",
-            description: "Water has begun to flood the area and interfere with movement.",
-            resolution: "Leave the flooded area or wait for the water to recede.",
-            origin: WEATHER_CONDITION_ORIGIN,
-            weather_auto: true,
+
+            description:
+                "Water has begun to flood the area and interfere with movement.",
+
+            resolution:
+                "Leave the flooded area or wait for the water to recede.",
         });
     }
 
-    if (precipitation === "snow" && (intensity === "heavy" || intensity === "violent")) {
-        conditions.push({
+    if (
+        precipitation === "snow" &&
+        (
+            intensity === "heavy" ||
+            intensity === "violent"
+        )
+    ) {
+        addEnvironmentalTilt({
             name: "Blizzard",
-            type: "tilt",
-            description: "Snow and wind severely reduce visibility and mobility.",
-            resolution: "Leave the weather, gain shelter, or wait for conditions to improve.",
-            origin: WEATHER_CONDITION_ORIGIN,
-            weather_auto: true,
+
+            description:
+                "Snow and wind severely reduce visibility and mobility.",
+
+            resolution:
+                "Leave the weather, gain shelter, or wait for conditions to improve.",
         });
     }
 
-    if (wind === "strong" || wind === "gale") {
-        conditions.push({
+    if (
+        wind === "strong" ||
+        wind === "gale"
+    ) {
+        addEnvironmentalTilt({
             name: "Heavy Winds",
-            type: "tilt",
-            description: "Strong winds interfere with movement, perception, and exposed actions.",
-            resolution: "Leave the weather, gain shelter, or wait for conditions to improve.",
-            origin: WEATHER_CONDITION_ORIGIN,
-            weather_auto: true,
+
+            description:
+                "Strong winds interfere with movement, perception, and exposed actions.",
+
+            resolution:
+                "Leave the weather, gain shelter, or wait for conditions to improve.",
         });
     }
 
@@ -319,8 +410,29 @@ export const GameCardsPanel = ({
     }
 };
 
-    const placesPeople = activeCharacter?.places_people || [];
-    const sortedPlacesPeople = [...placesPeople].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+    const placesPeople =
+        activeCharacter?.places_people || [];
+
+    const sortedPlacesPeople =
+        [...placesPeople].sort(
+            (a, b) =>
+                (a.name || "").localeCompare(
+                    b.name || ""
+                )
+        );
+
+    const scenePlaceOptions =
+        placesPeople
+            .filter(
+                (entry) =>
+                    entry?.type === "place"
+            )
+            .sort(
+                (a, b) =>
+                    (a.name || "").localeCompare(
+                        b.name || ""
+                    )
+            );
     const characterType = activeCharacter?.character_type || "geist";
     const isMage = characterType === "mage";
     const activeSpells = [...(activeCharacter?.active_spells || [])].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
@@ -570,6 +682,7 @@ export const GameCardsPanel = ({
                     <SceneTrackerCard
                         sceneTracker={sceneTracker}
                         updateSceneTracker={updateSceneTracker}
+                        placeOptions={scenePlaceOptions}
                         sceneTemperature={sceneTemperature}
                         sceneSeason={sceneSeason}
                         getSeasonColorClass={getSeasonColorClass}
