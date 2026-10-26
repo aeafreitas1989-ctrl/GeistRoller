@@ -192,31 +192,62 @@ export const SceneTrackerCard = ({
                     <Thermometer className={`w-3 h-3 ${getTemperatureIconClass(sceneTemperature)}`} />
                     Temp (°C)
                 </label>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
                     <Button
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-5 text-zinc-400 text-sm"
-                        onClick={() => updateSceneTracker({ temperature: String(Math.max(-20, sceneTemperature - 1)) })}
+                        className="h-6 w-3 min-w-3 p-0 text-zinc-500 text-xs hover:text-zinc-200"
+                        onClick={() =>
+                            updateSceneTracker({
+                                temperature: String(
+                                    Math.max(
+                                        -20,
+                                        sceneTemperature - 1
+                                    )
+                                ),
+                            })
+                        }
                         disabled={sceneTemperature <= -20}
                         data-testid="scene-temperature-decrease"
                     >
-                        <span className="leading-none">−</span>
+                        <span className="leading-none text-[11px]">
+                            −
+                        </span>
                     </Button>
-                    <div className={`flex-1 h-8 rounded-sm border flex items-center justify-center text-xs font-medium ${getTemperatureColorClass(sceneTemperature)}`}>
-                        {sceneTemperature} · {getTemperatureCondition(sceneTemperature)}
+                
+                    <div
+                        className={`flex-1 min-w-0 h-8 rounded-sm border flex items-center justify-center text-xs font-medium ${getTemperatureColorClass(
+                            sceneTemperature
+                        )}`}
+                    >
+                        {sceneTemperature} ·{" "}
+                        {getTemperatureCondition(
+                            sceneTemperature
+                        )}
                     </div>
+                
                     <Button
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-5 text-zinc-400 text-sm"
-                        onClick={() => updateSceneTracker({ temperature: String(Math.min(45, sceneTemperature + 1)) })}
+                        className="h-6 w-3 min-w-3 p-0 text-zinc-500 text-xs hover:text-zinc-200"
+                        onClick={() =>
+                            updateSceneTracker({
+                                temperature: String(
+                                    Math.min(
+                                        45,
+                                        sceneTemperature + 1
+                                    )
+                                ),
+                            })
+                        }
                         disabled={sceneTemperature >= 45}
                         data-testid="scene-temperature-increase"
                     >
-                        <span className="leading-none">+</span>
+                        <span className="leading-none text-[11px]">
+                            +
+                        </span>
                     </Button>
                 </div>
             </div>
