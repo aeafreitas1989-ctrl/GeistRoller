@@ -739,6 +739,8 @@ export const ConditionCard = ({
     name,
     type,
     persistent = false,
+    group = "",
+    mitigatedByShelter = false,
     description,
     resolution,
     origin,
@@ -772,6 +774,28 @@ export const ConditionCard = ({
         targetName ||
         "Character";
 
+    const isEnvironmentalTilt =
+        group ===
+        "tilt-environmental";
+
+    const isPersonalTilt =
+        group ===
+        "tilt-personal";
+
+    const badgeLabel =
+        isEnvironmentalTilt
+            ? "Environmental Tilt"
+            : isPersonalTilt
+            ? "Personal Tilt"
+            : type === "tilt"
+            ? "Tilt"
+            : type;
+
+    const targetVerb =
+        isEnvironmentalTilt
+            ? "affecting"
+            : "targeting";
+
     return (
         <div
             className={`${colors.bg} ${colors.border} border rounded-sm p-3 relative group transition-all hover:scale-[1.02]`}
@@ -786,7 +810,7 @@ export const ConditionCard = ({
                         <span
                             className={`text-xs px-1.5 py-0.5 rounded ${colors.badge} ${colors.text} font-mono uppercase`}
                         >
-                            {type}
+                            {badgeLabel}
                         </span>
 
                         <h4
@@ -809,12 +833,21 @@ export const ConditionCard = ({
                             .replace(/\s+/g, "-")}`}
                     >
                         from {originLabel};{" "}
-                        targeting{" "}
+                        {targetVerb}{" "}
                         <span className="text-zinc-300">
                             {safeTargetName}
                         </span>
                     </p>
-
+                    {mitigatedByShelter && (
+                        <div
+                            className="mb-2 px-2 py-1.5 rounded-sm border border-cyan-700/40 bg-cyan-950/30 text-[10px] text-cyan-300"
+                            data-testid={`condition-shelter-mitigation-${safeName
+                                .toLowerCase()
+                                .replace(/\s+/g, "-")}`}
+                        >
+                            Sheltered — environmental effects currently suppressed.
+                        </div>
+                    )}
                     {description && (
                         <p className="text-xs text-zinc-400 leading-relaxed whitespace-pre-line">
                             {description}
