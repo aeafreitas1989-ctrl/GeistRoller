@@ -215,7 +215,7 @@ export const SceneTrackerCard = ({
                             −
                         </span>
                     </Button>
-                
+
                     <div
                         className={`flex-1 min-w-0 h-8 rounded-sm border flex items-center justify-center text-xs font-medium ${getTemperatureColorClass(
                             sceneTemperature
@@ -226,7 +226,7 @@ export const SceneTrackerCard = ({
                             sceneTemperature
                         )}
                     </div>
-                
+
                     <Button
                         type="button"
                         variant="ghost"
