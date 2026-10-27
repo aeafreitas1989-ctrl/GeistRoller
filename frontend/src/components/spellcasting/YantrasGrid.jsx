@@ -1,5 +1,12 @@
 import { Wrench } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 
 export const YantraSingleCheckbox = ({ name, label, bonus, checked, disabled, onToggle }) => (
     <label
@@ -95,22 +102,109 @@ export const YantrasGrid = ({
     specialRangeMode,
     toggleYantraName,
     setMutuallyExclusiveYantra,
+    inventoryYantraOptions = {},
+    selectedInventoryYantras = {},
+    onSelectInventoryYantra,
 }) => {
     const slotsFull = selectedNameSet.size >= yantraSlotLimit;
     const sympathyCurrent = SYMPATHY_VARIANTS.find((v) => selectedNameSet.has(v.name)) || null;
     const sacramentCurrent = SACRAMENT_VARIANTS.find((v) => selectedNameSet.has(v.name)) || null;
 
-    const renderSingle = (name, label, bonus) => (
-        <YantraSingleCheckbox
-            key={name}
-            name={name}
-            label={label}
-            bonus={bonus}
-            checked={selectedNameSet.has(name)}
-            disabled={!selectedNameSet.has(name) && slotsFull}
-            onToggle={toggleYantraName}
-        />
-    );
+    const renderSingle = (
+        name,
+        label,
+        bonus
+    ) => {
+        const checked =
+            selectedNameSet.has(name);
+
+        const inventoryOptions =
+            inventoryYantraOptions[
+                name
+            ] || [];
+
+        const selectedInventoryKey =
+            selectedInventoryYantras[
+                name
+            ] ||
+            inventoryOptions[0]?.key ||
+            "";
+
+        return (
+            <div key={name}>
+                <YantraSingleCheckbox
+                    name={name}
+                    label={label}
+                    bonus={bonus}
+                    checked={checked}
+                    disabled={
+                        !checked &&
+                        slotsFull
+                    }
+                    onToggle={
+                        toggleYantraName
+                    }
+                />
+
+                {checked &&
+                    inventoryOptions.length >
+                        1 && (
+                        <div className="pl-6 pr-1 pb-1">
+                            <Select
+                                value={
+                                    selectedInventoryKey
+                                }
+                                onValueChange={(
+                                    value
+                                ) =>
+                                    onSelectInventoryYantra?.(
+                                        name,
+                                        value
+                                    )
+                                }
+                            >
+                                <SelectTrigger
+                                    className="h-6 bg-zinc-900/60 border-zinc-700 text-[10px]"
+                                    data-testid={`yantra-inventory-select-${name
+                                        .toLowerCase()
+                                        .replace(
+                                            /[^a-z0-9]+/g,
+                                            "-"
+                                        )}`}
+                                >
+                                    <SelectValue />
+                                </SelectTrigger>
+
+                                <SelectContent className="bg-zinc-900 border-zinc-700">
+                                    {inventoryOptions.map(
+                                        (
+                                            option
+                                        ) => (
+                                            <SelectItem
+                                                key={
+                                                    option.key
+                                                }
+                                                value={
+                                                    option.key
+                                                }
+                                                className="text-xs"
+                                            >
+                                                {
+                                                    option.name
+                                                }
+                                                {option.equipped
+                                                    ? " — Equipped"
+                                                    : ""}
+                                            </SelectItem>
+                                        )
+                                    )}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    )}
+            </div>
+        );
+    };
 
     return (
         <div className="space-y-2">
