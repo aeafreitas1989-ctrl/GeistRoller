@@ -3,8 +3,18 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { GNOSIS_TABLE } from "../../data/character-data";
-import { SynergyTrack, HealthTrack, ResourceTrack, getHealthCounts, buildHealthBoxes } from "./StatComponents";
+import { GNOSIS_TABLE as BASE_GNOSIS_TABLE } from "../../data/character-data";
+import { SynergyTrack, ResourceTrack, getHealthCounts, buildHealthBoxes } from "./StatComponents";
+
+const GNOSIS_TABLE = {
+    ...BASE_GNOSIS_TABLE,
+    10: {
+        ...BASE_GNOSIS_TABLE[10],
+        ritualInterval: "1 min",
+        combinedSpells: 4,
+        yantras: 6,
+    },
+};
 
 export const MageGnosisContent = ({
     getValue, handleChange, getNestedValue, handleNestedChange,
@@ -90,7 +100,7 @@ export const MageGnosisContent = ({
             counts.lethal += 1;
             const totalAfter = counts.aggravated + counts.lethal + counts.bashing;
             if (totalAfter > maxHealth) {
-                if (counts.bashing > 0) { counts.bashing -= 1; }
+                if (counts.bashing > 0) counts.bashing -= 1;
             }
             const updatedBoxes = buildHealthBoxes(counts, maxHealth);
             updates.health_boxes = updatedBoxes;
@@ -116,7 +126,6 @@ export const MageGnosisContent = ({
 
     return (
         <>
-            {/* Gnosis for Mages */}
             <div>
                 <label className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1 block">Gnosis</label>
                 <SynergyTrack value={getValue("gnosis") || 1} maxValue={10} onChangeValue={(v) => handleChange("gnosis", v)} onChangeMax={() => {}} />
@@ -157,7 +166,6 @@ export const MageGnosisContent = ({
                 );
             })()}
 
-            {/* Willpower */}
             <div>
                 <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-1.5">
@@ -192,7 +200,6 @@ export const MageGnosisContent = ({
                 <ResourceTrack current={getValue("willpower") || 0} max={calculateWillpowerMax()} onChange={(v) => handleChange("willpower", v)} color="amber" testIdPrefix="willpower" />
             </div>
 
-            {/* Mana for Mages */}
             <div>
                 <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-1.5">
@@ -233,6 +240,7 @@ export const MageGnosisContent = ({
                                 </div>
                             </DialogContent>
                         </Dialog>
+
                         <button
                             onClick={openHallowDialog}
                             className="text-[9px] px-1.5 py-0.5 rounded bg-violet-900/30 text-violet-400 hover:bg-violet-800/40 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
@@ -285,7 +293,7 @@ export const MageGnosisContent = ({
                                         <div className={`text-[11px] rounded-sm p-2 ${hallowResult.successes > 0 ? "bg-emerald-900/30 border border-emerald-500/30 text-emerald-300" : "bg-rose-900/30 border border-rose-500/30 text-rose-300"}`} data-testid="hallow-result">
                                             {hallowResult.successes > 0
                                                 ? `Success (${hallowResult.successes})! Recovered ${hallowResult.gained} Mana.`
-                                                : `Failure (0 successes). No Mana recovered.`} Time advanced 1 hour.
+                                                : "Failure (0 successes). No Mana recovered."} Time advanced 1 hour.
                                         </div>
                                     )}
 
@@ -313,6 +321,7 @@ export const MageGnosisContent = ({
                             </DialogContent>
                         </Dialog>
                     </div>
+
                     <div className="flex items-center gap-2">
                         {(() => {
                             const gnosisLevel = getValue("gnosis") || 1;
@@ -333,6 +342,7 @@ export const MageGnosisContent = ({
                         })()}
                     </div>
                 </div>
+
                 {(() => {
                     const gnosisLevel = getValue("gnosis") || 1;
                     const gnosisData = GNOSIS_TABLE[gnosisLevel] || GNOSIS_TABLE[1];
@@ -344,7 +354,7 @@ export const MageGnosisContent = ({
                     );
                 })()}
             </div>
-                        {/* Nimbus for Mages */}
+
             <div className="p-2 bg-violet-900/20 border border-violet-500/30 rounded-sm space-y-2">
                 <div className="flex items-center justify-between">
                     <label className="text-[10px] text-violet-400 uppercase tracking-wider">Nimbus</label>
@@ -354,9 +364,8 @@ export const MageGnosisContent = ({
                             if (currentMana < 1) return;
 
                             const gnosis = getValue("gnosis") || 1;
-                            const potentNimbusDots =
-                                ((getValue("merits_list") || []).find((m) => (m?.name || "") === "Potent Nimbus")?.dots || 0);
-                            const pool = gnosis + (potentNimbusDots * 2);
+                            const potentNimbusDots = ((getValue("merits_list") || []).find((m) => (m?.name || "") === "Potent Nimbus")?.dots || 0);
+                            const pool = gnosis + potentNimbusDots * 2;
 
                             handleChange("mana", currentMana - 1);
 
