@@ -3,29 +3,59 @@ import { X, Minus, Plus, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { GNOSIS_TABLE, YANTRAS } from "@/data/character-data";
+import { GNOSIS_TABLE as BASE_GNOSIS_TABLE } from "@/data/character-data";
 import { YantrasGrid } from "./spellcasting/YantrasGrid";
 import { PrimaryFactorOverride } from "./spellcasting/PrimaryFactorOverride";
 import { FactorRow } from "./spellcasting/FactorRow";
 import { ParadoxSection } from "./spellcasting/ParadoxSection";
 import { toast } from "sonner";
 
-// Practice dot requirements
+// Spellcasting-specific corrections are kept local so this rules pass does not
+// require replacing the shared character-data catalogue.
+const GNOSIS_TABLE = {
+    ...BASE_GNOSIS_TABLE,
+    10: {
+        ...BASE_GNOSIS_TABLE[10],
+        ritualInterval: "1 min",
+        combinedSpells: 4,
+        yantras: 6,
+    },
+};
+
+const YANTRAS = [
+    { name: "Concentration", bonus: 2, description: "Focus your full attention on a spell with Duration longer than one turn." },
+    { name: "Dedicated Tool", bonus: 1, description: "Personal Dedicated Tool. Functions as the mage's Path/Order tool and also reduces the Paradox pool by 2 dice.", reducesParadox: true },
+    { name: "Demesne", bonus: 2, description: "Casting within an appropriate Demesne." },
+    { name: "Supernal Verge", bonus: 2, description: "Casting within an appropriate Supernal Verge." },
+    { name: "Environment", bonus: 1, description: "A place symbolically linked to the spell." },
+    { name: "High Speech", bonus: 2, description: "Chanting in the Supernal tongue. Requires the High Speech Merit." },
+    { name: "Order Tool", bonus: 1, description: "A tool associated with the mage's Order." },
+    { name: "Path Tool: Coin", bonus: 1, description: "A Path Tool: Coin." },
+    { name: "Path Tool: Cup", bonus: 1, description: "A Path Tool: Cup." },
+    { name: "Path Tool: Mirror", bonus: 1, description: "A Path Tool: Mirror." },
+    { name: "Path Tool: Rod", bonus: 1, description: "A Path Tool: Rod." },
+    { name: "Path Tool: Weapon", bonus: 1, description: "A Path Tool: Weapon." },
+    { name: "Persona", bonus: 0, description: "Invoking the mage's Persona. Actual bonus is Shadow Name + Cabal Theme." },
+    { name: "Resonant Mana", bonus: 1, description: "Mana resonant with the spell's symbolism." },
+    { name: "Runes", bonus: 2, description: "Inscribed runes that channel the spell." },
+    { name: "Sacrament: Minor", bonus: 1, description: "An equipped +1 Sacrament. Kept in Inventory as a replenishable abstraction." },
+    { name: "Sacrament: Major", bonus: 2, description: "An equipped +2 Sacrament. The selected Inventory item is consumed when casting is committed." },
+    { name: "Sacrament: Mystic", bonus: 3, description: "An equipped +3 Sacrament. The selected Inventory item is consumed when casting is committed." },
+    { name: "Sympathy: Material", bonus: 2, description: "A strong sympathetic link. Gives +0 when enabling Sympathetic Range or Temporal Sympathy." },
+    { name: "Sympathy: Representational", bonus: 1, description: "A sufficient sympathetic link. Gives +0 when enabling Sympathetic Range or Temporal Sympathy." },
+    { name: "Sympathy: Symbolic", bonus: 0, description: "A weak sympathetic link." },
+];
+
 const PRACTICE_DOTS = {
-    "Compelling": 1, "Knowing": 1, "Unveiling": 1,
-    "Ruling": 2, "Shielding": 2, "Veiling": 2,
-    "Fraying": 3, "Perfecting": 3, "Weaving": 3,
-    "Patterning": 4, "Unravelling": 4,
-    "Making": 5, "Unmaking": 5
+    Compelling: 1, Knowing: 1, Unveiling: 1,
+    Ruling: 2, Shielding: 2, Veiling: 2,
+    Fraying: 3, Perfecting: 3, Weaving: 3,
+    Patterning: 4, Unravelling: 4,
+    Making: 5, Unmaking: 5,
 };
 
 const ALL_PRACTICES = Object.entries(PRACTICE_DOTS).map(([name, dots]) => ({ name, dots }));
-
-const ARCANA_NAMES = [
-    "Death", "Fate", "Forces", "Life", "Matter",
-    "Mind", "Prime", "Space", "Spirit", "Time"
-];
-
+const ARCANA_NAMES = ["Death", "Fate", "Forces", "Life", "Matter", "Mind", "Prime", "Space", "Spirit", "Time"];
 const WITHSTAND_TRAITS = [
     { value: "none", label: "None" },
     { value: "resistance", label: "Resistance" },
@@ -34,194 +64,98 @@ const WITHSTAND_TRAITS = [
     { value: "other", label: "Other" },
 ];
 
-const normalizeYantraText = (value) =>
-    String(value || "").trim().toLowerCase();
-
+const normalizeYantraText = (value) => String(value || "").trim().toLowerCase();
 const compareYantraLabelsAlphabetically = (a, b) =>
-    String(a || "").localeCompare(
-        String(b || ""),
-        undefined,
-        { sensitivity: "base", numeric: true }
-    );
+    String(a || "").localeCompare(String(b || ""), undefined, { sensitivity: "base", numeric: true });
 
 const getSelectedYantraToolType = (yantraName) => {
     const normalized = normalizeYantraText(yantraName);
-
     if (normalized === "dedicated tool") return "dedicated";
     if (normalized === "order tool") return "order";
-
     const pathToolMatch = normalized.match(/^path tool:\s*(.+)$/);
-    if (pathToolMatch) return pathToolMatch[1].trim();
-
-    return null;
+    return pathToolMatch ? pathToolMatch[1].trim() : null;
 };
 
 const getInventoryYantraToolType = (item) => {
     const kind = normalizeYantraText(item?.yantra?.kind);
     const explicitToolType = normalizeYantraText(item?.yantra?.tool_type);
     const name = normalizeYantraText(item?.name);
-
     if (kind === "sacrament") return "sacrament";
     if (explicitToolType) return explicitToolType;
     if (name.includes("dedicated")) return "dedicated";
-
-    // Existing older Yantra records without tool_type are displayed as Coin elsewhere.
     return "coin";
 };
 
 const isInventoryYantraDedicated = (item) => {
     const explicitToolType = normalizeYantraText(item?.yantra?.tool_type);
     const name = normalizeYantraText(item?.name);
-
-    return (
-        item?.yantra?.dedicated === true ||
-        explicitToolType === "dedicated" ||
-        name.includes("dedicated")
-    );
+    return item?.yantra?.dedicated === true || explicitToolType === "dedicated" || name.includes("dedicated");
 };
 
 const getInventoryYantraKey = (item, index) =>
-    String(
-        item?.id ??
-        `${normalizeYantraText(
-            item?.name || "yantra"
-        )}::${index}`
-    );
+    String(item?.id ?? `${normalizeYantraText(item?.name || "yantra")}::${index}`);
 
-const getMatchingInventoryYantras = (
-    yantraName,
-    inventoryItems
-) => {
-    const selectedToolType =
-        getSelectedYantraToolType(
-            yantraName
-        );
+const getSacramentRatingFromYantraName = (yantraName) => {
+    const normalized = normalizeYantraText(yantraName);
+    if (normalized === "sacrament: minor") return 1;
+    if (normalized === "sacrament: major") return 2;
+    if (normalized === "sacrament: mystic") return 3;
+    return null;
+};
 
-    if (!selectedToolType) {
-        return [];
-    }
+const getMatchingInventoryYantras = (yantraName, inventoryItems) => {
+    const selectedToolType = getSelectedYantraToolType(yantraName);
+    const sacramentRating = getSacramentRatingFromYantraName(yantraName);
+    if (!selectedToolType && !sacramentRating) return [];
 
     return (inventoryItems || [])
-        .map((item, index) => ({
-            item,
-            key: getInventoryYantraKey(
-                item,
-                index
-            ),
-        }))
-        .filter(
-            ({ item }) =>
-                normalizeYantraText(
-                    item?.type
-                ) === "yantra"
-        )
+        .map((item, index) => ({ item, index, key: getInventoryYantraKey(item, index) }))
+        .filter(({ item }) => normalizeYantraText(item?.type) === "yantra")
         .filter(({ item }) => {
-            if (
-                selectedToolType ===
-                "dedicated"
-            ) {
-                return (
-                    isInventoryYantraDedicated(
-                        item
-                    )
-                );
+            if (sacramentRating) {
+                return normalizeYantraText(item?.yantra?.kind) === "sacrament" &&
+                    item?.equipped === true &&
+                    Number(item?.yantra?.bonus ?? 1) === sacramentRating;
             }
-
-            return (
-                getInventoryYantraToolType(
-                    item
-                ) === selectedToolType
-            );
+            if (selectedToolType === "dedicated") return isInventoryYantraDedicated(item);
+            return getInventoryYantraToolType(item) === selectedToolType;
         })
-        .filter(
-            ({ item }) =>
-                String(
-                    item?.name || ""
-                ).trim()
-        )
+        .filter(({ item }) => String(item?.name || "").trim())
         .sort((a, b) => {
-            if (
-                !!a.item?.equipped !==
-                !!b.item?.equipped
-            ) {
-                return a.item?.equipped
-                    ? -1
-                    : 1;
-            }
-
-            return String(
-                a.item?.name || ""
-            ).localeCompare(
-                String(
-                    b.item?.name || ""
-                ),
-                undefined,
-                {
-                    sensitivity: "base",
-                    numeric: true,
-                }
-            );
+            if (!!a.item?.equipped !== !!b.item?.equipped) return a.item?.equipped ? -1 : 1;
+            return String(a.item?.name || "").localeCompare(String(b.item?.name || ""), undefined, {
+                sensitivity: "base",
+                numeric: true,
+            });
         })
-        .map(({ item, key }) => ({
+        .map(({ item, key, index }) => ({
             key,
-            name:
-                item?.name ||
-                "Unnamed Yantra",
-            equipped:
-                Boolean(
-                    item?.equipped
-                ),
+            index,
+            name: item?.name || "Unnamed Yantra",
+            equipped: Boolean(item?.equipped),
+            bonus: Number(item?.yantra?.bonus) || 0,
         }));
 };
 
-const getInventoryYantraLabel = (
-    yantraName,
-    inventoryItems,
-    selectedInventoryYantras
-) => {
-    const selectedToolType =
-        getSelectedYantraToolType(
-            yantraName
-        );
-
-    if (!selectedToolType) {
-        return yantraName;
+const getInventoryYantraLabel = (yantraName, inventoryItems, selectedInventoryYantras) => {
+    const sacramentRating = getSacramentRatingFromYantraName(yantraName);
+    if (sacramentRating) {
+        const matchingSacraments = getMatchingInventoryYantras(yantraName, inventoryItems);
+        if (!matchingSacraments.length) return `Sacrament +${sacramentRating}`;
+        const selectedKey = selectedInventoryYantras?.[yantraName];
+        const selectedSacrament = matchingSacraments.find((option) => option.key === selectedKey) || matchingSacraments[0];
+        return `Sacrament +${sacramentRating} (${selectedSacrament.name})`;
     }
 
-    const matchingInventoryYantras =
-        getMatchingInventoryYantras(
-            yantraName,
-            inventoryItems
-        );
-
-    const displayToolType =
-        selectedToolType === "dedicated"
-            ? "Dedicated"
-            : selectedToolType
-                  .charAt(0)
-                  .toUpperCase() +
-              selectedToolType.slice(1);
-
-    if (
-        matchingInventoryYantras.length ===
-        0
-    ) {
-        return displayToolType;
-    }
-
-    const selectedKey =
-        selectedInventoryYantras?.[
-            yantraName
-        ];
-
-    const selectedInventoryYantra =
-        matchingInventoryYantras.find(
-            (option) =>
-                option.key ===
-                selectedKey
-        ) ||
-        matchingInventoryYantras[0];
-
+    const selectedToolType = getSelectedYantraToolType(yantraName);
+    if (!selectedToolType) return yantraName;
+    const matchingInventoryYantras = getMatchingInventoryYantras(yantraName, inventoryItems);
+    const displayToolType = selectedToolType === "dedicated"
+        ? "Dedicated"
+        : selectedToolType.charAt(0).toUpperCase() + selectedToolType.slice(1);
+    if (!matchingInventoryYantras.length) return displayToolType;
+    const selectedKey = selectedInventoryYantras?.[yantraName];
+    const selectedInventoryYantra = matchingInventoryYantras.find((option) => option.key === selectedKey) || matchingInventoryYantras[0];
     return `${displayToolType} (${selectedInventoryYantra.name})`;
 };
 
@@ -235,20 +169,8 @@ const getCastingTime = (gnosis) => {
 
 const FACTOR_LEVELS = {
     potency: {
-        standard: [
-            { level: 1, label: "Potency 1" },
-            { level: 2, label: "Potency 2" },
-            { level: 3, label: "Potency 3" },
-            { level: 4, label: "Potency 4" },
-            { level: 5, label: "Potency 5" },
-        ],
-        advanced: [
-            { level: 1, label: "Potency 1 (+2 Withstand)" },
-            { level: 2, label: "Potency 2 (+2 Withstand)" },
-            { level: 3, label: "Potency 3 (+2 Withstand)" },
-            { level: 4, label: "Potency 4 (+2 Withstand)" },
-            { level: 5, label: "Potency 5 (+2 Withstand)" },
-        ]
+        standard: [1, 2, 3, 4, 5].map((level) => ({ level, label: `Potency ${level}` })),
+        advanced: [1, 2, 3, 4, 5].map((level) => ({ level, label: `Potency ${level} (+2 Withstand)` })),
     },
     duration: {
         standard: [
@@ -267,7 +189,7 @@ const FACTOR_LEVELS = {
             { level: 4, label: "1 month" },
             { level: 5, label: "1 year" },
             { level: 6, label: "Indefinite (+1 Reach, 1 Mana)" },
-        ]
+        ],
     },
     scale: {
         standard: [
@@ -284,14 +206,14 @@ const FACTOR_LEVELS = {
             { level: 4, targets: "40 subjects (Size 20)", area: "shopping mall" },
             { level: 5, targets: "80 subjects (Size 25)", area: "city block" },
             { level: 6, targets: "160 subjects (Size 30)", area: "neighbourhood" },
-        ]
-    }
+        ],
+    },
 };
 
-export const SpellcastingPopup = ({ 
-    isOpen, 
-    onClose, 
-    arcanum, 
+export const SpellcastingPopup = ({
+    isOpen,
+    onClose,
+    arcanum,
     arcanumDots,
     gnosis,
     isRuling,
@@ -315,9 +237,11 @@ export const SpellcastingPopup = ({
     athleticsDots = 0,
     firearmsDots = 0,
     inventoryItems = [],
+    meritsList = [],
+    onConsumeInventoryYantra,
     previousParadoxRolls = 0,
     onPreviousParadoxRollsChange,
-    onResetPreviousParadoxRolls
+    onResetPreviousParadoxRolls,
 }) => {
     const [selectedPractice, setSelectedPractice] = useState("");
     const [spellName, setSpellName] = useState("");
@@ -326,62 +250,56 @@ export const SpellcastingPopup = ({
         range: { advanced: false, level: 1 },
         potency: { advanced: false, level: 1 },
         duration: { advanced: false, level: 1 },
-        scale: { advanced: false, level: 1 }
+        scale: { advanced: false, level: 1 },
     });
     const [lastingDuration, setLastingDuration] = useState(false);
-
-    // Paradox state
     const [paradoxInured, setParadoxInured] = useState(false);
     const [sleeperWitnesses, setSleeperWitnesses] = useState("none");
     const [manaMitigation, setManaMitigation] = useState(0);
     const [paradoxMode, setParadoxMode] = useState("");
-
-    // Yantras state
-    const [selectedYantras, setSelectedYantras] =
-        useState([]);
-
-    const [
-        selectedInventoryYantras,
-        setSelectedInventoryYantras,
-    ] = useState({});
-
-    // Primary factor state (default: potency)
+    const [selectedYantras, setSelectedYantras] = useState([]);
+    const [selectedInventoryYantras, setSelectedInventoryYantras] = useState({});
     const [primaryFactor, setPrimaryFactor] = useState(defaultPrimaryFactor);
     const [overridePrimaryFactor, setOverridePrimaryFactor] = useState(false);
     const [spellReach, setSpellReach] = useState(0);
     const [fateDurationBonus, setFateDurationBonus] = useState(0);
     const [matterDurationMana, setMatterDurationMana] = useState(false);
-    const [specialRangeMode, setSpecialRangeMode] = useState("none"); // none | space | time
+    const [specialRangeMode, setSpecialRangeMode] = useState("none");
     const [sympatheticWithstand, setSympatheticWithstand] = useState(0);
     const [withstandTrait, setWithstandTrait] = useState("none");
     const [withstandValue, setWithstandValue] = useState(0);
     const [aimedTargetDefense, setAimedTargetDefense] = useState(0);
-    const [scaleMode, setScaleMode] = useState("targets"); // targets | area
+    const [scaleMode, setScaleMode] = useState("targets");
     const [ritualCastingBonus, setRitualCastingBonus] = useState(0);
     const [additionalMana, setAdditionalMana] = useState(0);
     const [combinedSpellCount, setCombinedSpellCount] = useState(0);
     const [combinedSpellArcana, setCombinedSpellArcana] = useState([]);
 
     const effectiveSpellType = spellType || "improvised";
+    const getMeritDots = (meritName) => {
+        const normalizedName = normalizeYantraText(meritName);
+        const merit = (meritsList || []).find((entry) => normalizeYantraText(entry?.name) === normalizedName);
+        return Math.max(0, Number(merit?.dots) || 0);
+    };
+    const shadowNameDots = getMeritDots("Shadow Name");
+    const cabalThemeDots = getMeritDots("Cabal Theme");
+    const personaBonus = shadowNameDots + cabalThemeDots;
+    const hasHighSpeechMerit = getMeritDots("High Speech") > 0;
+    const effectiveDurationLevel = Math.max(1, Number(factors.duration.level) || 1) + Math.max(0, Number(fateDurationBonus) || 0);
+    const canUseConcentration = lastingDuration || factors.duration.advanced || effectiveDurationLevel > 1;
     const scenePreviousParadoxRolls = Math.max(0, Number(previousParadoxRolls) || 0);
 
     const setPreviousParadoxRolls = (valueOrUpdater) => {
         if (!onPreviousParadoxRollsChange) return;
-
         if (typeof valueOrUpdater === "function") {
             onPreviousParadoxRollsChange(valueOrUpdater);
             return;
         }
-
         onPreviousParadoxRollsChange(Math.max(0, Number(valueOrUpdater) || 0));
     };
 
     const resetPreviousParadoxRolls = () => {
-        if (onResetPreviousParadoxRolls) {
-            onResetPreviousParadoxRolls();
-            return;
-        }
-
+        if (onResetPreviousParadoxRolls) return onResetPreviousParadoxRolls();
         setPreviousParadoxRolls(0);
     };
 
@@ -390,127 +308,100 @@ export const SpellcastingPopup = ({
             toast.info("Paradox dramatic failure: previous Paradox roll counter does not increase.");
             return;
         }
-
         setPreviousParadoxRolls((current) => current + 1);
     };
 
-    // Reset when popup opens
     useEffect(() => {
-        if (isOpen) {
-            setSelectedPractice(initialPractice || "");
-            setSpellName(defaultSpellName || "");
-            setFactors({
-                casting: { advanced: false, level: 1 },
-                range: { advanced: false, level: 1 },
-                potency: { advanced: false, level: 1 },
-                duration: { advanced: false, level: 1 },
-                scale: { advanced: false, level: 1 }
-            });
-            setLastingDuration(false);
-            setParadoxInured(false);
-            setSleeperWitnesses("none");
-            setManaMitigation(0);
-            setParadoxMode("");
-            setSelectedInventoryYantras({});
-            setSelectedYantras(
-                Array.from(
-                    {
-                        length: Math.max(
-                            0,
-                            (GNOSIS_TABLE[gnosis] || GNOSIS_TABLE[1]).yantras -
-                                (effectiveSpellType === "rote" && Math.max(0, Number(roteSkillDots) || 0) > 0 ? 1 : 0)
-                        ),
-                    },
-                    () => ""
-                )
-            );
-            setPrimaryFactor(defaultPrimaryFactor);
-            setOverridePrimaryFactor(false);
-            setSpellReach(0);
-            setFateDurationBonus(0);
-            setMatterDurationMana(false);
-            setSpecialRangeMode("none");
-            setSympatheticWithstand(0);
-            setWithstandTrait("none");
-            setWithstandValue(0);
-            setAimedTargetDefense(0);
-            setScaleMode("targets");
-            setRitualCastingBonus(0);
-            setAdditionalMana(0);
-            setCombinedSpellCount(0);
-            setCombinedSpellArcana([]);
-        }
+        if (!isOpen) return;
+        setSelectedPractice(initialPractice || "");
+        setSpellName(defaultSpellName || "");
+        setFactors({
+            casting: { advanced: false, level: 1 },
+            range: { advanced: false, level: 1 },
+            potency: { advanced: false, level: 1 },
+            duration: { advanced: false, level: 1 },
+            scale: { advanced: false, level: 1 },
+        });
+        setLastingDuration(false);
+        setParadoxInured(false);
+        setSleeperWitnesses("none");
+        setManaMitigation(0);
+        setParadoxMode("");
+        setSelectedInventoryYantras({});
+        // Initialize to the Gnosis maximum; the yantraSlotLimit effect below
+        // immediately contracts this for Rote Mudra when necessary.
+        setSelectedYantras(Array.from({ length: Math.max(0, (GNOSIS_TABLE[gnosis] || GNOSIS_TABLE[1]).yantras) }, () => ""));
+        setPrimaryFactor(defaultPrimaryFactor);
+        setOverridePrimaryFactor(false);
+        setSpellReach(0);
+        setFateDurationBonus(0);
+        setMatterDurationMana(false);
+        setSpecialRangeMode("none");
+        setSympatheticWithstand(0);
+        setWithstandTrait("none");
+        setWithstandValue(0);
+        setAimedTargetDefense(0);
+        setScaleMode("targets");
+        setRitualCastingBonus(0);
+        setAdditionalMana(0);
+        setCombinedSpellCount(0);
+        setCombinedSpellArcana([]);
     }, [isOpen, arcanum, initialPractice, defaultPrimaryFactor, gnosis, effectiveSpellType, roteSkillDots, defaultSpellName]);
 
     useEffect(() => {
-        if (!overridePrimaryFactor && primaryFactor === "scale") {
-            setPrimaryFactor(null);
-        }
+        if (!overridePrimaryFactor && primaryFactor === "scale") setPrimaryFactor(null);
     }, [overridePrimaryFactor, primaryFactor]);
 
-    // Gnosis-derived data
     const gnosisData = GNOSIS_TABLE[gnosis] || GNOSIS_TABLE[1];
     const maxYantras = gnosisData.yantras;
-    const roteMudraBonus = effectiveSpellType === "rote" ? Math.max(0, Number(roteSkillDots) || 0) : 0;
+    const roteMudraSkillBonus = effectiveSpellType === "rote"
+        ? Math.min(5, Math.max(0, Number(roteSkillDots) || 0))
+        : 0;
+    const roteMudraOrderBonus = effectiveSpellType === "rote" && isRoteOrderSkill ? 1 : 0;
+    const roteMudraBonus = roteMudraSkillBonus + roteMudraOrderBonus;
     const usesRoteMudra = effectiveSpellType === "rote" && roteMudraBonus > 0;
     const yantraSlotLimit = Math.max(0, maxYantras - (usesRoteMudra ? 1 : 0));
 
     useEffect(() => {
-        setSelectedYantras((prev) =>
-            Array.from({ length: yantraSlotLimit }, (_, index) => prev[index] || "")
-        );
+        setSelectedYantras((prev) => Array.from({ length: yantraSlotLimit }, (_, index) => prev[index] || ""));
     }, [yantraSlotLimit]);
+
     const paradoxDiePerReach = gnosisData.paradoxDie;
     const manaPerTurn = gnosisData.perTurn;
-
     const fateDots = allArcana?.Fate || 0;
     const matterDots = allArcana?.Matter || 0;
     const spaceDots = allArcana?.Space || 0;
     const timeDots = allArcana?.Time || 0;
-
     const canUseFateDuration = fateDots >= 2;
     const canUseMatterDurationMana = matterDots >= 2 && arcanum === "Matter";
     const canUseSpaceSympathetic = spaceDots >= 2;
     const canUseTimeSympathetic = timeDots >= 2;
-
-    const maxCombinedSpellCount = Math.max(0, Math.floor((Number(gnosis) || 0) / 2));
+    const maxCombinedSpellCount = Math.max(0, (Number(gnosisData.combinedSpells) || 1) - 1);
 
     const getArcanaDotsForCombinedSpell = (arcanaName) => {
         if (arcanaName === arcanum) return Number(arcanumDots) || 0;
         return Number(allArcana?.[arcanaName]) || 0;
     };
-
     const availableCombinedArcana = ARCANA_NAMES
-        .map((arcanaName) => ({
-            name: arcanaName,
-            dots: getArcanaDotsForCombinedSpell(arcanaName),
-        }))
+        .map((arcanaName) => ({ name: arcanaName, dots: getArcanaDotsForCombinedSpell(arcanaName) }))
         .filter((arcanaData) => arcanaData.dots > 0);
 
     useEffect(() => {
-        if (combinedSpellCount > maxCombinedSpellCount) {
-            setCombinedSpellCount(maxCombinedSpellCount);
-        }
+        if (combinedSpellCount > maxCombinedSpellCount) setCombinedSpellCount(maxCombinedSpellCount);
     }, [combinedSpellCount, maxCombinedSpellCount]);
 
     useEffect(() => {
-        setCombinedSpellArcana((prev) =>
-            Array.from({ length: combinedSpellCount }, (_, index) => prev[index] || arcanum)
-        );
+        setCombinedSpellArcana((prev) => Array.from({ length: combinedSpellCount }, (_, index) => prev[index] || arcanum));
     }, [combinedSpellCount, arcanum]);
 
     const selectedCombinedArcana = combinedSpellArcana.slice(0, combinedSpellCount);
     const selectedCombinedArcanaDots = selectedCombinedArcana.map(getArcanaDotsForCombinedSpell);
-    const combinedLowestArcanumDots = selectedCombinedArcanaDots.length > 0
+    const combinedLowestArcanumDots = selectedCombinedArcanaDots.length
         ? Math.min(Number(arcanumDots) || 0, ...selectedCombinedArcanaDots)
         : Number(arcanumDots) || 0;
     const combinedSpellPenalty = combinedSpellCount * -2;
     const baseArcanumDots = combinedSpellCount > 0 ? combinedLowestArcanumDots : Number(arcanumDots) || 0;
-
-    const availablePractices = useMemo(() => {
-        return ALL_PRACTICES.filter(p => p.dots <= arcanumDots);
-    }, [arcanumDots]);
-
+    const availablePractices = useMemo(() => ALL_PRACTICES.filter((p) => p.dots <= arcanumDots), [arcanumDots]);
     const practiceDots = selectedPractice ? PRACTICE_DOTS[selectedPractice] : 0;
     const reachArcanumDots = effectiveSpellType === "rote" ? 5 : baseArcanumDots;
     const freeReach = selectedPractice ? Math.max(0, reachArcanumDots - practiceDots + 1) : 0;
@@ -520,166 +411,129 @@ export const SpellcastingPopup = ({
         if (key === "duration" && matterDurationMana && arcanum === "Matter") return sum;
         return sum + 1;
     }, 0);
-    const indefiniteReach = (!lastingDuration && factors.duration.advanced && factors.duration.level === 6) ? 1 : 0;
-
-    // Current Active Spells increase the Reach cost of any spell cast.
-    // At Active Spells = Gnosis, the next spell costs +1 Reach.
-    // Each Active Spell above Gnosis adds another +1 Reach.
+    const indefiniteReach = !lastingDuration && factors.duration.advanced && factors.duration.level === 6 ? 1 : 0;
     const activeSpellReachSurcharge = Math.max(0, activeSpellCount - gnosis + 1);
-
     const changePrimaryReach = overridePrimaryFactor && !!primaryFactor ? 1 : 0;
     const specialRangeReach = specialRangeMode !== "none" ? 1 : 0;
     const totalReachUsed = advancedReachUsed + indefiniteReach + changePrimaryReach + activeSpellReachSurcharge + spellReach + specialRangeReach;
     const reachRemaining = freeReach - totalReachUsed;
-
-    // Primary factor gives free levels = spell Arcanum dots - 1. Combined spells use the lowest Arcanum.
     const primaryFreeLevels = Math.max(0, baseArcanumDots - 1);
     const effectivePrimaryFactor = primaryFactor;
 
-    // Dice penalty from factor levels (accounting for primary free levels)
     const calculatePenalty = () => {
         let penalty = 0;
-
-        const potencyPaid = Math.max(
-            0,
-            factors.potency.level - 1 - (effectivePrimaryFactor === "potency" ? primaryFreeLevels : 0)
-        );
+        const potencyPaid = Math.max(0, factors.potency.level - 1 - (effectivePrimaryFactor === "potency" ? primaryFreeLevels : 0));
         penalty += potencyPaid * -2;
-
-        const durationPaid = lastingDuration ? 0 : Math.max(
-            0,
-            factors.duration.level - 1 - (effectivePrimaryFactor === "duration" ? primaryFreeLevels : 0)
-        );
+        const durationPaid = lastingDuration ? 0 : Math.max(0, factors.duration.level - 1 - (effectivePrimaryFactor === "duration" ? primaryFreeLevels : 0));
         penalty += durationPaid * -2;
-
         penalty += (factors.scale.level - 1) * -2;
-
         return penalty;
     };
-
     const dicePenalty = calculatePenalty();
 
-    // Yantras calculation
-    const selectedYantraData = useMemo(() => {
-        return selectedYantras
-            .map((name) => YANTRAS.find((y) => y.name === name))
-            .filter(Boolean);
-    }, [selectedYantras]);
+    const selectedYantraData = useMemo(
+        () => selectedYantras.map((name) => YANTRAS.find((y) => y.name === name)).filter(Boolean),
+        [selectedYantras]
+    );
 
-    const inventoryYantraOptions =
-        useMemo(() => {
-            const options = {};
+    const inventoryYantraOptions = useMemo(() => {
+        const options = {};
+        YANTRAS.forEach((yantra) => {
+            const matches = getMatchingInventoryYantras(yantra.name, inventoryItems);
+            if (matches.length) options[yantra.name] = matches;
+        });
+        return options;
+    }, [inventoryItems]);
 
-            YANTRAS.forEach(
-                (yantra) => {
-                    const matches =
-                        getMatchingInventoryYantras(
-                            yantra.name,
-                            inventoryItems
-                        );
+    const getChosenInventoryYantra = (yantraName) => {
+        const options = inventoryYantraOptions[yantraName] || [];
+        if (!options.length) return null;
+        const selectedKey = selectedInventoryYantras?.[yantraName];
+        return options.find((option) => option.key === selectedKey) || options[0];
+    };
 
-                    if (
-                        matches.length >
-                        0
-                    ) {
-                        options[
-                            yantra.name
-                        ] = matches;
-                    }
-                }
-            );
+    useEffect(() => {
+        setSelectedYantras((previous) => {
+            const filled = previous.filter(Boolean);
+            const allowed = filled.filter((name) => {
+                if (name === "High Speech" && !hasHighSpeechMerit) return false;
+                if (name === "Concentration" && !canUseConcentration) return false;
+                if (name === "Persona" && personaBonus <= 0) return false;
+                if (getSacramentRatingFromYantraName(name) && !inventoryYantraOptions[name]?.length) return false;
+                return true;
+            });
+            if (allowed.length === filled.length) return previous;
+            const trimmed = allowed.slice(0, yantraSlotLimit);
+            return [...trimmed, ...Array.from({ length: Math.max(0, yantraSlotLimit - trimmed.length) }, () => "")];
+        });
+    }, [hasHighSpeechMerit, canUseConcentration, personaBonus, inventoryYantraOptions, yantraSlotLimit]);
 
-            return options;
-        }, [inventoryItems]);
-    
     const selectedYantraNames = selectedYantraData.map((y) => y.name);
-
     const hasDedicatedTool = selectedYantraNames.includes("Dedicated Tool");
-
-    const selectedYantraBonus = selectedYantraData.reduce((sum, y) => sum + y.bonus, 0);
+    const getEffectiveYantraBonus = (yantra) => {
+        if (yantra?.name === "Persona") return personaBonus;
+        if (specialRangeMode !== "none" && String(yantra?.name || "").startsWith("Sympathy:")) return 0;
+        return Math.max(0, Number(yantra?.bonus) || 0);
+    };
+    const selectedYantraBonus = selectedYantraData.reduce((sum, yantra) => sum + getEffectiveYantraBonus(yantra), 0);
     const rawYantraBonus = selectedYantraBonus + roteMudraBonus;
-    const yantraBonusCap = 5 + Math.abs(Math.min(0, dicePenalty));
+    const totalSpellcastingPenaltyForYantras = Math.min(0, dicePenalty + combinedSpellPenalty);
+    const yantraBonusCap = 5 + Math.abs(totalSpellcastingPenaltyForYantras);
     const yantraBonus = Math.min(rawYantraBonus, yantraBonusCap);
     const yantraBonusWasCapped = rawYantraBonus > yantraBonus;
+    const getSelectedYantraSummaryLabel = (name) => {
+        if (name === "Persona") return `Persona +${personaBonus}`;
+        if (name === "Resonant Mana") return "Resonant Mana +1";
+        if (specialRangeMode !== "none" && name.startsWith("Sympathy:")) return `${name} +0`;
+        return getInventoryYantraLabel(name, inventoryItems, selectedInventoryYantras);
+    };
     const selectedYantraLabels = [
-        ...selectedYantraNames.map(
-            (name) =>
-                getInventoryYantraLabel(
-                    name,
-                    inventoryItems,
-                    selectedInventoryYantras
-                )
-        ),
+        ...selectedYantraNames.map(getSelectedYantraSummaryLabel),
         ...(usesRoteMudra ? [`Rote Mudra +${roteMudraBonus}`] : []),
     ].sort(compareYantraLabelsAlphabetically);
     const yantraCount = selectedYantraNames.length + (usesRoteMudra ? 1 : 0);
-
-    // Advanced (Instant) Casting Time additional time, by yantra.
-    //   - The first yantra used on a casting does NOT add a turn (it is "free").
-    //   - High Speech is exempt from the free rule and always adds 1 turn,
-    //     even if it is the only yantra used.
-    //   - Runes adds the mage's ritual interval (e.g. "1 hour" at Gnosis 3)
-    //     in addition to any turns.
-    //   - Rote Mudra counts as a non-HS, non-Runes yantra.
     const hasHighSpeechYantra = selectedYantraNames.includes("High Speech");
     const hasRunesYantra = selectedYantraNames.includes("Runes");
     const nonHsYantraCount = yantraCount - (hasHighSpeechYantra ? 1 : 0);
     const nonHsTurns = Math.max(0, nonHsYantraCount - 1);
 
-    // Dice pool
     const ritualBonus = factors.casting.advanced ? 0 : ritualCastingBonus;
     const baseDicePool = gnosis + baseArcanumDots;
     const finalDicePool = Math.max(0, baseDicePool + dicePenalty + yantraBonus + ritualBonus + combinedSpellPenalty);
 
-    // Spell Mana cost
     const getManaCost = () => {
         let cost = 0;
-
         if (effectiveSpellType === "improvised" && !isRuling) cost += 1;
         if (!lastingDuration && factors.duration.advanced && factors.duration.level === 6) cost += 1;
         if (!lastingDuration && fateDurationBonus > 0) cost += 1;
         if (!lastingDuration && matterDurationMana && arcanum === "Matter" && factors.duration.advanced) cost += 1;
         if (specialRangeMode !== "none") cost += 1;
-
         return cost;
     };
-
     const manaCost = getManaCost();
-
-    // Paradox calculation
     const reachBeyondFree = Math.max(0, totalReachUsed - freeReach);
     const baseParadoxDice = reachBeyondFree * paradoxDiePerReach;
     const paradoxTriggered = baseParadoxDice > 0;
-
     let paradoxModifiers = 0;
     if (paradoxInured) paradoxModifiers += 2;
     if (sleeperWitnesses !== "none") paradoxModifiers += 1;
     if (hasDedicatedTool) paradoxModifiers -= 2;
     paradoxModifiers += scenePreviousParadoxRolls;
-
     const paradoxAfterModifiers = baseParadoxDice + paradoxModifiers;
-
     const committedSpellManaCost = manaCost + additionalMana;
-
-    // Max mana for mitigation: can't exceed perTurn total (including spell cost), can't exceed available mana
     const maxManaMitigation = Math.max(0, Math.min(
         manaPerTurn - committedSpellManaCost,
         currentMana - committedSpellManaCost,
         Math.max(0, paradoxAfterModifiers)
     ));
 
-    // Clamp mana mitigation if max changed
     useEffect(() => {
-        if (manaMitigation > maxManaMitigation) {
-            setManaMitigation(Math.max(0, maxManaMitigation));
-        }
+        if (manaMitigation > maxManaMitigation) setManaMitigation(Math.max(0, maxManaMitigation));
     }, [maxManaMitigation, manaMitigation]);
 
     const actualManaMitigation = Math.min(manaMitigation, maxManaMitigation);
     const finalParadoxPool = Math.max(0, paradoxAfterModifiers - actualManaMitigation);
     const paradoxIsChanceDie = paradoxTriggered && finalParadoxPool <= 0;
-
-    // Sleeper witness effect on paradox ROLL quality (separate from dice count)
     const getParadoxRollQuality = () => {
         if (sleeperWitnesses === "few") return { again: 9, rote: false, desc: "9-again" };
         if (sleeperWitnesses === "large") return { again: 8, rote: false, desc: "8-again" };
@@ -687,211 +541,102 @@ export const SpellcastingPopup = ({
         return { again: 10, rote: false, desc: "10-again" };
     };
     const paradoxRollQuality = getParadoxRollQuality();
-
-    // Total mana
     const totalManaCost = committedSpellManaCost + actualManaMitigation;
 
     const manualWithstandValue = withstandTrait === "none" ? 0 : Math.max(0, Number(withstandValue) || 0);
     const sympatheticWithstandValue = specialRangeMode !== "none" ? Math.max(0, Number(sympatheticWithstand) || 0) : 0;
     const withstandRatings = [manualWithstandValue, sympatheticWithstandValue].filter((value) => value > 0);
-    const effectiveWithstand = withstandRatings.length > 0
+    const effectiveWithstand = withstandRatings.length
         ? Math.max(...withstandRatings) + Math.max(0, withstandRatings.length - 1)
         : 0;
     const basePotency = Number(factors.potency.level) || 1;
     const effectivePotency = Math.max(0, basePotency - effectiveWithstand);
-    const withstandLabel = withstandTrait === "none"
-        ? "None"
-        : WITHSTAND_TRAITS.find((entry) => entry.value === withstandTrait)?.label || "Other";
-
     const aimedAthletics = Number(athleticsDots) || 0;
     const aimedFirearms = Number(firearmsDots) || 0;
     const aimedSkillName = aimedAthletics >= aimedFirearms ? "Athletics" : "Firearms";
     const aimedSkillDots = Math.max(aimedAthletics, aimedFirearms);
     const aimedDefense = Math.max(0, Number(aimedTargetDefense) || 0);
     const aimedSpellPoolRaw = (Number(gnosis) || 0) + aimedSkillDots - aimedDefense;
-    const aimedRangeBands = {
-        short: (Number(gnosis) || 0) * 10,
-        medium: (Number(gnosis) || 0) * 20,
-        long: (Number(gnosis) || 0) * 40,
-    };
+    const aimedRangeBands = { short: gnosis * 10, medium: gnosis * 20, long: gnosis * 40 };
     const isTouchSelfRange = !factors.range.advanced && specialRangeMode === "none";
 
     const updateFactor = (factorName, updates) => {
-        setFactors(prev => ({
-            ...prev,
-            [factorName]: { ...prev[factorName], ...updates }
-        }));
+        setFactors((prev) => ({ ...prev, [factorName]: { ...prev[factorName], ...updates } }));
     };
-
     const getMaxLevel = (factorName, isAdvanced) => {
         if (factorName === "casting" || factorName === "range") return 1;
-        const levels = FACTOR_LEVELS[factorName]?.[isAdvanced ? "advanced" : "standard"];
-        return levels?.length || 1;
+        return FACTOR_LEVELS[factorName]?.[isAdvanced ? "advanced" : "standard"]?.length || 1;
     };
-
     const getDisplayedDurationLevel = () => {
         const max = FACTOR_LEVELS.duration[factors.duration.advanced ? "advanced" : "standard"]?.length || 1;
         return Math.min(max, factors.duration.level + fateDurationBonus);
     };
-
-    const activateSpecialRange = (mode) => {
-        setSpecialRangeMode((prev) => (prev === mode ? "none" : mode));
-    };
-
+    const activateSpecialRange = (mode) => setSpecialRangeMode((prev) => (prev === mode ? "none" : mode));
     const getPrimaryFactorLabel = (factorName) => {
         if (factorName === "potency") return "Potency";
         if (factorName === "duration") return "Duration";
         if (factorName === "scale") return "Scale";
         return "Primary Factor";
     };
-
     const getFactorDescription = (factorName, advancedOverride = null) => {
         const factor = factors[factorName];
         if (!factor) return "";
-        
         const isAdvanced = advancedOverride ?? factor.advanced;
-
         if (factorName === "casting") {
             if (isAdvanced) {
-                // Base Instant casting always takes 1 turn. Each yantra after the
-                // first adds 1 turn; High Speech is exempt from the "first free"
-                // rule and always adds 1 extra turn.
                 const totalTurns = 1 + nonHsTurns + (hasHighSpeechYantra ? 1 : 0);
                 const turnsLabel = `Instant (${totalTurns} turn${totalTurns === 1 ? "" : "s"})`;
-                if (hasRunesYantra) {
-                    return `${turnsLabel} + ${gnosisData.ritualInterval}`;
-                }
-                return turnsLabel;
+                return hasRunesYantra ? `${turnsLabel} + ${gnosisData.ritualInterval}` : turnsLabel;
             }
             return `${getCastingTime(gnosis)} Ritual`;
         }
-
-        if (factorName === "range") {
-            return isAdvanced ? "Sensory Range" : "Touch Range / Self";
-        }
-
-        if (factorName === "duration" && lastingDuration) {
-            return "Lasting";
-        }
-
+        if (factorName === "range") return isAdvanced ? "Sensory Range" : "Touch Range / Self";
+        if (factorName === "duration" && lastingDuration) return "Lasting";
         const levels = FACTOR_LEVELS[factorName]?.[isAdvanced ? "advanced" : "standard"];
         const levelData = levels?.[factor.level - 1];
-
         if (factorName === "scale") {
-            const scaleDescription =
-                scaleMode === "area"
-                    ? levelData?.area || ""
-                    : levelData?.targets || "";
-
+            const scaleDescription = scaleMode === "area" ? levelData?.area || "" : levelData?.targets || "";
             return `up to ${scaleDescription}`;
         }
-
-        const baseDescription = levelData?.label || "";
-        return baseDescription;
+        return levelData?.label || "";
     };
 
-    const setYantraSlot = (index, value) => {
-        setSelectedYantras((prev) => {
-            const next = [...prev];
-            const currentValue = next[index];
-            const nextValue = value === "__none__" ? "" : value;
-
-            if (specialRangeMode !== "none" && currentValue === "Sympathy" && nextValue === "") {
-                return prev;
-            }
-
-            next[index] = nextValue;
-            return next;
-        });
-    };
-
-    // Set of currently-selected yantra names (excluding empty slots).
     const selectedNameSet = useMemo(() => new Set(selectedYantras.filter(Boolean)), [selectedYantras]);
-
-    // Toggle a yantra by name. If it would put the user over the slot limit, the
-    // earliest selected yantra (other than the one we're toggling) is replaced.
     const toggleYantraName = (name) => {
         setSelectedYantras((prev) => {
             const filled = prev.filter(Boolean);
             const isOn = filled.includes(name);
-
             if (isOn) {
-                // Removing — but Sympathy cannot be removed while a Sympathetic range is active.
-                if (specialRangeMode !== "none" && name.startsWith("Sympathy:")) {
-                    return prev;
-                }
+                if (specialRangeMode !== "none" && name.startsWith("Sympathy:")) return prev;
                 const nextFilled = filled.filter((n) => n !== name);
-                return [
-                    ...nextFilled,
-                    ...Array.from({ length: Math.max(0, yantraSlotLimit - nextFilled.length) }, () => ""),
-                ];
+                return [...nextFilled, ...Array.from({ length: Math.max(0, yantraSlotLimit - nextFilled.length) }, () => "")];
             }
-
-            // Adding — enforce capacity.
             const nextFilled = [...filled, name];
-            if (nextFilled.length > yantraSlotLimit) {
-                // Drop the oldest one to make room.
-                nextFilled.shift();
-            }
-            return [
-                ...nextFilled,
-                ...Array.from({ length: Math.max(0, yantraSlotLimit - nextFilled.length) }, () => ""),
-            ];
+            if (nextFilled.length > yantraSlotLimit) nextFilled.shift();
+            return [...nextFilled, ...Array.from({ length: Math.max(0, yantraSlotLimit - nextFilled.length) }, () => "")];
         });
     };
-
-    // For Sympathy/Sacrament rating selectors: replaces any current rating with the new one.
     const setMutuallyExclusiveYantra = (group, name) => {
-        // group is array of names; name is the chosen one (or null to clear)
         setSelectedYantras((prev) => {
             const filled = prev.filter(Boolean);
             const withoutGroup = filled.filter((n) => !group.includes(n));
             const nextFilled = name ? [...withoutGroup, name] : withoutGroup;
-            const trimmed = nextFilled.length > yantraSlotLimit
-                ? nextFilled.slice(nextFilled.length - yantraSlotLimit)
-                : nextFilled;
-            return [
-                ...trimmed,
-                ...Array.from({ length: Math.max(0, yantraSlotLimit - trimmed.length) }, () => ""),
-            ];
-        });
-    };
-
-    const getYantraOptionsForSlot = (index) => {
-        const currentValue = selectedYantras[index];
-
-        return YANTRAS.filter((yantra) => {
-            const alreadyUsedElsewhere = selectedYantras.some(
-                (selectedName, selectedIndex) =>
-                    selectedIndex !== index && selectedName === yantra.name
-            );
-
-            return !alreadyUsedElsewhere || yantra.name === currentValue;
+            const trimmed = nextFilled.length > yantraSlotLimit ? nextFilled.slice(nextFilled.length - yantraSlotLimit) : nextFilled;
+            return [...trimmed, ...Array.from({ length: Math.max(0, yantraSlotLimit - trimmed.length) }, () => "")];
         });
     };
 
     const SYMPATHY_VARIANTS = ["Sympathy: Material", "Sympathy: Representational", "Sympathy: Symbolic"];
-
     useEffect(() => {
         setSelectedYantras((prev) => {
             const hasSympathy = prev.some((name) => SYMPATHY_VARIANTS.includes(name));
-
-            if (specialRangeMode === "none") {
-                if (!hasSympathy) return prev;
-
-                // Note: leave any user-chosen Sympathy variant alone when special range turns off.
-                return prev;
-            }
-
-            if (hasSympathy) return prev;
-
+            if (specialRangeMode === "none" || hasSympathy) return prev;
             const emptyIndex = prev.findIndex((name) => !name);
             if (emptyIndex >= 0) {
                 const next = [...prev];
                 next[emptyIndex] = "Sympathy: Symbolic";
                 return next;
             }
-
             toast.error("No free Yantra slot for Sympathy.");
             setSpecialRangeMode("none");
             return prev;
@@ -900,14 +645,11 @@ export const SpellcastingPopup = ({
 
     const handleRollAimedSpell = () => {
         if (!onRollDice) return;
-
         if (!isTouchSelfRange) {
             toast.error("Aimed Spell rolls are only available for Touch/Self Range spells.");
             return;
         }
-
         const adjustedPool = Math.max(0, aimedSpellPoolRaw);
-
         onRollDice({
             pool: adjustedPool <= 0 ? 1 : adjustedPool,
             chance: adjustedPool <= 0,
@@ -924,26 +666,25 @@ export const SpellcastingPopup = ({
             toast.error("Select a Primary Spell Factor before casting.");
             return;
         }
-
         if (totalManaCost > 0 && currentMana < totalManaCost) return;
         if (!lastingDuration && factors.duration.advanced && !spellName.trim()) return;
         if (paradoxTriggered && !paradoxMode) return;
 
-        if (totalManaCost > 0) {
-            onSpendMana(totalManaCost);
+        const selectedSacramentName = selectedYantraNames.find((name) => getSacramentRatingFromYantraName(name));
+        const selectedSacramentRating = selectedSacramentName ? getSacramentRatingFromYantraName(selectedSacramentName) : null;
+        if (selectedSacramentName && selectedSacramentRating >= 2 && onConsumeInventoryYantra) {
+            const chosenSacrament = getChosenInventoryYantra(selectedSacramentName);
+            if (chosenSacrament && Number.isInteger(chosenSacrament.index)) onConsumeInventoryYantra(chosenSacrament.index);
         }
+
+        if (totalManaCost > 0) onSpendMana(totalManaCost);
 
         const activeSpellData = !lastingDuration && factors.duration.advanced && onCreateActiveSpell
             ? {
-                id: Date.now(),
-                kind: "spell",
-                name: spellName.trim(),
-                arcanum,
-                practice: selectedPractice,
+                id: Date.now(), kind: "spell", name: spellName.trim(), arcanum, practice: selectedPractice,
                 potency: getFactorDescription("potency"),
                 effectivePotency: effectiveWithstand > 0 ? `Potency ${effectivePotency}` : undefined,
-                duration: getFactorDescription("duration"),
-                scale: getFactorDescription("scale"),
+                duration: getFactorDescription("duration"), scale: getFactorDescription("scale"),
                 combined: combinedSpellCount > 0 ? `${combinedSpellCount + 1} spells` : undefined,
             }
             : null;
@@ -951,77 +692,34 @@ export const SpellcastingPopup = ({
         const buildFactorSummary = (advancePrimaryFactor = false) => [
             getFactorDescription("casting"),
             getFactorDescription("range"),
-            getFactorDescription(
-                "potency",
-                advancePrimaryFactor && effectivePrimaryFactor === "potency"
-                    ? true
-                    : null
-            ),
-            getFactorDescription(
-                "duration",
-                advancePrimaryFactor && effectivePrimaryFactor === "duration"
-                    ? true
-                    : null
-            ),
-            getFactorDescription(
-                "scale",
-                advancePrimaryFactor && effectivePrimaryFactor === "scale"
-                    ? true
-                    : null
-            ),
+            getFactorDescription("potency", advancePrimaryFactor && effectivePrimaryFactor === "potency" ? true : null),
+            getFactorDescription("duration", advancePrimaryFactor && effectivePrimaryFactor === "duration" ? true : null),
+            getFactorDescription("scale", advancePrimaryFactor && effectivePrimaryFactor === "scale" ? true : null),
         ].join("; ");
-        
         const factorSummary = buildFactorSummary(false);
         const advancedPrimaryFactorSummary = buildFactorSummary(true);
-
-        const selectedYantrasSummary = selectedYantraLabels.length > 0
+        const selectedYantrasSummary = selectedYantraLabels.length
             ? `Yantras: ${selectedYantraLabels.join(", ")}${yantraBonusWasCapped ? `; raw +${rawYantraBonus}, capped at +${yantraBonus}` : ""}`
             : "";
-
-        const ritualSummary = ritualBonus > 0
-            ? `Ritual Casting: +${ritualBonus} dice`
-            : "";
-
+        const ritualSummary = ritualBonus > 0 ? `Ritual Casting: +${ritualBonus} dice` : "";
         const combinedSpellSummary = combinedSpellCount > 0
             ? `Combined Spell: ${combinedSpellCount + 1} spells (${[arcanum, ...selectedCombinedArcana].join(", ")}); lowest Arcanum ${combinedLowestArcanumDots}; ${combinedSpellPenalty} dice`
             : "";
-
         const arcanaManaSurchargeSummary = effectiveSpellType === "improvised" && !isRuling
-            ? (isInferior ? "Inferior Arcanum" : "Common Arcanum")
-            : "";
-
+            ? (isInferior ? "Inferior Arcanum" : "Common Arcanum") : "";
         const spentSpellManaSummary = committedSpellManaCost > 0
-            ? `Spent Mana: ${committedSpellManaCost}${
-                arcanaManaSurchargeSummary ? ` (${arcanaManaSurchargeSummary})` : ""
-            }`
-            : "";
-
-        // Build Reach breakdown — only categories actually used.
+            ? `Spent Mana: ${committedSpellManaCost}${arcanaManaSurchargeSummary ? ` (${arcanaManaSurchargeSummary})` : ""}` : "";
         const reachCategories = [];
         if (advancedReachUsed > 0) reachCategories.push(`Advanced Factors +${advancedReachUsed}`);
         if (indefiniteReach > 0) reachCategories.push(`Indefinite Duration +${indefiniteReach}`);
-        if (changePrimaryReach > 0) {
-            const newPrimaryLabel = getPrimaryFactorLabel(primaryFactor);
-            reachCategories.push(`Primary Factor Override → ${newPrimaryLabel} +${changePrimaryReach}`);
-        }
+        if (changePrimaryReach > 0) reachCategories.push(`Primary Factor Override → ${getPrimaryFactorLabel(primaryFactor)} +${changePrimaryReach}`);
         if (spellReach > 0) reachCategories.push(`Spell Options +${spellReach}`);
         if (specialRangeReach > 0) reachCategories.push(`Sympathetic Casting +${specialRangeReach}`);
         if (activeSpellReachSurcharge > 0) reachCategories.push(`Active Spell surcharge +${activeSpellReachSurcharge}`);
-
-        const reachBreakdownLine = reachCategories.length > 0
-            ? `Reach: ${reachCategories.join(", ")}`
-            : "";
-
-        const spellReachSummary = `Spell Reach: ${totalReachUsed} / ${freeReach} free${
-            reachBeyondFree > 0 ? `; ${reachBeyondFree} over free` : ""
-        }`;
-
+        const reachBreakdownLine = reachCategories.length ? `Reach: ${reachCategories.join(", ")}` : "";
+        const spellReachSummary = `Spell Reach: ${totalReachUsed} / ${freeReach} free${reachBeyondFree > 0 ? `; ${reachBeyondFree} over free` : ""}`;
         const withstandSummary = effectiveWithstand > 0
-            ? `Withstand: ${effectiveWithstand} total; effective Potency ${effectivePotency}${effectivePotency <= 0 ? " (spell active, no effect)" : ""}`
-            : "";
-
-        const spellNameTrimmed = spellName.trim();
-
+            ? `Withstand: ${effectiveWithstand} total; effective Potency ${effectivePotency}${effectivePotency <= 0 ? " (spell active, no effect)" : ""}` : "";
         const buildSpellSummary = (factorLine) => [
             spellReachSummary,
             ...(reachBreakdownLine ? [reachBreakdownLine] : []),
@@ -1032,20 +730,15 @@ export const SpellcastingPopup = ({
             ...(withstandSummary ? [withstandSummary] : []),
             factorLine,
         ].join("\n");
-        
         const spellSummary = buildSpellSummary(factorSummary);
-        
-        const spellSummaryWithAdvancedPrimaryFactor = buildSpellSummary(
-            advancedPrimaryFactorSummary
-        );
-
-        const baseCastLabel = `${arcanum} ${effectiveSpellType === "praxis" ? "Praxis" : effectiveSpellType === "rote" ? "Rote" : "Spell"} (${selectedPractice})`;
+        const spellSummaryWithAdvancedPrimaryFactor = buildSpellSummary(advancedPrimaryFactorSummary);
+        const spellNameTrimmed = spellName.trim();
         const defaultSpellNameTrimmed = (defaultSpellName || "").trim();
+        const baseCastLabel = `${arcanum} ${effectiveSpellType === "praxis" ? "Praxis" : effectiveSpellType === "rote" ? "Rote" : "Spell"} (${selectedPractice})`;
         const castLabel = spellNameTrimmed || defaultSpellNameTrimmed || baseCastLabel;
 
         const buildSpellRollConfig = (poolModifier = 0) => {
             const adjustedPool = Math.max(0, finalDicePool + poolModifier);
-
             const dicePoolBreakdownParts = [
                 `Gnosis ${gnosis}`,
                 combinedSpellCount > 0
@@ -1057,7 +750,6 @@ export const SpellcastingPopup = ({
                 ...(dicePenalty !== 0 ? [`Factors ${dicePenalty}`] : []),
                 ...(poolModifier < 0 ? [`Release Penalty ${poolModifier}`] : []),
             ];
-
             return {
                 pool: adjustedPool <= 0 ? 1 : adjustedPool,
                 chance: adjustedPool <= 0,
@@ -1074,17 +766,10 @@ export const SpellcastingPopup = ({
                 spellPrimaryFactorLabel: getPrimaryFactorLabel(effectivePrimaryFactor),
                 onResult: (rollResult, exceptionalChoice = null) => {
                     const spellSucceeded = (rollResult?.successes || 0) >= 1;
-
                     if (rollResult?.is_exceptional && onAwardSpellcastingExceptionalSuccess) {
-                        onAwardSpellcastingExceptionalSuccess({
-                            manaSpent: totalManaCost,
-                            choiceId: exceptionalChoice?.id || null,
-                        });
+                        onAwardSpellcastingExceptionalSuccess({ manaSpent: totalManaCost, choiceId: exceptionalChoice?.id || null });
                     }
-
-                    if (spellSucceeded && activeSpellData) {
-                        onCreateActiveSpell(activeSpellData);
-                    }
+                    if (spellSucceeded && activeSpellData) onCreateActiveSpell(activeSpellData);
                 },
             };
         };
@@ -1103,53 +788,30 @@ export const SpellcastingPopup = ({
             const spellConfig = buildSpellRollConfig(poolModifier);
             onRollDice(summaryOptions ? { ...spellConfig, ...summaryOptions } : spellConfig);
         };
-
         if (!paradoxConfig) {
             rollSpell(0);
             onClose();
             return;
         }
-
         if (paradoxMode === "release") {
             onRollDice({
-                ...paradoxConfig,
-                resetSummary: true,
-                summaryKey: "paradox",
-                summaryLabel: "Paradox",
+                ...paradoxConfig, resetSummary: true, summaryKey: "paradox", summaryLabel: "Paradox",
                 onResult: (paradoxResult) => {
                     registerParadoxRollForScene(paradoxResult);
-
                     const penalty = paradoxResult?.successes || 0;
-
-                    if (penalty > 0) {
-                        toast.info(
-                            `Release: ${penalty} Paradox success${penalty === 1 ? "" : "es"} = -${penalty} die${penalty === 1 ? "" : "s"} to the spell.`
-                        );
-                    }
-
-                    rollSpell(-penalty, {
-                        appendToSummary: true,
-                        summaryKey: "spell",
-                        summaryLabel: "Spell",
-                    });
+                    if (penalty > 0) toast.info(`Release: ${penalty} Paradox success${penalty === 1 ? "" : "es"} = -${penalty} die${penalty === 1 ? "" : "s"} to the spell.`);
+                    rollSpell(-penalty, { appendToSummary: true, summaryKey: "spell", summaryLabel: "Spell" });
                 },
             });
-
             onClose();
             return;
         }
-
         if (paradoxMode === "contain") {
             onRollDice({
-                ...paradoxConfig,
-                resetSummary: true,
-                summaryKey: "paradox",
-                summaryLabel: "Paradox",
+                ...paradoxConfig, resetSummary: true, summaryKey: "paradox", summaryLabel: "Paradox",
                 onResult: (paradoxResult) => {
                     registerParadoxRollForScene(paradoxResult);
-
                     const paradoxSuccesses = paradoxResult?.successes || 0;
-
                     onRollDice({
                         pool: currentWisdom > 0 ? currentWisdom : 1,
                         chance: currentWisdom <= 0,
@@ -1162,38 +824,23 @@ export const SpellcastingPopup = ({
                             const wisdomSuccesses = wisdomResult?.successes || 0;
                             const cancelled = Math.min(paradoxSuccesses, wisdomSuccesses);
                             const remaining = Math.max(0, paradoxSuccesses - wisdomSuccesses);
-
-                            if (onResolveParadoxContainment) {
-                                await onResolveParadoxContainment({
-                                    cancelled,
-                                    remaining,
-                                    wisdomExceptional: !!wisdomResult?.is_exceptional,
-                                });
-                            }
-
-                            toast.info(
-                                `Contain: ${cancelled} cancelled, ${remaining} remaining${cancelled > 0 ? `, ${cancelled} Bashing dealt` : ""}.`
-                            );
-
-                            rollSpell(0, {
-                                appendToSummary: true,
-                                summaryKey: "spell",
-                                summaryLabel: "Spell",
+                            if (onResolveParadoxContainment) await onResolveParadoxContainment({
+                                cancelled,
+                                remaining,
+                                wisdomExceptional: !!wisdomResult?.is_exceptional,
                             });
+                            toast.info(`Contain: ${cancelled} cancelled, ${remaining} remaining${cancelled > 0 ? `, ${cancelled} Bashing dealt` : ""}.`);
+                            rollSpell(0, { appendToSummary: true, summaryKey: "spell", summaryLabel: "Spell" });
                         },
                     });
                 },
             });
-
             onClose();
         }
     };
 
     if (!isOpen) return null;
 
-    const castingTimeStandard = getCastingTime(gnosis);
-
-    // Helper to render a factor row using the FactorRow component
     const renderFactorRow = (factorName, label, hasLevels) => {
         const f = factors[factorName];
         const hasPrimary = factorName === "potency" || factorName === "duration" || factorName === "scale";
@@ -1202,23 +849,11 @@ export const SpellcastingPopup = ({
         const freeLevelsFromPrimary = isEffectivePrimary ? primaryFreeLevels : 0;
         const displayedLevel = factorName === "duration" ? getDisplayedDurationLevel() : f.level;
         const description = getFactorDescription(factorName);
-
-        const paidLevels = hasLevels
-            ? Math.max(0, f.level - 1 - freeLevelsFromPrimary)
-            : 0;
-
+        const paidLevels = hasLevels ? Math.max(0, f.level - 1 - freeLevelsFromPrimary) : 0;
         const isDuration = factorName === "duration";
         const isRange = factorName === "range";
-
-        const canTogglePrimary = !(
-            isSelectedPrimary ||
-            (factorName === "scale" && !overridePrimaryFactor) ||
-            (defaultPrimaryFactor && !overridePrimaryFactor)
-        );
-
-        const standardOrAdvancedDisabled =
-            (isRange && specialRangeMode !== "none") || (isDuration && lastingDuration);
-
+        const canTogglePrimary = !(isSelectedPrimary || (factorName === "scale" && !overridePrimaryFactor) || (defaultPrimaryFactor && !overridePrimaryFactor));
+        const standardOrAdvancedDisabled = (isRange && specialRangeMode !== "none") || (isDuration && lastingDuration);
         return (
             <FactorRow
                 key={factorName}
@@ -1288,11 +923,7 @@ export const SpellcastingPopup = ({
 
     return (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[100]" onClick={onClose}>
-            <div
-                className="bg-zinc-900 border border-violet-500/50 rounded-lg w-[640px] max-h-[90vh] overflow-y-auto shadow-2xl"
-                onClick={e => e.stopPropagation()}
-            >
-                {/* Header */}
+            <div className="bg-zinc-900 border border-violet-500/50 rounded-lg w-[640px] max-h-[90vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
                 <div className="p-4 border-b border-zinc-800 flex items-center justify-between sticky top-0 bg-zinc-900 z-10">
                     <div className="flex items-center gap-3">
                         <Sparkles className="w-5 h-5 text-violet-400" />
@@ -1310,435 +941,148 @@ export const SpellcastingPopup = ({
                             </p>
                         </div>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={onClose} className="text-zinc-400 hover:text-zinc-100">
-                        <X className="w-5 h-5" />
-                    </Button>
+                    <Button variant="ghost" size="icon" onClick={onClose} className="text-zinc-400 hover:text-zinc-100"><X className="w-5 h-5" /></Button>
                 </div>
 
                 <div className="p-4 space-y-4">
-                    {/* Spell Name */}
                     <div>
                         <label className="text-xs text-zinc-500 uppercase block mb-1">Name</label>
-                        <Input
-                            value={spellName}
-                            onChange={(e) => setSpellName(e.target.value)}
-                            placeholder="Spell name"
-                            className="bg-zinc-900/50 border-zinc-700"
-                            data-testid="spell-name-input"
-                        />
+                        <Input value={spellName} onChange={(e) => setSpellName(e.target.value)} placeholder="Spell name" className="bg-zinc-900/50 border-zinc-700" data-testid="spell-name-input" />
                         {!lastingDuration && factors.duration.advanced && !spellName.trim() && (
-                            <p className="text-[11px] text-amber-400 mt-1">
-                                Advanced Duration spells need a name to become an Active Spell card.
-                            </p>
+                            <p className="text-[11px] text-amber-400 mt-1">Advanced Duration spells need a name to become an Active Spell card.</p>
                         )}
                     </div>
 
-                    {/* Practice Selection */}
                     <div>
                         <label className="text-xs text-zinc-500 uppercase block mb-1">Practice</label>
                         <Select value={selectedPractice} onValueChange={setSelectedPractice}>
-                            <SelectTrigger className="bg-zinc-900/50 border-zinc-700" data-testid="practice-select">
-                                <SelectValue placeholder="Select a Practice..." />
-                            </SelectTrigger>
+                            <SelectTrigger className="bg-zinc-900/50 border-zinc-700" data-testid="practice-select"><SelectValue placeholder="Select a Practice..." /></SelectTrigger>
                             <SelectContent className="bg-zinc-900 border-zinc-700 z-[200]">
-                                {availablePractices.length === 0 ? (
-                                    <div className="p-2 text-xs text-zinc-500">No practices available</div>
-                                ) : (
-                                    availablePractices.map(p => (
-                                        <SelectItem key={p.name} value={p.name} className="text-zinc-200">
-                                            <span className="text-violet-400 mr-2">{"●".repeat(p.dots)}</span>
-                                            {p.name}
-                                        </SelectItem>
-                                    ))
-                                )}
+                                {availablePractices.length === 0 ? <div className="p-2 text-xs text-zinc-500">No practices available</div> : availablePractices.map((p) => (
+                                    <SelectItem key={p.name} value={p.name} className="text-zinc-200"><span className="text-violet-400 mr-2">{"●".repeat(p.dots)}</span>{p.name}</SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
                     </div>
 
-                    {/* Reach Display */}
                     {selectedPractice && (
                         <div className="p-2 bg-zinc-800/50 rounded text-sm space-y-1.5">
                             <div className="flex items-center justify-between">
-                                <span className="text-zinc-400">
-                                    Free Reach: <span className="text-teal-400 font-mono">{freeReach}</span>
-                                    <span className="text-zinc-600 ml-1">({reachArcanumDots} - {practiceDots} + 1{effectiveSpellType === "rote" ? "; Rote uses 5" : ""})</span>
-                                </span>
-                                <span className={`font-mono ${reachRemaining >= 0 ? "text-teal-400" : "text-red-400"}`}>
-                                    {reachRemaining >= 0 ? `${reachRemaining} remaining` : `${Math.abs(reachRemaining)} over`}
-                                </span>
+                                <span className="text-zinc-400">Free Reach: <span className="text-teal-400 font-mono">{freeReach}</span><span className="text-zinc-600 ml-1">({reachArcanumDots} - {practiceDots} + 1{effectiveSpellType === "rote" ? "; Rote uses 5" : ""})</span></span>
+                                <span className={`font-mono ${reachRemaining >= 0 ? "text-teal-400" : "text-red-400"}`}>{reachRemaining >= 0 ? `${reachRemaining} remaining` : `${Math.abs(reachRemaining)} over`}</span>
                             </div>
-
-                            {(advancedReachUsed > 0 || indefiniteReach > 0 || changePrimaryReach > 0 || activeSpellReachSurcharge > 0 || spellReach > 0) && (
+                            {(advancedReachUsed > 0 || indefiniteReach > 0 || changePrimaryReach > 0 || activeSpellReachSurcharge > 0 || spellReach > 0 || specialRangeReach > 0) && (
                                 <div className="pt-1 border-t border-zinc-700/50 space-y-1 text-xs">
-                                    {advancedReachUsed > 0 && (
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-zinc-500">Advanced Factors</span>
-                                            <span className="font-mono text-amber-400">+{advancedReachUsed} Reach</span>
-                                        </div>
-                                    )}
-
-                                    {indefiniteReach > 0 && (
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-zinc-500">Indefinite Duration</span>
-                                            <span className="font-mono text-amber-400">+{indefiniteReach} Reach</span>
-                                        </div>
-                                    )}
-
-                                    {changePrimaryReach > 0 && (
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-zinc-500">Override Primary Factor </span>
-                                            <span className="font-mono text-amber-400">+{changePrimaryReach} Reach</span>
-                                        </div>
-                                    )}
-
-                                    {spellReach > 0 && (
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-zinc-500">Spell Reach</span>
-                                            <span className="font-mono text-amber-400">+{spellReach} Reach</span>
-                                        </div>
-                                    )}
-
-                                    {specialRangeReach > 0 && (
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-zinc-500">Sympathetic Casting</span>
-                                            <span className="font-mono text-amber-400">+{specialRangeReach} Reach</span>
-                                        </div>
-                                    )}
-
-                                    {activeSpellReachSurcharge > 0 && (
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-zinc-500">Active Spell surcharge</span>
-                                            <span className="font-mono text-amber-400">+{activeSpellReachSurcharge} Reach</span>
-                                        </div>
-                                    )}
-
-                                    <div className="flex items-center justify-between pt-1 border-t border-zinc-700/50">
-                                        <span className="text-zinc-400">Total Reach Used</span>
-                                        <span className="font-mono text-zinc-200">{totalReachUsed}</span>
-                                    </div>
+                                    {advancedReachUsed > 0 && <div className="flex justify-between"><span className="text-zinc-500">Advanced Factors</span><span className="font-mono text-amber-400">+{advancedReachUsed} Reach</span></div>}
+                                    {indefiniteReach > 0 && <div className="flex justify-between"><span className="text-zinc-500">Indefinite Duration</span><span className="font-mono text-amber-400">+{indefiniteReach} Reach</span></div>}
+                                    {changePrimaryReach > 0 && <div className="flex justify-between"><span className="text-zinc-500">Override Primary Factor</span><span className="font-mono text-amber-400">+{changePrimaryReach} Reach</span></div>}
+                                    {spellReach > 0 && <div className="flex justify-between"><span className="text-zinc-500">Spell Reach</span><span className="font-mono text-amber-400">+{spellReach} Reach</span></div>}
+                                    {specialRangeReach > 0 && <div className="flex justify-between"><span className="text-zinc-500">Sympathetic Casting</span><span className="font-mono text-amber-400">+{specialRangeReach} Reach</span></div>}
+                                    {activeSpellReachSurcharge > 0 && <div className="flex justify-between"><span className="text-zinc-500">Active Spell surcharge</span><span className="font-mono text-amber-400">+{activeSpellReachSurcharge} Reach</span></div>}
+                                    <div className="flex justify-between pt-1 border-t border-zinc-700/50"><span className="text-zinc-400">Total Reach Used</span><span className="font-mono text-zinc-200">{totalReachUsed}</span></div>
                                 </div>
                             )}
                         </div>
                     )}
 
-                    {/* Spell Factors */}
                     <div className="space-y-1">
                         <p className="text-xs text-zinc-500 uppercase">Spell Factors</p>
                         <div className="grid grid-cols-[20px_170px_50px_50px_50px_1fr] gap-1.5 items-center p-2 bg-zinc-800/30 rounded text-sm">
-                            <span />
-                            <span>Factor</span>
-                            <span className="text-center">Std</span>
-                            <span className="text-center">Adv</span>
-                            <span className="text-center">Lvl</span>
-                            <span>Effect</span>
+                            <span /><span>Factor</span><span className="text-center">Std</span><span className="text-center">Adv</span><span className="text-center">Lvl</span><span>Effect</span>
                         </div>
                         {renderFactorRow("casting", "Casting Time", false)}
                         {renderFactorRow("range", "Range", false)}
                         {renderFactorRow("potency", "Potency", true)}
                         {renderFactorRow("duration", "Duration", true)}
                         {renderFactorRow("scale", "Scale", true)}
-
-                        {selectedPractice && !effectivePrimaryFactor && (
-                            <p className="text-[11px] text-amber-400">
-                                Select Potency, Duration, or Scale as the Primary Spell Factor before casting.
-                            </p>
-                        )}
-
+                        {selectedPractice && !effectivePrimaryFactor && <p className="text-[11px] text-amber-400">Select Potency, Duration, or Scale as the Primary Spell Factor before casting.</p>}
                         <div className="mt-2 p-2 bg-zinc-800/30 rounded space-y-1.5">
                             <div className="flex items-center justify-between gap-3">
-                                <div>
-                                    <p className="text-xs text-zinc-500 uppercase">Scale Mode</p>
-                                    <p className="text-[11px] text-zinc-600">
-                                        Choose whether Scale applies to Targets or Area
-                                    </p>
-                                </div>
-
-                                <div
-                                    className="inline-flex rounded-md border border-zinc-700 bg-zinc-900/50 p-1"
-                                    data-testid="scale-mode-toggle"
-                                >
-                                    <button
-                                        type="button"
-                                        onClick={() => setScaleMode("targets")}
-                                        className={`px-3 py-1 text-xs rounded transition-all ${
-                                            scaleMode === "targets"
-                                                ? "bg-teal-600 text-white"
-                                                : "text-zinc-400 hover:text-zinc-200"
-                                        }`}
-                                        data-testid="scale-mode-targets"
-                                    >
-                                        Targets
-                                    </button>
-
-                                    <button
-                                        type="button"
-                                        onClick={() => setScaleMode("area")}
-                                        className={`px-3 py-1.5 text-xs rounded transition-all ${
-                                            scaleMode === "area"
-                                                ? "bg-teal-600 text-white"
-                                                : "text-zinc-400 hover:text-zinc-200"
-                                        }`}
-                                        data-testid="scale-mode-area"
-                                    >
-                                        Area
-                                    </button>
+                                <div><p className="text-xs text-zinc-500 uppercase">Scale Mode</p><p className="text-[11px] text-zinc-600">Choose whether Scale applies to Targets or Area</p></div>
+                                <div className="inline-flex rounded-md border border-zinc-700 bg-zinc-900/50 p-1" data-testid="scale-mode-toggle">
+                                    <button type="button" onClick={() => setScaleMode("targets")} className={`px-3 py-1 text-xs rounded transition-all ${scaleMode === "targets" ? "bg-teal-600 text-white" : "text-zinc-400 hover:text-zinc-200"}`} data-testid="scale-mode-targets">Targets</button>
+                                    <button type="button" onClick={() => setScaleMode("area")} className={`px-3 py-1.5 text-xs rounded transition-all ${scaleMode === "area" ? "bg-teal-600 text-white" : "text-zinc-400 hover:text-zinc-200"}`} data-testid="scale-mode-area">Area</button>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Spell Options */}
                     {selectedPractice && (
                         <div className="grid grid-cols-2 gap-2">
                             <div className="p-2 bg-zinc-800/30 rounded space-y-2">
                                 <div className="flex items-center justify-between gap-3">
                                     <p className="text-xs text-zinc-500 uppercase">Combined Spell</p>
                                     <div className="flex items-center gap-1">
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-6 w-6 text-zinc-400"
-                                            onClick={() => setCombinedSpellCount(Math.max(0, combinedSpellCount - 1))}
-                                            disabled={combinedSpellCount <= 0 || maxCombinedSpellCount <= 0}
-                                            data-testid="combined-spell-decrease"
-                                        >
-                                            <Minus className="w-3 h-3" />
-                                        </Button>
-                                        <span className="font-mono text-amber-400 w-12 text-center">
-                                            {combinedSpellCount}/{maxCombinedSpellCount}
-                                        </span>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-6 w-6 text-zinc-400"
-                                            onClick={() => setCombinedSpellCount(Math.min(maxCombinedSpellCount, combinedSpellCount + 1))}
-                                            disabled={combinedSpellCount >= maxCombinedSpellCount || maxCombinedSpellCount <= 0}
-                                            data-testid="combined-spell-increase"
-                                        >
-                                            <Plus className="w-3 h-3" />
-                                        </Button>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-zinc-400" onClick={() => setCombinedSpellCount(Math.max(0, combinedSpellCount - 1))} disabled={combinedSpellCount <= 0 || maxCombinedSpellCount <= 0} data-testid="combined-spell-decrease"><Minus className="w-3 h-3" /></Button>
+                                        <span className="font-mono text-amber-400 w-12 text-center">{combinedSpellCount}/{maxCombinedSpellCount}</span>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-zinc-400" onClick={() => setCombinedSpellCount(Math.min(maxCombinedSpellCount, combinedSpellCount + 1))} disabled={combinedSpellCount >= maxCombinedSpellCount || maxCombinedSpellCount <= 0} data-testid="combined-spell-increase"><Plus className="w-3 h-3" /></Button>
                                     </div>
                                 </div>
-
                                 {combinedSpellCount > 0 && (
                                     <div className="space-y-2 pt-2 border-t border-zinc-700/50">
                                         {Array.from({ length: combinedSpellCount }).map((_, index) => {
                                             const selectedArcanaName = selectedCombinedArcana[index] || arcanum;
                                             const selectedDots = getArcanaDotsForCombinedSpell(selectedArcanaName);
-
                                             return (
                                                 <div key={`combined-spell-${index}`} className="flex items-center gap-2">
-                                                    <span className="w-20 text-[10px] uppercase tracking-wider text-zinc-500">
-                                                        Spell {index + 2}
-                                                    </span>
-                                                    <Select
-                                                        value={selectedArcanaName}
-                                                        onValueChange={(value) => {
-                                                            setCombinedSpellArcana((prev) => {
-                                                                const next = [...prev];
-                                                                next[index] = value;
-                                                                return next;
-                                                            });
-                                                        }}
-                                                    >
-                                                        <SelectTrigger
-                                                            className="flex-1 h-8 text-xs bg-zinc-900/50 border-zinc-700"
-                                                            data-testid={`combined-spell-arcana-${index + 1}`}
-                                                        >
-                                                            <SelectValue />
-                                                        </SelectTrigger>
+                                                    <span className="w-20 text-[10px] uppercase tracking-wider text-zinc-500">Spell {index + 2}</span>
+                                                    <Select value={selectedArcanaName} onValueChange={(value) => setCombinedSpellArcana((prev) => { const next = [...prev]; next[index] = value; return next; })}>
+                                                        <SelectTrigger className="flex-1 h-8 text-xs bg-zinc-900/50 border-zinc-700" data-testid={`combined-spell-arcana-${index + 1}`}><SelectValue /></SelectTrigger>
                                                         <SelectContent className="bg-zinc-900 border-zinc-700 z-[200]">
-                                                            {availableCombinedArcana.map((arcanaData) => (
-                                                                <SelectItem
-                                                                    key={arcanaData.name}
-                                                                    value={arcanaData.name}
-                                                                    className="text-xs text-zinc-200"
-                                                                >
-                                                                    {arcanaData.name} {arcanaData.dots}
-                                                                </SelectItem>
-                                                            ))}
+                                                            {availableCombinedArcana.map((arcanaData) => <SelectItem key={arcanaData.name} value={arcanaData.name} className="text-xs text-zinc-200">{arcanaData.name} {arcanaData.dots}</SelectItem>)}
                                                         </SelectContent>
                                                     </Select>
-                                                    <span className="w-12 text-right text-xs font-mono text-violet-300">
-                                                        {selectedDots} dot{selectedDots === 1 ? "" : "s"}
-                                                    </span>
+                                                    <span className="w-12 text-right text-xs font-mono text-violet-300">{selectedDots} dot{selectedDots === 1 ? "" : "s"}</span>
                                                 </div>
                                             );
                                         })}
-
-                                        <div className="flex justify-between text-xs">
-                                            <span className="text-zinc-500">Combined penalty</span>
-                                            <span className="font-mono text-red-400">{combinedSpellPenalty} dice</span>
-                                        </div>
-                                        <div className="flex justify-between text-xs">
-                                            <span className="text-zinc-500">Lowest Arcanum used</span>
-                                            <span className="font-mono text-violet-300">{combinedLowestArcanumDots}</span>
-                                        </div>
+                                        <div className="flex justify-between text-xs"><span className="text-zinc-500">Combined penalty</span><span className="font-mono text-red-400">{combinedSpellPenalty} dice</span></div>
+                                        <div className="flex justify-between text-xs"><span className="text-zinc-500">Lowest Arcanum used</span><span className="font-mono text-violet-300">{combinedLowestArcanumDots}</span></div>
                                     </div>
                                 )}
                             </div>
 
                             <div className="p-2 bg-zinc-800/30 rounded space-y-1.5">
-                                <div className="flex items-center justify-between">
-                                    <p className="text-xs text-zinc-500 uppercase">Spell Reach</p>
-                                    <div className="flex items-center gap-1">
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-6 w-6 text-zinc-400"
-                                            onClick={() => setSpellReach(Math.max(0, spellReach - 1))}
-                                            disabled={spellReach <= 0}
-                                            data-testid="spell-reach-decrease"
-                                        >
-                                            <Minus className="w-3 h-3" />
-                                        </Button>
-                                        <span className="font-mono text-amber-400 w-8 text-center">
-                                            {spellReach}
-                                        </span>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-6 w-6 text-zinc-400"
-                                            onClick={() => setSpellReach(spellReach + 1)}
-                                            data-testid="spell-reach-increase"
-                                        >
-                                            <Plus className="w-3 h-3" />
-                                        </Button>
-                                    </div>
-                                </div>
+                                <div className="flex items-center justify-between"><p className="text-xs text-zinc-500 uppercase">Spell Reach</p><div className="flex items-center gap-1">
+                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-zinc-400" onClick={() => setSpellReach(Math.max(0, spellReach - 1))} disabled={spellReach <= 0} data-testid="spell-reach-decrease"><Minus className="w-3 h-3" /></Button>
+                                    <span className="font-mono text-amber-400 w-8 text-center">{spellReach}</span>
+                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-zinc-400" onClick={() => setSpellReach(spellReach + 1)} data-testid="spell-reach-increase"><Plus className="w-3 h-3" /></Button>
+                                </div></div>
                             </div>
 
                             <div className="p-2 bg-zinc-800/30 rounded space-y-1.5">
-                                <div className="flex items-center justify-between">
-                                    <p className="text-xs text-zinc-500 uppercase">Add Mana</p>
-                                    <div className="flex items-center gap-1">
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-6 w-6 text-zinc-400"
-                                            onClick={() => setAdditionalMana(Math.max(0, additionalMana - 1))}
-                                            disabled={additionalMana <= 0}
-                                            data-testid="additional-mana-decrease"
-                                        >
-                                            <Minus className="w-3 h-3" />
-                                        </Button>
-                                        <span className="font-mono text-violet-400 w-8 text-center">
-                                            {additionalMana}
-                                        </span>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-6 w-6 text-zinc-400"
-                                            onClick={() => setAdditionalMana(additionalMana + 1)}
-                                            disabled={committedSpellManaCost >= currentMana}
-                                            data-testid="additional-mana-increase"
-                                        >
-                                            <Plus className="w-3 h-3" />
-                                        </Button>
-                                    </div>
-                                </div>
+                                <div className="flex items-center justify-between"><p className="text-xs text-zinc-500 uppercase">Add Mana</p><div className="flex items-center gap-1">
+                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-zinc-400" onClick={() => setAdditionalMana(Math.max(0, additionalMana - 1))} disabled={additionalMana <= 0} data-testid="additional-mana-decrease"><Minus className="w-3 h-3" /></Button>
+                                    <span className="font-mono text-violet-400 w-8 text-center">{additionalMana}</span>
+                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-zinc-400" onClick={() => setAdditionalMana(additionalMana + 1)} disabled={committedSpellManaCost >= currentMana} data-testid="additional-mana-increase"><Plus className="w-3 h-3" /></Button>
+                                </div></div>
                             </div>
 
-                            <PrimaryFactorOverride
-                                selectedPractice={selectedPractice}
-                                overridePrimaryFactor={overridePrimaryFactor}
-                                setOverridePrimaryFactor={setOverridePrimaryFactor}
-                                primaryFactor={primaryFactor}
-                                setPrimaryFactor={setPrimaryFactor}
-                                defaultPrimaryFactor={defaultPrimaryFactor}
-                            />
+                            <PrimaryFactorOverride selectedPractice={selectedPractice} overridePrimaryFactor={overridePrimaryFactor} setOverridePrimaryFactor={setOverridePrimaryFactor} primaryFactor={primaryFactor} setPrimaryFactor={setPrimaryFactor} defaultPrimaryFactor={defaultPrimaryFactor} />
                         </div>
                     )}
-                    
-                    {/* Withstand + Aimed Spell */}
-                    <div className="grid grid-cols-2 gap-2 items-stretch">
-                        {/* Withstand */}
-                        <div className={`p-2 bg-zinc-800/30 rounded h-full grid grid-rows-[28px_32px_20px] gap-2 ${isTouchSelfRange ? "" : "col-span-2"}`}>
-                            <div className="h-7 flex items-center justify-between gap-3">
-                                <p className="text-xs text-zinc-500 uppercase">Withstand</p>
-                                <div className="h-7 w-[100px] px-2 rounded border border-amber-800 bg-amber-900/50 flex items-center justify-center gap-1 text-xs text-amber-500 shrink-0">
-                                    <span>Potency</span>
-                                    <span className="font-mono text-violet-300">{basePotency}</span>
-                                </div>
-                            </div>
 
+                    <div className="grid grid-cols-2 gap-2 items-stretch">
+                        <div className={`p-2 bg-zinc-800/30 rounded h-full grid grid-rows-[28px_32px_20px] gap-2 ${isTouchSelfRange ? "" : "col-span-2"}`}>
+                            <div className="h-7 flex items-center justify-between gap-3"><p className="text-xs text-zinc-500 uppercase">Withstand</p><div className="h-7 w-[100px] px-2 rounded border border-amber-800 bg-amber-900/50 flex items-center justify-center gap-1 text-xs text-amber-500 shrink-0"><span>Potency</span><span className="font-mono text-violet-300">{basePotency}</span></div></div>
                             <div className="grid grid-cols-[minmax(0,1fr)_72px] gap-2 items-center">
                                 <Select value={withstandTrait} onValueChange={setWithstandTrait}>
-                                    <SelectTrigger className="h-8 text-xs bg-zinc-900/50 border-zinc-700" data-testid="withstand-trait-select">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent className="bg-zinc-900 border-zinc-700 z-[200]">
-                                        {WITHSTAND_TRAITS.map((trait) => (
-                                            <SelectItem key={trait.value} value={trait.value} className="text-xs text-zinc-200">
-                                                {trait.label}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
+                                    <SelectTrigger className="h-8 text-xs bg-zinc-900/50 border-zinc-700" data-testid="withstand-trait-select"><SelectValue /></SelectTrigger>
+                                    <SelectContent className="bg-zinc-900 border-zinc-700 z-[200]">{WITHSTAND_TRAITS.map((trait) => <SelectItem key={trait.value} value={trait.value} className="text-xs text-zinc-200">{trait.label}</SelectItem>)}</SelectContent>
                                 </Select>
-
-                                <Input
-                                    type="number"
-                                    min="0"
-                                    value={withstandValue}
-                                    onChange={(event) => setWithstandValue(Math.max(0, Number(event.target.value) || 0))}
-                                    disabled={withstandTrait === "none"}
-                                    className="h-8 text-xs bg-zinc-900/50 border-zinc-700 text-right font-mono"
-                                    data-testid="withstand-value-input"
-                                />
+                                <Input type="number" min="0" value={withstandValue} onChange={(event) => setWithstandValue(Math.max(0, Number(event.target.value) || 0))} disabled={withstandTrait === "none"} className="h-8 text-xs bg-zinc-900/50 border-zinc-700 text-right font-mono" data-testid="withstand-value-input" />
                             </div>
-
-                            <div className="h-5 flex items-center justify-between text-xs">
-                                <span className="text-zinc-500">Effective Potency</span>
-                                <span className={`font-mono ${effectivePotency > 0 ? "text-teal-400" : "text-red-400"}`}>
-                                    {effectivePotency}
-                                </span>
-                            </div>
+                            <div className="h-5 flex items-center justify-between text-xs"><span className="text-zinc-500">Effective Potency</span><span className={`font-mono ${effectivePotency > 0 ? "text-teal-400" : "text-red-400"}`}>{effectivePotency}</span></div>
                         </div>
-
-                        {/* Aimed Spell */}
                         {isTouchSelfRange && (
                             <div className="p-2 bg-zinc-800/30 rounded h-full grid grid-rows-[28px_32px_20px] gap-2">
-                                <div className="h-7 flex items-center justify-between gap-3">
-                                    <p className="text-xs text-zinc-500 uppercase">Aimed Spell</p>
-                                    <Button
-                                        type="button"
-                                        size="sm"
-                                        className="h-7 w-[120px] px-2 text-xs bg-violet-700 hover:bg-violet-600"
-                                        onClick={handleRollAimedSpell}
-                                        data-testid="roll-aimed-spell-btn"
-                                    >
-                                        Roll Aimed Spell
-                                    </Button>
-                                </div>
-
-                                <div className="grid grid-cols-[minmax(0,1fr)_72px] gap-2 items-center">
-                                    <div className="text-[10px] text-zinc-400 whitespace-nowrap overflow-hidden">
-                                        <span className="font-mono text-violet-300">Gnosis {gnosis} + {aimedSkillName} {aimedSkillDots} - Defense</span>
-                                    </div>
-
-                                    <Input
-                                        type="number"
-                                        min="0"
-                                        value={aimedTargetDefense}
-                                        onChange={(event) => setAimedTargetDefense(Math.max(0, Number(event.target.value) || 0))}
-                                        className="h-8 text-xs bg-zinc-900/50 border-zinc-700 text-right font-mono"
-                                        data-testid="aimed-target-defense-input"
-                                    />
-                                </div>
-
-                                <div className="h-5 flex items-center justify-between gap-2 text-xs text-zinc-500">
-                                    <span>Short {aimedRangeBands.short}</span>
-                                    <span>Medium {aimedRangeBands.medium}</span>
-                                    <span>Long {aimedRangeBands.long}</span>
-                                    <span className={`font-mono ${aimedSpellPoolRaw > 0 ? "text-teal-400" : "text-amber-400"}`}>
-                                        {aimedSpellPoolRaw > 0 ? `${aimedSpellPoolRaw} dice` : "Chance Die"}
-                                    </span>
-                                </div>
+                                <div className="h-7 flex items-center justify-between gap-3"><p className="text-xs text-zinc-500 uppercase">Aimed Spell</p><Button type="button" size="sm" className="h-7 w-[120px] px-2 text-xs bg-violet-700 hover:bg-violet-600" onClick={handleRollAimedSpell} data-testid="roll-aimed-spell-btn">Roll Aimed Spell</Button></div>
+                                <div className="grid grid-cols-[minmax(0,1fr)_72px] gap-2 items-center"><div className="text-[10px] text-zinc-400 whitespace-nowrap overflow-hidden"><span className="font-mono text-violet-300">Gnosis {gnosis} + {aimedSkillName} {aimedSkillDots} - Defense</span></div><Input type="number" min="0" value={aimedTargetDefense} onChange={(event) => setAimedTargetDefense(Math.max(0, Number(event.target.value) || 0))} className="h-8 text-xs bg-zinc-900/50 border-zinc-700 text-right font-mono" data-testid="aimed-target-defense-input" /></div>
+                                <div className="h-5 flex items-center justify-between gap-2 text-xs text-zinc-500"><span>Short {aimedRangeBands.short}</span><span>Medium {aimedRangeBands.medium}</span><span>Long {aimedRangeBands.long}</span><span className={`font-mono ${aimedSpellPoolRaw > 0 ? "text-teal-400" : "text-amber-400"}`}>{aimedSpellPoolRaw > 0 ? `${aimedSpellPoolRaw} dice` : "Chance Die"}</span></div>
                             </div>
                         )}
                     </div>
 
-                    {/* Yantras Section */}
                     <YantrasGrid
                         yantraCount={yantraCount}
                         maxYantras={maxYantras}
@@ -1750,31 +1094,16 @@ export const SpellcastingPopup = ({
                         roteMudraBonus={roteMudraBonus}
                         selectedNameSet={selectedNameSet}
                         specialRangeMode={specialRangeMode}
+                        hasHighSpeechMerit={hasHighSpeechMerit}
+                        canUseConcentration={canUseConcentration}
+                        personaBonus={personaBonus}
                         toggleYantraName={toggleYantraName}
-                        setMutuallyExclusiveYantra={
-                            setMutuallyExclusiveYantra
-                        }
-                        inventoryYantraOptions={
-                            inventoryYantraOptions
-                        }
-                        selectedInventoryYantras={
-                            selectedInventoryYantras
-                        }
-                        onSelectInventoryYantra={(
-                            yantraName,
-                            inventoryKey
-                        ) =>
-                            setSelectedInventoryYantras(
-                                (previous) => ({
-                                    ...previous,
-                                    [yantraName]:
-                                        inventoryKey,
-                                })
-                            )
-                        }
+                        setMutuallyExclusiveYantra={setMutuallyExclusiveYantra}
+                        inventoryYantraOptions={inventoryYantraOptions}
+                        selectedInventoryYantras={selectedInventoryYantras}
+                        onSelectInventoryYantra={(yantraName, inventoryKey) => setSelectedInventoryYantras((previous) => ({ ...previous, [yantraName]: inventoryKey }))}
                     />
 
-                    {/* Dice Pool Display */}
                     <div className="p-3 bg-violet-900/20 border border-violet-500/30 rounded">
                         <p className="text-xs text-zinc-500 uppercase mb-1">Spellcasting Dice Pool</p>
                         <p className="text-base font-mono text-violet-300">
@@ -1783,12 +1112,10 @@ export const SpellcastingPopup = ({
                             {ritualBonus > 0 && <span className="text-teal-400"> + Ritual ({ritualBonus})</span>}
                             {combinedSpellPenalty !== 0 && <span className="text-red-400"> {combinedSpellPenalty}</span>}
                             {dicePenalty !== 0 && <span className="text-red-400"> {dicePenalty}</span>}
-                            <span className="text-zinc-400"> = </span>
-                            <span className="text-teal-400 font-bold text-lg">{finalDicePool}</span>
+                            <span className="text-zinc-400"> = </span><span className="text-teal-400 font-bold text-lg">{finalDicePool}</span>
                         </p>
                     </div>
 
-                    {/* Paradox Section */}
                     <ParadoxSection
                         selectedPractice={selectedPractice}
                         paradoxTriggered={paradoxTriggered}
@@ -1818,96 +1145,30 @@ export const SpellcastingPopup = ({
                         setParadoxMode={setParadoxMode}
                     />
 
-                    {/* Summary */}
                     <div className="p-3 bg-zinc-800/50 rounded space-y-1.5">
-                        <div className="flex justify-between text-sm">
-                            <span className="text-zinc-400">Final Dice Pool:</span>
-                            <span className="font-mono text-teal-400 font-bold" data-testid="final-dice-pool">{finalDicePool} dice</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                            <span className="text-zinc-400">Reach Used / Free:</span>
-                            <span className={`font-mono ${reachRemaining >= 0 ? "text-teal-400" : "text-red-400"}`}>
-                                {totalReachUsed} / {freeReach}
-                            </span>
-                        </div>
-                        {activeSpellReachSurcharge > 0 && (
-                            <div className="flex justify-between text-sm">
-                                <span className="text-zinc-400">Active Spell surcharge:</span>
-                                <span className="font-mono text-amber-400">{activeSpellReachSurcharge}</span>
-                            </div>
-                        )}
-                        <div className="flex justify-between text-sm">
-                            <span className="text-zinc-400">Spell Mana:</span>
-                            <span className="font-mono text-violet-400">{manaCost}</span>
-                        </div>
-                        {additionalMana > 0 && (
-                            <div className="flex justify-between text-sm">
-                                <span className="text-zinc-400">Additional Mana:</span>
-                                <span className="font-mono text-violet-400">{additionalMana}</span>
-                            </div>
-                        )}
-                        {effectiveWithstand > 0 && (
-                            <div className="flex justify-between text-sm">
-                                <span className="text-zinc-400">Effective Potency:</span>
-                                <span className={`font-mono ${effectivePotency > 0 ? "text-teal-400" : "text-red-400"}`}>
-                                    {effectivePotency}/{basePotency}
-                                </span>
-                            </div>
-                        )}
-                        {ritualBonus > 0 && (
-                            <div className="flex justify-between text-sm">
-                                <span className="text-zinc-400">Ritual bonus:</span>
-                                <span className="font-mono text-teal-400">+{ritualBonus} dice</span>
-                            </div>
-                        )}
-                        {combinedSpellCount > 0 && (
-                            <div className="flex justify-between text-sm">
-                                <span className="text-zinc-400">Combined Spell:</span>
-                                <span className="font-mono text-red-400">{combinedSpellPenalty} dice</span>
-                            </div>
-                        )}
-                        {actualManaMitigation > 0 && (
-                            <div className="flex justify-between text-sm">
-                                <span className="text-zinc-400">Paradox Mitigation Mana:</span>
-                                <span className="font-mono text-violet-400">{actualManaMitigation}</span>
-                            </div>
-                        )}
-                        <div className="flex justify-between text-sm border-t border-zinc-700/50 pt-1">
-                            <span className="text-zinc-400">Total Mana Cost:</span>
-                            <span className={`font-mono font-bold ${totalManaCost > currentMana ? "text-red-400" : "text-violet-400"}`}>
-                                {totalManaCost} <span className="text-zinc-500 font-normal">(have {currentMana})</span>
-                            </span>
-                        </div>
-                        {paradoxTriggered && (
-                            <div className="flex justify-between text-sm">
-                                <span className="text-zinc-400">Paradox:</span>
-                                <span className={`font-mono ${paradoxIsChanceDie ? "text-amber-400" : "text-red-400"}`}>
-                                    {paradoxIsChanceDie ? "Chance Die" : `${finalParadoxPool} dice`}
-                                </span>
-                            </div>
-                        )}
+                        <div className="flex justify-between text-sm"><span className="text-zinc-400">Final Dice Pool:</span><span className="font-mono text-teal-400 font-bold" data-testid="final-dice-pool">{finalDicePool} dice</span></div>
+                        <div className="flex justify-between text-sm"><span className="text-zinc-400">Reach Used / Free:</span><span className={`font-mono ${reachRemaining >= 0 ? "text-teal-400" : "text-red-400"}`}>{totalReachUsed} / {freeReach}</span></div>
+                        {activeSpellReachSurcharge > 0 && <div className="flex justify-between text-sm"><span className="text-zinc-400">Active Spell surcharge:</span><span className="font-mono text-amber-400">{activeSpellReachSurcharge}</span></div>}
+                        <div className="flex justify-between text-sm"><span className="text-zinc-400">Spell Mana:</span><span className="font-mono text-violet-400">{manaCost}</span></div>
+                        {additionalMana > 0 && <div className="flex justify-between text-sm"><span className="text-zinc-400">Additional Mana:</span><span className="font-mono text-violet-400">{additionalMana}</span></div>}
+                        {effectiveWithstand > 0 && <div className="flex justify-between text-sm"><span className="text-zinc-400">Effective Potency:</span><span className={`font-mono ${effectivePotency > 0 ? "text-teal-400" : "text-red-400"}`}>{effectivePotency}/{basePotency}</span></div>}
+                        {ritualBonus > 0 && <div className="flex justify-between text-sm"><span className="text-zinc-400">Ritual bonus:</span><span className="font-mono text-teal-400">+{ritualBonus} dice</span></div>}
+                        {combinedSpellCount > 0 && <div className="flex justify-between text-sm"><span className="text-zinc-400">Combined Spell:</span><span className="font-mono text-red-400">{combinedSpellPenalty} dice</span></div>}
+                        {actualManaMitigation > 0 && <div className="flex justify-between text-sm"><span className="text-zinc-400">Paradox Mitigation Mana:</span><span className="font-mono text-violet-400">{actualManaMitigation}</span></div>}
+                        <div className="flex justify-between text-sm border-t border-zinc-700/50 pt-1"><span className="text-zinc-400">Total Mana Cost:</span><span className={`font-mono font-bold ${totalManaCost > currentMana ? "text-red-400" : "text-violet-400"}`}>{totalManaCost} <span className="text-zinc-500 font-normal">(have {currentMana})</span></span></div>
+                        {paradoxTriggered && <div className="flex justify-between text-sm"><span className="text-zinc-400">Paradox:</span><span className={`font-mono ${paradoxIsChanceDie ? "text-amber-400" : "text-red-400"}`}>{paradoxIsChanceDie ? "Chance Die" : `${finalParadoxPool} dice`}</span></div>}
                     </div>
                 </div>
 
-                {/* Footer */}
                 <div className="p-4 border-t border-zinc-800 flex justify-end gap-2 sticky bottom-0 bg-zinc-900">
-                    <Button variant="outline" onClick={onClose} className="border-zinc-700 text-zinc-300" data-testid="spell-cancel-btn">
-                        Cancel
-                    </Button>
+                    <Button variant="outline" onClick={onClose} className="border-zinc-700 text-zinc-300" data-testid="spell-cancel-btn">Cancel</Button>
                     <Button
                         onClick={handleCastSpell}
-                        disabled={
-                            !selectedPractice ||
-                            !effectivePrimaryFactor ||
-                            totalManaCost > currentMana ||
-                            (!lastingDuration && factors.duration.advanced && !spellName.trim()) ||
-                            (paradoxTriggered && !paradoxMode)
-                        }
+                        disabled={!selectedPractice || !effectivePrimaryFactor || totalManaCost > currentMana || (!lastingDuration && factors.duration.advanced && !spellName.trim()) || (paradoxTriggered && !paradoxMode)}
                         className="bg-violet-600 hover:bg-violet-500 text-white"
                         data-testid="cast-spell-btn"
                     >
-                        <Sparkles className="w-4 h-4 mr-2" />
-                        Cast Spell ({finalDicePool} dice)
+                        <Sparkles className="w-4 h-4 mr-2" /> Cast Spell ({finalDicePool} dice)
                     </Button>
                 </div>
             </div>
