@@ -405,32 +405,20 @@ export const CombatContent = ({
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent className="bg-zinc-900 border-zinc-700">
-                                                <SelectItem value="Dedicated" className="text-xs">
-                                                    Dedicated
-                                                </SelectItem>
-
-                                                <SelectItem value="Coin" className="text-xs">
-                                                    Coin
-                                                </SelectItem>
-
-                                                <SelectItem value="Cup" className="text-xs">
-                                                    Cup
-                                                </SelectItem>
-
-                                                <SelectItem value="Mirror" className="text-xs">
-                                                    Mirror
-                                                </SelectItem>
-
-                                                <SelectItem value="Rod" className="text-xs">
-                                                    Rod
-                                                </SelectItem>
-
-                                                <SelectItem value="Weapon" className="text-xs">
+                                                <SelectItem value="weapon" className="text-xs">
                                                     Weapon
                                                 </SelectItem>
 
-                                                <SelectItem value="Order" className="text-xs">
-                                                    Order
+                                                <SelectItem value="armor" className="text-xs">
+                                                    Armor
+                                                </SelectItem>
+
+                                                <SelectItem value="equipment" className="text-xs">
+                                                    Equipment
+                                                </SelectItem>
+
+                                                <SelectItem value="yantra" className="text-xs">
+                                                    Yantra
                                                 </SelectItem>
                                             </SelectContent>
                                         </Select>
