@@ -80,42 +80,149 @@ const isInventoryYantraDedicated = (item) => {
     );
 };
 
-const getInventoryYantraLabel = (yantraName, inventoryItems) => {
-    const selectedToolType = getSelectedYantraToolType(yantraName);
-    if (!selectedToolType) return yantraName;
+const getInventoryYantraKey = (item, index) =>
+    String(
+        item?.id ??
+        `${normalizeYantraText(
+            item?.name || "yantra"
+        )}::${index}`
+    );
 
-    const matchingInventoryYantras = (inventoryItems || [])
-        .filter((item) => normalizeYantraText(item?.type) === "yantra")
-        .filter((item) => {
-            if (selectedToolType === "dedicated") {
-                return isInventoryYantraDedicated(item);
+const getMatchingInventoryYantras = (
+    yantraName,
+    inventoryItems
+) => {
+    const selectedToolType =
+        getSelectedYantraToolType(
+            yantraName
+        );
+
+    if (!selectedToolType) {
+        return [];
+    }
+
+    return (inventoryItems || [])
+        .map((item, index) => ({
+            item,
+            key: getInventoryYantraKey(
+                item,
+                index
+            ),
+        }))
+        .filter(
+            ({ item }) =>
+                normalizeYantraText(
+                    item?.type
+                ) === "yantra"
+        )
+        .filter(({ item }) => {
+            if (
+                selectedToolType ===
+                "dedicated"
+            ) {
+                return (
+                    isInventoryYantraDedicated(
+                        item
+                    )
+                );
             }
 
-            return getInventoryYantraToolType(item) === selectedToolType;
-        })
-        .filter((item) => String(item?.name || "").trim())
-        .sort((a, b) => {
-            if (!!a?.equipped !== !!b?.equipped) {
-                return a?.equipped ? -1 : 1;
-            }
-
-            return normalizeYantraText(a?.name || "Unnamed").localeCompare(
-                normalizeYantraText(b?.name || "Unnamed"),
-                undefined,
-                { sensitivity: "base", numeric: true }
+            return (
+                getInventoryYantraToolType(
+                    item
+                ) === selectedToolType
             );
-        });
+        })
+        .filter(
+            ({ item }) =>
+                String(
+                    item?.name || ""
+                ).trim()
+        )
+        .sort((a, b) => {
+            if (
+                !!a.item?.equipped !==
+                !!b.item?.equipped
+            ) {
+                return a.item?.equipped
+                    ? -1
+                    : 1;
+            }
+
+            return String(
+                a.item?.name || ""
+            ).localeCompare(
+                String(
+                    b.item?.name || ""
+                ),
+                undefined,
+                {
+                    sensitivity: "base",
+                    numeric: true,
+                }
+            );
+        })
+        .map(({ item, key }) => ({
+            key,
+            name:
+                item?.name ||
+                "Unnamed Yantra",
+            equipped:
+                Boolean(
+                    item?.equipped
+                ),
+        }));
+};
+
+const getInventoryYantraLabel = (
+    yantraName,
+    inventoryItems,
+    selectedInventoryYantras
+) => {
+    const selectedToolType =
+        getSelectedYantraToolType(
+            yantraName
+        );
+
+    if (!selectedToolType) {
+        return yantraName;
+    }
+
+    const matchingInventoryYantras =
+        getMatchingInventoryYantras(
+            yantraName,
+            inventoryItems
+        );
 
     const displayToolType =
         selectedToolType === "dedicated"
             ? "Dedicated"
-            : selectedToolType.charAt(0).toUpperCase() + selectedToolType.slice(1);
+            : selectedToolType
+                  .charAt(0)
+                  .toUpperCase() +
+              selectedToolType.slice(1);
 
-    if (matchingInventoryYantras.length === 0) {
+    if (
+        matchingInventoryYantras.length ===
+        0
+    ) {
         return displayToolType;
     }
 
-    return `${displayToolType} (${matchingInventoryYantras[0].name})`;
+    const selectedKey =
+        selectedInventoryYantras?.[
+            yantraName
+        ];
+
+    const selectedInventoryYantra =
+        matchingInventoryYantras.find(
+            (option) =>
+                option.key ===
+                selectedKey
+        ) ||
+        matchingInventoryYantras[0];
+
+    return `${displayToolType} (${selectedInventoryYantra.name})`;
 };
 
 const getCastingTime = (gnosis) => {
@@ -230,7 +337,13 @@ export const SpellcastingPopup = ({
     const [paradoxMode, setParadoxMode] = useState("");
 
     // Yantras state
-    const [selectedYantras, setSelectedYantras] = useState([]);
+    const [selectedYantras, setSelectedYantras] =
+        useState([]);
+
+    const [
+        selectedInventoryYantras,
+        setSelectedInventoryYantras,
+    ] = useState({});
 
     // Primary factor state (default: potency)
     const [primaryFactor, setPrimaryFactor] = useState(defaultPrimaryFactor);
@@ -298,6 +411,7 @@ export const SpellcastingPopup = ({
             setSleeperWitnesses("none");
             setManaMitigation(0);
             setParadoxMode("");
+            setSelectedInventoryYantras({});
             setSelectedYantras(
                 Array.from(
                     {
@@ -452,6 +566,32 @@ export const SpellcastingPopup = ({
             .filter(Boolean);
     }, [selectedYantras]);
 
+    const inventoryYantraOptions =
+        useMemo(() => {
+            const options = {};
+
+            YANTRAS.forEach(
+                (yantra) => {
+                    const matches =
+                        getMatchingInventoryYantras(
+                            yantra.name,
+                            inventoryItems
+                        );
+
+                    if (
+                        matches.length >
+                        0
+                    ) {
+                        options[
+                            yantra.name
+                        ] = matches;
+                    }
+                }
+            );
+
+            return options;
+        }, [inventoryItems]);
+    
     const selectedYantraNames = selectedYantraData.map((y) => y.name);
 
     const hasDedicatedTool = selectedYantraNames.includes("Dedicated Tool");
@@ -462,7 +602,14 @@ export const SpellcastingPopup = ({
     const yantraBonus = Math.min(rawYantraBonus, yantraBonusCap);
     const yantraBonusWasCapped = rawYantraBonus > yantraBonus;
     const selectedYantraLabels = [
-        ...selectedYantraNames.map((name) => getInventoryYantraLabel(name, inventoryItems)),
+        ...selectedYantraNames.map(
+            (name) =>
+                getInventoryYantraLabel(
+                    name,
+                    inventoryItems,
+                    selectedInventoryYantras
+                )
+        ),
         ...(usesRoteMudra ? [`Rote Mudra +${roteMudraBonus}`] : []),
     ].sort(compareYantraLabelsAlphabetically);
     const yantraCount = selectedYantraNames.length + (usesRoteMudra ? 1 : 0);
@@ -1604,7 +1751,27 @@ export const SpellcastingPopup = ({
                         selectedNameSet={selectedNameSet}
                         specialRangeMode={specialRangeMode}
                         toggleYantraName={toggleYantraName}
-                        setMutuallyExclusiveYantra={setMutuallyExclusiveYantra}
+                        setMutuallyExclusiveYantra={
+                            setMutuallyExclusiveYantra
+                        }
+                        inventoryYantraOptions={
+                            inventoryYantraOptions
+                        }
+                        selectedInventoryYantras={
+                            selectedInventoryYantras
+                        }
+                        onSelectInventoryYantra={(
+                            yantraName,
+                            inventoryKey
+                        ) =>
+                            setSelectedInventoryYantras(
+                                (previous) => ({
+                                    ...previous,
+                                    [yantraName]:
+                                        inventoryKey,
+                                })
+                            )
+                        }
                     />
 
                     {/* Dice Pool Display */}
