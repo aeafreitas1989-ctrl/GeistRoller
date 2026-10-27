@@ -30,6 +30,50 @@ const YANTRA_TOOL_ORDER = {
     order: 6,
 };
 
+const YANTRA_PATH_CARD_CLASSES = {
+    Acanthus:
+        "bg-slate-800/25 border-slate-500/30",
+
+    Mastigos:
+        "bg-violet-950/30 border-violet-500/30",
+
+    Moros:
+        "bg-zinc-800/35 border-zinc-500/30",
+
+    Obrimos:
+        "bg-amber-950/25 border-amber-500/30",
+
+    Thyrsus:
+        "bg-emerald-950/25 border-emerald-500/30",
+};
+
+const DEFAULT_YANTRA_CARD_CLASS =
+    "bg-sky-950/20 border-sky-500/25";
+
+const getYantraDisplayType = (item) => {
+    if (
+        item?.yantra?.dedicated === true ||
+        normalizeInventoryText(
+            item?.yantra?.tool_type
+        ) === "dedicated"
+    ) {
+        return "Dedicated";
+    }
+
+    if (
+        normalizeInventoryText(
+            item?.yantra?.kind
+        ) === "sacrament"
+    ) {
+        return "Sacrament";
+    }
+
+    return (
+        item?.yantra?.tool_type ||
+        "Coin"
+    );
+};
+
 const normalizeInventoryText = (value) =>
     String(value || "").trim().toLowerCase();
 
@@ -125,7 +169,16 @@ export const CombatContent = ({
     const sortedInventoryItems = (inventoryItems || [])
         .map((item, originalIndex) => ({ item, originalIndex }))
         .sort(compareInventoryItems);
+    const currentMagePath =
+        isMage
+            ? getValue("path")
+            : "";
 
+    const yantraCardClass =
+        YANTRA_PATH_CARD_CLASSES[
+            currentMagePath
+        ] ||
+        DEFAULT_YANTRA_CARD_CLASS;
     return (
         <>
             {showCombat && (
@@ -352,10 +405,33 @@ export const CombatContent = ({
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent className="bg-zinc-900 border-zinc-700">
-                                                <SelectItem value="weapon" className="text-xs">Weapon</SelectItem>
-                                                <SelectItem value="armor" className="text-xs">Armor</SelectItem>
-                                                <SelectItem value="equipment" className="text-xs">Equipment</SelectItem>
-                                                <SelectItem value="yantra" className="text-xs">Yantra</SelectItem>
+                                                <SelectItem value="Dedicated" className="text-xs">
+                                                    Dedicated
+                                                </SelectItem>
+
+                                                <SelectItem value="Coin" className="text-xs">
+                                                    Coin
+                                                </SelectItem>
+
+                                                <SelectItem value="Cup" className="text-xs">
+                                                    Cup
+                                                </SelectItem>
+
+                                                <SelectItem value="Mirror" className="text-xs">
+                                                    Mirror
+                                                </SelectItem>
+
+                                                <SelectItem value="Rod" className="text-xs">
+                                                    Rod
+                                                </SelectItem>
+
+                                                <SelectItem value="Weapon" className="text-xs">
+                                                    Weapon
+                                                </SelectItem>
+
+                                                <SelectItem value="Order" className="text-xs">
+                                                    Order
+                                                </SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
@@ -840,14 +916,21 @@ export const CombatContent = ({
                 {inventoryItems.length === 0 ? (
                     <p className="text-[10px] text-zinc-600 italic">No inventory items yet.</p>
                 ) : (
-                    <div className="space-y-2">
+                    <div className="space-y-1">
                         {sortedInventoryItems.map(({ item: it, originalIndex: idx }) => (
-                            <div key={`${it.name || "item"}-${idx}`} className="p-2 rounded-sm bg-zinc-900/20 border border-zinc-800">
-                                <div className="flex items-start justify-between gap-3">
-                                    <div className="text-xs text-zinc-200 min-w-0 flex-1 pt-0.5">
+                            <div
+                                key={`${it.name || "item"}-${idx}`}
+                                className={`px-2 py-1.5 rounded-sm border ${
+                                    it.type === "yantra"
+                                        ? yantraCardClass
+                                        : "bg-zinc-900/20 border-zinc-800"
+                                }`}
+                            >
+                                <div className="flex items-center justify-between gap-3">
+                                     <div className="text-xs text-zinc-200 min-w-0 flex-1">
                                         <span className="font-mono text-zinc-500 mr-2">
                                             {it.type === "yantra"
-                                                ? `Yantra (${formatLabel(it.yantra?.tool_type || (it.yantra?.kind === "sacrament" ? "sacrament" : "coin"))})`
+                                                ? `Yantra (${getYantraDisplayType(it)})`
                                                 : it.type === "armor"
                                                     ? `Armor (${it.armor?.general ?? 0}/${it.armor?.ballistic ?? 0})`
                                                     : it.type.charAt(0).toUpperCase() + it.type.slice(1)}
@@ -881,20 +964,20 @@ export const CombatContent = ({
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
-                                                className="h-7 px-2 text-zinc-400 hover:text-zinc-200"
+                                                className="h-6 px-1.5 text-zinc-400 hover:text-zinc-200"
                                                 onClick={() => setEditingInventoryIndex(idx)}
                                                 data-testid={`inventory-edit-${idx}`}
                                             >
-                                                <Pencil className="w-4 h-4" />
+                                                <Pencil className="w-3.5 h-3.5" />
                                             </Button>
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
-                                                className="h-7 px-2 text-zinc-400 hover:text-red-300"
+                                                className="h-6 px-1.5 text-zinc-400 hover:text-red-300"
                                                 onClick={() => removeInventoryItem(idx)}
                                                 data-testid={`inventory-remove-${idx}`}
                                             >
-                                                <Trash2 className="w-4 h-4" />
+                                                <Trash2 className="w-3.5 h-3.5" />
                                             </Button>
                                         </div>
                                     </div>
@@ -1080,19 +1163,57 @@ export const CombatContent = ({
                                                 {it.yantra?.kind === "tool" ? (
                                                     <div className="space-y-1">
                                                         <Select
-                                                            value={it.yantra?.tool_type || "Coin"}
-                                                            onValueChange={(v) => updateInventoryItemNested(idx, "yantra", { tool_type: v })}
+                                                            value={
+                                                                it.yantra?.dedicated
+                                                                    ? "Dedicated"
+                                                                    : it.yantra?.tool_type ||
+                                                                    "Coin"
+                                                            }
+                                                            onValueChange={(v) =>
+                                                                updateInventoryItemNested(
+                                                                    idx,
+                                                                    "yantra",
+                                                                    {
+                                                                        tool_type: v,
+
+                                                                        // Converts old starred Dedicated
+                                                                        // Yantras to the new category system.
+                                                                        dedicated: false,
+                                                                    }
+                                                                )
+                                                            }
                                                         >
                                                             <SelectTrigger className="h-7 bg-zinc-900/50 border-zinc-700 text-xs">
                                                                 <SelectValue />
                                                             </SelectTrigger>
                                                             <SelectContent className="bg-zinc-900 border-zinc-700">
-                                                                <SelectItem value="Coin" className="text-xs">Coin</SelectItem>
-                                                                <SelectItem value="Cup" className="text-xs">Cup</SelectItem>
-                                                                <SelectItem value="Mirror" className="text-xs">Mirror</SelectItem>
-                                                                <SelectItem value="Rod" className="text-xs">Rod</SelectItem>
-                                                                <SelectItem value="Weapon" className="text-xs">Weapon</SelectItem>
-                                                                <SelectItem value="Order" className="text-xs">Order</SelectItem>
+                                                                <SelectItem value="Dedicated" className="text-xs">
+                                                                    Dedicated
+                                                                </SelectItem>
+
+                                                                <SelectItem value="Coin" className="text-xs">
+                                                                    Coin
+                                                                </SelectItem>
+
+                                                                <SelectItem value="Cup" className="text-xs">
+                                                                    Cup
+                                                                </SelectItem>
+
+                                                                <SelectItem value="Mirror" className="text-xs">
+                                                                    Mirror
+                                                                </SelectItem>
+
+                                                                <SelectItem value="Rod" className="text-xs">
+                                                                    Rod
+                                                                </SelectItem>
+
+                                                                <SelectItem value="Weapon" className="text-xs">
+                                                                    Weapon
+                                                                </SelectItem>
+
+                                                                <SelectItem value="Order" className="text-xs">
+                                                                    Order
+                                                                </SelectItem>
                                                             </SelectContent>
                                                         </Select>
                                                     </div>
@@ -1128,18 +1249,9 @@ export const CombatContent = ({
                                     </div>
                                 ) : (
                                     <>
-                                        <div className="mt-2 grid grid-cols-3 gap-2 items-center">
-                                            <div className="text-xs text-cyan-400 font-mono">
-                                                {(() => {
-                                                    if (it.type === "equipment") return `Bonus +${it.equipment?.bonus ?? 0}`;
-                                                    return null;
-                                                })()}
-                                            </div>
-                                            <div />
-                                        </div>
-
+                                        
                                         {it.type === "weapon" && (
-                                            <div className="mt-2 grid grid-cols-4 gap-1 text-[12px] text-zinc-500">
+                                            <div className="mt-1 grid grid-cols-4 gap-1 text-[12px] text-zinc-500">
                                                 <span>Damage {it.weapon?.damage ?? 0}</span>
                                                 <span>Initiative {it.weapon?.initiative ?? 0}</span>
                                                 <span>Strength {it.weapon?.strength ?? 0}</span>
@@ -1148,7 +1260,7 @@ export const CombatContent = ({
                                         )}
 
                                         {it.type === "armor" && (
-                                            <div className="mt-2 grid grid-cols-3 gap-1 text-[12px] text-zinc-500">
+                                            <div className="mt-1 grid grid-cols-3 gap-1 text-[12px] text-zinc-500">
                                                 <span>Strength {it.armor?.strength ?? 0}</span>
                                                 <span>Defense {it.armor?.defense ?? 0}</span>
                                                 <span>Speed {it.armor?.speed ?? 0}</span>
@@ -1156,48 +1268,32 @@ export const CombatContent = ({
                                         )}
 
                                         {it.type === "equipment" && (
-                                            <div className="mt-2 grid grid-cols-3 gap-1 text-[12px] text-zinc-500">
-                                                <span>Durability {it.equipment?.durability ?? 0}</span>
-                                                <span>Structure {it.equipment?.structure ?? 1}</span>
-                                                <span>Size {it.equipment?.size ?? 1}</span>
+                                            <div className="mt-1 grid grid-cols-4 gap-1 text-[12px] text-zinc-500">
+                                                <span className="text-cyan-400">
+                                                    Bonus {Number(it.equipment?.bonus ?? 0) >= 0 ? "+" : ""}
+                                                    {it.equipment?.bonus ?? 0}
+                                                </span>
+
+                                                <span>
+                                                    Durability {it.equipment?.durability ?? 0}
+                                                </span>
+
+                                                <span>
+                                                    Structure {it.equipment?.structure ?? 1}
+                                                </span>
+
+                                                <span>
+                                                    Size {it.equipment?.size ?? 1}
+                                                </span>
                                             </div>
                                         )}
 
-                                        {it.type === "yantra" && (
-                                            <div className="mt-1 flex items-center justify-between gap-3">
-                                                <div className="text-[11px] text-zinc-500 min-w-0 flex-1">
-                                                    {it.yantra?.notes && (
-                                                        <span className="block truncate">
-                                                            {it.yantra.notes}
-                                                        </span>
-                                                    )}
+                                        {it.type === "yantra" &&
+                                            it.yantra?.notes && (
+                                                <div className="mt-1 text-[11px] text-zinc-500 truncate">
+                                                    {it.yantra.notes}
                                                 </div>
-
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className={`h-6 px-2 text-[10px] flex items-center gap-1 shrink-0 ${
-                                                        it.yantra?.dedicated
-                                                            ? "text-teal-300 hover:text-teal-200"
-                                                            : "text-zinc-500 hover:text-zinc-300"
-                                                    }`}
-                                                    onClick={() =>
-                                                        updateInventoryItemNested(idx, "yantra", {
-                                                            dedicated: !it.yantra?.dedicated,
-                                                        })
-                                                    }
-                                                    data-testid={`inventory-dedicated-${idx}`}
-                                                >
-                                                    <Star
-                                                        className={`w-3 h-3 ${
-                                                            it.yantra?.dedicated ? "fill-current" : ""
-                                                        }`}
-                                                    />
-                                                    Dedicated
-                                                </Button>
-                                            </div>
-                                        )}
+                                            )}
                                     </>
                                 )}
                             </div>
