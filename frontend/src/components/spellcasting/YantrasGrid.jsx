@@ -175,7 +175,7 @@ export const YantrasGrid = ({
                                     <SelectValue />
                                 </SelectTrigger>
 
-                                <SelectContent className="bg-zinc-900 border-zinc-700">
+                                <SelectContent className="bg-zinc-900 border-zinc-700 z-[200]">
                                     {inventoryOptions.map(
                                         (
                                             option
