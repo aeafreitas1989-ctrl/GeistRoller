@@ -62,6 +62,9 @@ export const FactorRow = ({
     const isCasting = factorName === "casting";
     const isRange = factorName === "range";
     const isDuration = factorName === "duration";
+    const rangeReachCost = isRange && factor.advanced
+        ? Math.max(1, Number(factor.level) || 1)
+        : 0;
 
     return (
         <div className="grid grid-cols-[20px_170px_50px_50px_50px_1fr] gap-1.5 items-center p-2 bg-zinc-800/30 rounded text-sm">
@@ -262,14 +265,17 @@ export const FactorRow = ({
             <div className="text-xs text-zinc-400 min-w-0 flex items-center justify-between gap-2">
                 <span className="truncate min-w-0">
                     {description}
-                    {factor.advanced && factorName !== "duration" && <span className="text-amber-400 ml-1">(+1R)</span>}
+                    {factor.advanced && factorName === "range" && specialRangeMode === "none" && (
+                        <span className="text-amber-400 ml-1">(+{rangeReachCost}R)</span>
+                    )}
+                    {factor.advanced && factorName !== "duration" && factorName !== "range" && <span className="text-amber-400 ml-1">(+1R)</span>}
                     {factor.advanced && factorName === "duration" && !matterDurationMana && <span className="text-amber-400 ml-1">(+1R)</span>}
                     {factor.advanced && factorName === "duration" && matterDurationMana && arcanum === "Matter" && <span className="text-blue-400 ml-1">(+1 Mana)</span>}
                     {factorName === "range" && specialRangeMode !== "none" && <span className="text-blue-400 ml-1">(+1 Mana, +1 Reach)</span>}
                     {factorName === "duration" && fateDurationBonus > 0 && <span className="text-blue-400 ml-1">(+{fateDurationBonus} lvl, +1 Mana)</span>}
                     {isCasting && !factor.advanced && ritualCastingBonus > 0 && <span className="text-teal-400 ml-1">(+{ritualCastingBonus}d)</span>}
-                    {hasLevels && paidLevels > 0 && <span className="text-red-400 ml-1">(-{paidLevels * 2}d)</span>}
-                    {hasLevels && freeLevelsFromPrimary > 0 && factor.level > 1 && (
+                    {hasLevels && !isRange && paidLevels > 0 && <span className="text-red-400 ml-1">(-{paidLevels * 2}d)</span>}
+                    {hasLevels && !isRange && freeLevelsFromPrimary > 0 && factor.level > 1 && (
                         <span className="text-teal-400 ml-1">
                             (+{Math.min(freeLevelsFromPrimary, factor.level - 1)}free)
                         </span>
