@@ -409,6 +409,7 @@ export const SpellcastingPopup = ({
         if (!value.advanced) return sum;
         if (key === "duration" && lastingDuration) return sum;
         if (key === "duration" && matterDurationMana && arcanum === "Matter") return sum;
+        if (key === "range") return sum + Math.max(1, Number(value.level) || 1);
         return sum + 1;
     }, 0);
     const indefiniteReach = !lastingDuration && factors.duration.advanced && factors.duration.level === 6 ? 1 : 0;
@@ -564,7 +565,8 @@ export const SpellcastingPopup = ({
         setFactors((prev) => ({ ...prev, [factorName]: { ...prev[factorName], ...updates } }));
     };
     const getMaxLevel = (factorName, isAdvanced) => {
-        if (factorName === "casting" || factorName === "range") return 1;
+        if (factorName === "casting") return 1;
+        if (factorName === "range") return isAdvanced ? 2 : 1;
         return FACTOR_LEVELS[factorName]?.[isAdvanced ? "advanced" : "standard"]?.length || 1;
     };
     const getDisplayedDurationLevel = () => {
@@ -590,7 +592,10 @@ export const SpellcastingPopup = ({
             }
             return `${getCastingTime(gnosis)} Ritual`;
         }
-        if (factorName === "range") return isAdvanced ? "Sensory Range" : "Touch Range / Self";
+        if (factorName === "range") {
+            if (!isAdvanced) return "Touch Range / Self";
+            return factor.level >= 2 ? "Remote Range" : "Sensory Range";
+        }
         if (factorName === "duration" && lastingDuration) return "Lasting";
         const levels = FACTOR_LEVELS[factorName]?.[isAdvanced ? "advanced" : "standard"];
         const levelData = levels?.[factor.level - 1];
@@ -849,9 +854,9 @@ export const SpellcastingPopup = ({
         const freeLevelsFromPrimary = isEffectivePrimary ? primaryFreeLevels : 0;
         const displayedLevel = factorName === "duration" ? getDisplayedDurationLevel() : f.level;
         const description = getFactorDescription(factorName);
-        const paidLevels = hasLevels ? Math.max(0, f.level - 1 - freeLevelsFromPrimary) : 0;
         const isDuration = factorName === "duration";
         const isRange = factorName === "range";
+        const paidLevels = hasLevels && !isRange ? Math.max(0, f.level - 1 - freeLevelsFromPrimary) : 0;
         const canTogglePrimary = !(isSelectedPrimary || (factorName === "scale" && !overridePrimaryFactor) || (defaultPrimaryFactor && !overridePrimaryFactor));
         const standardOrAdvancedDisabled = (isRange && specialRangeMode !== "none") || (isDuration && lastingDuration);
         return (
@@ -885,7 +890,7 @@ export const SpellcastingPopup = ({
                 canIncreaseLevel={f.level < getMaxLevel(factorName, f.advanced)}
                 standardDisabled={standardOrAdvancedDisabled}
                 advancedDisabled={standardOrAdvancedDisabled}
-                levelDisabled={isDuration && lastingDuration}
+                levelDisabled={(isDuration && lastingDuration) || (isRange && specialRangeMode !== "none")}
                 ritualCastingBonus={ritualCastingBonus}
                 onDecreaseRitualBonus={() => setRitualCastingBonus(Math.max(0, ritualCastingBonus - 1))}
                 onIncreaseRitualBonus={() => setRitualCastingBonus(Math.min(5, ritualCastingBonus + 1))}
@@ -991,7 +996,7 @@ export const SpellcastingPopup = ({
                             <span /><span>Factor</span><span className="text-center">Std</span><span className="text-center">Adv</span><span className="text-center">Lvl</span><span>Effect</span>
                         </div>
                         {renderFactorRow("casting", "Casting Time", false)}
-                        {renderFactorRow("range", "Range", false)}
+                        {renderFactorRow("range", "Range", true)}
                         {renderFactorRow("potency", "Potency", true)}
                         {renderFactorRow("duration", "Duration", true)}
                         {renderFactorRow("scale", "Scale", true)}
