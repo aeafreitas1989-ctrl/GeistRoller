@@ -55,6 +55,8 @@ export const FactorRow = ({
     canUseTimeSympathetic,
     specialRangeMode,
     onActivateSpecialRange,
+    remoteRange,
+    onToggleRemoteRange,
     sympatheticWithstand,
     onDecreaseSympatheticWithstand,
     onIncreaseSympatheticWithstand,
@@ -62,9 +64,14 @@ export const FactorRow = ({
     const isCasting = factorName === "casting";
     const isRange = factorName === "range";
     const isDuration = factorName === "duration";
-    const rangeReachCost = isRange && factor.advanced
-        ? Math.max(1, Number(factor.level) || 1)
-        : 0;
+    const rangeReachCost =
+        isRange &&
+        factor.advanced &&
+        specialRangeMode === "none"
+            ? remoteRange
+                ? 2
+                : 1
+            : 0;
 
     return (
         <div className="grid grid-cols-[20px_170px_50px_50px_50px_1fr] gap-1.5 items-center p-2 bg-zinc-800/30 rounded text-sm">
@@ -274,13 +281,33 @@ export const FactorRow = ({
                     {factorName === "range" && specialRangeMode !== "none" && <span className="text-blue-400 ml-1">(+1 Mana, +1 Reach)</span>}
                     {factorName === "duration" && fateDurationBonus > 0 && <span className="text-blue-400 ml-1">(+{fateDurationBonus} lvl, +1 Mana)</span>}
                     {isCasting && !factor.advanced && ritualCastingBonus > 0 && <span className="text-teal-400 ml-1">(+{ritualCastingBonus}d)</span>}
-                    {hasLevels && !isRange && paidLevels > 0 && <span className="text-red-400 ml-1">(-{paidLevels * 2}d)</span>}
-                    {hasLevels && !isRange && freeLevelsFromPrimary > 0 && factor.level > 1 && (
+                    {hasLevels && paidLevels > 0 && <span className="text-red-400 ml-1">(-{paidLevels * 2}d)</span>}
+                    {hasLevels && freeLevelsFromPrimary > 0 && factor.level > 1 && (
                         <span className="text-teal-400 ml-1">
                             (+{Math.min(freeLevelsFromPrimary, factor.level - 1)}free)
                         </span>
                     )}
                 </span>
+
+                {isRange && (
+                    <button
+                        type="button"
+                        onClick={onToggleRemoteRange}
+                        disabled={!factor.advanced || specialRangeMode !== "none"}
+                        className={`px-1.5 py-0.5 rounded border text-[9px] shrink-0 ${
+                            remoteRange
+                                ? "bg-amber-900/40 border-amber-500/50 text-amber-300"
+                                : "bg-zinc-900/40 border-zinc-700 text-zinc-400"
+                        } ${
+                            !factor.advanced || specialRangeMode !== "none"
+                                ? "opacity-40 cursor-not-allowed"
+                                : ""
+                        }`}
+                        data-testid="range-remote"
+                    >
+                        Remote
+                    </button>
+                )}
 
                 {isDuration && (
                     <button
