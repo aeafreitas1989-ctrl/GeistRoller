@@ -265,6 +265,7 @@ export const SpellcastingPopup = ({
     const [fateDurationBonus, setFateDurationBonus] = useState(0);
     const [matterDurationMana, setMatterDurationMana] = useState(false);
     const [specialRangeMode, setSpecialRangeMode] = useState("none");
+    const [remoteRange, setRemoteRange] = useState(false);
     const [sympatheticWithstand, setSympatheticWithstand] = useState(0);
     const [withstandTrait, setWithstandTrait] = useState("none");
     const [withstandValue, setWithstandValue] = useState(0);
@@ -337,6 +338,7 @@ export const SpellcastingPopup = ({
         setFateDurationBonus(0);
         setMatterDurationMana(false);
         setSpecialRangeMode("none");
+        setRemoteRange(false);
         setSympatheticWithstand(0);
         setWithstandTrait("none");
         setWithstandValue(0);
@@ -409,14 +411,14 @@ export const SpellcastingPopup = ({
         if (!value.advanced) return sum;
         if (key === "duration" && lastingDuration) return sum;
         if (key === "duration" && matterDurationMana && arcanum === "Matter") return sum;
-        if (key === "range") return sum + Math.max(1, Number(value.level) || 1);
         return sum + 1;
     }, 0);
     const indefiniteReach = !lastingDuration && factors.duration.advanced && factors.duration.level === 6 ? 1 : 0;
     const activeSpellReachSurcharge = Math.max(0, activeSpellCount - gnosis + 1);
     const changePrimaryReach = overridePrimaryFactor && !!primaryFactor ? 1 : 0;
+    const remoteRangeReach = remoteRange && factors.range.advanced && specialRangeMode === "none" ? 1 : 0;
     const specialRangeReach = specialRangeMode !== "none" ? 1 : 0;
-    const totalReachUsed = advancedReachUsed + indefiniteReach + changePrimaryReach + activeSpellReachSurcharge + spellReach + specialRangeReach;
+    const totalReachUsed = advancedReachUsed + indefiniteReach + changePrimaryReach + activeSpellReachSurcharge + spellReach + remoteRangeReach + specialRangeReach;
     const reachRemaining = freeReach - totalReachUsed;
     const primaryFreeLevels = Math.max(0, baseArcanumDots - 1);
     const effectivePrimaryFactor = primaryFactor;
@@ -565,15 +567,18 @@ export const SpellcastingPopup = ({
         setFactors((prev) => ({ ...prev, [factorName]: { ...prev[factorName], ...updates } }));
     };
     const getMaxLevel = (factorName, isAdvanced) => {
-        if (factorName === "casting") return 1;
-        if (factorName === "range") return isAdvanced ? 2 : 1;
+        if (factorName === "casting" || factorName === "range") return 1;
         return FACTOR_LEVELS[factorName]?.[isAdvanced ? "advanced" : "standard"]?.length || 1;
     };
     const getDisplayedDurationLevel = () => {
         const max = FACTOR_LEVELS.duration[factors.duration.advanced ? "advanced" : "standard"]?.length || 1;
         return Math.min(max, factors.duration.level + fateDurationBonus);
     };
-    const activateSpecialRange = (mode) => setSpecialRangeMode((prev) => (prev === mode ? "none" : mode));
+    const activateSpecialRange = (mode) => {
+        const nextMode = specialRangeMode === mode ? "none" : mode;
+        if (nextMode !== "none") setRemoteRange(false);
+        setSpecialRangeMode(nextMode);
+    };
     const getPrimaryFactorLabel = (factorName) => {
         if (factorName === "potency") return "Potency";
         if (factorName === "duration") return "Duration";
@@ -594,7 +599,7 @@ export const SpellcastingPopup = ({
         }
         if (factorName === "range") {
             if (!isAdvanced) return "Touch Range / Self";
-            return factor.level >= 2 ? "Remote Range" : "Sensory Range";
+            return remoteRange ? "Remote Range" : "Sensory Range";
         }
         if (factorName === "duration" && lastingDuration) return "Lasting";
         const levels = FACTOR_LEVELS[factorName]?.[isAdvanced ? "advanced" : "standard"];
@@ -719,6 +724,7 @@ export const SpellcastingPopup = ({
         if (indefiniteReach > 0) reachCategories.push(`Indefinite Duration +${indefiniteReach}`);
         if (changePrimaryReach > 0) reachCategories.push(`Primary Factor Override → ${getPrimaryFactorLabel(primaryFactor)} +${changePrimaryReach}`);
         if (spellReach > 0) reachCategories.push(`Spell Options +${spellReach}`);
+        if (remoteRangeReach > 0) reachCategories.push(`Remote Range +${remoteRangeReach}`);
         if (specialRangeReach > 0) reachCategories.push(`Sympathetic Casting +${specialRangeReach}`);
         if (activeSpellReachSurcharge > 0) reachCategories.push(`Active Spell surcharge +${activeSpellReachSurcharge}`);
         const reachBreakdownLine = reachCategories.length ? `Reach: ${reachCategories.join(", ")}` : "";
@@ -856,7 +862,7 @@ export const SpellcastingPopup = ({
         const description = getFactorDescription(factorName);
         const isDuration = factorName === "duration";
         const isRange = factorName === "range";
-        const paidLevels = hasLevels && !isRange ? Math.max(0, f.level - 1 - freeLevelsFromPrimary) : 0;
+        const paidLevels = hasLevels ? Math.max(0, f.level - 1 - freeLevelsFromPrimary) : 0;
         const canTogglePrimary = !(isSelectedPrimary || (factorName === "scale" && !overridePrimaryFactor) || (defaultPrimaryFactor && !overridePrimaryFactor));
         const standardOrAdvancedDisabled = (isRange && specialRangeMode !== "none") || (isDuration && lastingDuration);
         return (
@@ -878,6 +884,7 @@ export const SpellcastingPopup = ({
                 overridePrimaryFactor={overridePrimaryFactor}
                 onToggleStandard={() => {
                     if (isDuration) setLastingDuration(false);
+                    if (isRange) setRemoteRange(false);
                     updateFactor(factorName, { advanced: false, ...(hasLevels ? { level: 1 } : {}) });
                 }}
                 onToggleAdvanced={() => {
@@ -919,6 +926,11 @@ export const SpellcastingPopup = ({
                 canUseTimeSympathetic={canUseTimeSympathetic}
                 specialRangeMode={specialRangeMode}
                 onActivateSpecialRange={activateSpecialRange}
+                remoteRange={remoteRange}
+                onToggleRemoteRange={() => {
+                    if (!factors.range.advanced || specialRangeMode !== "none") return;
+                    setRemoteRange((prev) => !prev);
+                }}
                 sympatheticWithstand={sympatheticWithstand}
                 onDecreaseSympatheticWithstand={() => setSympatheticWithstand(Math.max(0, sympatheticWithstand - 1))}
                 onIncreaseSympatheticWithstand={() => setSympatheticWithstand(Math.min(5, sympatheticWithstand + 1))}
@@ -976,12 +988,13 @@ export const SpellcastingPopup = ({
                                 <span className="text-zinc-400">Free Reach: <span className="text-teal-400 font-mono">{freeReach}</span><span className="text-zinc-600 ml-1">({reachArcanumDots} - {practiceDots} + 1{effectiveSpellType === "rote" ? "; Rote uses 5" : ""})</span></span>
                                 <span className={`font-mono ${reachRemaining >= 0 ? "text-teal-400" : "text-red-400"}`}>{reachRemaining >= 0 ? `${reachRemaining} remaining` : `${Math.abs(reachRemaining)} over`}</span>
                             </div>
-                            {(advancedReachUsed > 0 || indefiniteReach > 0 || changePrimaryReach > 0 || activeSpellReachSurcharge > 0 || spellReach > 0 || specialRangeReach > 0) && (
+                            {(advancedReachUsed > 0 || indefiniteReach > 0 || changePrimaryReach > 0 || activeSpellReachSurcharge > 0 || spellReach > 0 || remoteRangeReach > 0 || specialRangeReach > 0) && (
                                 <div className="pt-1 border-t border-zinc-700/50 space-y-1 text-xs">
                                     {advancedReachUsed > 0 && <div className="flex justify-between"><span className="text-zinc-500">Advanced Factors</span><span className="font-mono text-amber-400">+{advancedReachUsed} Reach</span></div>}
                                     {indefiniteReach > 0 && <div className="flex justify-between"><span className="text-zinc-500">Indefinite Duration</span><span className="font-mono text-amber-400">+{indefiniteReach} Reach</span></div>}
                                     {changePrimaryReach > 0 && <div className="flex justify-between"><span className="text-zinc-500">Override Primary Factor</span><span className="font-mono text-amber-400">+{changePrimaryReach} Reach</span></div>}
                                     {spellReach > 0 && <div className="flex justify-between"><span className="text-zinc-500">Spell Reach</span><span className="font-mono text-amber-400">+{spellReach} Reach</span></div>}
+                                    {remoteRangeReach > 0 && <div className="flex justify-between"><span className="text-zinc-500">Remote Range</span><span className="font-mono text-amber-400">+{remoteRangeReach} Reach</span></div>}
                                     {specialRangeReach > 0 && <div className="flex justify-between"><span className="text-zinc-500">Sympathetic Casting</span><span className="font-mono text-amber-400">+{specialRangeReach} Reach</span></div>}
                                     {activeSpellReachSurcharge > 0 && <div className="flex justify-between"><span className="text-zinc-500">Active Spell surcharge</span><span className="font-mono text-amber-400">+{activeSpellReachSurcharge} Reach</span></div>}
                                     <div className="flex justify-between pt-1 border-t border-zinc-700/50"><span className="text-zinc-400">Total Reach Used</span><span className="font-mono text-zinc-200">{totalReachUsed}</span></div>
@@ -996,7 +1009,7 @@ export const SpellcastingPopup = ({
                             <span /><span>Factor</span><span className="text-center">Std</span><span className="text-center">Adv</span><span className="text-center">Lvl</span><span>Effect</span>
                         </div>
                         {renderFactorRow("casting", "Casting Time", false)}
-                        {renderFactorRow("range", "Range", true)}
+                        {renderFactorRow("range", "Range", false)}
                         {renderFactorRow("potency", "Potency", true)}
                         {renderFactorRow("duration", "Duration", true)}
                         {renderFactorRow("scale", "Scale", true)}
