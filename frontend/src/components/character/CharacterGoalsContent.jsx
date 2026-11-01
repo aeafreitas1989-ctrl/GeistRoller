@@ -71,7 +71,7 @@ export const CharacterGoalsContent = ({
                             variant="ghost"
                             size="sm"
                             className="h-7 px-2 text-[10px] text-zinc-400 hover:text-zinc-200"
-                            onClick={() => fulfillAspiration("aspiration_long")}
+                            onClick={awardBeat}
                             data-testid="aspiration-long-progressed"
                         >
                             LONG-TERM
@@ -83,6 +83,15 @@ export const CharacterGoalsContent = ({
                             }
                             className="h-7 input-geist text-xs flex-1"
                         />
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-[10px] text-zinc-400 hover:text-zinc-200"
+                            onClick={() => fulfillAspiration("aspiration_long")}
+                            data-testid="aspiration-long-fulfilled"
+                        >
+                            Fulfil
+                        </Button>
                     </div>
 
                     {isMage ? (
@@ -109,7 +118,7 @@ export const CharacterGoalsContent = ({
                                         variant="ghost"
                                         size="sm"
                                         className="h-7 px-2 text-[10px] text-zinc-400 hover:text-violet-300"
-                                        onClick={() => fulfillObsession(index)}
+                                        onClick={awardArcaneBeat}
                                         data-testid={`obsession-${index}-progressed`}
                                     >
                                         OBSESSION {index + 1}
@@ -126,12 +135,11 @@ export const CharacterGoalsContent = ({
                                     <Button
                                         variant="ghost"
                                         size="sm"
-                                        className="h-7 w-7 p-0 text-zinc-500 hover:text-red-400"
-                                        onClick={() => removeObsession(index)}
-                                        disabled={obsessions.length <= 1}
-                                        data-testid={`obsession-${index}-remove`}
+                                        className="h-7 px-2 text-[10px] text-violet-400 hover:text-violet-300"
+                                        onClick={() => fulfillObsession(index)}
+                                        data-testid={`obsession-${index}-fulfilled`}
                                     >
-                                        <X className="w-3 h-3" />
+                                        Fulfil
                                     </Button>
                                 </div>
                             ))}
