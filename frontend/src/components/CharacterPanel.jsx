@@ -6,6 +6,8 @@ import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useLiveCharacterTool } from "../hooks/useLiveCharacterTool";
+import { buildLiveCharacterState } from "../utils/liveCharacterState";
 import {
     Select,
     SelectContent,
@@ -109,6 +111,15 @@ export const CharacterPanel = ({
         notes: false,
     });
     const [pendingChanges, setPendingChanges] = useState({});
+    const [draftCharacterId, setDraftCharacterId] = useState(
+        activeCharacter?.id
+    );
+    
+    // Prevent one character's unsaved edits appearing on another character.
+    if (draftCharacterId !== activeCharacter?.id) {
+        setDraftCharacterId(activeCharacter?.id);
+        setPendingChanges({});
+    }
     const [showMeritDialog, setShowMeritDialog] = useState(false);
     const [newMeritName, setNewMeritName] = useState("");
     const [newMeritDots, setNewMeritDots] = useState(1);
@@ -2130,6 +2141,23 @@ export const CharacterPanel = ({
     const maxDotsForMerit = selectedMerit?.maxDots || 5;
     const isFixedDotMerit = minDotsForMerit === maxDotsForMerit;
 
+    useLiveCharacterTool(() =>
+        buildLiveCharacterState(
+            activeCharacter
+                ? { ...activeCharacter, ...pendingChanges }
+                : null,
+            {
+                healthBoxes,
+                maxHealth,
+                woundPenalty,
+                isDeadTrack,
+                maxWillpower: calculateWillpowerMax(),
+                hasUnsavedChanges: hasPendingChanges,
+                previousParadoxRolls: getMageSceneParadoxRolls(),
+            }
+        )
+    );
+    
     if (!activeCharacter) {
         return (
             <div className="p-6" data-testid="character-panel">
