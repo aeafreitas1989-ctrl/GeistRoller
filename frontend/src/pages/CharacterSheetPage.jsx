@@ -6,7 +6,7 @@ import axios from "axios";
 import { toast } from "sonner";
 import { normalizeHealthBoxes, getHealthCounts, buildHealthBoxes } from "@/components/character/StatComponents";
 import { advanceSceneTime, sleepUntilMorning } from "@/utils/timeUtils";
-
+import { useCharacterSync } from "@/hooks/useCharacterSync";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -17,6 +17,24 @@ export const CharacterSheetPage = () => {
 
     const diceRollerRef = useRef(null);
     const lastCharacterStorageKey = "geistroller-last-active-character-id";
+
+    useCharacterSync(activeCharacter?.id, (updatedCharacter) => {
+        setActiveCharacter((current) => {
+            if (!current || current.id !== updatedCharacter.id) {
+                return current;
+            }
+
+            return updatedCharacter;
+        });
+
+        setCharacters((currentCharacters) =>
+            currentCharacters.map((character) =>
+                character.id === updatedCharacter.id
+                    ? updatedCharacter
+                    : character
+            )
+        );
+    });
 
     const triggerDiceRoll = (config) => {
         setRollColumnCollapsed(false);
