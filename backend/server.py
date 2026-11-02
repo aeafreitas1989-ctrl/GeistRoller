@@ -1,12 +1,15 @@
 from pathlib import Path
-from typing import List
+from typing import Dict, List, Set
+from datetime import datetime, timezone
+import asyncio
+import json
 import logging
 import os
 
 from dotenv import load_dotenv
 from fastapi import APIRouter, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from database import client, db
@@ -37,6 +40,57 @@ app = FastAPI(title="GeistRoller API")
 api_router = APIRouter(prefix="/api")
 
 
+_character_subscribers: Dict[str, Set[asyncio.Queue]] = {}
+
+
+def _subscribe_to_character(character_id: str) -> asyncio.Queue:
+    queue: asyncio.Queue = asyncio.Queue(maxsize=20)
+    _character_subscribers.setdefault(character_id, set()).add(queue)
+    return queue
+
+
+def _unsubscribe_from_character(character_id: str, queue: asyncio.Queue) -> None:
+    subscribers = _character_subscribers.get(character_id)
+    if not subscribers:
+        return
+
+    subscribers.discard(queue)
+
+    if not subscribers:
+        _character_subscribers.pop(character_id, None)
+
+
+def _publish_character_update(character: dict) -> None:
+    character_id = character.get("id")
+    if not character_id:
+        return
+
+    subscribers = list(_character_subscribers.get(character_id, set()))
+    if not subscribers:
+        return
+
+    payload = json.dumps(
+        {
+            "type": "character_updated",
+            "character": character,
+        },
+        default=str,
+        separators=(",", ":"),
+    )
+
+    for queue in subscribers:
+        if queue.full():
+            try:
+                queue.get_nowait()
+            except asyncio.QueueEmpty:
+                pass
+
+        try:
+            queue.put_nowait(payload)
+        except asyncio.QueueFull:
+            pass
+
+
 @api_router.get("/")
 async def api_root():
     return {"status": "ok", "service": "GeistRoller API"}
@@ -62,6 +116,50 @@ async def get_character(character_id: str):
     if not character:
         raise HTTPException(status_code=404, detail="Character not found")
     return character
+
+
+@api_router.get("/characters/{character_id}/events")
+async def character_events(character_id: str):
+    character = await db.characters.find_one({"id": character_id}, {"_id": 0})
+    if not character:
+        raise HTTPException(status_code=404, detail="Character not found")
+
+    queue = _subscribe_to_character(character_id)
+
+    async def event_stream():
+        try:
+            initial_payload = json.dumps(
+                {
+                    "type": "character_updated",
+                    "character": character,
+                },
+                default=str,
+                separators=(",", ":"),
+            )
+
+            yield "retry: 2000\n\n"
+            yield f"event: character_updated\ndata: {initial_payload}\n\n"
+
+            while True:
+                try:
+                    payload = await asyncio.wait_for(queue.get(), timeout=20)
+                    yield f"event: character_updated\ndata: {payload}\n\n"
+                except asyncio.TimeoutError:
+                    yield ": keep-alive\n\n"
+        except asyncio.CancelledError:
+            raise
+        finally:
+            _unsubscribe_from_character(character_id, queue)
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @api_router.post("/characters", response_model=Character)
@@ -91,17 +189,25 @@ async def create_character(input: CharacterCreate):
 @api_router.put("/characters/{character_id}", response_model=Character)
 async def update_character(character_id: str, input: CharacterUpdate):
     update_data = input.model_dump(exclude_unset=True)
+
     if update_data:
+        update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+
         result = await db.characters.update_one(
             {"id": character_id},
             {"$set": update_data},
         )
+
         if result.matched_count == 0:
             raise HTTPException(status_code=404, detail="Character not found")
 
     character = await db.characters.find_one({"id": character_id}, {"_id": 0})
     if not character:
         raise HTTPException(status_code=404, detail="Character not found")
+
+    if update_data:
+        _publish_character_update(character)
+
     return character
 
 
