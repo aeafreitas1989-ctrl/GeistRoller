@@ -86,6 +86,13 @@ import {
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
+const LIVE_STATE_AUTO_SAVE_FIELDS = new Set([
+    "mana",
+    "plasm",
+    "willpower",
+    "active_mage_armor",
+]);
+
 export const CharacterPanel = ({
     characters,
     activeCharacter,
@@ -751,6 +758,11 @@ export const CharacterPanel = ({
 
         if (requestFieldTraitPurchase(field, value, currentValue)) return;
         if (requestListTraitPurchase(field, value, currentValue)) return;
+
+        if (LIVE_STATE_AUTO_SAVE_FIELDS.has(field)) {
+            void commitCharacterUpdate({ [field]: value });
+            return;
+        }
 
         setPendingChanges(prev => ({ ...prev, [field]: value }));
     };
