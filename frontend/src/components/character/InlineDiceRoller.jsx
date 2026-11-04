@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { Dices, ChevronDown, ChevronRight, Skull } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -99,6 +100,7 @@ export const InlineDiceRoller = ({
     const [selectedEquipKey, setSelectedEquipKey] = useState("__none__");
     const [isRolling, setIsRolling] = useState(false);
     const [result, setResult] = useState(null);
+    const [pendingFailureChoice, setPendingFailureChoice] = useState(null);
     const [expanded, setExpanded] = useState(false);
     useEffect(() => {
         if (forceExpanded) setExpanded(true);
@@ -465,6 +467,14 @@ export const InlineDiceRoller = ({
         }
     }, [brokenConditionActive]);
 
+    const resolveFailureChoice = (convert) => {
+        if (!pendingFailureChoice) return;
+    
+        const { resolve } = pendingFailureChoice;
+        setPendingFailureChoice(null);
+        resolve(convert);
+    };
+    
     const rollDice = async () => {
         if (rollType === "spellcasting") {
             if (!spellArcanum) {
@@ -538,6 +548,26 @@ export const InlineDiceRoller = ({
             });
 
             await new Promise(resolve => setTimeout(resolve, 300));
+            
+            if (
+                response.data.successes === 0 &&
+                !response.data.is_dramatic_failure
+            ) {
+                const convert = await new Promise((resolve) => {
+                    setPendingFailureChoice({ resolve });
+                });
+            
+                if (convert) {
+                    response.data = {
+                        ...response.data,
+                        is_dramatic_failure: true,
+                        beat_awarded: true,
+                        voluntary_dramatic_failure: true,
+                        description: "Voluntary Dramatic Failure",
+                    };
+                }
+            }
+            
             setResult(response.data);
 
             // Build roll description for chat
@@ -612,7 +642,11 @@ export const InlineDiceRoller = ({
             onRollComplete?.();
 
             if (response.data.beat_awarded) {
-                await onAwardBeat();
+                await onAwardBeat(
+                    response.data.voluntary_dramatic_failure
+                        ? "Voluntary Dramatic Failure"
+                        : "Chance Die Dramatic Failure"
+                );
                 toast.warning("Dramatic Failure: Beat gained");
             } else if (response.data.is_dramatic_failure) {
                 toast.error("Dramatic Failure!");
@@ -628,6 +662,38 @@ export const InlineDiceRoller = ({
 
     return (
         <div className="bg-zinc-900/50 border border-zinc-800 rounded-sm" data-testid="inline-dice-roller">
+            
+            <Dialog open={!!pendingFailureChoice}>
+                <DialogContent className="bg-zinc-950 border-zinc-800 text-zinc-100">
+                    <DialogHeader>
+                        <DialogTitle>Failed Roll</DialogTitle>
+                        <DialogDescription className="text-zinc-400">
+                            Accept the Failure or voluntarily convert it
+                            into a Dramatic Failure?
+                        </DialogDescription>
+                    </DialogHeader>
+    
+                    <div className="space-y-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full border-zinc-700"
+                            onClick={() => resolveFailureChoice(false)}
+                        >
+                            Accept Failure
+                        </Button>
+    
+                        <Button
+                            type="button"
+                            className="w-full bg-rose-900 hover:bg-rose-800 text-white"
+                            onClick={() => resolveFailureChoice(true)}
+                        >
+                            Dramatic Failure (+1 Beat)
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
             <button
                 onClick={() => setExpanded(!expanded)}
                 className="w-full p-2 flex items-center justify-between text-xs font-mono uppercase tracking-wider text-zinc-400 hover:bg-zinc-800/50"
