@@ -1,7 +1,6 @@
-import { Minus, Plus, Star, X } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-
 
 export const CharacterGoalsContent = ({
     isMage,
@@ -71,7 +70,7 @@ export const CharacterGoalsContent = ({
                             variant="ghost"
                             size="sm"
                             className="h-7 px-2 text-[10px] text-zinc-400 hover:text-zinc-200"
-                            onClick={awardBeat}
+                            onClick={() => awardBeat(`Long-Term Aspiration progress: ${getValue("aspiration_long") || "Unnamed aspiration"}`)}
                             data-testid="aspiration-long-progressed"
                         >
                             LONG-TERM
@@ -118,7 +117,7 @@ export const CharacterGoalsContent = ({
                                         variant="ghost"
                                         size="sm"
                                         className="h-7 px-2 text-[10px] text-zinc-400 hover:text-violet-300"
-                                        onClick={awardArcaneBeat}
+                                        onClick={() => awardArcaneBeat(`Obsession progress: ${obsession || "Unnamed obsession"}`)}
                                         data-testid={`obsession-${index}-progressed`}
                                     >
                                         OBSESSION {index + 1}
