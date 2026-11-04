@@ -5,6 +5,7 @@ import asyncio
 import json
 import logging
 import os
+import uuid
 
 from dotenv import load_dotenv
 from fastapi import APIRouter, FastAPI, HTTPException
@@ -185,25 +186,173 @@ async def create_character(input: CharacterCreate):
     await db.characters.insert_one(doc)
     return character
 
+XP_TRACK_FIELDS = (
+    "experience",
+    "arcane_experience",
+    "beats",
+    "arcane_beats",
+)
+
+
+def build_xp_history_entry(previous, updates, reason=""):
+    before = {
+        key: int(previous.get(key, 0) or 0)
+        for key in XP_TRACK_FIELDS
+    }
+
+    after = {
+        key: int(updates.get(key, before[key]) or 0)
+        for key in XP_TRACK_FIELDS
+    }
+
+    changes = {
+        key: after[key] - before[key]
+        for key in XP_TRACK_FIELDS
+    }
+
+    if not any(changes.values()):
+        return None
+
+    old_ledger = previous.get("advancement_ledger") or []
+    new_ledger = updates.get("advancement_ledger")
+
+    source = None
+
+    if (
+        isinstance(new_ledger, list)
+        and len(new_ledger) > len(old_ledger)
+        and isinstance(new_ledger[-1], dict)
+    ):
+        source = new_ledger[-1]
+
+    movements = []
+    cost = (source or {}).get("cost") or {}
+    is_purchase = (source or {}).get("type") == "xp_purchase"
+
+    for key in ("experience", "arcane_experience"):
+        spent = (
+            max(0, int(cost.get(key, 0) or 0))
+            if is_purchase else 0
+        )
+
+        if spent:
+            movements.append({
+                "resource": key,
+                "amount": -spent,
+            })
+
+        remaining = changes[key] + spent
+
+        if remaining:
+            movements.append({
+                "resource": key,
+                "amount": remaining,
+            })
+
+    for beat_key, xp_key in (
+        ("beats", "experience"),
+        ("arcane_beats", "arcane_experience"),
+    ):
+        if changes[xp_key] > 0 and changes[beat_key] == -4:
+            movements.extend([
+                {"resource": beat_key, "amount": 1},
+                {"resource": beat_key, "amount": -5},
+            ])
+        elif changes[beat_key]:
+            movements.append({
+                "resource": beat_key,
+                "amount": changes[beat_key],
+            })
+
+    if reason:
+        label = reason
+    elif source:
+        label = source.get("label") or "XP transaction"
+    elif changes["experience"] > 0 and changes["beats"] == -4:
+        label = "5 Beats converted to 1 XP"
+    elif (
+        changes["arcane_experience"] > 0
+        and changes["arcane_beats"] == -4
+    ):
+        label = "5 Arcane Beats converted to 1 Arcane XP"
+    elif changes["beats"]:
+        label = "Beat gained" if changes["beats"] > 0 else "Beat removed"
+    elif changes["arcane_beats"]:
+        label = (
+            "Arcane Beat gained"
+            if changes["arcane_beats"] > 0
+            else "Arcane Beat removed"
+        )
+    else:
+        label = "XP adjustment"
+
+    return {
+        "id": str(uuid.uuid4()),
+        "date": datetime.now(timezone.utc).isoformat(),
+        "type": "xp_transaction",
+        "label": label,
+        "note": (source or {}).get("note", ""),
+        "source_ledger_id": (source or {}).get("id"),
+        "movements": movements,
+        "balances": after,
+    }
 
 @api_router.put("/characters/{character_id}", response_model=Character)
 async def update_character(character_id: str, input: CharacterUpdate):
     update_data = input.model_dump(exclude_unset=True)
+    reason = (update_data.pop("xp_reason", "") or "").strip()
 
-    if update_data:
-        update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    previous = await db.characters.find_one(
+        {"id": character_id},
+        {"_id": 0},
+    )
 
-        result = await db.characters.update_one(
-            {"id": character_id},
-            {"$set": update_data},
+    if not previous:
+        raise HTTPException(
+            status_code=404,
+            detail="Character not found",
         )
 
-        if result.matched_count == 0:
-            raise HTTPException(status_code=404, detail="Character not found")
+    if update_data:
+        # Preserve saved history when importing a character.
+        importing_history = "xp_history" in update_data
 
-    character = await db.characters.find_one({"id": character_id}, {"_id": 0})
+        transaction = (
+            None
+            if importing_history
+            else build_xp_history_entry(
+                previous,
+                update_data,
+                reason,
+            )
+        )
+
+        update_data["updated_at"] = (
+            datetime.now(timezone.utc).isoformat()
+        )
+
+        operations = {"$set": update_data}
+
+        if transaction:
+            operations["$push"] = {
+                "xp_history": transaction,
+            }
+
+        await db.characters.update_one(
+            {"id": character_id},
+            operations,
+        )
+
+    character = await db.characters.find_one(
+        {"id": character_id},
+        {"_id": 0},
+    )
+
     if not character:
-        raise HTTPException(status_code=404, detail="Character not found")
+        raise HTTPException(
+            status_code=404,
+            detail="Character not found",
+        )
 
     if update_data:
         _publish_character_update(character)
