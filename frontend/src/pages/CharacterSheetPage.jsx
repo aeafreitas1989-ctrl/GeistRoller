@@ -572,7 +572,7 @@ export const CharacterSheetPage = () => {
         const currentBeats = activeCharacter.beats || 0;
         const currentXP = activeCharacter.experience || 0;
         const newBeats = currentBeats + 1;
-        const updates = { conditions: newConditions };
+        const updates = { conditions: newConditions, xp_reason: `Condition resolved: ${condition.name || "Unnamed condition"}`, };
         if (newBeats >= 5) {
             updates.beats = newBeats - 5;
             updates.experience = currentXP + 1;
