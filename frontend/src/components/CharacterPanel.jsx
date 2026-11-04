@@ -3198,6 +3198,87 @@ export const CharacterPanel = ({
                     </Collapsible>
                 </div>
             </ScrollArea>
+
+            {/* Edit XP Transaction */}
+            <Dialog
+                open={!!xpEditDraft}
+                onOpenChange={(open) => {
+                    if (!open && !savingXPChange) {
+                        setXpEditDraft(null);
+                    }
+                }}
+            >
+                <DialogContent className="bg-zinc-900 border-zinc-700 max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="text-amber-300">
+                            Edit XP Transaction
+                        </DialogTitle>
+                        <DialogDescription className="text-zinc-400">
+                            Edit the transaction description and notes.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {xpEditDraft && (
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-xs text-zinc-400">
+                                    Description
+                                </label>
+                                <Input
+                                    value={xpEditDraft.label}
+                                    onChange={(e) =>
+                                        setXpEditDraft((prev) => ({
+                                            ...prev,
+                                            label: e.target.value,
+                                        }))
+                                    }
+                                    className="mt-1 input-geist text-sm"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="text-xs text-zinc-400">
+                                    Notes
+                                </label>
+                                <Textarea
+                                    value={xpEditDraft.note}
+                                    onChange={(e) =>
+                                        setXpEditDraft((prev) => ({
+                                            ...prev,
+                                            note: e.target.value,
+                                        }))
+                                    }
+                                    className="mt-1 bg-zinc-950 border-zinc-700 text-sm"
+                                    rows={3}
+                                />
+                            </div>
+
+                            <div className="flex justify-end gap-2">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    disabled={savingXPChange}
+                                    onClick={() => setXpEditDraft(null)}
+                                >
+                                    Cancel
+                                </Button>
+
+                                <Button
+                                    type="button"
+                                    disabled={
+                                        savingXPChange ||
+                                        !xpEditDraft.label?.trim()
+                                    }
+                                    onClick={saveXPEntryEdit}
+                                    className="bg-amber-800 hover:bg-amber-700 text-white"
+                                >
+                                    {savingXPChange ? "Saving..." : "Save Changes"}
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
             
             {/* Dice Roll Popup for Haunts */}
             <DiceRollPopup
