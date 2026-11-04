@@ -591,25 +591,51 @@ export const CharacterSheetPage = () => {
         toast.success(`Removed: ${condition.name}`);
     };
 
+
     const resolveCondition = async (conditionIndex) => {
         if (!activeCharacter) return;
+
         const conditions = activeCharacter.conditions || [];
         const condition = conditions[conditionIndex];
         if (!condition) return;
-        const newConditions = conditions.filter((_, i) => i !== conditionIndex);
-        const currentBeats = activeCharacter.beats || 0;
-        const currentXP = activeCharacter.experience || 0;
+
+        const isPersistent = Boolean(condition.persistent);
+        const currentBeats = Number(activeCharacter.beats) || 0;
+        const currentXP = Number(activeCharacter.experience) || 0;
         const newBeats = currentBeats + 1;
-        const updates = { conditions: newConditions, xp_reason: `Condition resolved: ${condition.name || "Unnamed condition"}`, };
-        if (newBeats >= 5) {
-            updates.beats = newBeats - 5;
-            updates.experience = currentXP + 1;
-            toast.success(`Resolved "${condition.name}": Beat gained! 5 Beats converted to 1 Experience!`);
-        } else {
-            updates.beats = newBeats;
-            toast.success(`Resolved "${condition.name}": Beat gained!`);
+
+        const updates = {
+            beats: newBeats >= 5 ? newBeats - 5 : newBeats,
+            xp_reason: isPersistent
+                ? `Persistent Condition Beat: ${condition.name || "Unnamed condition"}`
+                : `Condition resolved: ${condition.name || "Unnamed condition"}`,
+        };
+
+        // Only remove non-Persistent Conditions.
+        if (!isPersistent) {
+            updates.conditions = conditions.filter(
+                (_, index) => index !== conditionIndex
+            );
         }
+
+        // Convert 5 Beats into 1 Experience.
+        if (newBeats >= 5) {
+            updates.experience = currentXP + 1;
+        }
+
         await updateCharacter(updates);
+
+        const action = isPersistent
+            ? `Persistent Condition "${condition.name}" triggered`
+            : `Condition "${condition.name}" resolved`;
+
+        toast.success(
+            `${action}! ${
+                newBeats >= 5
+                    ? "5 Beats converted to 1 Experience!"
+                    : "Beat gained!"
+            }`
+        );
     };
 
     const updateCondition = async (conditionIndex, partialUpdate) => {
