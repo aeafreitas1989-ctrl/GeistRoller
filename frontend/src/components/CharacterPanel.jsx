@@ -1280,7 +1280,52 @@ export const CharacterPanel = ({
                 setRecordingManualXP(false);
             }
         };
-    
+
+    const saveXPEntryEdit = async () => {
+        if (!xpEditDraft || savingXPChange) return;
+
+        const label = (xpEditDraft.label || "").trim();
+        if (!label) {
+            toast.error("Transaction description cannot be empty.");
+            return;
+        }
+
+        const history = getValue("xp_history") || [];
+        const original = history.find(
+            (entry) => entry.id === xpEditDraft.id
+        );
+
+        if (!original || original.source_ledger_id) {
+            toast.error("This transaction cannot be edited.");
+            return;
+        }
+
+        const updatedHistory = history.map((entry) =>
+            entry.id === xpEditDraft.id
+                ? {
+                    ...entry,
+                    label,
+                    note: xpEditDraft.note || "",
+                }
+                : entry
+        );
+
+        setSavingXPChange(true);
+
+        try {
+            await onUpdateCharacter({
+                xp_history: updatedHistory,
+            });
+
+            setXpEditDraft(null);
+            toast.success("Transaction updated.");
+        } catch (error) {
+            toast.error("Failed to update transaction.");
+        } finally {
+            setSavingXPChange(false);
+        }
+    };
+
     const getXPTrackerEntries = () => {
         const history = getValue("xp_history") || [];
         const ledger = getValue("advancement_ledger") || [];
