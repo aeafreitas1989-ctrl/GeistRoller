@@ -592,6 +592,7 @@ export const CharacterSheetPage = () => {
     };
 
 
+
     const resolveCondition = async (conditionIndex) => {
         if (!activeCharacter) return;
 
@@ -600,27 +601,34 @@ export const CharacterSheetPage = () => {
         if (!condition) return;
 
         const isPersistent = Boolean(condition.persistent);
-        const currentBeats = Number(activeCharacter.beats) || 0;
-        const currentXP = Number(activeCharacter.experience) || 0;
+        const isArcane = condition.beat_type === "arcane";
+
+        const beatField = isArcane ? "arcane_beats" : "beats";
+        const xpField = isArcane ? "arcane_experience" : "experience";
+        const beatLabel = isArcane ? "Arcane Beat" : "Beat";
+        const xpLabel = isArcane ? "Arcane Experience" : "Experience";
+
+        const currentBeats = Number(activeCharacter[beatField]) || 0;
+        const currentXP = Number(activeCharacter[xpField]) || 0;
         const newBeats = currentBeats + 1;
 
         const updates = {
-            beats: newBeats >= 5 ? newBeats - 5 : newBeats,
+            [beatField]: newBeats >= 5 ? newBeats - 5 : newBeats,
             xp_reason: isPersistent
-                ? `Persistent Condition Beat: ${condition.name || "Unnamed condition"}`
-                : `Condition resolved: ${condition.name || "Unnamed condition"}`,
+                ? `Persistent Condition: ${condition.name || "Unnamed condition"} (${beatLabel})`
+                : `Condition resolved: ${condition.name || "Unnamed condition"} (${beatLabel})`,
         };
 
-        // Only remove non-Persistent Conditions.
+        // Persistent Conditions remain active.
         if (!isPersistent) {
             updates.conditions = conditions.filter(
                 (_, index) => index !== conditionIndex
             );
         }
 
-        // Convert 5 Beats into 1 Experience.
+        // Convert 5 Beats into the corresponding Experience.
         if (newBeats >= 5) {
-            updates.experience = currentXP + 1;
+            updates[xpField] = currentXP + 1;
         }
 
         await updateCharacter(updates);
@@ -632,8 +640,8 @@ export const CharacterSheetPage = () => {
         toast.success(
             `${action}! ${
                 newBeats >= 5
-                    ? "5 Beats converted to 1 Experience!"
-                    : "Beat gained!"
+                    ? `5 ${beatLabel}s converted to 1 ${xpLabel}!`
+                    : `1 ${beatLabel} gained!`
             }`
         );
     };
