@@ -50,7 +50,12 @@ const SPELL_EXCEPTIONAL_CHOICES = [
     },
 ];
 
-export const DiceRoller = forwardRef(({ embedded = false, collapsed = false, onToggleCollapsed = null }, ref) => {
+export const DiceRoller = forwardRef(({
+    embedded = false,
+    collapsed = false,
+    onToggleCollapsed = null,
+    onAwardDramaticFailure,
+}, ref) => {
     const [isOpen, setIsOpen] = useState(false);
     const [isMinimized, setIsMinimized] = useState(false);
     const [pool, setPool] = useState(3);
@@ -68,6 +73,7 @@ export const DiceRoller = forwardRef(({ embedded = false, collapsed = false, onT
     const [rollSequence, setRollSequence] = useState([]);
     const [historyToken, setHistoryToken] = useState(0);
     const [pendingSpellExceptionalChoice, setPendingSpellExceptionalChoice] = useState(null);
+    const [pendingDramaticFailure, setPendingDramaticFailure] = useState(null);
 
     // External roll trigger
     const pendingRollRef = useRef(null);
@@ -114,6 +120,18 @@ export const DiceRoller = forwardRef(({ embedded = false, collapsed = false, onT
                 onResult: options.onResult,
             };
 
+            // A failed action must be accepted or converted
+            // before being recorded in Recent Rolls.
+            if (
+                typeof onAwardDramaticFailure === "function" &&
+                response.data.successes === 0 &&
+                !response.data.is_dramatic_failure &&
+                !completedPayload.config?.countOnly
+            ) {
+                setPendingDramaticFailure(completedPayload);
+                return;
+            }
+            
             if (
                 response.data?.is_exceptional &&
                 completedPayload.config?.requiresSpellExceptionalChoice &&
@@ -151,6 +169,16 @@ export const DiceRoller = forwardRef(({ embedded = false, collapsed = false, onT
                 });
             }
 
+            if (
+                response.data.beat_awarded &&
+                typeof onAwardDramaticFailure === "function"
+            ) {
+                await onAwardDramaticFailure({
+                    spellcasting: completedPayload.config?.summaryKey === "spell",
+                    automatic: true,
+                });
+            }
+            
             if (response.data.is_dramatic_failure) {
                 toast.error("Dramatic Failure!", {
                     description: "The spirits turn against you...",
@@ -172,7 +200,7 @@ export const DiceRoller = forwardRef(({ embedded = false, collapsed = false, onT
         } finally {
             setIsRolling(false);
         }
-    }, []);
+    }, [onAwardDramaticFailure]);
 
     useImperativeHandle(ref, () => ({
         rollWithConfig: (config) => {
@@ -688,6 +716,62 @@ export const DiceRoller = forwardRef(({ embedded = false, collapsed = false, onT
         );
     }, [rollSequence, result, lastRollConfig, pool, again, chance, countOnly, rollLabel]);
 
+    const resolveDramaticFailureChoice = async (convert) => {
+        const pending = pendingDramaticFailure;
+        if (!pending) return;
+
+        setPendingDramaticFailure(null);
+
+        const finalResult = convert
+            ? {
+                ...pending.result,
+                is_dramatic_failure: true,
+                description: "Voluntary Dramatic Failure",
+            }
+            : pending.result;
+
+        if (convert && typeof onAwardDramaticFailure === "function") {
+            await onAwardDramaticFailure({
+                spellcasting: pending.config?.summaryKey === "spell",
+                automatic: false,
+            });
+        }
+
+        setResult(finalResult);
+
+        completedRollRef.current = {
+            ...pending,
+            result: finalResult,
+        };
+
+        if (pending.config?.summaryLabel) {
+            const entry = {
+                key: pending.config.summaryKey || pending.config.summaryLabel,
+                label: pending.config.summaryLabel,
+                result: finalResult,
+                config: pending.config,
+            };
+
+            setRollSequence((prev) => {
+                const index = prev.findIndex((item) => item.key === entry.key);
+
+                if (index >= 0) {
+                    const next = [...prev];
+                    next[index] = entry;
+                    return next;
+                }
+
+                return [...prev, entry];
+            });
+        }
+
+        setHistoryToken((prev) => prev + 1);
+
+        if (typeof pending.onResult === "function") {
+            await pending.onResult(finalResult);
+        }
+    };
+    
     const resolveSpellExceptionalChoice = (choice) => {
         if (!pendingSpellExceptionalChoice) return;
 
@@ -817,6 +901,41 @@ export const DiceRoller = forwardRef(({ embedded = false, collapsed = false, onT
             }
             data-testid="dice-roller-panel"
         >
+
+            <Dialog open={!!pendingDramaticFailure}>
+                <DialogContent className="bg-zinc-950 border-zinc-800 text-zinc-100">
+                    <DialogHeader>
+                        <DialogTitle>Failed Roll</DialogTitle>
+                        <DialogDescription className="text-zinc-400">
+                            Do you want to accept this Failure or voluntarily
+                            convert it into a Dramatic Failure?
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full border-zinc-700"
+                            onClick={() => resolveDramaticFailureChoice(false)}
+                        >
+                            Accept Failure
+                        </Button>
+
+                        <Button
+                            type="button"
+                            className="w-full bg-rose-900 hover:bg-rose-800 text-white"
+                            onClick={() => resolveDramaticFailureChoice(true)}
+                        >
+                            Dramatic Failure (+1 {
+                                pendingDramaticFailure?.config?.summaryKey === "spell"
+                                    ? "Arcane Beat"
+                                    : "Beat"
+                            })
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>            
             <Dialog open={!!pendingSpellExceptionalChoice}>
                 <DialogContent className="bg-zinc-950 border-zinc-800 text-zinc-100">
                     <DialogHeader>
