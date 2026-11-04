@@ -1,27 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-    Plus,
-    ChevronDown,
-    ChevronRight,
-} from "lucide-react";
-
+import { Plus, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
-
-import {
-    Collapsible,
-    CollapsibleContent,
-    CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 import {
     Dialog,
@@ -74,6 +57,7 @@ export const ConditionsSection = ({
     const [customConditionName, setCustomConditionName] = useState("");
     const [customConditionDesc, setCustomConditionDesc] = useState("");
     const [conditionOrigin, setConditionOrigin] = useState("");
+    const [conditionBeatType, setConditionBeatType] = useState("regular");
     const [conditionTarget, setConditionTarget] = useState("character");
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedFilters, setSelectedFilters] = useState([]);
@@ -384,6 +368,8 @@ export const ConditionsSection = ({
         setSearchTerm("");
         setSelectedFilters([]);
         setConditionOrigin("");
+        setConditionBeatType("regular");
+        setConditionBeatType("regular");
         setConditionTarget("character");
         setCustomConditionName("");
         setCustomConditionDesc("");
