@@ -135,6 +135,7 @@ class Character(BaseModel):
     spent_experience: int = 0
     spent_arcane_experience: int = 0
     advancement_ledger: List[Dict[str, Any]] = Field(default_factory=list)
+    xp_history: List[Dict[str, Any]] = Field(default_factory=list)
     free_skill_specialty_slots: int = 0
     free_praxis_slots: int = 0
     remembrance_trait_type: str = ""
@@ -257,6 +258,8 @@ class CharacterUpdate(BaseModel):
     spent_experience: Optional[int] = None
     spent_arcane_experience: Optional[int] = None
     advancement_ledger: Optional[List[Dict[str, Any]]] = None
+    xp_history: Optional[List[Dict[str, Any]]] = None
+    xp_reason: Optional[str] = None
     free_skill_specialty_slots: Optional[int] = None
     free_praxis_slots: Optional[int] = None
     remembrance_trait_type: Optional[str] = None
