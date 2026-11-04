@@ -449,6 +449,8 @@ export const ConditionsSection = ({
                         condition.persistent
                     ),
 
+                beat_type: conditionBeatType,
+
                 splat:
                     condition.splat ||
                     "",
@@ -500,6 +502,7 @@ export const ConditionsSection = ({
                 type: "custom",
                 group: "condition",
                 persistent: false,
+                beat_type: conditionBeatType,
                 splat: "Custom",
 
                 effect:
