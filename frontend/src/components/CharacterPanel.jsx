@@ -1281,51 +1281,204 @@ export const CharacterPanel = ({
             }
         };
 
-    const saveXPEntryEdit = async () => {
-        if (!xpEditDraft || savingXPChange) return;
+    const XP_TRACKER_RESOURCES = [
+        "experience",
+        "arcane_experience",
+        "beats",
+        "arcane_beats",
+    ];
 
-        const label = (xpEditDraft.label || "").trim();
-        if (!label) {
-            toast.error("Transaction description cannot be empty.");
+    const getXPTransactionTotals = (entry) => {
+        const totals = Object.fromEntries(
+            XP_TRACKER_RESOURCES.map((resource) => [resource, 0])
+        );
+
+        for (const movement of entry.movements || []) {
+            const { resource } = movement;
+            const amount = Number(movement.amount);
+
+            if (
+                !XP_TRACKER_RESOURCES.includes(resource) ||
+                !Number.isInteger(amount)
+            ) {
+                throw new Error("The transaction contains invalid XP movements.");
+            }
+
+            totals[resource] += amount;
+        }
+
+        return totals;
+    };
+
+    const isValidXPTrackerBalance = (resource, balance) =>
+        Number.isInteger(balance) &&
+        balance >= 0 &&
+        (!resource.endsWith("beats") || balance <= 4);
+
+    // Apply an edit or deletion as one character update. Supplying xp_history
+    // prevents the backend from recording this correction as a new transaction.
+    const applyXPTrackerCorrection = async (transactionId, editedEntry = null) => {
+        if (savingXPChange) return;
+
+        const history = activeCharacter?.xp_history || [];
+        const index = history.findIndex((entry) => entry.id === transactionId);
+
+        if (index < 0) {
+            toast.error("Transaction not found. Refresh and try again.");
             return;
         }
 
-        const history = getValue("xp_history") || [];
-        const original = history.find(
-            (entry) => entry.id === xpEditDraft.id
-        );
-
-        if (!original || original.source_ledger_id) {
-            toast.error("This transaction cannot be edited.");
+        const original = history[index];
+        if (
+            !original?.id ||
+            original.historical ||
+            original.source_ledger_id ||
+            original.type === "xp_purchase"
+        ) {
+            toast.error("Advancement transactions cannot be changed here.");
             return;
         }
 
-        const updatedHistory = history.map((entry) =>
-            entry.id === xpEditDraft.id
-                ? {
-                    ...entry,
-                    label,
-                    note: xpEditDraft.note || "",
-                }
-                : entry
-        );
-
-        setSavingXPChange(true);
+        const deleting = editedEntry === null;
+        let oldTotals;
+        let newTotals;
 
         try {
-            await onUpdateCharacter({
-                xp_history: updatedHistory,
-            });
-
-            setXpEditDraft(null);
-            toast.success("Transaction updated.");
+            oldTotals = getXPTransactionTotals(original);
+            newTotals = deleting
+                ? Object.fromEntries(XP_TRACKER_RESOURCES.map((key) => [key, 0]))
+                : getXPTransactionTotals(editedEntry);
         } catch (error) {
-            toast.error("Failed to update transaction.");
+            toast.error(error.message);
+            return;
+        }
+
+        const delta = Object.fromEntries(
+            XP_TRACKER_RESOURCES.map((resource) => [
+                resource,
+                newTotals[resource] - oldTotals[resource],
+            ])
+        );
+        const affectsBalances = XP_TRACKER_RESOURCES.some(
+            (resource) => delta[resource] !== 0
+        );
+
+        const currentBalances = {};
+        for (const resource of XP_TRACKER_RESOURCES) {
+            const existing = Number(activeCharacter?.[resource] ?? 0);
+            const corrected = existing + delta[resource];
+            if (!isValidXPTrackerBalance(resource, corrected)) {
+                toast.error(
+                    "This change would create an invalid current XP or Beat balance."
+                );
+                return;
+            }
+            currentBalances[resource] = corrected;
+        }
+
+        const updatedHistory = [];
+        for (let i = 0; i < history.length; i++) {
+            if (deleting && i === index) continue;
+
+            const entry = i === index ? editedEntry : history[i];
+            if (!affectsBalances || i < index) {
+                updatedHistory.push(entry);
+                continue;
+            }
+
+            if (!entry.balances) {
+                toast.error(
+                    "A later transaction has no balance snapshot; correction cancelled."
+                );
+                return;
+            }
+
+            const balances = { ...entry.balances };
+            for (const resource of XP_TRACKER_RESOURCES) {
+                const before = Number(balances[resource]);
+                const after = before + delta[resource];
+
+                if (!isValidXPTrackerBalance(resource, after)) {
+                    toast.error(
+                        "This change would invalidate a later XP or Beat balance."
+                    );
+                    return;
+                }
+                balances[resource] = after;
+            }
+            updatedHistory.push({ ...entry, balances });
+        }
+
+        const updates = { xp_history: updatedHistory };
+        if (affectsBalances) {
+            for (const resource of XP_TRACKER_RESOURCES) {
+                if (delta[resource] !== 0) {
+                    updates[resource] = currentBalances[resource];
+                }
+            }
+        }
+
+        setSavingXPChange(true);
+        try {
+            await onUpdateCharacter(updates);
+            if (deleting) {
+                setXpDeleteEntry(null);
+                toast.success("Transaction deleted; balances updated.");
+            } else {
+                setXpEditDraft(null);
+                toast.success("Transaction updated.");
+            }
+        } catch (error) {
+            toast.error("Could not save the XP Tracker correction.");
         } finally {
             setSavingXPChange(false);
         }
     };
 
+    const saveXPEntryEdit = async () => {
+        if (!xpEditDraft || savingXPChange) return;
+
+        const label = String(xpEditDraft.label || "").trim();
+        if (!label) {
+            toast.error("Transaction description cannot be empty.");
+            return;
+        }
+
+        const original = (activeCharacter?.xp_history || []).find(
+            (entry) => entry.id === xpEditDraft.id
+        );
+        if (!original) {
+            toast.error("Transaction not found.");
+            return;
+        }
+
+        const oldMovements = original.movements || [];
+        const canEditAmount =
+            oldMovements.length === 1 &&
+            XP_TRACKER_RESOURCES.includes(oldMovements[0].resource);
+
+        let movements = oldMovements;
+        if (canEditAmount) {
+            const amount = Number(xpEditDraft.movements?.[0]?.amount);
+            if (!Number.isInteger(amount) || amount === 0) {
+                toast.error("Amount must be a non-zero whole number.");
+                return;
+            }
+            movements = [{ ...oldMovements[0], amount }];
+        }
+
+        await applyXPTrackerCorrection(original.id, {
+            ...original,
+            label,
+            note: String(xpEditDraft.note || ""),
+            movements,
+        });
+    };
+
+    const deleteXPTransaction = async () => {
+        if (!xpDeleteEntry || savingXPChange) return;
+        await applyXPTrackerCorrection(xpDeleteEntry.id, null);
+    };
     const getXPTrackerEntries = () => {
         const history = getValue("xp_history") || [];
         const ledger = getValue("advancement_ledger") || [];
@@ -3203,9 +3356,7 @@ export const CharacterPanel = ({
             <Dialog
                 open={!!xpEditDraft}
                 onOpenChange={(open) => {
-                    if (!open && !savingXPChange) {
-                        setXpEditDraft(null);
-                    }
+                    if (!open && !savingXPChange) setXpEditDraft(null);
                 }}
             >
                 <DialogContent className="bg-zinc-900 border-zinc-700 max-w-md">
@@ -3214,7 +3365,8 @@ export const CharacterPanel = ({
                             Edit XP Transaction
                         </DialogTitle>
                         <DialogDescription className="text-zinc-400">
-                            Edit the transaction description and notes.
+                            Correct the description, notes, and amount where supported.
+                            Multi-movement transactions retain their original amounts.
                         </DialogDescription>
                     </DialogHeader>
 
@@ -3225,7 +3377,7 @@ export const CharacterPanel = ({
                                     Description
                                 </label>
                                 <Input
-                                    value={xpEditDraft.label}
+                                    value={xpEditDraft.label || ""}
                                     onChange={(e) =>
                                         setXpEditDraft((prev) => ({
                                             ...prev,
@@ -3236,12 +3388,39 @@ export const CharacterPanel = ({
                                 />
                             </div>
 
+                            {(xpEditDraft.movements || []).length === 1 &&
+                                XP_TRACKER_RESOURCES.includes(
+                                    xpEditDraft.movements[0].resource
+                                ) && (
+                                    <div>
+                                        <label className="text-xs text-zinc-400">
+                                            Amount ({xpEditDraft.movements[0].resource
+                                                .replaceAll("_", " ")})
+                                        </label>
+                                        <Input
+                                            type="number"
+                                            step="1"
+                                            value={xpEditDraft.movements[0].amount}
+                                            onChange={(e) =>
+                                                setXpEditDraft((prev) => ({
+                                                    ...prev,
+                                                    movements: [{
+                                                        ...prev.movements[0],
+                                                        amount: e.target.value,
+                                                    }],
+                                                }))
+                                            }
+                                            className="mt-1 input-geist text-sm"
+                                        />
+                                    </div>
+                                )}
+
                             <div>
                                 <label className="text-xs text-zinc-400">
                                     Notes
                                 </label>
                                 <Textarea
-                                    value={xpEditDraft.note}
+                                    value={xpEditDraft.note || ""}
                                     onChange={(e) =>
                                         setXpEditDraft((prev) => ({
                                             ...prev,
@@ -3262,13 +3441,9 @@ export const CharacterPanel = ({
                                 >
                                     Cancel
                                 </Button>
-
                                 <Button
                                     type="button"
-                                    disabled={
-                                        savingXPChange ||
-                                        !xpEditDraft.label?.trim()
-                                    }
+                                    disabled={savingXPChange || !xpEditDraft.label?.trim()}
                                     onClick={saveXPEntryEdit}
                                     className="bg-amber-800 hover:bg-amber-700 text-white"
                                 >
@@ -3279,7 +3454,53 @@ export const CharacterPanel = ({
                     )}
                 </DialogContent>
             </Dialog>
-            
+
+            {/* Confirm XP Transaction Deletion */}
+            <AlertDialog
+                open={!!xpDeleteEntry}
+                onOpenChange={(open) => {
+                    if (!open && !savingXPChange) setXpDeleteEntry(null);
+                }}
+            >
+                <AlertDialogContent className="bg-zinc-900 border-zinc-700 max-w-md">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="text-red-300">
+                            Delete XP Transaction?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-zinc-400">
+                            This permanently removes the transaction, reverses its XP
+                            and Beat movements, and adjusts later balance snapshots.
+                            Deletion is blocked if any balance would become invalid.
+                            Character advancement purchases cannot be deleted here.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+
+                    {xpDeleteEntry && (
+                        <div className="rounded-sm bg-zinc-950 border border-zinc-800 p-3 text-xs text-zinc-200">
+                            {xpDeleteEntry.label || "XP Transaction"}
+                            <div className="mt-1 text-[10px] text-zinc-500">
+                                {formatLedgerDate(xpDeleteEntry.date)}
+                            </div>
+                        </div>
+                    )}
+
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={savingXPChange}>
+                            Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                            disabled={savingXPChange}
+                            onClick={async (event) => {
+                                event.preventDefault();
+                                await deleteXPTransaction();
+                            }}
+                            className="bg-red-800 hover:bg-red-700 text-white"
+                        >
+                            {savingXPChange ? "Deleting..." : "Delete Transaction"}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
             {/* Dice Roll Popup for Haunts */}
             <DiceRollPopup
                 isOpen={dicePopupOpen}
