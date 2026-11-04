@@ -538,6 +538,34 @@ export const CharacterSheetPage = () => {
         }
     };
 
+    const awardDramaticFailureBeat = async ({
+        spellcasting = false,
+        automatic = false,
+    } = {}) => {
+        if (!activeCharacter) return;
+
+        const isArcane =
+            activeCharacter.character_type === "mage" &&
+            spellcasting;
+
+        const beatField = isArcane ? "arcane_beats" : "beats";
+        const xpField = isArcane ? "arcane_experience" : "experience";
+
+        const currentBeats = Number(activeCharacter[beatField]) || 0;
+        const currentXP = Number(activeCharacter[xpField]) || 0;
+        const newBeats = currentBeats + 1;
+
+        await updateCharacter({
+            [beatField]: newBeats >= 5 ? newBeats - 5 : newBeats,
+            ...(newBeats >= 5 ? { [xpField]: currentXP + 1 } : {}),
+            xp_reason: automatic
+                ? "Chance Die Dramatic Failure"
+                : isArcane
+                    ? "Voluntary Dramatic Failure: Spellcasting"
+                    : "Voluntary Dramatic Failure",
+        });
+    };
+    
     // Condition management
     const addCondition = async (condition) => {
         if (!activeCharacter) return;
@@ -700,6 +728,7 @@ export const CharacterSheetPage = () => {
                                 <DiceRoller
                                     ref={diceRollerRef}
                                     embedded
+                                    onAwardDramaticFailure={awardDramaticFailureBeat}
                                     collapsed={rollColumnCollapsed}
                                     onToggleCollapsed={() => setRollColumnCollapsed((prev) => !prev)}
                                 />
