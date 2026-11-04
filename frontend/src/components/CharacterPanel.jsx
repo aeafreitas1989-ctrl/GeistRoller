@@ -2622,6 +2622,67 @@ export const CharacterPanel = ({
                                 removeArcaneBeat={removeArcaneBeat}
                                 awardArcaneBeat={awardArcaneBeat}
                             />
+
+                            {isMage && (
+                                <div className="space-y-3 pt-3 border-t border-zinc-800">
+                                    <div className="text-[10px] font-mono uppercase tracking-wider text-amber-400">
+                                        Beat Awards
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => awardBeat("End Chapter")}
+                                            className="border-amber-800/50 text-amber-300"
+                                        >
+                                            End Chapter
+                                        </Button>
+
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => awardBeat("Dramatic Event")}
+                                            className="border-amber-800/50 text-amber-300"
+                                        >
+                                            Dramatic Event
+                                        </Button>
+                                    </div>
+
+                                    <div className="text-[10px] font-mono uppercase tracking-wider text-violet-400">
+                                        Arcane Beat Awards
+                                    </div>
+
+                                    <div className="grid grid-cols-3 gap-2">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => awardArcaneBeat("Act of Hubris")}
+                                            className="h-auto min-h-9 whitespace-normal border-violet-800/50 text-violet-300 text-xs"
+                                        >
+                                            Act of Hubris
+                                        </Button>
+
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => awardArcaneBeat("Legacy Tutoring")}
+                                            className="h-auto min-h-9 whitespace-normal border-violet-800/50 text-violet-300 text-xs"
+                                        >
+                                            Legacy Tutoring
+                                        </Button>
+
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => awardArcaneBeat("Supernatural Encounter")}
+                                            className="h-auto min-h-9 whitespace-normal border-violet-800/50 text-violet-300 text-xs"
+                                        >
+                                            Supernatural Encounter
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
                         </CollapsibleContent>
                     </Collapsible>
 
