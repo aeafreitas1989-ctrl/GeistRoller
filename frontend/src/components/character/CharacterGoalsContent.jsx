@@ -174,7 +174,7 @@ export const CharacterGoalsContent = ({
                     </label>
                 </div>
 
-                <div className="flex items-center gap-4">
+                <div className="flex items-start gap-4">
                     <div className="flex-1">
                         <div className="flex items-center justify-between text-xs mb-1">
                             <span className="text-zinc-400">Beats</span>
@@ -220,32 +220,53 @@ export const CharacterGoalsContent = ({
                             ))}
                         </div>
                     </div>
-
-                    <div className="flex-1">
-                        <div className="flex items-center justify-between text-xs mb-1">
-                            <span className="text-zinc-400">Experience</span>
-                            <span className="font-mono text-teal-300">
-                                {getValue("experience") || 0}
-                            </span>
+                    
+                    <div className="flex-1 min-w-0 grid grid-cols-[96px_minmax(0,1fr)_auto] items-start gap-2">
+                        <div className="min-w-0">
+                            <div className="text-xs text-zinc-400 mb-1">
+                                Experience
+                            </div>
+                            <Input
+                                type="number"
+                                min={0}
+                                value={getValue("experience") || 0}
+                                onChange={(event) =>
+                                    handleChange(
+                                        "experience",
+                                        Math.max(0, parseInt(event.target.value, 10) || 0)
+                                    )
+                                }
+                                className="h-6 w-16 text-center input-geist text-xs"
+                                data-testid="experience-input-header"
+                            />
                         </div>
-                        <Input
-                            type="number"
-                            min={0}
-                            value={getValue("experience") || 0}
-                            onChange={(event) =>
-                                handleChange(
-                                    "experience",
-                                    Math.max(0, parseInt(event.target.value, 10) || 0)
-                                )
-                            }
-                            className="h-6 w-16 text-center input-geist text-xs"
-                            data-testid="experience-input-header"
-                        />
+                    
+                        {isMage && (
+                            <div className="flex flex-col gap-1 min-w-0 max-w-[128px]">
+                                {["End Chapter", "Dramatic Event"].map((label) => (
+                                    <Button
+                                        key={label}
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => awardBeat(label)}
+                                        className="w-full min-h-5 h-auto px-1 py-[3px] text-[9px] leading-[10px] whitespace-normal text-center border-amber-800/60 bg-amber-950/20 text-amber-300 hover:bg-amber-900/40 hover:text-amber-200"
+                                    >
+                                        {label}
+                                    </Button>
+                                ))}
+                            </div>
+                        )}
+                    
+                        <span className="font-mono text-xs text-teal-300 justify-self-end">
+                            {getValue("experience") || 0}
+                        </span>
                     </div>
+
                 </div>
 
                 {isMage && (
-                    <div className="mt-3 pt-3 border-t border-amber-900/40 flex items-center gap-4">
+                    <div className="mt-3 pt-3 border-t border-amber-900/40 flex items-start gap-4">
                         <div className="flex-1">
                             <div className="flex items-center justify-between text-xs mb-1">
                                 <span className="text-zinc-400">Arcane Beats</span>
@@ -290,26 +311,48 @@ export const CharacterGoalsContent = ({
                             </div>
                         </div>
 
-                        <div className="flex-1">
-                            <div className="flex items-center justify-between text-xs mb-1">
-                                <span className="text-zinc-400">Arcane XP</span>
-                                <span className="font-mono text-violet-300">
-                                    {getValue("arcane_experience") || 0}
-                                </span>
+                        <div className="flex-1 min-w-0 grid grid-cols-[96px_minmax(0,1fr)_auto] items-start gap-2">
+                            <div className="min-w-0">
+                                <div className="text-xs text-zinc-400 mb-1">
+                                    Arcane XP
+                                </div>
+                                <Input
+                                    type="number"
+                                    min={0}
+                                    value={getValue("arcane_experience") || 0}
+                                    onChange={(event) =>
+                                        handleChange(
+                                            "arcane_experience",
+                                            Math.max(0, parseInt(event.target.value, 10) || 0)
+                                        )
+                                    }
+                                    className="h-6 w-16 text-center input-geist text-xs"
+                                    data-testid="arcane-experience-input-header"
+                                />
                             </div>
-                            <Input
-                                type="number"
-                                min={0}
-                                value={getValue("arcane_experience") || 0}
-                                onChange={(event) =>
-                                    handleChange(
-                                        "arcane_experience",
-                                        Math.max(0, parseInt(event.target.value, 10) || 0)
-                                    )
-                                }
-                                className="h-6 w-16 text-center input-geist text-xs"
-                                data-testid="arcane-experience-input-header"
-                            />
+                        
+                            <div className="flex flex-col gap-1 min-w-0 max-w-[128px]">
+                                {[
+                                    "Act of Hubris",
+                                    "Legacy Tutoring",
+                                    "Supernatural Encounter",
+                                ].map((label) => (
+                                    <Button
+                                        key={label}
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => awardArcaneBeat(label)}
+                                        className="w-full min-h-5 h-auto px-1 py-[3px] text-[9px] leading-[10px] whitespace-normal text-center border-violet-800/60 bg-violet-950/20 text-violet-300 hover:bg-violet-900/40 hover:text-violet-200"
+                                    >
+                                        {label}
+                                    </Button>
+                                ))}
+                            </div>
+                        
+                            <span className="font-mono text-xs text-violet-300 justify-self-end">
+                                {getValue("arcane_experience") || 0}
+                            </span>
                         </div>
                     </div>
                 )}
