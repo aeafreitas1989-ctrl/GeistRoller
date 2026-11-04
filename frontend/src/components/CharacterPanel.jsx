@@ -1463,6 +1463,7 @@ export const CharacterPanel = ({
 
         await onUpdateCharacter({
             experience: currentXP - 1,
+            xp_reason: "Restore Willpower dot",
             willpower_max_modifier: nextModifier,
             willpower: Math.min(currentWillpower + 1, nextMaxWillpower),
         });
@@ -1479,17 +1480,18 @@ export const CharacterPanel = ({
         return true;
     };
 
-    const awardBeat = async () => {
+    const awardBeat = async (source = "Beat awarded") => {
+        const reason = typeof source === "string" ? source : "Beat awarded";
         const currentBeats = getValue("beats") || 0;
         const currentXP = getValue("experience") || 0;
         const newBeats = currentBeats + 1;
         
         // 5 Beats = 1 Experience
         if (newBeats >= 5) {
-            await onUpdateCharacter({ beats: newBeats - 5, experience: currentXP + 1 });
+            await onUpdateCharacter({ beats: newBeats - 5, experience: currentXP + 1, xp_reason: reason, });
             toast.success("5 Beats converted to 1 Experience!");
         } else {
-            await onUpdateCharacter({ beats: newBeats });
+            await onUpdateCharacter({ beats: newBeats, xp_reason: reason, });
         }
         
         setPendingChanges((prev) => {
@@ -1513,16 +1515,17 @@ export const CharacterPanel = ({
         });
     };
 
-    const awardArcaneBeat = async () => {
+    const awardArcaneBeat = async (source = "Arcane Beat awarded") => {
+        const reason = typeof source === "string" ? source : "Arcane Beat awarded";
         const currentBeats = getValue("arcane_beats") || 0;
         const currentXP = getValue("arcane_experience") || 0;
         const newBeats = currentBeats + 1;
 
         if (newBeats >= 5) {
-            await onUpdateCharacter({ arcane_beats: newBeats - 5, arcane_experience: currentXP + 1 });
+            await onUpdateCharacter({ arcane_beats: newBeats - 5, arcane_experience: currentXP + 1, xp_reason: reason, });
             toast.success("5 Arcane Beats converted to 1 Arcane Experience!");
         } else {
-            await onUpdateCharacter({ arcane_beats: newBeats });
+            await onUpdateCharacter({ arcane_beats: newBeats, xp_reason: reason, });
         }
 
         setPendingChanges((prev) => {
@@ -1547,7 +1550,7 @@ export const CharacterPanel = ({
     };
 
     const fulfillAspiration = async (field) => {
-        await awardBeat();
+        await awardBeat(`Aspiration fulfilled: ${getValue(field) || field}`);
         if (field) {
             handleChange(field, "");
         }
@@ -1578,7 +1581,8 @@ export const CharacterPanel = ({
     };
 
     const fulfillObsession = async (index) => {
-        await awardArcaneBeat();
+        const title = getObsessions()[index] || `Obsession ${index + 1}`;
+        await awardArcaneBeat(`Obsession fulfilled: ${title}`);
         const next = [...getObsessions()];
         next[index] = "";
         handleChange("obsessions", next);
@@ -1599,7 +1603,10 @@ export const CharacterPanel = ({
         const currentXP = getValue("experience") || 0;
         const newBeats = currentBeats + 1;
         
-        const updates = { conditions: updatedConditions };
+        const updates = {
+            conditions: updatedConditions,
+            xp_reason: `Condition resolved: ${condition.name || "Unnamed condition"}`,
+        };
         
         // 5 Beats = 1 Experience
         if (newBeats >= 5) {
