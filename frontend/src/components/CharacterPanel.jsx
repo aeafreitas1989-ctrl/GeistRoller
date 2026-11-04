@@ -3088,6 +3088,7 @@ export const CharacterPanel = ({
                                             ))}
                                         </div>
                                     )}
+                                </div>
                             ) : (
                                 <Textarea
                                     value={getValue("notes") || ""}
