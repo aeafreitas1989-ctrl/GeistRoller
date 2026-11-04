@@ -369,7 +369,6 @@ export const ConditionsSection = ({
         setSelectedFilters([]);
         setConditionOrigin("");
         setConditionBeatType("regular");
-        setConditionBeatType("regular");
         setConditionTarget("character");
         setCustomConditionName("");
         setCustomConditionDesc("");
@@ -683,6 +682,40 @@ export const ConditionsSection = ({
                                         className="input-geist mt-1"
                                         data-testid="condition-origin-input"
                                     />
+                                </div>
+
+                                <div>
+                                    <label className="text-[10px] uppercase tracking-wider text-zinc-500">
+                                        Beat Awarded on Resolve
+                                    </label>
+
+                                    <div className="grid grid-cols-2 gap-2 mt-1">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() => setConditionBeatType("regular")}
+                                            className={`h-8 text-xs ${
+                                                conditionBeatType === "regular"
+                                                    ? "bg-amber-900/40 border-amber-500 text-amber-200"
+                                                    : "bg-zinc-900 border-zinc-700 text-zinc-400"
+                                            }`}
+                                        >
+                                            Regular
+                                        </Button>
+
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() => setConditionBeatType("arcane")}
+                                            className={`h-8 text-xs ${
+                                                conditionBeatType === "arcane"
+                                                    ? "bg-violet-900/40 border-violet-500 text-violet-200"
+                                                    : "bg-zinc-900 border-zinc-700 text-zinc-400"
+                                            }`}
+                                        >
+                                            Arcane
+                                        </Button>
+                                    </div>
                                 </div>
 
                                 <div>
