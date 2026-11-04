@@ -205,6 +205,10 @@ export const CharacterPanel = ({
     const [pendingPurchase, setPendingPurchase] = useState(null);
     const [arcaneXpApplied, setArcaneXpApplied] = useState(0);
     const [xpPurchaseNote, setXpPurchaseNote] = useState("");
+    const [manualXPType, setManualXPType] = useState("experience");
+    const [manualXPAmount, setManualXPAmount] = useState("");
+    const [manualXPReason, setManualXPReason] = useState("");
+    const [recordingManualXP, setRecordingManualXP] = useState(false);
 
     const openSpellcastingPopup = (arcanum, practice = null, spellType = null, roteSkill = null, defaultName = "") => {
         setSpellcastingArcanum(arcanum);
@@ -1232,6 +1236,48 @@ export const CharacterPanel = ({
         return activeCharacter?.[parent]?.[field] ?? 0;
     };
 
+        const recordManualXPTransaction = async () => {
+            const amount = Number(manualXPAmount);
+            const reason = manualXPReason.trim();
+    
+            if (!Number.isInteger(amount) || amount === 0) {
+                toast.error("Enter a non-zero whole number.");
+                return;
+            }
+    
+            if (!reason) {
+                toast.error("Enter a reason for the transaction.");
+                return;
+            }
+    
+            const currentBalance = Number(getValue(manualXPType)) || 0;
+            const nextBalance = currentBalance + amount;
+    
+            if (nextBalance < 0) {
+                toast.error("Insufficient XP for this transaction.");
+                return;
+            }
+    
+            if (recordingManualXP) return;
+    
+            setRecordingManualXP(true);
+    
+            try {
+                await commitCharacterUpdate({
+                    [manualXPType]: nextBalance,
+                    xp_reason: reason,
+                });
+    
+                setManualXPAmount("");
+                setManualXPReason("");
+                toast.success("XP transaction recorded.");
+            } catch (error) {
+                toast.error("Failed to record XP transaction.");
+            } finally {
+                setRecordingManualXP(false);
+            }
+        };
+    
     const getXPTrackerEntries = () => {
         const history = getValue("xp_history") || [];
         const ledger = getValue("advancement_ledger") || [];
@@ -2921,6 +2967,57 @@ export const CharacterPanel = ({
                                         </div>
                                     </div>
 
+                                    <div className="p-3 bg-zinc-950/50 border border-zinc-800 rounded-sm space-y-3">
+                                        <div className="text-xs font-semibold text-zinc-300">
+                                            Record XP Transaction
+                                        </div>
+                                    
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <select
+                                                value={manualXPType}
+                                                onChange={(e) => setManualXPType(e.target.value)}
+                                                className="h-8 bg-zinc-900 border border-zinc-700 rounded-sm px-2 text-xs text-zinc-200"
+                                            >
+                                                <option value="experience">XP</option>
+                                                <option value="arcane_experience">Arcane XP</option>
+                                            </select>
+                                    
+                                            <Input
+                                                type="number"
+                                                step="1"
+                                                value={manualXPAmount}
+                                                onChange={(e) => setManualXPAmount(e.target.value)}
+                                                placeholder="+5 or -2"
+                                                className="h-8 input-geist text-xs"
+                                            />
+                                        </div>
+                                    
+                                        <Input
+                                            value={manualXPReason}
+                                            onChange={(e) => setManualXPReason(e.target.value)}
+                                            placeholder="Reason for XP gain or expenditure"
+                                            className="h-8 input-geist text-xs"
+                                        />
+                                    
+                                        <Button
+                                            size="sm"
+                                            className="w-full bg-emerald-800 hover:bg-emerald-700 text-white"
+                                            onClick={recordManualXPTransaction}
+                                            disabled={
+                                                recordingManualXP ||
+                                                !manualXPReason.trim() ||
+                                                !Number.isInteger(Number(manualXPAmount)) ||
+                                                Number(manualXPAmount) === 0
+                                            }
+                                        >
+                                            {recordingManualXP ? "Recording..." : "Record Transaction"}
+                                        </Button>
+                                    
+                                        <div className="text-[10px] text-zinc-500">
+                                            Use positive numbers to gain XP and negative numbers to spend XP.
+                                        </div>
+                                    </div>
+                                    
                                     {getXPTrackerEntries().length === 0 ? (
                                         <div className="p-3 bg-zinc-950/40 border border-zinc-800 rounded-sm text-xs text-zinc-500">
                                             No XP transactions recorded yet.
