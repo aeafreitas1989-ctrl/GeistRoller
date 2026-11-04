@@ -209,6 +209,9 @@ export const CharacterPanel = ({
     const [manualXPAmount, setManualXPAmount] = useState("");
     const [manualXPReason, setManualXPReason] = useState("");
     const [recordingManualXP, setRecordingManualXP] = useState(false);
+    const [xpEditDraft, setXpEditDraft] = useState(null);
+    const [xpDeleteEntry, setXpDeleteEntry] = useState(null);
+    const [savingXPChange, setSavingXPChange] = useState(false);
 
     const openSpellcastingPopup = (arcanum, practice = null, spellType = null, roteSkill = null, defaultName = "") => {
         setSpellcastingArcanum(arcanum);
