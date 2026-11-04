@@ -3050,6 +3050,48 @@ export const CharacterPanel = ({
                                                                 {entry.historical && " · Historical advancement"}
                                                             </div>
                                                         </div>
+                                                    
+                                                        <div className="flex items-center gap-1 shrink-0">
+                                                            <Button
+                                                                type="button"
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-6 w-6 text-zinc-400 hover:text-amber-300"
+                                                                title="Edit transaction"
+                                                                disabled={
+                                                                    savingXPChange ||
+                                                                    !entry.id ||
+                                                                    entry.historical ||
+                                                                    Boolean(entry.source_ledger_id)
+                                                                }
+                                                                onClick={() =>
+                                                                    setXpEditDraft({
+                                                                        ...entry,
+                                                                        label: entry.label || "",
+                                                                        note: entry.note || "",
+                                                                    })
+                                                                }
+                                                            >
+                                                                <Pencil className="w-3.5 h-3.5" />
+                                                            </Button>
+                                                    
+                                                            <Button
+                                                                type="button"
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-6 w-6 text-zinc-400 hover:text-red-400"
+                                                                title="Delete transaction"
+                                                                disabled={
+                                                                    savingXPChange ||
+                                                                    !entry.id ||
+                                                                    entry.historical ||
+                                                                    Boolean(entry.source_ledger_id)
+                                                                }
+                                                                onClick={() => setXpDeleteEntry(entry)}
+                                                            >
+                                                                <X className="w-3.5 h-3.5" />
+                                                            </Button>
+                                                        </div>
                                                     </div>
                                     
                                                     <div className="flex flex-wrap gap-2 mt-2">
