@@ -1232,9 +1232,41 @@ export const CharacterPanel = ({
         return activeCharacter?.[parent]?.[field] ?? 0;
     };
 
-    const getAdvancementLedger = () => {
-        const ledger = getValue("advancement_ledger");
-        return Array.isArray(ledger) ? ledger : [];
+    const getXPTrackerEntries = () => {
+        const history = getValue("xp_history") || [];
+        const ledger = getValue("advancement_ledger") || [];
+
+        const trackedIds = new Set(
+            history.map(entry => entry.source_ledger_id).filter(Boolean)
+        );
+
+        const historical = ledger
+            .filter(entry => !trackedIds.has(entry.id))
+            .map(entry => {
+                const movements = [];
+
+                for (const resource of ["experience", "arcane_experience"]) {
+                    const cost = Number(entry.cost?.[resource]) || 0;
+                    if (cost !== 0) {
+                        movements.push({
+                            resource,
+                            amount: -cost,
+                        });
+                    }
+                }
+
+                return {
+                    ...entry,
+                    historical: true,
+                    movements,
+                };
+            });
+
+        return [...history, ...historical].sort(
+            (a, b) =>
+                (Date.parse(b.date) || 0) -
+                (Date.parse(a.date) || 0)
+        );
     };
 
     const formatLedgerDate = (value) => {
@@ -1250,21 +1282,18 @@ export const CharacterPanel = ({
         }).format(parsed);
     };
 
-    const formatLedgerCost = (entry = {}) => {
-        const cost = entry.cost || {};
-        const xp = Number(cost.experience) || 0;
-        const arcane = Number(cost.arcane_experience) || 0;
-        const parts = [];
-        if (xp > 0) parts.push(`${xp} XP`);
-        if (arcane > 0) parts.push(`${arcane} Arcane XP`);
-        return parts.length > 0 ? parts.join(" / ") : "0 XP";
-    };
+    const formatXPTrackerMovement = (movement) => {
+        const names = {
+            experience: "XP",
+            arcane_experience: "Arcane XP",
+            beats: "Beats",
+            arcane_beats: "Arcane Beats",
+        };
 
-    const formatLedgerChange = (entry = {}) => {
-        const hasFrom = entry.from !== null && entry.from !== undefined;
-        const hasTo = entry.to !== null && entry.to !== undefined;
-        if (hasFrom && hasTo) return `${entry.from} → ${entry.to}`;
-        return "";
+        const amount = Number(movement.amount) || 0;
+        const sign = amount > 0 ? "+" : "";
+
+        return `${sign}${amount} ${names[movement.resource] || movement.resource}`;
     };
 
     // Inventory helpers
@@ -2868,7 +2897,7 @@ export const CharacterPanel = ({
                         <CollapsibleTrigger className="w-full">
                             <div className="flex items-center justify-between p-2 bg-zinc-900/40 border border-zinc-800 rounded-sm">
                                 <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">
-                                    {isMage ? "XP Expenditure" : "Notes"}
+                                    {isMage ? "XP Tracker" : "Notes"}
                                 </span>
                                 {expandedSections.notes ? <ChevronDown className="w-4 h-4 text-zinc-500" /> : <ChevronRight className="w-4 h-4 text-zinc-500" />}
                             </div>
@@ -2892,36 +2921,69 @@ export const CharacterPanel = ({
                                         </div>
                                     </div>
 
-                                    {getAdvancementLedger().length === 0 ? (
+                                    {getXPTrackerEntries().length === 0 ? (
                                         <div className="p-3 bg-zinc-950/40 border border-zinc-800 rounded-sm text-xs text-zinc-500">
-                                            No XP expenditure recorded yet. Trait increases after locking character creation will appear here.
+                                            No XP transactions recorded yet.
                                         </div>
                                     ) : (
                                         <div className="space-y-2">
-                                            {getAdvancementLedger().slice().reverse().map((entry, index) => (
+                                            {getXPTrackerEntries().map((entry, index) => (
                                                 <div
-                                                    key={entry.id || `${entry.trait_type}-${entry.trait_key}-${index}`}
-                                                    className="p-2 bg-zinc-950/50 border border-zinc-800 rounded-sm"
-                                                    data-testid="xp-expenditure-entry"
+                                                    key={entry.id || index}
+                                                    className="p-3 bg-zinc-950/50 border border-zinc-800 rounded-sm"
+                                                    data-testid="xp-tracker-entry"
                                                 >
-                                                    <div className="flex items-start justify-between gap-3">
+                                                    <div className="flex items-start justify-between gap-2">
                                                         <div className="min-w-0">
-                                                            <div className="text-xs text-zinc-200 truncate">
-                                                                {entry.label || formatLabel(entry.trait_key || entry.trait_type || "Purchase")}
-                                                                {formatLedgerChange(entry) && (
-                                                                    <span className="ml-2 font-mono text-zinc-500">{formatLedgerChange(entry)}</span>
-                                                                )}
+                                                            <div className="text-xs text-zinc-200">
+                                                                {entry.label || "XP Transaction"}
                                                             </div>
-                                                            <div className="mt-1 text-[10px] text-zinc-500 uppercase tracking-wider">
-                                                                {formatLedgerDate(entry.date)} · {formatLabel(entry.trait_type || "purchase")}
+                                                            <div className="mt-1 text-[10px] text-zinc-500">
+                                                                {formatLedgerDate(entry.date)}
+                                                                {entry.historical && " · Historical advancement"}
                                                             </div>
-                                                        </div>
-                                                        <div className="shrink-0 text-xs font-mono text-emerald-300">
-                                                            {formatLedgerCost(entry)}
                                                         </div>
                                                     </div>
+                                    
+                                                    <div className="flex flex-wrap gap-2 mt-2">
+                                                        {(entry.movements || [])
+                                                            .filter(m => Number(m.amount) !== 0)
+                                                            .map((movement, movementIndex) => (
+                                                                <span
+                                                                    key={movementIndex}
+                                                                    className={`text-xs font-mono ${
+                                                                        Number(movement.amount) > 0
+                                                                            ? "text-emerald-300"
+                                                                            : "text-rose-300"
+                                                                    }`}
+                                                                >
+                                                                    {formatXPTrackerMovement(movement)}
+                                                                </span>
+                                                            ))}
+                                    
+                                                        {(entry.movements || []).every(
+                                                            m => Number(m.amount) === 0
+                                                        ) && (
+                                                            <span className="text-xs text-zinc-500">
+                                                                No XP change
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                    
+                                                    {entry.balances && (
+                                                        <div className="mt-2 text-[10px] text-zinc-500">
+                                                            Balance: {entry.balances.experience} XP
+                                                            {" / "}
+                                                            {entry.balances.arcane_experience} Arcane XP
+                                                            {" · "}
+                                                            {entry.balances.beats} Beats
+                                                            {" / "}
+                                                            {entry.balances.arcane_beats} Arcane Beats
+                                                        </div>
+                                                    )}
+                                    
                                                     {entry.note && (
-                                                        <div className="mt-2 text-xs text-zinc-400 whitespace-pre-wrap border-t border-zinc-800 pt-2">
+                                                        <div className="mt-2 pt-2 border-t border-zinc-800 text-xs text-zinc-400 whitespace-pre-wrap">
                                                             {entry.note}
                                                         </div>
                                                     )}
@@ -2929,7 +2991,6 @@ export const CharacterPanel = ({
                                             ))}
                                         </div>
                                     )}
-                                </div>
                             ) : (
                                 <Textarea
                                     value={getValue("notes") || ""}
