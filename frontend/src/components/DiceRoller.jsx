@@ -126,6 +126,7 @@ export const DiceRoller = forwardRef(({
                 typeof onAwardDramaticFailure === "function" &&
                 response.data.successes === 0 &&
                 !response.data.is_dramatic_failure &&
+                completedPayload.config?.summaryKey !== "paradox" &&
                 !completedPayload.config?.countOnly
             ) {
                 setPendingDramaticFailure(completedPayload);
