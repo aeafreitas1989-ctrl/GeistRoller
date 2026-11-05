@@ -1,3 +1,5 @@
+import { normalizeSkillSpecialty } from "./skillSpecialties";
+
 export const MAGE_ATTRIBUTE_CATEGORIES = {
     mental: ["intelligence", "wits", "resolve"],
     physical: ["strength", "dexterity", "stamina"],
@@ -313,6 +315,17 @@ export const validateMageCreation = (character = {}) => {
 
     if (specialties.length !== expectedStartingSpecialties) {
         errors.push(`Starting Skill Specialties: ${specialties.length}; expected ${expectedStartingSpecialties}.`);
+    }
+
+    const normalizedSpecialties = specialties.map(normalizeSkillSpecialty);
+    if (normalizedSpecialties.some((entry) => !entry.skill || !entry.name)) {
+        errors.push("Each starting Skill Specialty must have a Skill and a name.");
+    }
+    const specialtyKeys = normalizedSpecialties
+        .filter((entry) => entry.skill && entry.name)
+        .map((entry) => `${entry.skill}:${entry.name.toLowerCase()}`);
+    if (new Set(specialtyKeys).size !== specialtyKeys.length) {
+        errors.push("Duplicate Skill Specialties are not allowed.");
     }
 
     if (gnosis < 1 || gnosis > 3) {

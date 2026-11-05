@@ -53,6 +53,7 @@ const PHYSICAL_SKILLS = new Set([
 ]);
 
 import { formatLabel } from "./StatComponents";
+import { normalizeSkillSpecialty } from "../../utils/skillSpecialties";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -102,6 +103,18 @@ export const InlineDiceRoller = ({
     const [result, setResult] = useState(null);
     const [pendingFailureChoice, setPendingFailureChoice] = useState(null);
     const [expanded, setExpanded] = useState(false);
+
+    const savedSpecialties = Array.isArray(getValue("specialties")) ? getValue("specialties") : [];
+    const matchingSpecialties = savedSpecialties
+        .map(normalizeSkillSpecialty)
+        .filter((entry) => entry.skill === skill && !!entry.name);
+    const hasMatchingSpecialty = matchingSpecialties.length > 0;
+    const specialtyActive = rollType === "attr-skill" && hasMatchingSpecialty && useSpecialty;
+
+    useEffect(() => {
+        if (!hasMatchingSpecialty) setUseSpecialty(false);
+    }, [hasMatchingSpecialty]);
+
     useEffect(() => {
         if (forceExpanded) setExpanded(true);
     }, [forceExpanded]);
@@ -131,6 +144,7 @@ export const InlineDiceRoller = ({
         if (preset.type === "skill") {
             setRollType("attr-skill");
             setSkill(preset.key);
+            setUseSpecialty(false);
             return;
         }
 
@@ -152,7 +166,7 @@ export const InlineDiceRoller = ({
 
             setAgainRule(String(preset.again || 10));
             setUseRote(!!preset.rote);
-            setUseSpecialty(inferredSpecialty);
+            setUseSpecialty(false);
             setUseRemembrance(false);
             setSpendWillpower(false);
             setSelectedEquipKey("__none__");
@@ -167,7 +181,11 @@ export const InlineDiceRoller = ({
                     setSkill(right);
 
                     const skillDots = getNestedValue("skills", right) || 0;
-                    const specialtyBonus = inferredSpecialty ? 1 : 0;
+                    const eligibleForSpecialty = savedSpecialties.some(
+                        (entry) => normalizeSkillSpecialty(entry).skill === right
+                    );
+                    const specialtyBonus = inferredSpecialty && eligibleForSpecialty ? 1 : 0;
+                    setUseSpecialty(specialtyBonus > 0);
                     const untrainedPenalty = getUntrainedSkillPenalty(right, skillDots);
                     const basePool =
                         (getNestedValue("attributes", left) || 0) +
@@ -179,20 +197,7 @@ export const InlineDiceRoller = ({
                     return;
                 }
 
-                if (ATTRIBUTE_LIST.includes(left) && SKILL_LIST.includes(right)) {
-                    setRollType("attr-skill");
-                    setPrimaryAttr(left);
-                    setSkill(right);
 
-                    const specialtyBonus = inferredSpecialty ? 1 : 0;
-                    const basePool =
-                        (getNestedValue("attributes", left) || 0) +
-                        (getNestedValue("skills", right) || 0) +
-                        specialtyBonus;
-
-                    setDiceModifier((preset.pool || basePool) - basePool);
-                    return;
-                }
             }
 
             setDiceModifier(0);
@@ -354,7 +359,7 @@ export const InlineDiceRoller = ({
                 primaryAttrValue +
                 selectedSkillValue +
                 untrainedSkillPenalty +
-                (useSpecialty ? 1 : 0) +
+                (specialtyActive ? 1 : 0) +
                 remembranceBonus +
                 smallFramedStealthBonus
             );
@@ -432,7 +437,9 @@ export const InlineDiceRoller = ({
             parts.push(formatPoolPart(formatLabel(primaryAttr), primaryAttrValue, false));
             parts.push(formatPoolPart(formatLabel(skill), selectedSkillValue));
             parts.push(formatPoolPart("Untrained", untrainedSkillPenalty));
-            if (useSpecialty) parts.push(formatPoolPart("Specialty", 1));
+            if (specialtyActive) {
+                parts.push(formatPoolPart(`Specialty (${matchingSpecialties.map((entry) => entry.name).join(", ")})`, 1));
+            }
             parts.push(formatPoolPart("Remembrance", remembranceBonus));
             parts.push(formatPoolPart("Small-Framed", smallFramedStealthBonus));
         }
@@ -776,7 +783,10 @@ export const InlineDiceRoller = ({
                                 </div>
                                 <div>
                                     <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Skill</label>
-                                    <Select value={skill} onValueChange={setSkill}>
+                                    <Select value={skill} onValueChange={(value) => {
+                                        setSkill(value);
+                                        setUseSpecialty(false);
+                                    }}>
                                         <SelectTrigger className="h-7 bg-zinc-900/50 border-zinc-700 text-xs" data-testid="dice-skill-select">
                                             <SelectValue />
                                         </SelectTrigger>
@@ -788,10 +798,12 @@ export const InlineDiceRoller = ({
                                     </Select>
                                 </div>
                             </div>
-                            <div className="flex items-center justify-between text-[10px] text-zinc-500">
-                                <span>Specialty</span>
-                                <Switch checked={useSpecialty} onCheckedChange={setUseSpecialty} data-testid="dice-specialty-toggle" />
-                            </div>
+                            {hasMatchingSpecialty && (
+                                <div className="flex items-center justify-between gap-2 text-[10px] text-zinc-500">
+                                    <span>Specialty ({matchingSpecialties.map((entry) => entry.name).join(", ")})</span>
+                                    <Switch checked={useSpecialty} onCheckedChange={setUseSpecialty} data-testid="dice-specialty-toggle" />
+                                </div>
+                            )}
                             {!isMage && (
                                 <>
                                     <div className="flex items-center justify-between text-[10px] text-zinc-500">

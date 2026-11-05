@@ -165,7 +165,7 @@ class Character(BaseModel):
         "animal_ken": 0, "empathy": 0, "expression": 0, "intimidation": 0,
         "persuasion": 0, "socialize": 0, "streetwise": 0, "subterfuge": 0
     })
-    specialties: List[str] = Field(default_factory=list)
+    specialties: List[Any] = Field(default_factory=list)  # {skill, name}; legacy strings accepted
     synergy: int = 7
     synergy_max: int = 10
     touchstones: List[str] = Field(default_factory=list)
@@ -279,7 +279,7 @@ class CharacterUpdate(BaseModel):
     remembrance_3_complete: Optional[bool] = None
     attributes: Optional[Dict[str, int]] = None
     skills: Optional[Dict[str, int]] = None
-    specialties: Optional[List[str]] = None
+    specialties: Optional[List[Any]] = None  # {skill, name}; legacy strings accepted
     synergy: Optional[int] = None
     synergy_max: Optional[int] = None
     touchstones: Optional[List[str]] = None

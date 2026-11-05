@@ -62,6 +62,7 @@ import {
     StatDots, StatRow, HealthTrack, ResourceTrack, SynergyTrack,
 } from "./character/StatComponents";
 import { InlineDiceRoller } from "./character/InlineDiceRoller";
+import { normalizeSkillSpecialty, formatSkillSpecialty } from "../utils/skillSpecialties";
 import { MageArcanaContent } from "./character/MageArcanaContent";
 import { MageGnosisContent } from "./character/MageGnosisContent";
 import { GeistSynergyContent } from "./character/GeistSynergyContent";
@@ -134,6 +135,8 @@ export const CharacterPanel = ({
     const [newMeritDots, setNewMeritDots] = useState(1);
     const [newMeritSpecialty, setNewMeritSpecialty] = useState("");
     const [newSpecialty, setNewSpecialty] = useState("");
+    const [newSpecialtySkill, setNewSpecialtySkill] = useState("__none__");
+    const [showSpecialtyForm, setShowSpecialtyForm] = useState(false);
     const [inventoryAddOpen, setInventoryAddOpen] = useState(false);
     const importFileInputRef = useRef(null);
     
@@ -521,11 +524,11 @@ export const CharacterPanel = ({
         const nextList = Array.isArray(value) ? value : [];
 
         if (field === "specialties" && nextList.length > currentList.length) {
+            const addedSpecialty = formatSkillSpecialty(nextList[nextList.length - 1]);
             const freeSlots = Math.max(0, Number(activeCharacter?.free_skill_specialty_slots) || 0);
 
             if (freeSlots > 0) {
                 const currentLedger = activeCharacter?.advancement_ledger || [];
-                const addedSpecialty = nextList[nextList.length - 1] || "New Specialty";
                 const ledgerEntry = makeLedgerEntry(
                     {
                         trait_type: "skill_specialty",
@@ -550,8 +553,8 @@ export const CharacterPanel = ({
 
             openAdvancementPurchase({
                 trait_type: "skill_specialty",
-                trait_key: nextList[nextList.length - 1] || "specialty",
-                label: `Skill Specialty: ${nextList[nextList.length - 1] || "New Specialty"}`,
+                trait_key: addedSpecialty,
+                label: `Skill Specialty: ${addedSpecialty}`,
                 from: currentList.length,
                 to: nextList.length,
                 apply: { kind: "field", field, value },
@@ -1073,6 +1076,14 @@ export const CharacterPanel = ({
         Object.entries(character.skills || {}).forEach(([key, value]) => {
             addLine(formatLabel(key), value);
         });
+
+        addSection("Skill Specialties");
+        const exportSpecialties = character.specialties || [];
+        if (exportSpecialties.length === 0) {
+            lines.push("-");
+        } else {
+            exportSpecialties.forEach((entry) => lines.push(`- ${formatSkillSpecialty(entry)}`));
+        }
 
         addSection("Merits");
         const merits = character.merits_list || [];
@@ -2414,13 +2425,48 @@ export const CharacterPanel = ({
         handleChange("ceremonies_list", newCeremonies);
     };
 
-    // Specialties management
+    // Specialty records explicitly name their Skill; older strings remain readable.
     const specialties = getValue("specialties") || [];
     const addSpecialty = () => {
-        if (newSpecialty.trim()) {
-            handleChange("specialties", [...specialties, newSpecialty.trim()]);
-            setNewSpecialty("");
+        const name = newSpecialty.trim();
+        if (!SKILL_LIST.includes(newSpecialtySkill)) {
+            toast.error("Select a Skill for this Specialty.");
+            return;
         }
+        if (!name) {
+            toast.error("Enter a Specialty name.");
+            return;
+        }
+        if (specialties.some((entry) => {
+            const current = normalizeSkillSpecialty(entry);
+            return current.skill === newSpecialtySkill &&
+                current.name.toLowerCase() === name.toLowerCase();
+        })) {
+            toast.error("That Skill already has this Specialty.");
+            return;
+        }
+        handleChange("specialties", [...specialties, { skill: newSpecialtySkill, name }]);
+        setNewSpecialty("");
+        setNewSpecialtySkill("__none__");
+        setShowSpecialtyForm(false);
+    };
+    const assignSpecialty = (index, skillKey) => {
+        if (!SKILL_LIST.includes(skillKey)) return;
+        const existing = normalizeSkillSpecialty(specialties[index]);
+        if (!existing.name) return;
+        if (specialties.some((entry, i) => {
+            if (index === i) return false;
+            const current = normalizeSkillSpecialty(entry);
+            return current.skill === skillKey &&
+                current.name.toLowerCase() === existing.name.toLowerCase();
+        })) {
+            toast.error("That Skill already has this Specialty.");
+            return;
+        }
+        // Same number of entries: assigning a legacy Specialty does not buy a new one.
+        handleChange("specialties", specialties.map((entry, i) =>
+            i === index ? { skill: skillKey, name: existing.name } : entry
+        ));
     };
     const removeSpecialty = (index) => {
         handleChange("specialties", specialties.filter((_, i) => i !== index));
@@ -2952,19 +2998,53 @@ export const CharacterPanel = ({
                                 </div>
                             </div>
                             <div className="p-2 bg-zinc-900/50 border border-zinc-800 rounded-sm">
-                                <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Skill Specialties</label>
-                                <div className="flex flex-wrap gap-1 mt-1" data-testid="skill-specialties-list">
-                                    {specialties.map((spec, i) => (
-                                        <span key={i} className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-teal-900/30 border border-teal-500/30 rounded text-[10px] text-teal-300" data-testid={`skill-specialty-${i}`}>
-                                            {spec}
-                                            <button onClick={() => removeSpecialty(i)} className="hover:text-red-400" data-testid={`skill-specialty-remove-${i}`}><X className="w-2 h-2" /></button>
-                                        </span>
-                                    ))}
+                                <div className="flex items-center justify-between gap-2">
+                                    <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Skill Specialties</label>
+                                    <Button type="button" size="sm" onClick={() => setShowSpecialtyForm(true)} className="h-6 px-2 text-[10px] btn-secondary" data-testid="skill-specialty-add">Add</Button>
                                 </div>
-                                <div className="flex gap-1 mt-1">
-                                    <Input value={newSpecialty} onChange={(e) => setNewSpecialty(e.target.value)} placeholder="e.g., Occult (Ghosts)" className="input-geist h-6 text-[10px] flex-1" onKeyDown={(e) => e.key === "Enter" && addSpecialty()} data-testid="skill-specialty-input" />
-                                    <Button size="sm" onClick={addSpecialty} className="h-6 px-2 text-[10px] btn-secondary" data-testid="skill-specialty-add">Add</Button>
+                                <div className="flex flex-wrap gap-1 mt-2" data-testid="skill-specialties-list">
+                                    {specialties.map((spec, i) => {
+                                        const normalized = normalizeSkillSpecialty(spec);
+                                        return (
+                                            <div key={i} className="inline-flex items-center gap-1.5 px-2 py-1 bg-teal-900/30 border border-teal-500/30 rounded text-[10px] text-teal-300" data-testid={`skill-specialty-${i}`}>
+                                                <span>{formatSkillSpecialty(spec)}</span>
+                                                {!normalized.skill && (
+                                                    <Select value="__none__" onValueChange={(value) => assignSpecialty(i, value)}>
+                                                        <SelectTrigger className="h-6 w-[115px] bg-zinc-900/50 border-zinc-700 text-[10px]" data-testid={`skill-specialty-assign-${i}`}>
+                                                            <SelectValue placeholder="Assign Skill" />
+                                                        </SelectTrigger>
+                                                        <SelectContent className="bg-zinc-900 border-zinc-700">
+                                                            {SKILL_LIST.map((skillKey) => (
+                                                                <SelectItem key={skillKey} value={skillKey} className="text-xs">{formatLabel(skillKey)}</SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                )}
+                                                <button type="button" onClick={() => removeSpecialty(i)} className="hover:text-red-400" data-testid={`skill-specialty-remove-${i}`}>
+                                                    <X className="w-2.5 h-2.5" />
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
+                                {showSpecialtyForm && (
+                                  <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto_auto] gap-2 mt-2">
+                                    <Select value={newSpecialtySkill} onValueChange={setNewSpecialtySkill}>
+                                        <SelectTrigger className="h-8 bg-zinc-900/50 border-zinc-700 text-xs" data-testid="skill-specialty-skill-select">
+                                            <SelectValue placeholder="Select Skill" />
+                                        </SelectTrigger>
+                                        <SelectContent className="bg-zinc-900 border-zinc-700 max-h-64">
+                                            <SelectItem value="__none__" className="text-xs">Select Skill</SelectItem>
+                                            {SKILL_LIST.map((skillKey) => (
+                                                <SelectItem key={skillKey} value={skillKey} className="text-xs">{formatLabel(skillKey)}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <Input value={newSpecialty} onChange={(e) => setNewSpecialty(e.target.value)} placeholder="Specialty name (e.g., Ghosts)" className="input-geist h-8 text-xs" onKeyDown={(e) => e.key === "Enter" && addSpecialty()} data-testid="skill-specialty-input" />
+                                    <Button type="button" size="sm" onClick={addSpecialty} disabled={!SKILL_LIST.includes(newSpecialtySkill) || !newSpecialty.trim()} className="h-8 px-3 text-xs btn-secondary" data-testid="skill-specialty-save">Save</Button>
+                                    <Button type="button" size="sm" variant="outline" onClick={() => { setShowSpecialtyForm(false); setNewSpecialty(""); setNewSpecialtySkill("__none__"); }} className="h-8 px-3 text-xs border-zinc-700">Cancel</Button>
+                                  </div>
+                                )}
                             </div>
                         </CollapsibleContent>
                     </Collapsible>
