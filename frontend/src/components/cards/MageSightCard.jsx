@@ -32,6 +32,9 @@ const MageSightCard = ({
     const currentPath = activeCharacter?.path;
     const rulingArcana = currentPath ? (PATH_ARCANA[currentPath]?.ruling || []) : [];
     const currentMana = activeCharacter?.mana || 0;
+    const legacyRulingArcanum = activeCharacter?.legacy_ruling_arcanum || "";
+    const manaCostToAddArcanum = (arcanum) =>
+        rulingArcana.includes(arcanum) || legacyRulingArcanum === arcanum ? 0 : 1;
     const currentWillpower = activeCharacter?.willpower || 0;
     const activeSpells = activeCharacter?.active_spells || [];
 
@@ -144,12 +147,15 @@ const MageSightCard = ({
     };
 
     const addArcanumToMageSight = async (arcanum) => {
-        if (currentMana < 1) return;
+        if (!activeMageSight || activeArcana.includes(arcanum)) return;
+
+        const manaCost = manaCostToAddArcanum(arcanum);
+        if (currentMana < manaCost) return;
 
         const nextArcana = [...new Set([...activeArcana, arcanum])];
 
         await onUpdateCharacter?.({
-            mana: Math.max(0, currentMana - 1),
+            ...(manaCost > 0 ? { mana: currentMana - manaCost } : {}),
             active_spells: [
                 ...activeSpells.filter((spell) => spell.effect_key !== "mage-sight"),
                 buildMageSightEffect(nextArcana),
@@ -398,9 +404,12 @@ const MageSightCard = ({
                             variant="ghost"
                             className="h-6 px-2 text-[10px] text-blue-300 border border-zinc-700 hover:bg-blue-950/30"
                             onClick={() => addArcanumToMageSight(arcanum)}
-                            disabled={currentMana < 1}
+                            disabled={currentMana < manaCostToAddArcanum(arcanum)}
+                            title={manaCostToAddArcanum(arcanum) === 0
+                                ? "Ruling Arcanum: free"
+                                : "Costs 1 Mana for this scene"}
                         >
-                            + {arcanum}
+                            + {arcanum} {manaCostToAddArcanum(arcanum) === 0 ? "(free)" : "(1 Mana)"}
                         </Button>
                     ))}
                 </div>
