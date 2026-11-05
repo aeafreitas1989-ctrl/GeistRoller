@@ -936,7 +936,7 @@ const EffectEditor = ({
                                 </label>
                                 <Select
                                     value={effect.arcanum || "__none__"}
-                                    onValueChange={updatePrimaryFactor}
+                                    onValueChange={(value) => onChange({ ...effect, arcanum: value === "__none__" ? "" : value })}
                                 >
                                     <SelectTrigger className="mt-0.5 h-8 border-zinc-700 bg-zinc-900/50 text-xs">
                                         <SelectValue placeholder="Select..." />
@@ -998,7 +998,7 @@ const EffectEditor = ({
                         </label>
                         <Select
                             value={effect.primary_factor || "potency"}
-                            onValueChange={(value) => onChange({ ...effect, primary_factor: value })}
+                            onValueChange={updatePrimaryFactor}
                         >
                             <SelectTrigger className="mt-0.5 h-8 border-zinc-700 bg-zinc-900/50 text-xs">
                                 <SelectValue />
