@@ -3040,18 +3040,10 @@ export const CharacterPanel = ({
                                     </label>
                                     <Input
                                         id="character-funds-input"
-                                        type="number"
-                                        min="0"
-                                        step="0.01"
+                                        type="text"
                                         value={getValue("funds") ?? ""}
-                                        onChange={(event) => {
-                                            const value = event.target.value;
-                                            if (value === "" || (Number.isFinite(Number(value)) && Number(value) >= 0)) {
-                                                handleChange("funds", value);
-                                            }
-                                        }}
-                                        placeholder="0.00"
-                                        className="input-geist h-8 w-28 border-amber-800/60 text-sm"
+                                        onChange={(event) => handleChange("funds", event.target.value)}
+                                        className="input-geist h-8 w-40 sm:w-52 border-amber-800/60 text-sm"
                                         data-testid="character-funds-input"
                                     />
                                 </div>
