@@ -843,6 +843,7 @@ export const CombatContent = ({
                                                             <SelectValue />
                                                         </SelectTrigger>
                                                         <SelectContent className="bg-zinc-900 border-zinc-700">
+                                                            <SelectItem value="Dedicated" className="text-xs">Dedicated</SelectItem>
                                                             <SelectItem value="Coin" className="text-xs">Coin</SelectItem>
                                                             <SelectItem value="Cup" className="text-xs">Cup</SelectItem>
                                                             <SelectItem value="Mirror" className="text-xs">Mirror</SelectItem>
