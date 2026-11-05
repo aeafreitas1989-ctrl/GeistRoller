@@ -189,6 +189,7 @@ class Character(BaseModel):
     merits_list: List[Dict[str, Any]] = Field(default_factory=list)
     ceremonies_list: List[Dict[str, Any]] = Field(default_factory=list)
     inventory_items: List[Dict[str, Any]] = Field(default_factory=list)
+    funds: str = ""
     aspiration_short_1: str = ""
     aspiration_short_2: str = ""
     aspiration_long: str = ""
@@ -302,6 +303,7 @@ class CharacterUpdate(BaseModel):
     merits_list: Optional[List[Dict[str, Any]]] = None
     ceremonies_list: Optional[List[Dict[str, Any]]] = None
     inventory_items: Optional[List[Dict[str, Any]]] = None
+    funds: Optional[str] = None
     aspiration_short_1: Optional[str] = None
     aspiration_short_2: Optional[str] = None
     aspiration_long: Optional[str] = None

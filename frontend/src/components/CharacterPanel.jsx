@@ -79,6 +79,8 @@ import {
     getBlankMageCreationChoices,
     getChargeableMeritDots,
     getProfessionalTrainingFreeSpecialtyCount,
+    isMageRulingArcanum,
+    isMageInferiorArcanum,
     makeLedgerEntry,
     makeSanctityOfMeritsEntry,
     validateMageCreation,
@@ -1085,6 +1087,7 @@ export const CharacterPanel = ({
         }
 
         addSection("Inventory");
+        addLine("Funds", character.funds);
         const inventory = character.inventory_items || [];
         if (inventory.length === 0) {
             lines.push("-");
@@ -2254,6 +2257,12 @@ export const CharacterPanel = ({
 
     // Merits management
     const meritsList = getValue("merits_list") || [];
+    const resourcesMeritDots = Math.min(
+        5,
+        Math.max(0, Number(meritsList.find(
+            (merit) => (merit?.name || "").trim().toLowerCase() === "resources"
+        )?.dots) || 0)
+    );
     const familiarMerit = meritsList.find((merit) => (merit?.name || "") === "Familiar" && Number(merit?.dots) >= 2);
     const familiarDots = Number(familiarMerit?.dots) || 0;
     const sheetHasGiant = (meritsList || []).some((m) => (m?.name || "") === "Giant");
@@ -3005,6 +3014,48 @@ export const CharacterPanel = ({
                         </CollapsibleTrigger>
 
                         <CollapsibleContent className="pt-2">
+                            <div
+                                className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-sm border border-amber-600/50 bg-amber-950/30 px-3 py-2"
+                                data-testid="inventory-resources-funds-bar"
+                            >
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs font-semibold uppercase tracking-wider text-amber-300">
+                                        Resources
+                                    </span>
+                                    <span
+                                        className="font-mono text-sm tracking-widest"
+                                        aria-label={`Resources ${resourcesMeritDots} of 5`}
+                                        data-testid="inventory-resources-dots"
+                                    >
+                                        <span className="text-amber-300">{"●".repeat(resourcesMeritDots)}</span>
+                                        <span className="text-amber-900">{"○".repeat(5 - resourcesMeritDots)}</span>
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <label
+                                        htmlFor="character-funds-input"
+                                        className="text-xs font-semibold uppercase tracking-wider text-amber-300"
+                                    >
+                                        Funds
+                                    </label>
+                                    <Input
+                                        id="character-funds-input"
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        value={getValue("funds") ?? ""}
+                                        onChange={(event) => {
+                                            const value = event.target.value;
+                                            if (value === "" || (Number.isFinite(Number(value)) && Number(value) >= 0)) {
+                                                handleChange("funds", value);
+                                            }
+                                        }}
+                                        placeholder="0.00"
+                                        className="input-geist h-8 w-28 border-amber-800/60 text-sm"
+                                        data-testid="character-funds-input"
+                                    />
+                                </div>
+                            </div>
                             <CombatContent
                                 getValue={getValue} getNestedValue={getNestedValue} handleChange={handleChange}
                                 isMage={isMage}
@@ -3723,16 +3774,14 @@ export const CharacterPanel = ({
                     arcanumDots={getNestedValue("arcana", spellcastingArcanum) || 0}
                     allArcana={getValue("arcana") || {}}
                     gnosis={getValue("gnosis") || 1}
-                    isRuling={
-                        (getValue("path") &&
-                            PATH_ARCANA[getValue("path")]?.ruling?.includes(spellcastingArcanum)) ||
-                        getValue("legacy_ruling_arcanum") === spellcastingArcanum
-                    }
-                    isInferior={
-                        getValue("path") &&
-                        PATH_ARCANA[getValue("path")]?.inferior === spellcastingArcanum &&
-                        getValue("legacy_ruling_arcanum") !== spellcastingArcanum
-                    }
+                    isRuling={isMageRulingArcanum({
+                        path: getValue("path") || "",
+                        legacy_ruling_arcanum: getValue("legacy_ruling_arcanum") || "",
+                    }, spellcastingArcanum)}
+                    isInferior={isMageInferiorArcanum({
+                        path: getValue("path") || "",
+                        legacy_ruling_arcanum: getValue("legacy_ruling_arcanum") || "",
+                    }, spellcastingArcanum)}
                     currentMana={getValue("mana") || 0}
                     currentWisdom={getValue("wisdom") || 7}
                     athleticsDots={getNestedValue("skills", "athletics") || 0}

@@ -3,7 +3,8 @@ import { Plus, Trash2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ARCANA, PATH_ARCANA, ORDER_ROTE_SKILLS, ARCANA_PRACTICES, SKILL_LIST } from "../../data/character-data";
+import { ARCANA, ORDER_ROTE_SKILLS, ARCANA_PRACTICES, SKILL_LIST } from "../../data/character-data";
+import { isMageRulingArcanum, isMageInferiorArcanum } from "../../utils/mageCreationAudit";
 import { StatDots, formatLabel } from "./StatComponents";
 import { MageAttainmentsContent } from "./MageAttainmentsContent";
 
@@ -101,15 +102,12 @@ export const MageArcanaContent = ({
                 <div className="space-y-1">
                     {ARCANA.map((arcanum) => {
                         const arcanumRating = getNestedValue("arcana", arcanum) || 0;
-                        const selectedPath = getValue("path");
-                        const pathData = selectedPath ? PATH_ARCANA[selectedPath] : null;
-                        const legacyRuling = getValue("legacy_ruling_arcanum") || "";
-                        const isRuling =
-                            pathData?.ruling?.includes(arcanum) ||
-                            legacyRuling === arcanum;
-                        const isInferior =
-                            pathData?.inferior === arcanum &&
-                            !isRuling;
+                        const mageClassification = {
+                            path: getValue("path") || "",
+                            legacy_ruling_arcanum: getValue("legacy_ruling_arcanum") || "",
+                        };
+                        const isRuling = isMageRulingArcanum(mageClassification, arcanum);
+                        const isInferior = isMageInferiorArcanum(mageClassification, arcanum);
 
                         let labelColor = arcanumRating > 0 ? "text-zinc-400" : "text-zinc-600";
                         if (isRuling) labelColor = "text-blue-400 font-medium";

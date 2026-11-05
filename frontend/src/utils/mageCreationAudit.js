@@ -394,20 +394,27 @@ export const validateMageCreation = (character = {}) => {
     };
 };
 
-export const getArcanumUntrainedLimit = (character = {}, arcanum) => {
+export const getEffectiveMageRulingArcana = (character = {}) => {
     const pathData = character.path_arcana_override || MAGE_PATH_ARCANA[character.path] || null;
-    const ruling = pathData?.ruling || character.ruling_arcana || [];
+    const pathRuling = Array.isArray(pathData?.ruling)
+        ? pathData.ruling
+        : (Array.isArray(character.ruling_arcana) ? character.ruling_arcana : []);
     const legacyRuling = character.legacy_ruling_arcanum || "";
+    return [...new Set([...pathRuling, ...(legacyRuling ? [legacyRuling] : [])])];
+};
+
+export const isMageRulingArcanum = (character = {}, arcanum) =>
+    getEffectiveMageRulingArcana(character).includes(arcanum);
+
+export const isMageInferiorArcanum = (character = {}, arcanum) => {
+    const pathData = character.path_arcana_override || MAGE_PATH_ARCANA[character.path] || null;
     const inferior = pathData?.inferior || character.inferior_arcanum || "";
+    return inferior === arcanum && !isMageRulingArcanum(character, arcanum);
+};
 
-    if (
-        (Array.isArray(ruling) && ruling.includes(arcanum)) ||
-        legacyRuling === arcanum
-    ) {
-        return 5;
-    }
-
-    if (inferior === arcanum) return 2;
+export const getArcanumUntrainedLimit = (character = {}, arcanum) => {
+    if (isMageRulingArcanum(character, arcanum)) return 5;
+    if (isMageInferiorArcanum(character, arcanum)) return 2;
     return 4;
 };
 
