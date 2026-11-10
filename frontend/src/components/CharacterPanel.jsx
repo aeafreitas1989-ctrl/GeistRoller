@@ -2563,21 +2563,27 @@ export const CharacterPanel = ({
         )
     );
 
-    const navigationTabs = [
-        { id: "header", label: "Info", title: "Character Info" },
-        ...(!isMage ? [
+    const navigationTabs = isMage
+        ? [
+            { id: "header", label: "Character", title: "Character Info" },
+            { id: "familiar", label: "Familiar", title: hasFamiliar ? "Familiar" : "Requires Familiar Merit (2 dots)", disabled: !hasFamiliar },
+            { id: "attributesSkills", label: "Attributes", title: "Attributes & Skills" },
+            { id: "powers", label: "Spells", title: "Arcana, Spells & Attainments" },
+            { id: "sinEater", label: "Resources", title: "Gnosis & Resources" },
+            { id: "inventory", label: "Inventory", title: "Inventory" },
+            { id: "merits", label: "Merits", title: "Merits" },
+            { id: "notes", label: "XP Track", title: "XP Tracker" },
+        ]
+        : [
+            { id: "header", label: "Character", title: "Character Info" },
             { id: "geist", label: "Geist", title: "Geist & Remembrance" },
-        ] : []),
-        { id: "attributesSkills", label: "Attributes", title: "Attributes & Skills" },
-        { id: "sinEater", label: isMage ? "Gnosis" : "Synergy", title: isMage ? "Gnosis & Resources" : "Synergy & Resources" },
-        { id: "inventory", label: "Inventory", title: "Inventory" },
-        { id: "powers", label: isMage ? "Arcana" : "Haunts", title: isMage ? "Arcana, Spells & Attainments" : "Haunts, Keys & Mementos" },
-        { id: "merits", label: "Merits", title: isMage ? "Merits" : "Merits & Ceremonies" },
-        ...(hasFamiliar ? [
-            { id: "familiar", label: "Familiar", title: "Familiar" },
-        ] : []),
-        { id: "notes", label: isMage ? "XP Tracker" : "Notes", title: isMage ? "XP Tracker" : "Notes" },
-    ];
+            { id: "attributesSkills", label: "Attributes", title: "Attributes & Skills" },
+            { id: "powers", label: "Haunts", title: "Haunts, Keys & Mementos" },
+            { id: "sinEater", label: "Synergy", title: "Synergy & Resources" },
+            { id: "inventory", label: "Inventory", title: "Inventory" },
+            { id: "merits", label: "Merits", title: "Merits & Ceremonies" },
+            { id: "notes", label: "Notes", title: "Notes" },
+        ];
 
     // Mage Armor bonuses for Defense and Armor stats
     const activeMageArmorName = isMage ? (getValue("active_mage_armor") || null) : null;
@@ -2729,16 +2735,17 @@ export const CharacterPanel = ({
                 data-testid="character-section-nav"
                 className="shrink-0 border-b border-zinc-800/70 bg-zinc-950/95 px-3 py-2"
             >
-                <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
+                <div className="grid grid-cols-4 gap-1.5">
                     {navigationTabs.map((tab) => (
                         <button
                             key={tab.id}
                             type="button"
                             title={tab.title}
+                            disabled={!!tab.disabled}
                             aria-pressed={expandedSections[tab.id]}
                             onClick={() => toggleSection(tab.id)}
                             data-testid={`character-nav-${tab.id}`}
-                            className={`h-8 min-w-0 rounded-sm border px-1.5 text-[10px] font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400 ${
+                            className={`h-8 min-w-0 rounded-sm border px-1.5 text-[10px] font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400 disabled:cursor-not-allowed disabled:opacity-40 ${
                                 expandedSections[tab.id]
                                     ? "border-amber-500/70 bg-amber-900/30 text-amber-200"
                                     : "border-zinc-700/80 bg-zinc-900/60 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
