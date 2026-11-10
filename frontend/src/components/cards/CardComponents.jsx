@@ -14,6 +14,7 @@ import {
     HAUNT_DEFINITIONS, KEY_DEFINITIONS,
 } from "../../data/cards-data";
 import { HealthTrack } from "../character/StatComponents";
+import { normalizeSkillSpecialty } from "../../utils/skillSpecialties";
 
 export const MeritCard = ({ merit, definition }) => {
     const [expanded, setExpanded] = useState(false);
@@ -1223,6 +1224,8 @@ export const CombatTrackerCard = ({
     const [attackMode, setAttackMode] = useState("unarmed");
     const [targetDefense, setTargetDefense] = useState("0");
     const [attackModifier, setAttackModifier] = useState("0");
+    const [useAttackSpecialty, setUseAttackSpecialty] = useState(false);
+    const [useAttackWillpower, setUseAttackWillpower] = useState(false);
     const [incomingDamage, setIncomingDamage] = useState("1");
     const [incomingType, setIncomingType] = useState("bashing");
     const [incomingSource, setIncomingSource] = useState("general");
@@ -1382,6 +1385,8 @@ export const CombatTrackerCard = ({
         setAttackMode("unarmed");
         setTargetDefense("0");
         setAttackModifier("0");
+        setUseAttackSpecialty(false);
+        setUseAttackWillpower(false);
         setIncomingDamage("1");
         setIncomingType("bashing");
         setIncomingSource("general");
@@ -1468,6 +1473,24 @@ export const CombatTrackerCard = ({
         };
     })();
 
+    const matchingAttackSpecialties = (activeCharacter?.specialties || [])
+        .map(normalizeSkillSpecialty)
+        .filter((entry) =>
+            entry.skill === attackProfile.skill && !!entry.name
+        );
+
+    const hasAttackSpecialty = matchingAttackSpecialties.length > 0;
+
+    const attackSpecialtyBonus =
+        hasAttackSpecialty && useAttackSpecialty ? 1 : 0;
+
+    const attackWillpowerBonus =
+        useAttackWillpower && currentWillpower > 0 ? 3 : 0;
+
+    useEffect(() => {
+        setUseAttackSpecialty(false);
+    }, [attackProfile.skill]);
+
     const attackAttributeValue = getValue("attributes", attackProfile.attribute) || 0;
     const attackSkillValue = getValue("skills", attackProfile.skill) || 0;
     const attackUntrainedPenalty = attackSkillValue > 0 ? 0 : -1;
@@ -1488,6 +1511,8 @@ export const CombatTrackerCard = ({
         attackAttributeValue +
         attackSkillValue +
         attackUntrainedPenalty +
+        attackSpecialtyBonus +
+        attackWillpowerBonus +
         modifierValue +
         attackConditionPenalty -
         defensePenalty
@@ -1685,6 +1710,8 @@ export const CombatTrackerCard = ({
                                 {" + "}
                                 {formatLabel(attackProfile.skill)} {attackSkillValue}
                                 {attackUntrainedPenalty !== 0 ? ` + Untrained ${attackUntrainedPenalty}` : ""}
+                                {attackSpecialtyBonus > 0 ? ` + Specialty ${attackSpecialtyBonus}` : ""}
+                                {attackWillpowerBonus > 0 ? ` + Willpower ${attackWillpowerBonus}` : ""}
                                 {modifierValue !== 0 ? ` + Modifier ${modifierValue}` : ""}
                                 {attackConditionBreakdown.length > 0 ? ` ${attackConditionBreakdown.map((entry) => `+ ${entry}`).join(" ")}` : ""}
                                 {attackProfile.appliesDefense ? ` - Defense ${defensePenalty}` : ""}
@@ -1717,6 +1744,48 @@ export const CombatTrackerCard = ({
                         </div>
                     </div>
 
+                    <div className="grid grid-cols-2 gap-2">
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={!hasAttackSpecialty}
+                            aria-pressed={hasAttackSpecialty && useAttackSpecialty}
+                            onClick={() => setUseAttackSpecialty((current) => !current)}
+                            title={
+                                hasAttackSpecialty
+                                    ? `Available: ${matchingAttackSpecialties.map((entry) => entry.name).join(", ")}`
+                                    : `No Specialty in ${formatLabel(attackProfile.skill)}`
+                            }
+                            data-testid="combat-card-attack-specialty"
+                            className={`h-8 text-xs ${
+                                hasAttackSpecialty && useAttackSpecialty
+                                    ? "border-teal-500 bg-teal-900/40 text-teal-200"
+                                    : "border-zinc-700 bg-zinc-900/40 text-zinc-400"
+                            } disabled:cursor-not-allowed disabled:opacity-40`}
+                        >
+                            Specialty +1
+                        </Button>
+
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={currentWillpower < 1 || !onUpdateCharacter}
+                            aria-pressed={attackWillpowerBonus > 0}
+                            onClick={() => setUseAttackWillpower((current) => !current)}
+                            title="Spend 1 Willpower when rolling for +3 dice"
+                            data-testid="combat-card-attack-willpower"
+                            className={`h-8 text-xs ${
+                                attackWillpowerBonus > 0
+                                    ? "border-amber-500 bg-amber-900/40 text-amber-200"
+                                    : "border-zinc-700 bg-zinc-900/40 text-zinc-400"
+                            } disabled:cursor-not-allowed disabled:opacity-40`}
+                        >
+                            Willpower +3
+                        </Button>
+                    </div>
+
                     <div className="flex items-center justify-between rounded-sm border px-3 py-2 bg-zinc-950/50 border-zinc-800">
                         <span className="text-zinc-500 text-xs">Pool</span>
                         <span className="font-mono text-amber-300 text-sm">{attackPool}</span>
@@ -1728,26 +1797,62 @@ export const CombatTrackerCard = ({
                         onClick={async () => {
                             if (!onTriggerDiceRoll) return;
 
+                            const spendAttackWillpower = attackWillpowerBonus > 0;
+
+                            const attackUpdates = {};
+
+                            if (spendAttackWillpower) {
+                                if (currentWillpower < 1 || !onUpdateCharacter) return;
+                                attackUpdates.willpower = currentWillpower - 1;
+                            }
+
+                            const isThrownAttack =
+                                attackProfile.unequipAfterAttack &&
+                                selectedWeaponIndex >= 0;
+
+                            if (isThrownAttack && onUpdateCharacter) {
+                                attackUpdates.inventory_items = inventoryItems.map(
+                                    (item, idx) =>
+                                        idx === selectedWeaponIndex
+                                            ? { ...item, equipped: false }
+                                            : item
+                                );
+                            }
+
+                            const breakdown = [
+                                `${formatLabel(attackProfile.attribute)} ${attackAttributeValue}`,
+                                `+ ${formatLabel(attackProfile.skill)} ${attackSkillValue}`,
+                                ...(attackUntrainedPenalty !== 0
+                                    ? [`+ Untrained ${attackUntrainedPenalty}`]
+                                    : []),
+                                ...(attackSpecialtyBonus > 0
+                                    ? [`+ Specialty ${attackSpecialtyBonus}`]
+                                    : []),
+                                ...(attackWillpowerBonus > 0
+                                    ? [`+ Willpower ${attackWillpowerBonus}`]
+                                    : []),
+                                `+ Modifier ${modifierValue}`,
+                                ...attackConditionBreakdown.map((entry) => `+ ${entry}`),
+                                `- Target Defense ${defensePenalty}`,
+                            ].join(" ");
+
                             onTriggerDiceRoll({
                                 pool: attackPool <= 0 ? 1 : attackPool,
                                 chance: attackPool <= 0,
-                                label: `${formatLabel(attackAttribute)} + ${formatLabel(attackSkill)} Attack`,
-                                dicePoolBreakdown: `${formatLabel(attackAttribute)} ${attackAttributeValue} + ${formatLabel(attackSkill)} ${attackSkillValue}${attackUntrainedPenalty !== 0 ? ` + Untrained ${attackUntrainedPenalty}` : ""} + Modifier ${parseInt(attackModifier, 10) || 0} - Target Defense ${parseInt(targetDefense, 10) || 0}`,
+                                label: `${formatLabel(attackProfile.attribute)} + ${formatLabel(attackProfile.skill)} Attack`,
+                                dicePoolBreakdown: breakdown,
                                 isAttack: true,
                                 weaponDamage: 0,
                                 exceptional_target: 5,
                             });
 
-                            if (
-                                attackProfile.unequipAfterAttack &&
-                                selectedWeaponIndex >= 0 &&
-                                typeof onUpdateCharacter === "function"
-                            ) {
-                                const updatedInventory = inventoryItems.map((item, idx) =>
-                                    idx === selectedWeaponIndex ? { ...item, equipped: false } : item
-                                );
+                            setUseAttackWillpower(false);
 
-                                await onUpdateCharacter({ inventory_items: updatedInventory });
+                            if (Object.keys(attackUpdates).length > 0 && onUpdateCharacter) {
+                                await onUpdateCharacter(attackUpdates);
+                            }
+
+                            if (isThrownAttack) {
                                 setSelectedWeaponKey("__unarmed__");
                                 setAttackMode("unarmed");
                             }
