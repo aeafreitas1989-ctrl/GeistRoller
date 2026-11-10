@@ -342,6 +342,7 @@ export const GameCardsPanel = ({
     onEndTurn,
     onSleep,
 }) => {
+    const cardsScrollAreaRef = useRef(null);
     const [showAddPlacePerson, setShowAddPlacePerson] = useState(false);
     const [newPlaceName, setNewPlaceName] = useState("");
     const [newPlaceType, setNewPlaceType] = useState("place");
@@ -352,6 +353,7 @@ export const GameCardsPanel = ({
     const [newPersonSubtype, setNewPersonSubtype] = useState("Aware");
     const [newAnimalSpecies, setNewAnimalSpecies] = useState("");
     const [openSections, setOpenSections] = useState({
+        scene: true,
         sessionSummary: false,
         caseTruth: false,
         conditions: false,
@@ -577,15 +579,15 @@ export const GameCardsPanel = ({
     const toggleSection = (section) => {
         setOpenSections((prev) => {
             const shouldOpen = !prev[section];
-
-            if (!shouldOpen) {
-                return { ...prev, [section]: false };
-            }
-
             return Object.fromEntries(
-                Object.keys(prev).map((key) => [key, key === section])
+                Object.keys(prev).map((key) => [key, key === section && shouldOpen])
             );
         });
+        // Navigation stays visible; reset just the Cards content scroll.
+        const viewport = cardsScrollAreaRef.current?.querySelector(
+            '[data-radix-scroll-area-viewport]'
+        );
+        if (viewport) viewport.scrollTop = 0;
     };
 
     const handleSaveCaseFile = async () => {
@@ -671,14 +673,59 @@ export const GameCardsPanel = ({
     }, {});
 
 
+    // Same one-at-a-time navigation pattern as Character Sheet.
+    const cardNavigationItems = [
+        { id: "scene", label: "Scene" },
+        { id: "combat", label: "Combat" },
+        { id: "conditions", label: "Conditions" },
+        ...(!isMage ? [
+            { id: "haunts", label: "Haunts" },
+            { id: "keys", label: "Keys" },
+            { id: "ceremonies", label: "Ceremonies" },
+        ] : [
+            { id: "activeSpells", label: "Active Spells" },
+        ]),
+        { id: "merits", label: "Merits" },
+        { id: "places", label: "Places & NPCs" },
+        { id: "caseTruth", label: "Case File" },
+    ];
+
     return (
-        <div className="h-full flex flex-col" data-testid="game-cards-panel">
-            <div className="px-4 py-3 border-b border-zinc-800/50">
+        <div className="h-full min-h-0 flex flex-col" data-testid="game-cards-panel">
+            <div className="px-4 py-3 border-b border-zinc-800/50 shrink-0">
                 <h2 className="font-heading text-lg text-zinc-200">Cards</h2>
             </div>
 
-            <ScrollArea className="flex-1">
+            <nav
+                aria-label="Cards sections"
+                className="shrink-0 border-b border-zinc-800 bg-zinc-950/95 px-3 py-2"
+                data-testid="cards-top-navigation"
+            >
+                <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 lg:grid-cols-5">
+                    {cardNavigationItems.map(({ id, label }) => (
+                        <Button
+                            key={id}
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            aria-pressed={!!openSections[id]}
+                            onClick={() => toggleSection(id)}
+                            data-testid={`cards-nav-${id}`}
+                            className={`h-auto min-h-8 min-w-0 whitespace-normal px-1.5 py-1.5 text-[10px] leading-tight sm:text-xs ${
+                                openSections[id]
+                                    ? "border-teal-500/60 bg-teal-900/40 text-teal-200 hover:bg-teal-800/40"
+                                    : "border-zinc-700 bg-zinc-900/40 text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-200"
+                            }`}
+                        >
+                            {label}
+                        </Button>
+                    ))}
+                </div>
+            </nav>
+
+            <ScrollArea ref={cardsScrollAreaRef} className="flex-1 min-h-0">
                 <div className="p-4 space-y-4">
+                    <div className={openSections.scene ? "" : "hidden"} data-testid="cards-section-scene">
                     <SceneTrackerCard
                         sceneTracker={sceneTracker}
                         updateSceneTracker={updateSceneTracker}
@@ -690,13 +737,14 @@ export const GameCardsPanel = ({
                         getTemperatureColorClass={getTemperatureColorClass}
                         getTemperatureCondition={getTemperatureCondition}
                     />
+                    </div>
                         <Collapsible
                             open={openSections.combat}
                             onOpenChange={() => toggleSection("combat")}
-                            className="bg-zinc-900/40 border border-zinc-800 rounded-sm"
+                            className={openSections.combat ? "bg-zinc-900/40 border border-zinc-800 rounded-sm" : "hidden"}
                             data-testid="cards-section-combat"
                         >
-                            <CollapsibleTrigger className="w-full flex items-center justify-between p-3" data-testid="cards-section-combat-toggle">
+                            <CollapsibleTrigger className="!hidden w-full flex items-center justify-between p-3" data-testid="cards-section-combat-toggle">
                                 <div className="flex items-center gap-2">
                                     <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">Combat</span>
                                 </div>
@@ -706,7 +754,7 @@ export const GameCardsPanel = ({
                                     <ChevronRight className="w-4 h-4 text-zinc-500" />
                                 )}
                             </CollapsibleTrigger>
-                            <CollapsibleContent className="px-3 pb-3">
+                            <CollapsibleContent className="px-3 pt-3 pb-3">
                                 <CombatTrackerCard
                                     activeCharacter={activeCharacter}
                                     normalDefense={normalDefense}
@@ -737,6 +785,7 @@ export const GameCardsPanel = ({
 
                     {/* Conditions Section */}
                     <ConditionsSection
+                        navMode
                         open={openSections.conditions}
                         onToggle={() => toggleSection("conditions")}
                         activeCharacter={activeCharacter}
@@ -752,10 +801,10 @@ export const GameCardsPanel = ({
                             <Collapsible
                                 open={openSections.haunts}
                                 onOpenChange={() => toggleSection("haunts")}
-                                className="bg-zinc-900/40 border border-zinc-800 rounded-sm"
+                                className={openSections.haunts ? "bg-zinc-900/40 border border-zinc-800 rounded-sm" : "hidden"}
                                 data-testid="cards-section-haunts"
                             >
-                                <CollapsibleTrigger className="w-full flex items-center justify-between p-3" data-testid="cards-section-haunts-toggle">
+                                <CollapsibleTrigger className="!hidden w-full flex items-center justify-between p-3" data-testid="cards-section-haunts-toggle">
                                     <div className="flex items-center gap-2">
                                         <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">Haunts</span>
                                         <span className="text-[10px] text-zinc-500">{hauntCount}</span>
@@ -766,7 +815,7 @@ export const GameCardsPanel = ({
                                         <ChevronRight className="w-4 h-4 text-zinc-500" />
                                     )}
                                 </CollapsibleTrigger>
-                                <CollapsibleContent className="px-3 pb-3">
+                                <CollapsibleContent className="px-3 pt-3 pb-3">
                                     <div className="space-y-2" data-testid="haunts-list">
                                         {Object.entries(HAUNT_DEFINITIONS).map(([name, definition]) => (
                                             <HauntCard
@@ -789,10 +838,10 @@ export const GameCardsPanel = ({
                             <Collapsible
                                 open={openSections.keys}
                                 onOpenChange={() => toggleSection("keys")}
-                                className="bg-zinc-900/40 border border-zinc-800 rounded-sm"
+                                className={openSections.keys ? "bg-zinc-900/40 border border-zinc-800 rounded-sm" : "hidden"}
                                 data-testid="cards-section-keys"
                             >
-                                <CollapsibleTrigger className="w-full flex items-center justify-between p-3" data-testid="cards-section-keys-toggle">
+                                <CollapsibleTrigger className="!hidden w-full flex items-center justify-between p-3" data-testid="cards-section-keys-toggle">
                                     <div className="flex items-center gap-2">
                                         <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">Keys</span>
                                         <span className="text-[10px] text-zinc-500">{availableKeys.length}</span>
@@ -803,7 +852,7 @@ export const GameCardsPanel = ({
                                         <ChevronRight className="w-4 h-4 text-zinc-500" />
                                     )}
                                 </CollapsibleTrigger>
-                                <CollapsibleContent className="px-3 pb-3">
+                                <CollapsibleContent className="px-3 pt-3 pb-3">
                                     <div className="space-y-2" data-testid="keys-list">
                                         <div className="text-[11px] text-zinc-500 mb-2">
                                             Keys are unlocked from character creation, Geist, Mementos, and manual selection. 
@@ -845,10 +894,10 @@ export const GameCardsPanel = ({
                             <Collapsible
                                 open={openSections.ceremonies}
                                 onOpenChange={() => toggleSection("ceremonies")}
-                                className="bg-zinc-900/40 border border-zinc-800 rounded-sm"
+                                className={openSections.ceremonies ? "bg-zinc-900/40 border border-zinc-800 rounded-sm" : "hidden"}
                                 data-testid="cards-section-ceremonies"
                             >
-                                <CollapsibleTrigger className="w-full flex items-center justify-between p-3" data-testid="cards-section-ceremonies-toggle">
+                                <CollapsibleTrigger className="!hidden w-full flex items-center justify-between p-3" data-testid="cards-section-ceremonies-toggle">
                                     <div className="flex items-center gap-2">
                                         <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">Ceremonies</span>
                                         <span className="text-[10px] text-zinc-500">{Object.keys(CEREMONY_DEFINITIONS).length}</span>
@@ -859,7 +908,7 @@ export const GameCardsPanel = ({
                                         <ChevronRight className="w-4 h-4 text-zinc-500" />
                                     )}
                                 </CollapsibleTrigger>
-                                <CollapsibleContent className="px-3 pb-3">
+                                <CollapsibleContent className="px-3 pt-3 pb-3">
                                     <div className="space-y-2" data-testid="ceremonies-list">
                                         {Object.entries(CEREMONY_DEFINITIONS).map(([name, ceremony]) => (
                                             <CeremonyCard
@@ -877,6 +926,7 @@ export const GameCardsPanel = ({
 
                     {isMage && (
                         <ActiveSpellsSection
+                            navMode
                             open={openSections.activeSpells}
                             onToggle={() => toggleSection("activeSpells")}
                             activeCharacter={activeCharacter}
@@ -894,10 +944,10 @@ export const GameCardsPanel = ({
                     <Collapsible
                         open={openSections.merits}
                         onOpenChange={() => toggleSection("merits")}
-                        className="bg-zinc-900/40 border border-zinc-800 rounded-sm"
+                        className={openSections.merits ? "bg-zinc-900/40 border border-zinc-800 rounded-sm" : "hidden"}
                         data-testid="cards-section-merits"
                     >
-                        <CollapsibleTrigger className="w-full flex items-center justify-between p-3" data-testid="cards-section-merits-toggle">
+                        <CollapsibleTrigger className="!hidden w-full flex items-center justify-between p-3" data-testid="cards-section-merits-toggle">
                             <div className="flex items-center gap-2">
                                 <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">Merits</span>
                                 <span className="text-[10px] text-zinc-500">{characterMerits.length}</span>
@@ -908,7 +958,7 @@ export const GameCardsPanel = ({
                                 <ChevronRight className="w-4 h-4 text-zinc-500" />
                             )}
                         </CollapsibleTrigger>
-                        <CollapsibleContent className="px-3 pb-3">
+                        <CollapsibleContent className="px-3 pt-3 pb-3">
                             {characterMerits.length === 0 ? (
                                 <div className="text-center py-6">
                                     <p className="text-zinc-500 text-sm">No merits selected</p>
@@ -945,11 +995,11 @@ export const GameCardsPanel = ({
                         onOpenChange={() =>
                             toggleSection("places")
                         }
-                        className="bg-zinc-900/40 border border-zinc-800 rounded-sm"
+                        className={openSections.places ? "bg-zinc-900/40 border border-zinc-800 rounded-sm" : "hidden"}
                         data-testid="cards-section-places"
                     >
                         <CollapsibleTrigger
-                            className="w-full flex items-center justify-between p-3"
+                            className="!hidden w-full flex items-center justify-between p-3"
                             data-testid="cards-section-places-toggle"
                         >
                             <div className="flex items-center gap-2">
@@ -969,7 +1019,7 @@ export const GameCardsPanel = ({
                             )}
                         </CollapsibleTrigger>
 
-                        <CollapsibleContent className="px-3 pb-3">
+                        <CollapsibleContent className="px-3 pt-3 pb-3">
                             <div className="space-y-3">
 
                                 <Dialog
@@ -1396,9 +1446,9 @@ export const GameCardsPanel = ({
                     <Collapsible
                         open={openSections.caseTruth}
                         onOpenChange={() => toggleSection("caseTruth")}
-                        className="bg-purple-950/30 border border-purple-500/30 rounded-sm"
+                        className={openSections.caseTruth ? "bg-purple-950/30 border border-purple-500/30 rounded-sm" : "hidden"}
                     >
-                        <CollapsibleTrigger className="w-full flex items-center justify-between p-3">
+                        <CollapsibleTrigger className="!hidden w-full flex items-center justify-between p-3">
                             <div className="flex items-center gap-2">
                                 <BookOpen className="w-4 h-4 text-purple-400" />
                                 <span className="text-xs font-mono uppercase tracking-wider text-purple-300">
@@ -1412,7 +1462,7 @@ export const GameCardsPanel = ({
                             )}
                         </CollapsibleTrigger>
 
-                        <CollapsibleContent className="px-3 pb-3 space-y-3">
+                        <CollapsibleContent className="px-3 pt-3 pb-3 space-y-3">
                             <Textarea
                                 value={caseFileDraft}
                                 onChange={(e) => setCaseFileDraft(e.target.value)}

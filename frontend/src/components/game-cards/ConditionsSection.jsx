@@ -47,6 +47,7 @@ const SHELTER_MITIGATED_TILTS = new Set([
 export const ConditionsSection = ({
     open,
     onToggle,
+    navMode = false,
     activeCharacter,
     activeConditions = [],
     onAddCondition,
@@ -530,11 +531,11 @@ export const ConditionsSection = ({
         <Collapsible
             open={open}
             onOpenChange={onToggle}
-            className="bg-zinc-900/40 border border-zinc-800 rounded-sm"
+            className={navMode && !open ? "hidden" : "bg-zinc-900/40 border border-zinc-800 rounded-sm"}
             data-testid="cards-section-conditions"
         >
             <CollapsibleTrigger
-                className="w-full flex items-center justify-between p-3"
+                className={`${navMode ? "!hidden " : ""}w-full flex items-center justify-between p-3`}
                 data-testid="cards-section-conditions-toggle"
             >
                 <div className="flex items-center gap-2">
@@ -554,7 +555,7 @@ export const ConditionsSection = ({
                 )}
             </CollapsibleTrigger>
 
-            <CollapsibleContent className="px-3 pb-3">
+            <CollapsibleContent className="px-3 pt-3 pb-3">
                 <div className="space-y-3">
 
                     <Dialog

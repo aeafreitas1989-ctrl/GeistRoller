@@ -16,6 +16,7 @@ import { MageSightCard } from "../cards/MageSightCard";
 export const ActiveSpellsSection = ({
     open,
     onToggle,
+    navMode = false,
     activeCharacter,
     activeSpells,
     activeMageSight,
@@ -31,10 +32,10 @@ export const ActiveSpellsSection = ({
         <Collapsible
             open={open}
             onOpenChange={onToggle}
-            className="bg-zinc-900/40 border border-zinc-800 rounded-sm"
+            className={navMode && !open ? "hidden" : "bg-zinc-900/40 border border-zinc-800 rounded-sm"}
             data-testid="cards-section-active-spells"
         >
-            <CollapsibleTrigger className="w-full flex items-center justify-between p-3" data-testid="cards-section-active-spells-toggle">
+            <CollapsibleTrigger className={`${navMode ? "!hidden " : ""}w-full flex items-center justify-between p-3`} data-testid="cards-section-active-spells-toggle">
                 <div className="flex items-center gap-2">
                     <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">Active Spells & Effects</span>
                     <span className="text-[10px] text-zinc-500">{activeSpells.length}</span>
@@ -45,7 +46,7 @@ export const ActiveSpellsSection = ({
                     <ChevronRight className="w-4 h-4 text-zinc-500" />
                 )}
             </CollapsibleTrigger>
-            <CollapsibleContent className="px-3 pb-3">
+            <CollapsibleContent className="px-3 pt-3 pb-3">
                 <div className="space-y-2" data-testid="active-spells-list">
                     <MageSightCard
                         activeCharacter={activeCharacter}
