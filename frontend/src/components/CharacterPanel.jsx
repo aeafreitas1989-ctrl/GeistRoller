@@ -109,17 +109,13 @@ export const CharacterPanel = ({
     onImportCharacter,
     onAdvanceTime,
 }) => {
-    const [expandedSections, setExpandedSections] = useState({
-        header: false,
-        geist: false,
-        attributesSkills: false,
-        merits: false,
-        familiar: false,
-        inventory: false,
-        sinEater: false,
-        powers: false,
-        notes: false,
-    });
+    const [activeSection, setActiveSection] = useState("header");
+    const sheetScrollRef = useRef(null);
+
+    // Opening a different character starts on the Character Info section.
+    useEffect(() => {
+        setActiveSection("header");
+    }, [activeCharacter?.id]);
     const [pendingChanges, setPendingChanges] = useState({});
     const [draftCharacterId, setDraftCharacterId] = useState(
         activeCharacter?.id
@@ -364,17 +360,16 @@ export const CharacterPanel = ({
     };
 
     const toggleSection = (section) => {
-        setExpandedSections((prev) => {
-            const shouldOpen = !prev[section];
+        // Only one section is ever displayed; selecting the current section
+        // leaves it open rather than collapsing the whole character sheet.
+        setActiveSection(section);
 
-            if (!shouldOpen) {
-                return { ...prev, [section]: false };
-            }
-
-            return Object.fromEntries(
-                Object.keys(prev).map((key) => [key, key === section])
-            );
-        });
+        // The navigation stays visible outside the scroll area. When switching
+        // panels, show the beginning of the selected panel automatically.
+        const viewport = sheetScrollRef.current?.querySelector(
+            '[data-radix-scroll-area-viewport]'
+        );
+        if (viewport) viewport.scrollTop = 0;
     };
 
     const isMageCharacter = activeCharacter?.character_type === "mage";
@@ -2554,6 +2549,36 @@ export const CharacterPanel = ({
     const isMage = characterType === "mage";
     const hasFamiliar = isMage && familiarDots >= 2;
 
+    // Hide conditional sections that are unavailable for this character.
+    // This also handles switching between Mage and Sin-Eater characters.
+    const visibleSection = (
+        (activeSection === "familiar" && !hasFamiliar) ||
+        (activeSection === "geist" && isMage)
+    ) ? "header" : activeSection;
+
+    const expandedSections = Object.fromEntries(
+        ["header", "geist", "attributesSkills", "sinEater", "inventory",
+            "powers", "merits", "familiar", "notes"].map(
+            (section) => [section, visibleSection === section]
+        )
+    );
+
+    const navigationTabs = [
+        { id: "header", label: "Info", title: "Character Info" },
+        ...(!isMage ? [
+            { id: "geist", label: "Geist", title: "Geist & Remembrance" },
+        ] : []),
+        { id: "attributesSkills", label: "Attributes", title: "Attributes & Skills" },
+        { id: "sinEater", label: isMage ? "Gnosis" : "Synergy", title: isMage ? "Gnosis & Resources" : "Synergy & Resources" },
+        { id: "inventory", label: "Inventory", title: "Inventory" },
+        { id: "powers", label: isMage ? "Arcana" : "Haunts", title: isMage ? "Arcana, Spells & Attainments" : "Haunts, Keys & Mementos" },
+        { id: "merits", label: "Merits", title: isMage ? "Merits" : "Merits & Ceremonies" },
+        ...(hasFamiliar ? [
+            { id: "familiar", label: "Familiar", title: "Familiar" },
+        ] : []),
+        { id: "notes", label: isMage ? "XP Tracker" : "Notes", title: isMage ? "XP Tracker" : "Notes" },
+    ];
+
     // Mage Armor bonuses for Defense and Armor stats
     const activeMageArmorName = isMage ? (getValue("active_mage_armor") || null) : null;
     const activeMageArmorDots = activeMageArmorName ? (getNestedValue("arcana", activeMageArmorName) || 0) : 0;
@@ -2698,7 +2723,34 @@ export const CharacterPanel = ({
                 </div>
             </div>
 
-            <ScrollArea className="flex-1">
+            {/* Character section navigation stays visible while content scrolls. */}
+            <nav
+                aria-label="Character sheet sections"
+                data-testid="character-section-nav"
+                className="shrink-0 border-b border-zinc-800/70 bg-zinc-950/95 px-3 py-2"
+            >
+                <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
+                    {navigationTabs.map((tab) => (
+                        <button
+                            key={tab.id}
+                            type="button"
+                            title={tab.title}
+                            aria-pressed={expandedSections[tab.id]}
+                            onClick={() => toggleSection(tab.id)}
+                            data-testid={`character-nav-${tab.id}`}
+                            className={`h-8 min-w-0 rounded-sm border px-1.5 text-[10px] font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400 ${
+                                expandedSections[tab.id]
+                                    ? "border-amber-500/70 bg-amber-900/30 text-amber-200"
+                                    : "border-zinc-700/80 bg-zinc-900/60 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
+                            }`}
+                        >
+                            <span className="block truncate">{tab.label}</span>
+                        </button>
+                    ))}
+                </div>
+            </nav>
+
+            <ScrollArea ref={sheetScrollRef} className="min-h-0 flex-1" data-testid="character-sheet-content-scroll">
                 <div className="p-3 space-y-3">
                     {isMage && isCreationMode && (
                         <CharacterCreationAuditPanel
@@ -2741,7 +2793,7 @@ export const CharacterPanel = ({
 
                     {/* Character Header Info */}
                     <Collapsible open={expandedSections.header}>
-                        <CollapsibleTrigger onClick={() => toggleSection("header")} className="flex items-center justify-between w-full p-2 rounded-sm bg-teal-900/20 border border-teal-800 hover:bg-teal-800/30" data-testid="section-toggle-character-info">
+                        <CollapsibleTrigger onClick={() => toggleSection("header")} className="!hidden flex items-center justify-between w-full p-2 rounded-sm bg-teal-900/20 border border-teal-800 hover:bg-teal-800/30" data-testid="section-toggle-character-info">
                             <span className="text-xs font-mono uppercase tracking-wider text-teal-400">Character Info</span>
                             {expandedSections.header ? <ChevronDown className="w-4 h-4 text-teal-500" /> : <ChevronRight className="w-4 h-4 text-teal-500" />}
                         </CollapsibleTrigger>
@@ -2884,7 +2936,7 @@ export const CharacterPanel = ({
                     {/* Geist & Remembrance - Sin-Eaters only */}
                     {!isMage && (
                     <Collapsible open={expandedSections.geist}>
-                        <CollapsibleTrigger onClick={() => toggleSection("geist")} className="flex items-center justify-between w-full p-2 rounded-sm bg-cyan-900/20 border border-cyan-800 hover:bg-cyan-800/30" data-testid="section-toggle-geist">
+                        <CollapsibleTrigger onClick={() => toggleSection("geist")} className="!hidden flex items-center justify-between w-full p-2 rounded-sm bg-cyan-900/20 border border-cyan-800 hover:bg-cyan-800/30" data-testid="section-toggle-geist">
                             <span className="text-xs font-mono uppercase tracking-wider text-cyan-400">Geist & Remembrance</span>
                             {expandedSections.geist ? <ChevronDown className="w-4 h-4 text-cyan-500" /> : <ChevronRight className="w-4 h-4 text-cyan-500" />}
                         </CollapsibleTrigger>
@@ -2899,7 +2951,7 @@ export const CharacterPanel = ({
 
                     {/* Attributes & Skills */}
                     <Collapsible open={expandedSections.attributesSkills}>
-                        <CollapsibleTrigger onClick={() => toggleSection("attributesSkills")} className="flex items-center justify-between w-full p-2 rounded-sm bg-sky-900/20 border border-sky-800 hover:bg-sky-800/30" data-testid="section-toggle-attributes-skills">
+                        <CollapsibleTrigger onClick={() => toggleSection("attributesSkills")} className="!hidden flex items-center justify-between w-full p-2 rounded-sm bg-sky-900/20 border border-sky-800 hover:bg-sky-800/30" data-testid="section-toggle-attributes-skills">
                             <span className="text-xs font-mono uppercase tracking-wider text-sky-400">Attributes &amp; Skills</span>
                             {expandedSections.attributesSkills ? <ChevronDown className="w-4 h-4 text-sky-500" /> : <ChevronRight className="w-4 h-4 text-sky-500" />}
                         </CollapsibleTrigger>
@@ -3051,7 +3103,7 @@ export const CharacterPanel = ({
 
                     {/* Synergy & Resources (Geist) / Gnosis & Resources (Mage) */}
                     <Collapsible open={expandedSections.sinEater}>
-                        <CollapsibleTrigger onClick={() => toggleSection("sinEater")} className="flex items-center justify-between w-full p-2 rounded-sm bg-purple-900/20 border border-purple-500/30 hover:bg-purple-900/30" data-testid="section-toggle-synergy-resources">
+                        <CollapsibleTrigger onClick={() => toggleSection("sinEater")} className="!hidden flex items-center justify-between w-full p-2 rounded-sm bg-purple-900/20 border border-purple-500/30 hover:bg-purple-900/30" data-testid="section-toggle-synergy-resources">
                             <span className="text-xs font-mono uppercase tracking-wider text-purple-400">
                                 {isMage ? "Gnosis & Resources" : "Synergy & Resources"}
                             </span>
@@ -3082,7 +3134,7 @@ export const CharacterPanel = ({
                     <Collapsible open={expandedSections.inventory}>
                         <CollapsibleTrigger
                             onClick={() => toggleSection("inventory")}
-                            className="flex items-center justify-between w-full p-2 rounded-sm bg-orange-900/20 border border-orange-800 hover:bg-orange-800/30"
+                            className="!hidden flex items-center justify-between w-full p-2 rounded-sm bg-orange-900/20 border border-orange-800 hover:bg-orange-800/30"
                             data-testid="section-toggle-inventory"
                         >
                             <span className="text-xs font-mono uppercase tracking-wider text-orange-400">Inventory</span>
@@ -3156,7 +3208,7 @@ export const CharacterPanel = ({
 
                     {/* Powers - Different for Mage vs Geist */}
                     <Collapsible open={expandedSections.powers}>
-                        <CollapsibleTrigger onClick={() => toggleSection("powers")} className="flex items-center justify-between w-full p-2 rounded-sm bg-purple-900/20 border border-purple-500/30 hover:bg-purple-900/30" data-testid="section-toggle-powers">
+                        <CollapsibleTrigger onClick={() => toggleSection("powers")} className="!hidden flex items-center justify-between w-full p-2 rounded-sm bg-purple-900/20 border border-purple-500/30 hover:bg-purple-900/30" data-testid="section-toggle-powers">
                             <span className="text-xs font-mono uppercase tracking-wider text-purple-400">
                                 {isMage ? "Arcana, Spells & Attainments" : "Haunts, Keys & Mementos"}
                             </span>
@@ -3188,7 +3240,7 @@ export const CharacterPanel = ({
 
                     {/* Merits (different title for Mage vs Geist) */}
                     <Collapsible open={expandedSections.merits}>
-                        <CollapsibleTrigger onClick={() => toggleSection("merits")} className="flex items-center justify-between w-full p-2 rounded-sm bg-purple-900/20 border border-purple-500/30 hover:bg-purple-900/30" data-testid="section-toggle-merits">
+                        <CollapsibleTrigger onClick={() => toggleSection("merits")} className="!hidden flex items-center justify-between w-full p-2 rounded-sm bg-purple-900/20 border border-purple-500/30 hover:bg-purple-900/30" data-testid="section-toggle-merits">
                             <span className="text-xs font-mono uppercase tracking-wider text-purple-400">
                                 {isMage ? "Merits" : "Merits & Ceremonies"}
                             </span>
@@ -3223,7 +3275,7 @@ export const CharacterPanel = ({
                                         "familiar"
                                     )
                                 }
-                                className="flex items-center justify-between w-full p-2 rounded-sm bg-indigo-900/20 border border-indigo-500/30 hover:bg-indigo-900/30"
+                                className="!hidden flex items-center justify-between w-full p-2 rounded-sm bg-indigo-900/20 border border-indigo-500/30 hover:bg-indigo-900/30"
                                 data-testid="section-toggle-familiar"
                             >
                                 <div className="flex items-center gap-2">
@@ -3271,7 +3323,7 @@ export const CharacterPanel = ({
                         open={expandedSections.notes}
                         onOpenChange={() => toggleSection("notes")}
                     >
-                        <CollapsibleTrigger className="w-full">
+                        <CollapsibleTrigger className="!hidden w-full">
                             <div className="flex items-center justify-between p-2 bg-zinc-900/40 border border-zinc-800 rounded-sm">
                                 <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">
                                     {isMage ? "XP Tracker" : "Notes"}
