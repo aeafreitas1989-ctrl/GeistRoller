@@ -353,7 +353,6 @@ export const GameCardsPanel = ({
     const [newPersonSubtype, setNewPersonSubtype] = useState("Aware");
     const [newAnimalSpecies, setNewAnimalSpecies] = useState("");
     const [openSections, setOpenSections] = useState({
-        scene: true,
         sessionSummary: false,
         caseTruth: false,
         conditions: false,
@@ -674,21 +673,25 @@ export const GameCardsPanel = ({
 
 
     // Same one-at-a-time navigation pattern as Character Sheet.
-    const cardNavigationItems = [
-        { id: "scene", label: "Scene" },
-        { id: "combat", label: "Combat" },
-        { id: "conditions", label: "Conditions" },
-        ...(!isMage ? [
+    const cardNavigationItems = isMage
+        ? [
+            { id: "combat", label: "Combat" },
+            { id: "conditions", label: "Conditions" },
+            { id: "activeSpells", label: "Active Spells & Abilities" },
+            { id: "merits", label: "Merits" },
+            { id: "places", label: "Places & NPCs" },
+            { id: "caseTruth", label: "Case File" },
+        ]
+        : [
+            { id: "combat", label: "Combat" },
+            { id: "conditions", label: "Conditions" },
             { id: "haunts", label: "Haunts" },
             { id: "keys", label: "Keys" },
             { id: "ceremonies", label: "Ceremonies" },
-        ] : [
-            { id: "activeSpells", label: "Active Spells" },
-        ]),
-        { id: "merits", label: "Merits" },
-        { id: "places", label: "Places & NPCs" },
-        { id: "caseTruth", label: "Case File" },
-    ];
+            { id: "merits", label: "Merits" },
+            { id: "places", label: "Places & NPCs" },
+            { id: "caseTruth", label: "Case File" },
+        ];
 
     return (
         <div className="h-full min-h-0 flex flex-col" data-testid="game-cards-panel">
@@ -696,12 +699,26 @@ export const GameCardsPanel = ({
                 <h2 className="font-heading text-lg text-zinc-200">Cards</h2>
             </div>
 
+            <div className="px-4 py-3 shrink-0" data-testid="cards-section-scene">
+                <SceneTrackerCard
+                    sceneTracker={sceneTracker}
+                    updateSceneTracker={updateSceneTracker}
+                    placeOptions={scenePlaceOptions}
+                    sceneTemperature={sceneTemperature}
+                    sceneSeason={sceneSeason}
+                    getSeasonColorClass={getSeasonColorClass}
+                    getTemperatureIconClass={getTemperatureIconClass}
+                    getTemperatureColorClass={getTemperatureColorClass}
+                    getTemperatureCondition={getTemperatureCondition}
+                />
+            </div>
+
             <nav
                 aria-label="Cards sections"
                 className="shrink-0 border-b border-zinc-800 bg-zinc-950/95 px-3 py-2"
                 data-testid="cards-top-navigation"
             >
-                <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 lg:grid-cols-5">
+                <div className="grid grid-cols-3 gap-1.5">
                     {cardNavigationItems.map(({ id, label }) => (
                         <Button
                             key={id}
@@ -725,19 +742,7 @@ export const GameCardsPanel = ({
 
             <ScrollArea ref={cardsScrollAreaRef} className="flex-1 min-h-0">
                 <div className="p-4 space-y-4">
-                    <div className={openSections.scene ? "" : "hidden"} data-testid="cards-section-scene">
-                    <SceneTrackerCard
-                        sceneTracker={sceneTracker}
-                        updateSceneTracker={updateSceneTracker}
-                        placeOptions={scenePlaceOptions}
-                        sceneTemperature={sceneTemperature}
-                        sceneSeason={sceneSeason}
-                        getSeasonColorClass={getSeasonColorClass}
-                        getTemperatureIconClass={getTemperatureIconClass}
-                        getTemperatureColorClass={getTemperatureColorClass}
-                        getTemperatureCondition={getTemperatureCondition}
-                    />
-                    </div>
+
                         <Collapsible
                             open={openSections.combat}
                             onOpenChange={() => toggleSection("combat")}
