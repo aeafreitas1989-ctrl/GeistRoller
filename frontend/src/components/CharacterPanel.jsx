@@ -144,7 +144,7 @@ export const CharacterPanel = ({
         type: "equipment",
         name: "",
         availability: 0,
-        weapon: { kind: "melee", damage: 1, strength: 0, size: 1, range: 10, ammo: 0, special: [], notes: "" },
+        weapon: { kind: "melee", damage: 1, damage_type: "lethal", strength: 0, size: 1, range: 10, ammo: 0, special: [], notes: "" },
         armor: {
             general: 1,
             ballistic: 0,
@@ -1686,7 +1686,7 @@ export const CharacterPanel = ({
             type: prev.type,
             name: "",
             availability: 0,
-            weapon: { damage: 1, strength: 1, size: 1, special: [], notes: "" },
+            weapon: { kind: "melee", damage: 1, damage_type: "lethal", strength: 1, size: 1, special: [], notes: "" },
             armor: {
                 general: 1,
                 ballistic: 0,

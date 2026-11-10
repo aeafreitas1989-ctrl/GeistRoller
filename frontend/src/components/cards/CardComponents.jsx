@@ -1842,7 +1842,11 @@ export const CombatTrackerCard = ({
                                 label: `${formatLabel(attackProfile.attribute)} + ${formatLabel(attackProfile.skill)} Attack`,
                                 dicePoolBreakdown: breakdown,
                                 isAttack: true,
-                                weaponDamage: 0,
+                                weaponDamage: Math.max(0, Number(selectedWeaponDamage) || 0),
+                                weaponDamageType: selectedWeaponOption
+                                    ? (selectedWeapon?.damage_type || "lethal")
+                                    : "bashing",
+                                hasWeapon: !!selectedWeaponOption,
                                 exceptional_target: 5,
                             });
 

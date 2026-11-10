@@ -346,11 +346,30 @@ export const DiceRoller = forwardRef(({
         const weaponDamage = Math.max(0, Number(config.weaponDamage) || 0);
         const successText = `${successes} Success${successes === 1 ? "" : "es"}`;
 
+        // An attack with no successes inflicts no damage.
         if (successes <= 0) {
             return "Damage: 0";
         }
 
-        return `Damage: ${successText} + Weapon Damage ${weaponDamage} = ${successes + weaponDamage}`;
+        // Unarmed attacks inflict Bashing by default.
+        if (!config.hasWeapon) {
+            return `Damage: ${successText} = ${successes}B`;
+        }
+
+        const rawDamageType = String(
+            config.weaponDamageType || "lethal"
+        ).toLowerCase();
+
+        const damageSuffix =
+            rawDamageType === "bashing" || rawDamageType === "b"
+                ? "B"
+                : rawDamageType === "aggravated" || rawDamageType === "a"
+                    ? "A"
+                    : "L";
+
+        const totalDamage = successes + weaponDamage;
+
+        return `Damage: ${successText} + Weapon Damage ${weaponDamage}${damageSuffix} = ${totalDamage}${damageSuffix}`;
     };
 
     const formatSuccessCount = (successes = 0) =>

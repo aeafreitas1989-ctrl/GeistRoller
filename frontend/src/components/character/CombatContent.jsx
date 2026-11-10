@@ -686,6 +686,32 @@ export const CombatContent = ({
                                             </div>
                                         </div>
                                         <div>
+                                            <label className="text-[10px] text-zinc-500 uppercase tracking-wider">
+                                                Damage Type
+                                            </label>
+                                            <Select
+                                                value={invDraft.weapon.damage_type || "lethal"}
+                                                onValueChange={(value) =>
+                                                    setInvDraft((prev) => ({
+                                                        ...prev,
+                                                        weapon: {
+                                                            ...prev.weapon,
+                                                            damage_type: value,
+                                                        },
+                                                    }))
+                                                }
+                                            >
+                                                <SelectTrigger className="h-7 bg-zinc-900/50 border-zinc-700 text-xs" data-testid="weapon-damage-type">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent className="bg-zinc-900 border-zinc-700">
+                                                    <SelectItem value="bashing" className="text-xs">Bashing (B)</SelectItem>
+                                                    <SelectItem value="lethal" className="text-xs">Lethal (L)</SelectItem>
+                                                    <SelectItem value="aggravated" className="text-xs">Aggravated (A)</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div>
                                             {(invDraft.weapon.kind ?? "melee") === "melee" && (
                                                 <>
                                                     <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Special</label>
@@ -1052,6 +1078,31 @@ export const CombatContent = ({
                                             </div>
                                         )}
 
+                                        {it.type === "weapon" && (
+                                            <div className="col-span-2">
+                                                <label className="text-[10px] text-zinc-500 uppercase tracking-wider">
+                                                    Damage Type
+                                                </label>
+                                                <Select
+                                                    value={it.weapon?.damage_type || "lethal"}
+                                                    onValueChange={(value) =>
+                                                        updateInventoryItemNested(idx, "weapon", {
+                                                            damage_type: value,
+                                                        })
+                                                    }
+                                                >
+                                                    <SelectTrigger className="h-7 bg-zinc-900/50 border-zinc-700 text-xs" data-testid={`inventory-weapon-damage-type-${idx}`}>
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent className="bg-zinc-900 border-zinc-700">
+                                                        <SelectItem value="bashing" className="text-xs">Bashing (B)</SelectItem>
+                                                        <SelectItem value="lethal" className="text-xs">Lethal (L)</SelectItem>
+                                                        <SelectItem value="aggravated" className="text-xs">Aggravated (A)</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        )}
+
                                         {it.type === "armor" && (
                                             <div className="col-span-2 grid grid-cols-2 gap-2">
                                                 <Input
@@ -1241,7 +1292,14 @@ export const CombatContent = ({
                                         
                                         {it.type === "weapon" && (
                                             <div className="mt-1 grid grid-cols-4 gap-1 text-[12px] text-zinc-500">
-                                                <span>Damage {it.weapon?.damage ?? 0}</span>
+                                                <span>
+                                                    Damage {it.weapon?.damage ?? 0}
+                                                    {it.weapon?.damage_type === "bashing"
+                                                        ? "B"
+                                                        : it.weapon?.damage_type === "aggravated"
+                                                            ? "A"
+                                                            : "L"}
+                                                </span>
                                                 <span>Initiative {it.weapon?.initiative ?? 0}</span>
                                                 <span>Strength {it.weapon?.strength ?? 0}</span>
                                                 <span>Size {it.weapon?.size ?? 1}</span>
