@@ -76,6 +76,7 @@ export const InlineDiceRoller = ({
     onDiceRollResult,
     onAddRecentRoll,
     onRollComplete = null,
+    onRollPressed = null,
     geistRank = 1,
     woundPenalty = 0,
     currentPlasm = 0,
@@ -134,6 +135,26 @@ export const InlineDiceRoller = ({
     useEffect(() => {
         if (!preset) return;
         setExpanded(true);
+
+        if (preset.type === "paired-attributes") {
+            setRollType("attr-attr");
+            setPrimaryAttr(preset.primary);
+            setSecondaryAttr(preset.secondary);
+            setUseSpecialty(false);
+            setSpendWillpower(false);
+            setDiceModifier(0);
+            return;
+        }
+
+        if (preset.type === "paired-attribute-skill") {
+            setRollType("attr-skill");
+            setPrimaryAttr(preset.attribute);
+            setSkill(preset.skill);
+            setUseSpecialty(false);
+            setSpendWillpower(false);
+            setDiceModifier(0);
+            return;
+        }
 
         if (preset.type === "attribute") {
             setRollType("attr-attr");
@@ -494,6 +515,10 @@ export const InlineDiceRoller = ({
             }
             return;
         }
+
+        // The Roll button was pressed. Remove trait highlights now.
+        onRollPressed?.();
+
         // Handle Willpower spending (for +3 bonus OR avoiding doom)
         const needsWillpowerForBonus = spendWillpower;
         const needsWillpowerForDoom = rollType === "haunt" && key !== "__none__" && avoidDoom;

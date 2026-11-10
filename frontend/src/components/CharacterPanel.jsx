@@ -229,15 +229,85 @@ export const CharacterPanel = ({
     // Generic Dice Roller Popup State (Attributes / Skills)
     const [genericDicePopupOpen, setGenericDicePopupOpen] = useState(false);
     const [dicePopupPreset, setDicePopupPreset] = useState(null);
+
+    // Up to two selected names, kept highlighted until Roll.
+    const [selectedRollTraits, setSelectedRollTraits] = useState([]);
+
+    useEffect(() => {
+        setSelectedRollTraits([]);
+    }, [activeCharacter?.id]);
+
+    const isRollTraitSelected = (type, key) =>
+        selectedRollTraits.some(
+            (trait) => trait.type === type && trait.key === key
+        );
+
     const openDicePopup = (type, key) => {
-        // Only open the Haunt popup when explicitly opening a haunt
+        // Preserve Haunt rolls and shortcuts such as Perception.
         if (type === "haunt") {
             setDicePopupHaunt(key);
             setDicePopupOpen(true);
             return;
         }
-        // Attribute/Skill click -> open the generic dice roller popup
-        setDicePopupPreset({ type, key });
+
+        if (type !== "attribute" && type !== "skill") {
+            setDicePopupPreset({ type, key });
+            setGenericDicePopupOpen(true);
+            return;
+        }
+
+        if (genericDicePopupOpen) return;
+
+        const next = { type, key };
+
+        // A completed pair whose popup was dismissed starts over.
+        const first =
+            selectedRollTraits.length === 1
+                ? selectedRollTraits[0]
+                : null;
+
+        if (!first) {
+            setSelectedRollTraits([next]);
+            return;
+        }
+
+        // Clicking the same name again cancels the selection.
+        if (first.type === type && first.key === key) {
+            setSelectedRollTraits([]);
+            return;
+        }
+
+        // Skill + Skill is not a supported pool.
+        if (first.type === "skill" && type === "skill") {
+            setSelectedRollTraits([next]);
+            return;
+        }
+
+        // A valid pair: two Attributes, or Attribute + Skill.
+        setSelectedRollTraits([first, next]);
+
+        const attribute = [first, next].find(
+            (trait) => trait.type === "attribute"
+        );
+
+        const skill = [first, next].find(
+            (trait) => trait.type === "skill"
+        );
+
+        if (skill) {
+            setDicePopupPreset({
+                type: "paired-attribute-skill",
+                attribute: attribute.key,
+                skill: skill.key,
+            });
+        } else {
+            setDicePopupPreset({
+                type: "paired-attributes",
+                primary: first.key,
+                secondary: next.key,
+            });
+        }
+
         setGenericDicePopupOpen(true);
     };
 
@@ -2970,7 +3040,7 @@ export const CharacterPanel = ({
                                 <div>
                                     <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1 text-center">Mental</p>
                                     {["intelligence", "wits", "resolve"].map((attr) => (
-                                        <StatRow key={attr} label={attr} value={getNestedValue("attributes", attr)} max={5} onChange={(v) => handleNestedChange("attributes", attr, v)} color="zinc" onLabelClick={() => openDicePopup('attribute', attr)} />
+                                        <StatRow key={attr} label={attr} value={getNestedValue("attributes", attr)} max={5} onChange={(v) => handleNestedChange("attributes", attr, v)} color="zinc" selected={isRollTraitSelected("attribute", attr)} onLabelClick={() => openDicePopup('attribute', attr)} />
                                     ))}
                                 </div>
                                 <div>
@@ -3002,7 +3072,7 @@ export const CharacterPanel = ({
                                                 max={5}
                                                 onChange={(v) => handleNestedChange("attributes", attr, v)}
                                                 color={isScoured ? "red" : "zinc"}
-                                                onLabelClick={() => openDicePopup('attribute', attr)}
+                                                selected={isRollTraitSelected("attribute", attr)} onLabelClick={() => openDicePopup('attribute', attr)}
                                                 scoured={scouredCount}
                                                 onRestoreScoured={restoreScouredDot}
                                             />
@@ -3012,7 +3082,7 @@ export const CharacterPanel = ({
                                 <div>
                                     <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1 text-center">Social</p>
                                     {["presence", "manipulation", "composure"].map((attr) => (
-                                        <StatRow key={attr} label={attr} value={getNestedValue("attributes", attr)} max={5} onChange={(v) => handleNestedChange("attributes", attr, v)} color="zinc" onLabelClick={() => openDicePopup('attribute', attr)} />
+                                        <StatRow key={attr} label={attr} value={getNestedValue("attributes", attr)} max={5} onChange={(v) => handleNestedChange("attributes", attr, v)} color="zinc" selected={isRollTraitSelected("attribute", attr)} onLabelClick={() => openDicePopup('attribute', attr)} />
                                     ))}
                                 </div>
                             </div>
@@ -3028,7 +3098,7 @@ export const CharacterPanel = ({
                                         const isRoteSkill = currentOrder && ORDER_ROTE_SKILLS[currentOrder]?.includes(skill);
                                         return (
                                             <div key={skill}>
-                                                <StatRow label={skill} value={getNestedValue("skills", skill)} max={5} onChange={(v) => handleNestedChange("skills", skill, v)} color={isRoteSkill ? "amber" : "zinc"} onLabelClick={() => openDicePopup('skill', skill)} />
+                                                <StatRow label={skill} value={getNestedValue("skills", skill)} max={5} onChange={(v) => handleNestedChange("skills", skill, v)} color={isRoteSkill ? "amber" : "zinc"} selected={isRollTraitSelected("skill", skill)} onLabelClick={() => openDicePopup('skill', skill)} />
                                             </div>
                                         );
                                     })}
@@ -3040,7 +3110,7 @@ export const CharacterPanel = ({
                                         const isRoteSkill = currentOrder && ORDER_ROTE_SKILLS[currentOrder]?.includes(skill);
                                         return (
                                             <div key={skill}>
-                                                <StatRow label={skill} value={getNestedValue("skills", skill)} max={5} onChange={(v) => handleNestedChange("skills", skill, v)} color={isRoteSkill ? "amber" : "zinc"} onLabelClick={() => openDicePopup('skill', skill)} />
+                                                <StatRow label={skill} value={getNestedValue("skills", skill)} max={5} onChange={(v) => handleNestedChange("skills", skill, v)} color={isRoteSkill ? "amber" : "zinc"} selected={isRollTraitSelected("skill", skill)} onLabelClick={() => openDicePopup('skill', skill)} />
                                             </div>
                                         );
                                     })}
@@ -3052,7 +3122,7 @@ export const CharacterPanel = ({
                                         const isRoteSkill = currentOrder && ORDER_ROTE_SKILLS[currentOrder]?.includes(skill);
                                         return (
                                             <div key={skill}>
-                                                <StatRow label={skill} value={getNestedValue("skills", skill)} max={5} onChange={(v) => handleNestedChange("skills", skill, v)} color={isRoteSkill ? "amber" : "zinc"} onLabelClick={() => openDicePopup('skill', skill)} />
+                                                <StatRow label={skill} value={getNestedValue("skills", skill)} max={5} onChange={(v) => handleNestedChange("skills", skill, v)} color={isRoteSkill ? "amber" : "zinc"} selected={isRollTraitSelected("skill", skill)} onLabelClick={() => openDicePopup('skill', skill)} />
                                             </div>
                                         );
                                     })}
@@ -3734,6 +3804,7 @@ export const CharacterPanel = ({
                         onAddCondition={addConditionFromDiceRoller}
                         onDiceRollResult={onDiceRollResult}
                         onAddRecentRoll={onAddRecentRoll}
+                        onRollPressed={() => setSelectedRollTraits([])}
                         onRollComplete={() => setGenericDicePopupOpen(false)}
                         geistRank={getValue("geist_rank") || 1}
                         woundPenalty={getValue("wound_penalty") || 0}

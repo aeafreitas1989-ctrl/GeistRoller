@@ -107,11 +107,21 @@ export const StatDots = ({
     );
 };
 
-export const StatRow = ({ label, value, max, onChange, color, onLabelClick, scoured = 0, onRestoreScoured }) => (
+export const StatRow = ({ label, value, max, onChange, color, onLabelClick, selected = false, scoured = 0, onRestoreScoured }) => (
     <div className="flex items-center justify-between py-0.5 group">
-        <button 
+        <button
+            type="button"
             onClick={onLabelClick}
-            className={`text-xs capitalize truncate hover:text-teal-300 transition-colors cursor-pointer flex items-center gap-1 ${color === "amber" ? "text-amber-400" : color === "red" ? "text-red-400 font-medium" : "text-zinc-400"}`}
+            aria-pressed={selected}
+            className={`text-xs capitalize truncate transition-colors cursor-pointer flex items-center gap-1 ${
+                selected
+                    ? "text-cyan-200 bg-cyan-900/50 ring-1 ring-cyan-500/70 rounded-sm px-1"
+                    : color === "amber"
+                        ? "text-amber-400 hover:text-teal-300"
+                        : color === "red"
+                            ? "text-red-400 font-medium hover:text-teal-300"
+                            : "text-zinc-400 hover:text-teal-300"
+            }`}
             data-testid={`stat-${label.replace(/_/g, '-')}-label`}
         >
             <Dices className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 text-teal-500 transition-opacity" />
