@@ -2566,7 +2566,9 @@ export const CharacterPanel = ({
     const navigationTabs = isMage
         ? [
             { id: "header", label: "Character", title: "Character Info" },
-            { id: "familiar", label: "Familiar", title: hasFamiliar ? "Familiar" : "Requires Familiar Merit (2 dots)", disabled: !hasFamiliar },
+            ...(hasFamiliar ? [
+                { id: "familiar", label: "Familiar", title: "Familiar" },
+            ] : []),
             { id: "attributesSkills", label: "Attributes", title: "Attributes & Skills" },
             { id: "powers", label: "Spells", title: "Arcana, Spells & Attainments" },
             { id: "sinEater", label: "Resources", title: "Gnosis & Resources" },
@@ -2735,8 +2737,8 @@ export const CharacterPanel = ({
                 data-testid="character-section-nav"
                 className="shrink-0 border-b border-zinc-800/70 bg-zinc-950/95 px-3 py-2"
             >
-                <div className="grid grid-cols-4 gap-1.5">
-                    {navigationTabs.map((tab) => (
+                <div className="grid grid-cols-12 gap-1.5">
+                    {navigationTabs.map((tab, index) => (
                         <button
                             key={tab.id}
                             type="button"
@@ -2745,7 +2747,7 @@ export const CharacterPanel = ({
                             aria-pressed={expandedSections[tab.id]}
                             onClick={() => toggleSection(tab.id)}
                             data-testid={`character-nav-${tab.id}`}
-                            className={`h-8 min-w-0 rounded-sm border px-1.5 text-[10px] font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400 disabled:cursor-not-allowed disabled:opacity-40 ${
+                            className={`${isMage && !hasFamiliar && index < 3 ? "col-span-4" : "col-span-3"} h-8 min-w-0 rounded-sm border px-1.5 text-[10px] font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400 disabled:cursor-not-allowed disabled:opacity-40 ${
                                 expandedSections[tab.id]
                                     ? "border-amber-500/70 bg-amber-900/30 text-amber-200"
                                     : "border-zinc-700/80 bg-zinc-900/60 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
