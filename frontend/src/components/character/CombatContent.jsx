@@ -908,7 +908,7 @@ export const CombatContent = ({
                     <div className="space-y-1">
                         {sortedInventoryItems.map(({ item: it, originalIndex: idx }) => (
                             <div
-                                key={`${it.name || "item"}-${idx}`}
+                                key={idx}
                                 className={`px-2 py-1.5 rounded-sm border ${
                                     it.type === "yantra"
                                         ? yantraCardClass
