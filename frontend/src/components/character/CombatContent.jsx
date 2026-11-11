@@ -1,4 +1,4 @@
-import { Plus, Trash2, Pencil, Star } from "lucide-react";
+import { Plus, Trash2, Pencil, Star, Package, Sword, Shield, Sparkles, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,6 +12,7 @@ import {
     AVAILABILITY_OPTIONS, WEAPON_SPECIAL_OPTIONS, ARMOR_COVERAGE_OPTIONS,
     PREMADE_ARMOR, PREMADE_EQUIPMENT,
 } from "../../data/character-data";
+import { useState } from "react";
 import { HealthTrack, getHealthCounts, buildHealthBoxes, formatLabel } from "./StatComponents";
 const INVENTORY_TYPE_ORDER = {
     armor: 0,
@@ -166,9 +167,26 @@ export const CombatContent = ({
     showMageArmor = true,
     showInventory = true,
 }) => {
+    const [collapsedInventoryGroups, setCollapsedInventoryGroups] = useState([]);
+
     const sortedInventoryItems = (inventoryItems || [])
         .map((item, originalIndex) => ({ item, originalIndex }))
         .sort(compareInventoryItems);
+
+    const inventoryGroups = [
+        { key: "equipment", label: "Equipment", Icon: Package },
+        { key: "weapon", label: "Weapons", Icon: Sword },
+        { key: "armor", label: "Armor", Icon: Shield },
+        { key: "yantra", label: "Yantras", Icon: Sparkles },
+        { key: "other", label: "Other", Icon: Package },
+    ].map((group) => ({
+        ...group,
+        items: sortedInventoryItems.filter(({ item }) =>
+            group.key === "other"
+                ? !["equipment", "weapon", "armor", "yantra"].includes(item?.type)
+                : item?.type === group.key
+        ),
+    })).filter((group) => group.items.length > 0);
     const currentMagePath =
         isMage
             ? getValue("path")
@@ -211,7 +229,7 @@ export const CombatContent = ({
                                     onClick={() => onHealHealthState("aggravated")}
                                     data-testid="heal-aggravated-btn"
                                 >
-                                    ✱
+                                    âœ±
                                 </Button>
 
                                 <Button
@@ -364,14 +382,14 @@ export const CombatContent = ({
                     {/* Inventory (structured) */}
                     <div className="mt-2 space-y-2">
                 <div className="flex items-center justify-between">
-                    <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Inventory</label>
+                    <label className="font-heading text-sm uppercase tracking-wider text-zinc-200">Inventory</label>
                     <div className="flex items-center gap-2">
                         <span className="text-[10px] text-zinc-600 font-mono">
                             {inventoryItems.length} item{inventoryItems.length === 1 ? "" : "s"}
                         </span>
                         <Button
                             onClick={() => setInventoryAddOpen(true)}
-                            className="h-6 px-2 text-[10px] btn-primary flex items-center gap-1"
+                            className="btn-primary flex h-8 items-center gap-1.5 px-3 text-xs"
                             data-testid="inventory-open-add"
                         >
                             <Plus className="w-3 h-3" /> Add
@@ -931,29 +949,51 @@ export const CombatContent = ({
                 {inventoryItems.length === 0 ? (
                     <p className="text-[10px] text-zinc-600 italic">No inventory items yet.</p>
                 ) : (
-                    <div className="space-y-1">
-                        {sortedInventoryItems.map(({ item: it, originalIndex: idx }) => (
+                    <div className="space-y-3" data-testid="inventory-grouped-list">
+                        {inventoryGroups.map(({ key, label, Icon, items }) => (
+                            <section key={key} className="rounded-lg border border-zinc-700/80 bg-zinc-900/20 p-2" data-testid={`inventory-group-${key}`}>
+                                <button
+                                    type="button"
+                                    onClick={() => setCollapsedInventoryGroups((previous) => previous.includes(key)
+                                        ? previous.filter((value) => value !== key)
+                                        : [...previous, key]
+                                    )}
+                                    aria-expanded={!collapsedInventoryGroups.includes(key)}
+                                    className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-zinc-200 hover:bg-zinc-800/50"
+                                >
+                                    <ChevronDown className={`h-4 w-4 text-zinc-400 transition-transform ${collapsedInventoryGroups.includes(key) ? "-rotate-90" : ""}`} />
+                                    <Icon className="h-4 w-4 text-teal-300" />
+                                    <span className="text-sm font-semibold">{label}</span>
+                                    <span className="text-[11px] text-zinc-500">{items.length} item{items.length === 1 ? "" : "s"}</span>
+                                </button>
+                                {!collapsedInventoryGroups.includes(key) && (
+                                    <div className="space-y-2 px-1 pb-1">
+                                        {items.map(({ item: it, originalIndex: idx }) => (
                             <div
                                 key={idx}
-                                className={`px-2 py-1.5 rounded-sm border ${
+                                className={`relative rounded-md border px-3 py-3 shadow-sm ${
                                     it.type === "yantra"
                                         ? yantraCardClass
-                                        : "bg-zinc-900/20 border-zinc-800"
+                                        : "border-zinc-700/70 bg-gradient-to-r from-zinc-900/90 to-zinc-950/80"
                                 }`}
                             >
-                                <div className="flex items-center justify-between gap-3">
-                                     <div className="text-xs text-zinc-200 min-w-0 flex-1">
-                                        <span className="font-mono text-zinc-500 mr-2">
-                                            {it.type === "yantra"
-                                                ? `Yantra (${getYantraDisplayType(it)})`
-                                                : it.type === "armor"
-                                                    ? `Armor (${it.armor?.general ?? 0}/${it.armor?.ballistic ?? 0})`
-                                                    : it.type.charAt(0).toUpperCase() + it.type.slice(1)}
-                                        </span>
-                                        {it.name || "Unnamed"}
-                                        <span className="text-[10px] text-zinc-500 ml-2">
-                                            {AVAILABILITY_OPTIONS.find((a) => a.value === (it.availability ?? 0))?.label ?? "o"}
-                                        </span>
+                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                    <div className="flex min-w-[160px] flex-1 items-center gap-3">
+                                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-zinc-700 bg-zinc-950/70">
+                                            <Icon className="h-5 w-5 text-amber-200/80" strokeWidth={1.6} />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <div className="truncate text-sm font-semibold text-zinc-100">{it.name || "Unnamed"}</div>
+                                            <div className="text-[11px] leading-snug text-zinc-400">
+                                                {it.type === "yantra"
+                                                    ? `Yantra (${getYantraDisplayType(it)})`
+                                                    : it.type === "weapon"
+                                                        ? `${it.weapon?.kind === "ranged" ? "Ranged" : "Melee"} Weapon`
+                                                        : it.type === "armor" ? "Armor" : it.type === "equipment" ? "Equipment" : "Item"}
+                                                <span className="px-1 text-zinc-600">·</span>
+                                                Availability {AVAILABILITY_OPTIONS.find((a) => a.value === (it.availability ?? 0))?.label ?? "—"}
+                                            </div>
+                                        </div>
                                     </div>
 
                                     <div className="flex flex-col items-end gap-1 shrink-0">
@@ -1291,7 +1331,7 @@ export const CombatContent = ({
                                     <>
                                         
                                         {it.type === "weapon" && (
-                                            <div className="mt-1 grid grid-cols-4 gap-1 text-[12px] text-zinc-500">
+                                            <div className="mt-3 grid grid-cols-2 gap-1.5 border-t border-zinc-700/60 pt-3 text-xs text-zinc-300 sm:grid-cols-4">
                                                 <span>
                                                     Damage {it.weapon?.damage ?? 0}
                                                     {it.weapon?.damage_type === "bashing"
@@ -1307,7 +1347,7 @@ export const CombatContent = ({
                                         )}
 
                                         {it.type === "armor" && (
-                                            <div className="mt-1 grid grid-cols-3 gap-1 text-[12px] text-zinc-500">
+                                            <div className="mt-3 grid grid-cols-3 gap-1.5 border-t border-zinc-700/60 pt-3 text-xs text-zinc-300">
                                                 <span>Strength {it.armor?.strength ?? 0}</span>
                                                 <span>Defense {it.armor?.defense ?? 0}</span>
                                                 <span>Speed {it.armor?.speed ?? 0}</span>
@@ -1315,7 +1355,7 @@ export const CombatContent = ({
                                         )}
 
                                         {it.type === "equipment" && (
-                                            <div className="mt-1 grid grid-cols-4 gap-1 text-[12px] text-zinc-500">
+                                            <div className="mt-3 grid grid-cols-2 gap-1.5 border-t border-zinc-700/60 pt-3 text-xs text-zinc-300 sm:grid-cols-4">
                                                 <span className="text-cyan-400">
                                                     Bonus {Number(it.equipment?.bonus ?? 0) >= 0 ? "+" : ""}
                                                     {it.equipment?.bonus ?? 0}
@@ -1344,6 +1384,10 @@ export const CombatContent = ({
                                     </>
                                 )}
                             </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </section>
                         ))}
                     </div>
                 )}
@@ -1353,4 +1397,3 @@ export const CombatContent = ({
         </>
     );
 };
-
