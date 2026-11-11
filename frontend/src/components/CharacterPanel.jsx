@@ -1332,7 +1332,10 @@ export const CharacterPanel = ({
                 return;
             }
     
-            const currentBalance = Number(getValue(manualXPType)) || 0;
+            const xpResource = activeCharacter?.character_type === "mage"
+                ? manualXPType
+                : "experience";
+            const currentBalance = Number(getValue(xpResource)) || 0;
             const nextBalance = currentBalance + amount;
     
             if (nextBalance < 0) {
@@ -1346,7 +1349,7 @@ export const CharacterPanel = ({
     
             try {
                 await commitCharacterUpdate({
-                    [manualXPType]: nextBalance,
+                    [xpResource]: nextBalance,
                     xp_reason: reason,
                 });
     
@@ -2636,25 +2639,25 @@ export const CharacterPanel = ({
     const navigationTabs = isMage
         ? [
             { id: "header", label: "Character", title: "Character Info" },
+            { id: "sinEater", label: "Resources", title: "Gnosis & Resources" },
+            { id: "attributesSkills", label: "Abilities & Skills", title: "Attributes & Skills" },
+            { id: "powers", label: "Spellcasting", title: "Arcana, Spells & Attainments" },
+            { id: "inventory", label: "Inventory", title: "Inventory" },
+            { id: "merits", label: "Merits", title: "Merits" },
             ...(hasFamiliar ? [
                 { id: "familiar", label: "Familiar", title: "Familiar" },
             ] : []),
-            { id: "attributesSkills", label: "Attributes & Skills", title: "Attributes & Skills" },
-            { id: "powers", label: "Spells", title: "Arcana, Spells & Attainments" },
-            { id: "sinEater", label: "Resources", title: "Gnosis & Resources" },
-            { id: "inventory", label: "Inventory", title: "Inventory" },
-            { id: "merits", label: "Merits", title: "Merits" },
             { id: "notes", label: "XP Track", title: "XP Tracker" },
         ]
         : [
             { id: "header", label: "Character", title: "Character Info" },
-            { id: "geist", label: "Geist", title: "Geist & Remembrance" },
-            { id: "attributesSkills", label: "Attributes & Skills", title: "Attributes & Skills" },
-            { id: "powers", label: "Haunts", title: "Haunts, Keys & Mementos" },
-            { id: "sinEater", label: "Synergy", title: "Synergy & Resources" },
+            { id: "sinEater", label: "Resources", title: "Synergy & Resources" },
+            { id: "attributesSkills", label: "Abilities & Skills", title: "Attributes & Skills" },
+            { id: "powers", label: "Haunts & Ceremonies", title: "Haunts, Keys, Mementos & Ceremonies" },
             { id: "inventory", label: "Inventory", title: "Inventory" },
-            { id: "merits", label: "Merits", title: "Merits & Ceremonies" },
-            { id: "notes", label: "Notes", title: "Notes" },
+            { id: "merits", label: "Merits", title: "Merits" },
+            { id: "geist", label: "Geist", title: "Geist & Remembrance" },
+            { id: "notes", label: "XP Track", title: "XP Tracker" },
         ];
 
     // Mage Armor bonuses for Defense and Armor stats
@@ -2817,13 +2820,13 @@ export const CharacterPanel = ({
                             aria-pressed={expandedSections[tab.id]}
                             onClick={() => toggleSection(tab.id)}
                             data-testid={`character-nav-${tab.id}`}
-                            className={`${isMage && !hasFamiliar && index < 3 ? "col-span-4" : "col-span-3"} h-8 min-w-0 rounded-sm border px-1.5 text-[10px] font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400 disabled:cursor-not-allowed disabled:opacity-40 ${
+                            className={`${isMage && !hasFamiliar && tab.id === "notes" ? "col-span-6" : "col-span-3"} min-h-10 min-w-0 rounded-sm border px-1.5 py-1 text-[10px] leading-tight font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400 disabled:cursor-not-allowed disabled:opacity-40 ${
                                 expandedSections[tab.id]
                                     ? "border-amber-500/70 bg-amber-900/30 text-amber-200"
                                     : "border-zinc-700/80 bg-zinc-900/60 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
                             }`}
                         >
-                            <span className="block truncate">{tab.label}</span>
+                            <span className="block whitespace-normal text-center">{tab.label}</span>
                         </button>
                     ))}
                 </div>
@@ -3024,6 +3027,17 @@ export const CharacterPanel = ({
                                 getValue={getValue} handleChange={handleChange}
                                 geistRank={geistRank} currentSynergy={currentSynergy} synergyData={synergyData}
                             />
+                            <div className="space-y-1">
+                                <label className="text-[10px] uppercase tracking-wider text-zinc-500">
+                                    Notes
+                                </label>
+                                <Textarea
+                                    value={getValue("notes") || ""}
+                                    onChange={(e) => handleChange("notes", e.target.value)}
+                                    className="bg-zinc-900 border-zinc-700 text-zinc-200"
+                                    rows={6}
+                                />
+                            </div>
                         </CollapsibleContent>
                     </Collapsible>
                     )}
@@ -3306,13 +3320,29 @@ export const CharacterPanel = ({
                                     onAddRecentRoll={onAddRecentRoll}
                                 />
                             ) : (
-                                <GeistHauntsContent
-                                    getValue={getValue} getNestedValue={getNestedValue}
-                                    handleNestedChange={handleNestedChange} handleChange={handleChange}
-                                    openHauntRollPopup={openHauntRollPopup}
-                                    allAvailableKeys={allAvailableKeys} doomedKeys={doomedKeys} doomedKeySources={doomedKeySources}
-                                    mementos={mementos} addMemento={addMemento} updateMemento={updateMemento} deleteMemento={deleteMemento}
-                                />
+                                <>
+                                    <GeistHauntsContent
+                                        getValue={getValue} getNestedValue={getNestedValue}
+                                        handleNestedChange={handleNestedChange} handleChange={handleChange}
+                                        openHauntRollPopup={openHauntRollPopup}
+                                        allAvailableKeys={allAvailableKeys} doomedKeys={doomedKeys} doomedKeySources={doomedKeySources}
+                                        mementos={mementos} addMemento={addMemento} updateMemento={updateMemento} deleteMemento={deleteMemento}
+                                    />
+                                    <MeritsContent
+                                        isMage={false}
+                                        showMerits={false}
+                                        showCeremonies={true}
+                                        ceremoniesList={ceremoniesList}
+                                        sortedCeremoniesList={sortedCeremoniesList}
+                                        showCeremonyDialog={showCeremonyDialog}
+                                        setShowCeremonyDialog={setShowCeremonyDialog}
+                                        newCeremonyName={newCeremonyName}
+                                        setNewCeremonyName={setNewCeremonyName}
+                                        addCeremony={addCeremony}
+                                        deleteCeremony={deleteCeremony}
+                                        rollCeremonyFromCharacter={rollCeremonyFromCharacter}
+                                    />
+                                </>
                             )}
                         </CollapsibleContent>
                     </Collapsible>
@@ -3328,6 +3358,7 @@ export const CharacterPanel = ({
                         <CollapsibleContent className="pt-2 space-y-2">
                             <MeritsContent
                                 isMage={isMage}
+                                showCeremonies={false}
                                 meritsList={meritsList} sortedMeritsList={sortedMeritsList} deleteMerit={deleteMerit} updateMerit={updateMerit}
                                 showMeritDialog={showMeritDialog} setShowMeritDialog={setShowMeritDialog}
                                 newMeritName={newMeritName} setNewMeritName={setNewMeritName} newMeritDots={newMeritDots} setNewMeritDots={setNewMeritDots} newMeritSpecialty={newMeritSpecialty} setNewMeritSpecialty={setNewMeritSpecialty}
@@ -3594,12 +3625,88 @@ export const CharacterPanel = ({
                                     )}
                                 </div>
                             ) : (
-                                <Textarea
-                                    value={getValue("notes") || ""}
-                                    onChange={(e) => handleChange("notes", e.target.value)}
-                                    className="bg-zinc-900 border-zinc-700 text-zinc-200"
-                                    rows={6}
-                                />
+                                <div className="space-y-3" data-testid="geist-xp-tracker">
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {[
+                                            ["Available XP", getValue("experience") || 0],
+                                            ["Beats", getValue("beats") || 0],
+                                            ["Spent XP", getValue("spent_experience") || 0],
+                                        ].map(([label, value]) => (
+                                            <div key={label} className="rounded-sm border border-zinc-800 bg-zinc-950/50 p-2">
+                                                <div className="text-[10px] text-zinc-500">{label}</div>
+                                                <div className="mt-1 font-mono text-sm text-emerald-300">{value}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div className="space-y-2 rounded-sm border border-zinc-800 bg-zinc-950/50 p-3">
+                                        <div className="text-xs font-semibold text-zinc-300">
+                                            Record XP Transaction
+                                        </div>
+                                        <Input
+                                            type="number"
+                                            step="1"
+                                            value={manualXPAmount}
+                                            onChange={(e) => setManualXPAmount(e.target.value)}
+                                            placeholder="+5 or -2"
+                                            className="h-8 input-geist text-xs"
+                                        />
+                                        <Input
+                                            value={manualXPReason}
+                                            onChange={(e) => setManualXPReason(e.target.value)}
+                                            placeholder="Reason for XP gain or expenditure"
+                                            className="h-8 input-geist text-xs"
+                                        />
+                                        <Button
+                                            size="sm"
+                                            className="w-full bg-emerald-800 hover:bg-emerald-700 text-white"
+                                            onClick={recordManualXPTransaction}
+                                            disabled={
+                                                recordingManualXP ||
+                                                !manualXPReason.trim() ||
+                                                !Number.isInteger(Number(manualXPAmount)) ||
+                                                Number(manualXPAmount) === 0
+                                            }
+                                        >
+                                            {recordingManualXP ? "Recording..." : "Record Transaction"}
+                                        </Button>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        {getXPTrackerEntries().length === 0 ? (
+                                            <div className="rounded-sm border border-zinc-800 p-3 text-xs text-zinc-500">
+                                                No XP transactions recorded yet.
+                                            </div>
+                                        ) : (
+                                            getXPTrackerEntries().map((entry, index) => (
+                                                <div
+                                                    key={entry.id || index}
+                                                    className="rounded-sm border border-zinc-800 bg-zinc-950/50 p-3"
+                                                    data-testid="xp-tracker-entry"
+                                                >
+                                                    <div className="text-xs text-zinc-200">
+                                                        {entry.label || "XP Transaction"}
+                                                    </div>
+                                                    <div className="mt-1 text-[10px] text-zinc-500">
+                                                        {formatLedgerDate(entry.date)}
+                                                    </div>
+                                                    <div className="mt-2 flex flex-wrap gap-2">
+                                                        {(entry.movements || [])
+                                                            .filter(m => ["experience", "beats"].includes(m.resource) && Number(m.amount) !== 0)
+                                                            .map((movement, i) => (
+                                                                <span key={i} className="font-mono text-xs text-emerald-300">
+                                                                    {formatXPTrackerMovement(movement)}
+                                                                </span>
+                                                            ))}
+                                                    </div>
+                                                    {entry.note && (
+                                                        <p className="mt-2 text-xs text-zinc-400">{entry.note}</p>
+                                                    )}
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
                             )}
                         </CollapsibleContent>
                     </Collapsible>

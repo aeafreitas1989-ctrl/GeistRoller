@@ -9,6 +9,8 @@ import { MeritCard, CeremonyCard } from "./CardComponents";
 
 export const MeritsContent = ({
     isMage,
+    showMerits = true,
+    showCeremonies = true,
     meritsList, sortedMeritsList, deleteMerit, updateMerit,
     showMeritDialog, setShowMeritDialog,
     newMeritName, setNewMeritName,
@@ -23,6 +25,7 @@ export const MeritsContent = ({
 }) => {
     return (
         <>
+            {showMerits && (
             <div>
                 <div className="flex items-center justify-between mb-1">
                     <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Merits</label>
@@ -125,9 +128,10 @@ export const MeritsContent = ({
                     )}
                 </div>
             </div>
-            
+            )}
+
             {/* Ceremonies Section - Geist only */}
-            {!isMage && (
+            {!isMage && showCeremonies && (
             <div>
                 <div className="flex items-center justify-between mb-1">
                     <label className="text-[10px] text-violet-400 uppercase tracking-wider">Ceremonies</label>
