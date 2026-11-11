@@ -353,7 +353,610 @@ export const PREMADE_EQUIPMENT = [
     effect:
       "Bonus to Investigation and allows evidence handling offsite; supports careful analysis at own pace.",
   },
-];
+  // Additional premade Equipment from CofD 2e Appendix One (pp. 270-277).
+  // Mage: The Awakening 2e (pp. 225-227) reprints a subset.
+  // Numeric zero is used where the book states N/A for nonphysical or consumable gear.
+  {
+    name: "Cache (Concealed, Improved)",
+    category: "Mental",
+    availability: 2,
+    bonus: 2,
+    durability: 2,
+    size: 2,
+    structure: 5,
+    effect: "Concealed storage; +2 to concealment and -2 to attempts to find its contents. Maximum cache Size is half its containing object."
+  },
+  {
+    name: "Cache (Concealed, Superior)",
+    category: "Mental",
+    availability: 3,
+    bonus: 3,
+    durability: 2,
+    size: 3,
+    structure: 5,
+    effect: "Concealed storage; +3 to concealment and -3 to attempts to find its contents. Maximum cache Size is half its containing object."
+  },
+  {
+    name: "Code Kit",
+    category: "Mental",
+    availability: 1,
+    bonus: 5,
+    durability: 1,
+    size: 2,
+    structure: 1,
+    effect: "A shared cipher reference; imposes a -5 penalty on attempts to decode messages without the key. The +5 is a defensive rating, not a bonus to codebreaking."
+  },
+  {
+    name: "Cracking Software",
+    category: "Mental",
+    availability: 3,
+    bonus: 2,
+    durability: 0,
+    size: 0,
+    structure: 0,
+    effect: "Adds +2 to relevant hacking rolls; tracing the user requires separate steps to discover and attribute the software. Nonphysical: physical statistics N/A."
+  },
+  {
+    name: "Digital Recorder (Advanced)",
+    category: "Mental",
+    availability: 2,
+    bonus: 2,
+    durability: 1,
+    size: 1,
+    structure: 2,
+    effect: "+2 to recording or concealing audio, and relevant attempts to distinguish recorded sound."
+  },
+  {
+    name: "Digital Recorder (Basic)",
+    category: "Mental",
+    availability: 1,
+    bonus: 1,
+    durability: 1,
+    size: 1,
+    structure: 2,
+    effect: "+1 to recording or concealing audio, and relevant attempts to distinguish recorded sound."
+  },
+  {
+    name: "Duct Tape",
+    category: "Mental",
+    availability: 1,
+    bonus: 1,
+    durability: 1,
+    size: 1,
+    structure: 2,
+    effect: "+1 to suitable improvised repairs or related Crafts rolls; alternatively reinforce an object. Applied restraints penalize escape rolls."
+  },
+  {
+    name: "First-Aid Kit (Advanced)",
+    category: "Mental",
+    availability: 2,
+    bonus: 1,
+    durability: 1,
+    size: 2,
+    structure: 3,
+    effect: "Enables basic stabilization and treatment; +1 to relevant treatment rolls."
+  },
+  {
+    name: "First-Aid Kit (Basic)",
+    category: "Mental",
+    availability: 1,
+    bonus: 0,
+    durability: 1,
+    size: 2,
+    structure: 3,
+    effect: "Enables basic stabilization and treatment where medical supplies are required; no equipment dice bonus."
+  },
+  {
+    name: "Flashlight",
+    category: "Mental",
+    availability: 1,
+    bonus: 1,
+    durability: 2,
+    size: 1,
+    structure: 3,
+    effect: "Offsets one die of darkness penalties or adds +1 to searches in darkness. Can briefly dazzle an opponent."
+  },
+  {
+    name: "Glowstick",
+    category: "Mental",
+    availability: 1,
+    bonus: 2,
+    durability: 1,
+    size: 1,
+    structure: 1,
+    effect: "Portable chemical light for low-light operations; functions in water and rain, but cannot blind an opponent."
+  },
+  {
+    name: "GPS Tracker",
+    category: "Mental",
+    availability: 2,
+    bonus: 3,
+    durability: 2,
+    size: 2,
+    structure: 2,
+    effect: "Helps follow a GPS-equipped target or share locations. Tracking fails where suitable signals are unavailable."
+  },
+  {
+    name: "Keylogging Software",
+    category: "Mental",
+    availability: 2,
+    bonus: 2,
+    durability: 0,
+    size: 0,
+    structure: 0,
+    effect: "+2 to pertinent attempts to obtain data by capturing keystrokes. Requires a way to install the software. Nonphysical: physical statistics N/A."
+  },
+  {
+    name: "Luminol",
+    category: "Mental",
+    availability: 1,
+    bonus: 2,
+    durability: 0,
+    size: 1,
+    structure: 1,
+    effect: "+2 to finding traces of bodily fluids and reconstructing or tracking a bloody incident."
+  },
+  {
+    name: "Multi-Tool",
+    category: "Mental",
+    availability: 1,
+    bonus: 1,
+    durability: 3,
+    size: 1,
+    structure: 4,
+    effect: "+1 to various small-tool tasks, and may permit Craft rolls that would otherwise lack the required tools."
+  },
+  {
+    name: "Personal Computer (Availability 1)",
+    category: "Mental",
+    availability: 1,
+    bonus: 1,
+    durability: 2,
+    size: 3,
+    structure: 2,
+    effect: "+1 to applicable Computer rolls; higher Availability represents a more capable machine."
+  },
+  {
+    name: "Personal Computer (Availability 2)",
+    category: "Mental",
+    availability: 2,
+    bonus: 2,
+    durability: 2,
+    size: 3,
+    structure: 2,
+    effect: "+2 to applicable Computer rolls; higher Availability represents a more capable machine."
+  },
+  {
+    name: "Personal Computer (Availability 3)",
+    category: "Mental",
+    availability: 3,
+    bonus: 3,
+    durability: 2,
+    size: 3,
+    structure: 2,
+    effect: "+3 to applicable Computer rolls; higher Availability represents a more capable machine."
+  },
+  {
+    name: "Personal Computer (Availability 4)",
+    category: "Mental",
+    availability: 4,
+    bonus: 4,
+    durability: 2,
+    size: 3,
+    structure: 2,
+    effect: "+4 to applicable Computer rolls; higher Availability represents a more capable machine."
+  },
+  {
+    name: "Smartphone (Advanced)",
+    category: "Mental",
+    availability: 3,
+    bonus: 2,
+    durability: 2,
+    size: 1,
+    structure: 1,
+    effect: "+2 to applicable mobile-computing tasks; represents a more capable handset and software."
+  },
+  {
+    name: "Smartphone (Basic)",
+    category: "Mental",
+    availability: 1,
+    bonus: 1,
+    durability: 2,
+    size: 1,
+    structure: 1,
+    effect: "+1 to applicable mobile-computing tasks; includes ordinary calling, camera, navigation and online access."
+  },
+  {
+    name: "Special Effects",
+    category: "Mental",
+    availability: 3,
+    bonus: 2,
+    durability: 2,
+    size: 5,
+    structure: 3,
+    effect: "+2 to relevant staged illusions, distractions and theatrical tricks; may initially deceive an unwary observer."
+  },
+  {
+    name: "Surveillance Equipment",
+    category: "Mental",
+    availability: 3,
+    bonus: 2,
+    durability: 2,
+    size: 2,
+    structure: 2,
+    effect: "+2 to relevant installation or surveillance contests. Unwary intruders are recorded unless they actively evade the equipment."
+  },
+  {
+    name: "Survival Gear (Advanced)",
+    category: "Mental",
+    availability: 3,
+    bonus: 2,
+    durability: 2,
+    size: 3,
+    structure: 3,
+    effect: "+2 to relevant Survival rolls; lowers a suitable environment by two levels, but not a level-four hazard. Specify environment."
+  },
+  {
+    name: "Survival Gear (Basic)",
+    category: "Mental",
+    availability: 1,
+    bonus: 1,
+    durability: 2,
+    size: 2,
+    structure: 3,
+    effect: "+1 to relevant Survival rolls; lowers effective environmental severity by one level, subject to the rules."
+  },
+  {
+    name: "Talcum Powder",
+    category: "Mental",
+    availability: 1,
+    bonus: 2,
+    durability: 0,
+    size: 1,
+    structure: 0,
+    effect: "Reveals footprints or other signs of passage. Entering a treated area without traces requires five Stealth successes. Consumable: some physical statistics N/A."
+  },
+  {
+    name: "Ultraviolet Ink",
+    category: "Mental",
+    availability: 1,
+    bonus: 2,
+    durability: 1,
+    size: 1,
+    structure: 2,
+    effect: "Conceals written messages or markers that are visible under ultraviolet illumination."
+  },
+  {
+    name: "Battering Ram",
+    category: "Physical",
+    availability: 2,
+    bonus: 4,
+    durability: 3,
+    size: 4,
+    structure: 8,
+    effect: "+4 to a coordinated attempt to break a barrier, with up to four participants; ignores two points of Durability."
+  },
+  {
+    name: "Bear Trap",
+    category: "Physical",
+    availability: 2,
+    bonus: 2,
+    durability: 3,
+    size: 2,
+    structure: 5,
+    effect: "A sprung trap inflicts three lethal damage, ignoring two points of armor or Durability. Its rating hinders escape and concealment."
+  },
+  {
+    name: "Caltrops",
+    category: "Physical",
+    availability: 2,
+    bonus: 2,
+    durability: 2,
+    size: 2,
+    structure: 3,
+    effect: "A spread of sharp caltrops impedes passage and may inflict one lethal damage. Avoidance requires an Athletics roll."
+  },
+  {
+    name: "Camouflage Clothing",
+    category: "Physical",
+    availability: 2,
+    bonus: 2,
+    durability: 1,
+    size: 2,
+    structure: 3,
+    effect: "+2 to remaining unnoticed when the pattern suits the environment."
+  },
+  {
+    name: "Climbing Gear",
+    category: "Physical",
+    availability: 2,
+    bonus: 2,
+    durability: 3,
+    size: 2,
+    structure: 2,
+    effect: "+2 to climbing rolls; proper rigging can arrest a fall at short intervals."
+  },
+  {
+    name: "Crowbar",
+    category: "Physical",
+    availability: 1,
+    bonus: 2,
+    durability: 3,
+    size: 2,
+    structure: 4,
+    effect: "+2 when applying leverage; ignores two points of Durability while prying."
+  },
+  {
+    name: "Firearm Suppressor",
+    category: "Physical",
+    availability: 2,
+    bonus: 2,
+    durability: 2,
+    size: 1,
+    structure: 2,
+    effect: "When used with a compatible firearm, may grant +2 at short range while reducing the weapon damage rating by one. Also conceals the shot."
+  },
+  {
+    name: "Gas Mask",
+    category: "Physical",
+    availability: 2,
+    bonus: 5,
+    durability: 1,
+    size: 2,
+    structure: 3,
+    effect: "+5 to resisting dangerous airborne toxins; filters less potent airborne hazards."
+  },
+  {
+    name: "Handcuffs",
+    category: "Physical",
+    availability: 1,
+    bonus: 2,
+    durability: 4,
+    size: 1,
+    structure: 4,
+    effect: "Restrains a target after successful application. Escape attempts face substantial penalties and may cause injury."
+  },
+  {
+    name: "Lockpicking Kit (Portable)",
+    category: "Physical",
+    availability: 1,
+    bonus: 1,
+    durability: 2,
+    size: 1,
+    structure: 1,
+    effect: "+1 to mechanical lockpicking rolls; does not permit automatic opening even with plenty of time."
+  },
+  {
+    name: "Lockpicking Kit (Standard)",
+    category: "Physical",
+    availability: 2,
+    bonus: 2,
+    durability: 2,
+    size: 2,
+    structure: 2,
+    effect: "+2 to mechanical lockpicking under time pressure; skilled users may open common locks without a roll when time permits."
+  },
+  {
+    name: "Night Vision Goggles",
+    category: "Physical",
+    availability: 2,
+    bonus: 2,
+    durability: 1,
+    size: 2,
+    structure: 1,
+    effect: "Amplifies dim light to avoid acting-blind penalties; sudden bright lights can temporarily blind the user."
+  },
+  {
+    name: "Pepper Spray",
+    category: "Physical",
+    availability: 1,
+    bonus: 1,
+    durability: 2,
+    size: 1,
+    structure: 1,
+    effect: "Short-ranged chemical spray: a successful attack imposes the Stun Tilt and a severe penalty until the eyes are rinsed."
+  },
+  {
+    name: "Rope",
+    category: "Physical",
+    availability: 1,
+    bonus: 1,
+    durability: 2,
+    size: 3,
+    structure: 2,
+    effect: "+1 to relevant rigging and Crafts rolls; strong knots resist breaking according to the user's Crafts rating."
+  },
+  {
+    name: "Stun Gun (Handheld, Rating 1)",
+    category: "Physical",
+    availability: 1,
+    bonus: 0,
+    durability: 2,
+    size: 1,
+    structure: 2,
+    effect: "Handheld electrical device, rating one. Requires close combat contact; successful use harms and impairs the target."
+  },
+  {
+    name: "Stun Gun (Handheld, Rating 2)",
+    category: "Physical",
+    availability: 2,
+    bonus: 0,
+    durability: 2,
+    size: 1,
+    structure: 2,
+    effect: "Handheld electrical device, rating two. Requires close combat contact; successful use harms and impairs the target."
+  },
+  {
+    name: "Stun Gun (Handheld, Rating 3)",
+    category: "Physical",
+    availability: 3,
+    bonus: 0,
+    durability: 2,
+    size: 1,
+    structure: 2,
+    effect: "Handheld electrical device, rating three. Requires close combat contact; successful use harms and impairs the target."
+  },
+  {
+    name: "Stun Gun (Ranged, Rating 1)",
+    category: "Physical",
+    availability: 1,
+    bonus: 0,
+    durability: 2,
+    size: 1,
+    structure: 2,
+    effect: "Ranged electrical device, rating one. Fires wired darts and may maintain an electrical effect while attached."
+  },
+  {
+    name: "Stun Gun (Ranged, Rating 2)",
+    category: "Physical",
+    availability: 2,
+    bonus: 0,
+    durability: 2,
+    size: 1,
+    structure: 2,
+    effect: "Ranged electrical device, rating two. Fires wired darts and may maintain an electrical effect while attached."
+  },
+  {
+    name: "Stun Gun (Ranged, Rating 3)",
+    category: "Physical",
+    availability: 3,
+    bonus: 0,
+    durability: 2,
+    size: 1,
+    structure: 2,
+    effect: "Ranged electrical device, rating three. Fires wired darts and may maintain an electrical effect while attached."
+  },
+  {
+    name: "Cash (Availability 1)",
+    category: "Social",
+    availability: 1,
+    bonus: 1,
+    durability: 1,
+    size: 2,
+    structure: 1,
+    effect: "A one-off amount of money, not ongoing Resources. May be spent for a +1 bribe bonus or an item of comparable Availability."
+  },
+  {
+    name: "Cash (Availability 2)",
+    category: "Social",
+    availability: 2,
+    bonus: 2,
+    durability: 1,
+    size: 2,
+    structure: 1,
+    effect: "A one-off amount of money, not ongoing Resources. May be spent for a +2 bribe bonus or an item of comparable Availability."
+  },
+  {
+    name: "Cash (Availability 3)",
+    category: "Social",
+    availability: 3,
+    bonus: 3,
+    durability: 1,
+    size: 2,
+    structure: 1,
+    effect: "A one-off amount of money, not ongoing Resources. May be spent for a +3 bribe bonus or an item of comparable Availability."
+  },
+  {
+    name: "Cash (Availability 4)",
+    category: "Social",
+    availability: 4,
+    bonus: 4,
+    durability: 1,
+    size: 2,
+    structure: 1,
+    effect: "A one-off amount of money, not ongoing Resources. May be spent for a +4 bribe bonus or an item of comparable Availability."
+  },
+  {
+    name: "Cash (Availability 5)",
+    category: "Social",
+    availability: 5,
+    bonus: 5,
+    durability: 1,
+    size: 2,
+    structure: 1,
+    effect: "A one-off amount of money, not ongoing Resources. May be spent for a +5 bribe bonus or an item of comparable Availability."
+  },
+  {
+    name: "Disguise (Availability 1)",
+    category: "Social",
+    availability: 1,
+    bonus: 1,
+    durability: 1,
+    size: 3,
+    structure: 2,
+    effect: "Helps blend into an appropriate social group; +1 to remain concealed or as a penalty to active identification."
+  },
+  {
+    name: "Disguise (Availability 2)",
+    category: "Social",
+    availability: 2,
+    bonus: 2,
+    durability: 1,
+    size: 3,
+    structure: 2,
+    effect: "Helps blend into an appropriate social group; +2 to remain concealed or as a penalty to active identification."
+  },
+  {
+    name: "Disguise (Availability 3)",
+    category: "Social",
+    availability: 3,
+    bonus: 3,
+    durability: 1,
+    size: 3,
+    structure: 2,
+    effect: "Helps blend into an appropriate social group; +3 to remain concealed or as a penalty to active identification."
+  },
+  {
+    name: "Fashion (Availability 1)",
+    category: "Social",
+    availability: 1,
+    bonus: 1,
+    durability: 1,
+    size: 2,
+    structure: 1,
+    effect: "Appropriate clothing provides +1 to relevant Social rolls; unsuitable clothing imposes a matching penalty."
+  },
+  {
+    name: "Fashion (Availability 2)",
+    category: "Social",
+    availability: 2,
+    bonus: 1,
+    durability: 1,
+    size: 2,
+    structure: 1,
+    effect: "Appropriate clothing provides +1 to relevant Social rolls; unsuitable clothing imposes a matching penalty."
+  },
+  {
+    name: "Fashion (Availability 3)",
+    category: "Social",
+    availability: 3,
+    bonus: 2,
+    durability: 1,
+    size: 2,
+    structure: 1,
+    effect: "Appropriate clothing provides +2 to relevant Social rolls; unsuitable clothing imposes a matching penalty."
+  },
+  {
+    name: "Fashion (Availability 4)",
+    category: "Social",
+    availability: 4,
+    bonus: 2,
+    durability: 1,
+    size: 2,
+    structure: 1,
+    effect: "Appropriate clothing provides +2 to relevant Social rolls; unsuitable clothing imposes a matching penalty."
+  },
+  {
+    name: "Fashion (Availability 5)",
+    category: "Social",
+    availability: 5,
+    bonus: 3,
+    durability: 1,
+    size: 2,
+    structure: 1,
+    effect: "Appropriate clothing provides +3 to relevant Social rolls; unsuitable clothing imposes a matching penalty."
+  },
+].sort((a, b) => a.name.localeCompare(b.name));
 
 // Synergy table data
 export const SYNERGY_TABLE = {
