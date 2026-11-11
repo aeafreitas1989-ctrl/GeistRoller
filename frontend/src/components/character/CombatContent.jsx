@@ -1,4 +1,8 @@
-import { Plus, Trash2, Pencil, Star, Package, Sword, Shield, Sparkles, ChevronDown } from "lucide-react";
+import {
+    Plus, Trash2, Pencil, Star, Package, Sword, Shield, Sparkles, ChevronDown,
+    Coins, Wine, MirrorRound, WandSparkles, Flame,
+    ArrowUpRight, VenetianMask, BookOpen, Crown, Cog, Eye,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -77,6 +81,45 @@ const getYantraDisplayType = (item) => {
 
 const normalizeInventoryText = (value) =>
     String(value || "").trim().toLowerCase();
+
+const ORDER_YANTRA_ICONS = {
+    "adamantine arrow": ArrowUpRight,
+    "guardians of the veil": VenetianMask,
+    mysterium: BookOpen,
+    "silver ladder": Crown,
+    "free council": Cog,
+    "seers of the throne": Eye,
+};
+
+const YANTRA_TOOL_ICONS = {
+    coin: Coins,
+    cup: Wine,
+    mirror: MirrorRound,
+    rod: WandSparkles,
+    weapon: Sword,
+};
+
+const InventoryItemIcon = ({ item, FallbackIcon, order }) => {
+    let Icon = FallbackIcon;
+
+    if (item?.type === "yantra") {
+        const yantra = item.yantra || {};
+        const kind = normalizeInventoryText(yantra.kind);
+        const tool = normalizeInventoryText(yantra.tool_type);
+
+        if (yantra.dedicated === true || tool === "dedicated") {
+            Icon = Sparkles;
+        } else if (kind === "sacrament") {
+            Icon = Flame;
+        } else if (tool === "order") {
+            Icon = ORDER_YANTRA_ICONS[normalizeInventoryText(order)] || Sparkles;
+        } else {
+            Icon = YANTRA_TOOL_ICONS[tool || "coin"] || Sparkles;
+        }
+    }
+
+    return <Icon className="h-5 w-5 text-amber-200/80" strokeWidth={1.6} />;
+};
 
 const clampInventoryNumber = (value, min, max, fallback = min) => {
     const parsed = parseInt(value, 10);
@@ -980,7 +1023,7 @@ export const CombatContent = ({
                                 <div className="flex flex-wrap items-center justify-between gap-3">
                                     <div className="flex min-w-[160px] flex-1 items-center gap-3">
                                         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-zinc-700 bg-zinc-950/70">
-                                            <Icon className="h-5 w-5 text-amber-200/80" strokeWidth={1.6} />
+                                            <InventoryItemIcon item={it} FallbackIcon={Icon} order={getValue("order")} />
                                         </div>
                                         <div className="min-w-0">
                                             <div className="truncate text-sm font-semibold text-zinc-100">{it.name || "Unnamed"}</div>
