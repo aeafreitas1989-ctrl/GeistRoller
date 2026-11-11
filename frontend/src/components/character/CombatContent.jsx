@@ -1,4 +1,4 @@
-import { Plus, Trash2, Pencil, Star, Package, Sword, Shield, Sparkles, Umbrella, BriefcaseMedical, Backpack, Drama, Coins, CookingPot, ChevronDown, MoreHorizontal } from "lucide-react";
+import { Plus, Trash2, Pencil, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,7 +12,6 @@ import {
     AVAILABILITY_OPTIONS, WEAPON_SPECIAL_OPTIONS, ARMOR_COVERAGE_OPTIONS,
     PREMADE_ARMOR, PREMADE_EQUIPMENT,
 } from "../../data/character-data";
-import { useState } from "react";
 import { HealthTrack, getHealthCounts, buildHealthBoxes, formatLabel } from "./StatComponents";
 const INVENTORY_TYPE_ORDER = {
     armor: 0,
@@ -148,33 +147,6 @@ const compareInventoryItems = (a, b) => {
     return a.originalIndex - b.originalIndex;
 };
 
-const InventoryThumbnail = ({ item }) => {
-    const name = normalizeInventoryText(item?.name);
-    const Icon = name.includes("kasa") ? Umbrella
-        : name.includes("medicine") ? BriefcaseMedical
-        : name.includes("travelling") || name.includes("traveling") ? Backpack
-        : name.includes("mask") ? Drama
-        : name.includes("coin") ? Coins
-        : name.includes("pestle") ? CookingPot
-        : item?.type === "weapon" ? Sword
-        : item?.type === "armor" ? Shield
-        : item?.type === "yantra" ? Sparkles
-        : Package;
-
-    return (
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md border border-zinc-700/70 bg-gradient-to-br from-zinc-800/90 to-zinc-950 shadow-inner">
-            <Icon className="h-6 w-6 text-amber-200/80" strokeWidth={1.5} />
-        </div>
-    );
-};
-
-const InventoryStat = ({ label, value, accent = false }) => (
-    <div className="flex min-w-0 flex-col items-center justify-center rounded-md border border-zinc-700/70 bg-zinc-950/50 px-2 py-1.5 text-center">
-        <span className="text-[10px] leading-tight text-zinc-400">{label}</span>
-        <span className={`text-sm font-semibold leading-5 tabular-nums ${accent ? "text-teal-300" : "text-zinc-100"}`}>{value}</span>
-    </div>
-);
-
 export const CombatContent = ({
     getValue, getNestedValue, handleChange,
     isMage,
@@ -194,31 +166,9 @@ export const CombatContent = ({
     showMageArmor = true,
     showInventory = true,
 }) => {
-    const [collapsedInventoryGroups, setCollapsedInventoryGroups] = useState([]);
-    const [openInventoryMenu, setOpenInventoryMenu] = useState(null);
-
     const sortedInventoryItems = (inventoryItems || [])
         .map((item, originalIndex) => ({ item, originalIndex }))
         .sort(compareInventoryItems);
-
-    const groupDefinitions = [
-        { key: "equipment", label: "Equipment", icon: Package },
-        { key: "weapon", label: "Weapons", icon: Sword },
-        { key: "armor", label: "Armor", icon: Shield },
-        { key: "yantra", label: "Yantras", icon: Sparkles },
-    ];
-    const inventoryGroups = groupDefinitions
-        .map((group) => ({
-            ...group,
-            items: sortedInventoryItems.filter(({ item }) => item?.type === group.key),
-        }))
-        .filter((group) => group.items.length > 0);
-    const otherItems = sortedInventoryItems.filter(
-        ({ item }) => !groupDefinitions.some((group) => group.key === item?.type)
-    );
-    if (otherItems.length > 0) {
-        inventoryGroups.push({ key: "other", label: "Other", icon: Package, items: otherItems });
-    }
     const currentMagePath =
         isMage
             ? getValue("path")
@@ -977,149 +927,78 @@ export const CombatContent = ({
                     </DialogContent>
                 </Dialog>
 
-                {/* Grouped inventory - presentation only; original item indices are preserved. */}
+                {/* Items list */}
                 {inventoryItems.length === 0 ? (
-                    <p className="rounded-md border border-dashed border-zinc-800 px-3 py-6 text-center text-xs text-zinc-500">
-                        No inventory items yet.
-                    </p>
+                    <p className="text-[10px] text-zinc-600 italic">No inventory items yet.</p>
                 ) : (
-                    <div className="space-y-3" data-testid="inventory-grouped-list">
-                        {inventoryGroups.map((group) => (
-                            <section
-                                key={group.key}
-                                className={`rounded-lg border p-2 ${group.key === "yantra" ? yantraCardClass : "border-zinc-700/80 bg-zinc-900/20"}`}
-                                data-testid={`inventory-group-${group.key}`}
+                    <div className="space-y-1">
+                        {sortedInventoryItems.map(({ item: it, originalIndex: idx }) => (
+                            <div
+                                key={idx}
+                                className={`px-2 py-1.5 rounded-sm border ${
+                                    it.type === "yantra"
+                                        ? yantraCardClass
+                                        : "bg-zinc-900/20 border-zinc-800"
+                                }`}
                             >
-                                <button
-                                    type="button"
-                                    onClick={() => setCollapsedInventoryGroups((current) =>
-                                        current.includes(group.key)
-                                            ? current.filter((key) => key !== group.key)
-                                            : [...current, group.key]
-                                    )}
-                                    aria-expanded={!collapsedInventoryGroups.includes(group.key)}
-                                    className="flex w-full items-center gap-2 px-1 py-2 text-left text-zinc-200 hover:text-white"
-                                >
-                                    <ChevronDown className={`h-4 w-4 shrink-0 text-zinc-400 transition-transform ${collapsedInventoryGroups.includes(group.key) ? "-rotate-90" : ""}`} />
-                                    <group.icon className="h-4 w-4 shrink-0 text-zinc-400" />
-                                    <span className="text-sm font-semibold">{group.label}</span>
-                                    <span className="text-xs text-zinc-500">{group.items.length} item{group.items.length === 1 ? "" : "s"}</span>
-                                </button>
+                                <div className="flex items-center justify-between gap-3">
+                                     <div className="text-xs text-zinc-200 min-w-0 flex-1">
+                                        <span className="font-mono text-zinc-500 mr-2">
+                                            {it.type === "yantra"
+                                                ? `Yantra (${getYantraDisplayType(it)})`
+                                                : it.type === "armor"
+                                                    ? `Armor (${it.armor?.general ?? 0}/${it.armor?.ballistic ?? 0})`
+                                                    : it.type.charAt(0).toUpperCase() + it.type.slice(1)}
+                                        </span>
+                                        {it.name || "Unnamed"}
+                                        <span className="text-[10px] text-zinc-500 ml-2">
+                                            {AVAILABILITY_OPTIONS.find((a) => a.value === (it.availability ?? 0))?.label ?? "o"}
+                                        </span>
+                                    </div>
 
-                                {!collapsedInventoryGroups.includes(group.key) && (
-                                    <div className="space-y-2 pb-1">
-                                        {group.items.map(({ item: it, originalIndex: idx }) => (
-                                            <div
-                                                key={idx}
-                                                className={`relative rounded-md border border-zinc-700/60 bg-gradient-to-r from-zinc-900/80 to-zinc-950/70 pl-1 shadow-sm ${it.type === "yantra" ? "border-emerald-700/40" : ""}`}
+                                    <div className="flex flex-col items-end gap-1 shrink-0">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-[10px] text-zinc-500">Equipped</span>
+                                            <Switch
+                                                checked={!!it.equipped}
+                                                onCheckedChange={(v) => {
+                                                    const current = getValue("inventory_items") || [];
+                                                    const target = current[idx];
+                                                    let updated = current.map((it2, i) => (i === idx ? { ...it2, equipped: !!v } : it2));
+                                                    if (target?.type === "armor" && !!v) {
+                                                        updated = current.map((it2, i) => {
+                                                            if (it2?.type !== "armor") return it2;
+                                                            if (i === idx) return { ...it2, equipped: true };
+                                                            return { ...it2, equipped: false };
+                                                        });
+                                                    }
+                                                    handleChange("inventory_items", updated);
+                                                }}
+                                                data-testid={`inventory-equipped-${idx}`}
+                                            />
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-6 px-1.5 text-zinc-400 hover:text-zinc-200"
+                                                onClick={() => setEditingInventoryIndex(idx)}
+                                                data-testid={`inventory-edit-${idx}`}
                                             >
-                                                <span className={`absolute inset-y-0 left-0 w-1 rounded-l-md ${it.type === "yantra" ? "bg-emerald-400" : "bg-teal-400"}`} />
-                                                <div className="flex flex-wrap items-center gap-3 px-3 py-3">
-                                                    <div className="flex min-w-[155px] flex-1 items-center gap-3">
-                                                        <InventoryThumbnail item={it} />
-                                                        <div className="min-w-0">
-                                                            <p className="truncate text-sm font-semibold leading-snug text-zinc-100" title={it.name || "Unnamed"}>{it.name || "Unnamed"}</p>
-                                                            <p className="mt-0.5 text-[11px] leading-tight text-zinc-400">
-                                                                {it.type === "yantra"
-                                                                    ? `Yantra (${getYantraDisplayType(it)})`
-                                                                    : it.type === "weapon"
-                                                                        ? `${(it.weapon?.kind || "melee") === "ranged" ? "Ranged" : "Melee"} Weapon`
-                                                                        : it.type === "armor" ? "Armor" : it.type === "equipment" ? "Equipment" : "Item"}
-                                                                <span className="px-1 text-zinc-600">·</span>
-                                                                Availability {AVAILABILITY_OPTIONS.find((a) => a.value === (it.availability ?? 0))?.label ?? "—"}
-                                                            </p>
-                                                        </div>
-                                                    </div>
+                                                <Pencil className="w-3.5 h-3.5" />
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="h-6 px-1.5 text-zinc-400 hover:text-red-300"
+                                                onClick={() => removeInventoryItem(idx)}
+                                                data-testid={`inventory-remove-${idx}`}
+                                            >
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </div>
 
-                                                    {it.type === "weapon" && (
-                                                        <div className="grid min-w-[210px] flex-[1.3] grid-cols-4 gap-1.5">
-                                                            <InventoryStat label="Damage" value={`${it.weapon?.damage ?? 0}${it.weapon?.damage_type === "bashing" ? "B" : it.weapon?.damage_type === "aggravated" ? "A" : "L"}`} />
-                                                            <InventoryStat label="Initiative" value={it.weapon?.initiative ?? 0} />
-                                                            <InventoryStat label="Strength" value={it.weapon?.strength ?? 0} />
-                                                            <InventoryStat label="Size" value={it.weapon?.size ?? 1} />
-                                                        </div>
-                                                    )}
-                                                    {it.type === "armor" && (
-                                                        <div className="grid min-w-[210px] flex-[1.3] grid-cols-4 gap-1.5">
-                                                            <InventoryStat label="Armor" value={`${it.armor?.general ?? 0}/${it.armor?.ballistic ?? 0}`} />
-                                                            <InventoryStat label="Strength" value={it.armor?.strength ?? 0} />
-                                                            <InventoryStat label="Defense" value={it.armor?.defense ?? 0} />
-                                                            <InventoryStat label="Speed" value={it.armor?.speed ?? 0} />
-                                                        </div>
-                                                    )}
-                                                    {it.type === "equipment" && (
-                                                        <div className="grid min-w-[210px] flex-[1.3] grid-cols-4 gap-1.5">
-                                                            <InventoryStat label="Bonus" accent value={`${Number(it.equipment?.bonus ?? 0) >= 0 ? "+" : ""}${it.equipment?.bonus ?? 0}`} />
-                                                            <InventoryStat label="Durability" value={it.equipment?.durability ?? 0} />
-                                                            <InventoryStat label="Structure" value={it.equipment?.structure ?? 1} />
-                                                            <InventoryStat label="Size" value={it.equipment?.size ?? 1} />
-                                                        </div>
-                                                    )}
-                                                    {it.type === "yantra" && it.yantra?.kind === "sacrament" && (
-                                                        <div className="min-w-[100px] flex-1">
-                                                            <InventoryStat label="Bonus" accent value={`+${it.yantra?.bonus ?? 1}`} />
-                                                        </div>
-                                                    )}
-
-                                                    <div className="ml-auto flex shrink-0 items-center gap-2">
-                                                        <span className="text-[10px] text-zinc-400">Equipped</span>
-                                                        <Switch
-                                                            checked={!!it.equipped}
-                                                            onCheckedChange={(v) => {
-                                                                const current = getValue("inventory_items") || [];
-                                                                const target = current[idx];
-                                                                let updated = current.map((entry, i) => i === idx ? { ...entry, equipped: !!v } : entry);
-                                                                if (target?.type === "armor" && !!v) {
-                                                                    updated = current.map((entry, i) => entry?.type === "armor"
-                                                                        ? { ...entry, equipped: i === idx }
-                                                                        : entry
-                                                                    );
-                                                                }
-                                                                handleChange("inventory_items", updated);
-                                                            }}
-                                                            aria-label={`Equip ${it.name || "item"}`}
-                                                            data-testid={`inventory-equipped-${idx}`}
-                                                        />
-                                                        <div className="relative">
-                                                            <button
-                                                                type="button"
-                                                                aria-label={`Actions for ${it.name || "item"}`}
-                                                                aria-expanded={openInventoryMenu === idx}
-                                                                onClick={() => setOpenInventoryMenu((current) => current === idx ? null : idx)}
-                                                                className="flex h-8 w-8 items-center justify-center rounded-md border border-zinc-700 bg-zinc-900/70 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
-                                                            >
-                                                                <MoreHorizontal className="h-4 w-4" />
-                                                            </button>
-                                                            {openInventoryMenu === idx && (
-                                                                <div className="absolute right-0 top-full z-30 mt-1 min-w-[120px] rounded-md border border-zinc-700 bg-zinc-950 p-1 shadow-xl">
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => { setOpenInventoryMenu(null); setEditingInventoryIndex(idx); }}
-                                                                        data-testid={`inventory-edit-${idx}`}
-                                                                        className="flex w-full items-center gap-2 rounded px-2 py-2 text-left text-xs text-zinc-200 hover:bg-zinc-800"
-                                                                    ><Pencil className="h-3.5 w-3.5" /> Edit</button>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => { setOpenInventoryMenu(null); removeInventoryItem(idx); }}
-                                                                        data-testid={`inventory-remove-${idx}`}
-                                                                        className="flex w-full items-center gap-2 rounded px-2 py-2 text-left text-xs text-rose-300 hover:bg-rose-950/60"
-                                                                    ><Trash2 className="h-3.5 w-3.5" /> Delete</button>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                {it.type === "yantra" && it.yantra?.notes && (
-                                                    <p className="border-t border-emerald-900/40 px-4 py-2 text-[11px] text-zinc-400">{it.yantra.notes}</p>
-                                                )}
-                                                <Dialog
-                                                    open={editingInventoryIndex === idx}
-                                                    onOpenChange={(open) => { if (!open) setEditingInventoryIndex(null); }}
-                                                >
-                                                    <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto border-zinc-700 bg-zinc-900">
-                                                        <DialogHeader>
-                                                            <DialogTitle className="text-teal-200">Edit {it.name || "Item"}</DialogTitle>
-                                                        </DialogHeader>
+                                {editingInventoryIndex === idx ? (
                                     <div className="grid grid-cols-2 gap-2 mt-2">
                                         <Input
                                             value={it.name || ""}
@@ -1408,13 +1287,63 @@ export const CombatContent = ({
                                             </Button>
                                         </div>
                                     </div>
-                                                    </DialogContent>
-                                                </Dialog>
+                                ) : (
+                                    <>
+                                        
+                                        {it.type === "weapon" && (
+                                            <div className="mt-1 grid grid-cols-4 gap-1 text-[12px] text-zinc-500">
+                                                <span>
+                                                    Damage {it.weapon?.damage ?? 0}
+                                                    {it.weapon?.damage_type === "bashing"
+                                                        ? "B"
+                                                        : it.weapon?.damage_type === "aggravated"
+                                                            ? "A"
+                                                            : "L"}
+                                                </span>
+                                                <span>Initiative {it.weapon?.initiative ?? 0}</span>
+                                                <span>Strength {it.weapon?.strength ?? 0}</span>
+                                                <span>Size {it.weapon?.size ?? 1}</span>
                                             </div>
-                                        ))}
-                                    </div>
+                                        )}
+
+                                        {it.type === "armor" && (
+                                            <div className="mt-1 grid grid-cols-3 gap-1 text-[12px] text-zinc-500">
+                                                <span>Strength {it.armor?.strength ?? 0}</span>
+                                                <span>Defense {it.armor?.defense ?? 0}</span>
+                                                <span>Speed {it.armor?.speed ?? 0}</span>
+                                            </div>
+                                        )}
+
+                                        {it.type === "equipment" && (
+                                            <div className="mt-1 grid grid-cols-4 gap-1 text-[12px] text-zinc-500">
+                                                <span className="text-cyan-400">
+                                                    Bonus {Number(it.equipment?.bonus ?? 0) >= 0 ? "+" : ""}
+                                                    {it.equipment?.bonus ?? 0}
+                                                </span>
+
+                                                <span>
+                                                    Durability {it.equipment?.durability ?? 0}
+                                                </span>
+
+                                                <span>
+                                                    Structure {it.equipment?.structure ?? 1}
+                                                </span>
+
+                                                <span>
+                                                    Size {it.equipment?.size ?? 1}
+                                                </span>
+                                            </div>
+                                        )}
+
+                                        {it.type === "yantra" &&
+                                            it.yantra?.notes && (
+                                                <div className="mt-1 text-[11px] text-zinc-500 truncate">
+                                                    {it.yantra.notes}
+                                                </div>
+                                            )}
+                                    </>
                                 )}
-                            </section>
+                            </div>
                         ))}
                     </div>
                 )}
