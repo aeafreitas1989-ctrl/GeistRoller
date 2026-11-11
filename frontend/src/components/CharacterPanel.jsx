@@ -2639,7 +2639,7 @@ export const CharacterPanel = ({
             ...(hasFamiliar ? [
                 { id: "familiar", label: "Familiar", title: "Familiar" },
             ] : []),
-            { id: "attributesSkills", label: "Attributes", title: "Attributes & Skills" },
+            { id: "attributesSkills", label: "Attributes & Skills", title: "Attributes & Skills" },
             { id: "powers", label: "Spells", title: "Arcana, Spells & Attainments" },
             { id: "sinEater", label: "Resources", title: "Gnosis & Resources" },
             { id: "inventory", label: "Inventory", title: "Inventory" },
@@ -2649,7 +2649,7 @@ export const CharacterPanel = ({
         : [
             { id: "header", label: "Character", title: "Character Info" },
             { id: "geist", label: "Geist", title: "Geist & Remembrance" },
-            { id: "attributesSkills", label: "Attributes", title: "Attributes & Skills" },
+            { id: "attributesSkills", label: "Attributes & Skills", title: "Attributes & Skills" },
             { id: "powers", label: "Haunts", title: "Haunts, Keys & Mementos" },
             { id: "sinEater", label: "Synergy", title: "Synergy & Resources" },
             { id: "inventory", label: "Inventory", title: "Inventory" },
