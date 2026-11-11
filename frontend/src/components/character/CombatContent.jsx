@@ -2,6 +2,12 @@ import {
     Plus, Trash2, Pencil, Star, Package, Sword, Shield, Sparkles, ChevronDown,
     Coins, Wine, MirrorRound, WandSparkles, Flame,
     ArrowUpRight, VenetianMask, BookOpen, Crown, Cog, Eye,
+    Crosshair, Search, Fingerprint, Camera, Cctv, Mic, Binoculars, ScanEye,
+    FlaskConical, Flashlight, MapPin, Laptop, Smartphone, Radio, Headphones,
+    HardDrive, Usb, Code, FileKey, Monitor, Satellite, Wrench, Hammer, Drill,
+    KeyRound, LockKeyhole, Scissors, PocketKnife, Cable, Lasso, Construction,
+    BriefcaseMedical, Pill, Stethoscope, Backpack, Tent, Compass, Map, Glasses,
+    Shirt, Biohazard, Wallet, BookMarked, ScrollText, Gem, Skull, FlaskRound,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -99,10 +105,241 @@ const YANTRA_TOOL_ICONS = {
     weapon: Sword,
 };
 
+const EQUIPMENT_ICON_GROUPS = [
+    {
+        label: "Investigation & Surveillance",
+        icons: [
+            ["search", "Magnifier", Search],
+            ["fingerprint", "Forensics", Fingerprint],
+            ["camera", "Camera", Camera],
+            ["cctv", "Surveillance", Cctv],
+            ["mic", "Recorder", Mic],
+            ["binoculars", "Binoculars", Binoculars],
+            ["scan-eye", "Night Vision", ScanEye],
+            ["flask-conical", "Chemicals", FlaskConical],
+            ["flashlight", "Flashlight", Flashlight],
+            ["map-pin", "GPS Tracker", MapPin],
+        ],
+    },
+    {
+        label: "Computers & Communication",
+        icons: [
+            ["laptop", "Computer", Laptop],
+            ["smartphone", "Phone", Smartphone],
+            ["radio", "Radio", Radio],
+            ["headphones", "Headset", Headphones],
+            ["hard-drive", "Storage", HardDrive],
+            ["usb", "USB Drive", Usb],
+            ["code", "Code Kit", Code],
+            ["file-key", "Secure Files", FileKey],
+            ["monitor", "Monitor", Monitor],
+            ["satellite", "Comms", Satellite],
+        ],
+    },
+    {
+        label: "Tools & Access",
+        icons: [
+            ["wrench", "Toolkit", Wrench],
+            ["hammer", "Hammer", Hammer],
+            ["drill", "Drill", Drill],
+            ["key-round", "Key", KeyRound],
+            ["lock-keyhole", "Lock", LockKeyhole],
+            ["scissors", "Scissors", Scissors],
+            ["pocket-knife", "Multitool", PocketKnife],
+            ["cable", "Cables", Cable],
+            ["lasso", "Rope", Lasso],
+            ["construction", "Heavy Tools", Construction],
+        ],
+    },
+    {
+        label: "Medical, Survival & Clothing",
+        icons: [
+            ["briefcase-medical", "First Aid", BriefcaseMedical],
+            ["pill", "Medication", Pill],
+            ["stethoscope", "Medical Kit", Stethoscope],
+            ["backpack", "Backpack", Backpack],
+            ["tent", "Tent", Tent],
+            ["compass", "Compass", Compass],
+            ["map", "Map", Map],
+            ["glasses", "Goggles", Glasses],
+            ["shirt", "Clothing", Shirt],
+            ["biohazard", "Hazard Gear", Biohazard],
+        ],
+    },
+    {
+        label: "Money, Records & Magical Objects",
+        icons: [
+            ["coins", "Cash", Coins],
+            ["wallet", "Wallet", Wallet],
+            ["venetian-mask", "Disguise", VenetianMask],
+            ["book-open", "Book", BookOpen],
+            ["book-marked", "Grimoire", BookMarked],
+            ["scroll-text", "Manuscript", ScrollText],
+            ["gem", "Artifact", Gem],
+            ["skull", "Relic", Skull],
+            ["flask-round", "Potion", FlaskRound],
+            ["sparkles", "Enchanted Item", Sparkles],
+        ],
+    },
+];
+
+const EQUIPMENT_ICON_LOOKUP = Object.fromEntries(
+    EQUIPMENT_ICON_GROUPS.flatMap((group) =>
+        group.icons.map(([id, label, Icon]) => [id, { label, Icon }])
+    )
+);
+
+// Defaults for the 65 CofD premade entries, including their rating/Availability variants.
+// A user's selected icon takes priority; preset defaults do not overwrite existing items.
+const PREMADE_EQUIPMENT_ICON_RULES = [
+    [/^automotive tools/i, "wrench"],
+    [/^cache/i, "lock-keyhole"],
+    [/^communications headset/i, "headphones"],
+    [/^crime scene kit/i, "fingerprint"],
+    [/^code kit/i, "code"],
+    [/^cracking software/i, "laptop"],
+    [/^digital recorder/i, "mic"],
+    [/^duct tape/i, "cable"],
+    [/^first-aid kit/i, "briefcase-medical"],
+    [/^flashlight/i, "flashlight"],
+    [/^glowstick/i, "flashlight"],
+    [/^gps tracker/i, "map-pin"],
+    [/^keylogging software/i, "code"],
+    [/^luminol/i, "flask-conical"],
+    [/^multi-tool/i, "pocket-knife"],
+    [/^personal computer/i, "laptop"],
+    [/^smartphone/i, "smartphone"],
+    [/^special effects/i, "sparkles"],
+    [/^surveillance equipment/i, "cctv"],
+    [/^survival gear/i, "backpack"],
+    [/^talcum powder/i, "flask-round"],
+    [/^ultraviolet ink/i, "flask-round"],
+    [/^battering ram/i, "hammer"],
+    [/^bear trap/i, "lock-keyhole"],
+    [/^caltrops/i, "construction"],
+    [/^camouflage clothing/i, "shirt"],
+    [/^climbing gear/i, "lasso"],
+    [/^crowbar/i, "wrench"],
+    [/^firearm suppressor/i, "wrench"],
+    [/^gas mask/i, "biohazard"],
+    [/^handcuffs/i, "lock-keyhole"],
+    [/^lockpicking kit/i, "key-round"],
+    [/^night vision goggles/i, "scan-eye"],
+    [/^pepper spray/i, "flask-round"],
+    [/^rope/i, "lasso"],
+    [/^stun gun/i, "flashlight"],
+    [/^cash/i, "coins"],
+    [/^disguise/i, "venetian-mask"],
+    [/^fashion/i, "shirt"],
+];
+
+const getDefaultEquipmentIconId = (name) =>
+    PREMADE_EQUIPMENT_ICON_RULES.find(([pattern]) =>
+        pattern.test(String(name || ""))
+    )?.[1] || "";
+
+const getEquipmentIconId = (item) => {
+    const custom = item?.equipment?.icon;
+    if (custom && EQUIPMENT_ICON_LOOKUP[custom]) return custom;
+    return getDefaultEquipmentIconId(item?.name);
+};
+
+const EquipmentIconPicker = ({ value, itemName, onChange, testId }) => {
+    const [open, setOpen] = useState(false);
+    const [searchText, setSearchText] = useState("");
+    const effectiveId = (value && EQUIPMENT_ICON_LOOKUP[value])
+        ? value
+        : getDefaultEquipmentIconId(itemName);
+    const selection = EQUIPMENT_ICON_LOOKUP[effectiveId];
+    const SelectedIcon = selection?.Icon || Package;
+    const automaticLabel = selection?.label || "Package";
+    const matchingGroups = EQUIPMENT_ICON_GROUPS.map((group) => ({
+        ...group,
+        icons: group.icons.filter(([id, label]) =>
+            `${id} ${label}`.toLowerCase().includes(searchText.trim().toLowerCase())
+        ),
+    })).filter((group) => group.icons.length > 0);
+
+    return (
+        <div className="space-y-1" data-testid={testId}>
+            <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Icon</label>
+            <button
+                type="button"
+                onClick={() => setOpen((previous) => !previous)}
+                aria-expanded={open}
+                className="flex h-8 w-full items-center gap-2 rounded-sm border border-zinc-700 bg-zinc-900/50 px-2 text-left text-xs text-zinc-200 hover:border-teal-600"
+            >
+                <SelectedIcon className="h-4 w-4 shrink-0 text-teal-300" />
+                <span className="min-w-0 flex-1 truncate">
+                    {value && EQUIPMENT_ICON_LOOKUP[value]
+                        ? selection.label
+                        : `${automaticLabel} (automatic)`}
+                </span>
+                <ChevronDown className={`h-3.5 w-3.5 text-zinc-400 ${open ? "rotate-180" : ""}`} />
+            </button>
+
+            {open && (
+                <div className="space-y-2 rounded-md border border-zinc-700 bg-zinc-950/95 p-2">
+                    <Input
+                        value={searchText}
+                        onChange={(event) => setSearchText(event.target.value)}
+                        placeholder="Search equipment icons..."
+                        aria-label="Search equipment icons"
+                        className="h-8 input-geist text-xs"
+                    />
+                    <button
+                        type="button"
+                        onClick={() => { onChange(""); setOpen(false); }}
+                        className="flex w-full items-center gap-2 rounded-sm border border-zinc-700 px-2 py-1.5 text-left text-xs text-zinc-300 hover:border-teal-600"
+                    >
+                        <Package className="h-4 w-4 text-zinc-400" />
+                        Automatic / default
+                    </button>
+                    <div className="max-h-64 space-y-3 overflow-y-auto pr-1">
+                        {matchingGroups.length === 0 && (
+                            <p className="text-xs text-zinc-500">No matching icons.</p>
+                        )}
+                        {matchingGroups.map((group) => (
+                            <section key={group.label}>
+                                <p className="mb-1 text-[10px] uppercase tracking-wider text-zinc-500">
+                                    {group.label}
+                                </p>
+                                <div className="grid grid-cols-5 gap-1">
+                                    {group.icons.map(([id, label, Icon]) => (
+                                        <button
+                                            key={id}
+                                            type="button"
+                                            title={label}
+                                            aria-label={`Use ${label} icon`}
+                                            aria-pressed={value === id}
+                                            onClick={() => { onChange(id); setOpen(false); }}
+                                            className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-sm border p-1 text-center transition-colors ${
+                                                value === id
+                                                    ? "border-teal-500 bg-teal-900/30 text-teal-200"
+                                                    : "border-zinc-800 bg-zinc-900/50 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
+                                            }`}
+                                        >
+                                            <Icon className="h-5 w-5 shrink-0" strokeWidth={1.7} />
+                                            <span className="text-[9px] leading-tight">{label}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </section>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
 const InventoryItemIcon = ({ item, FallbackIcon, order }) => {
     let Icon = FallbackIcon;
 
-    if (item?.type === "yantra") {
+    if (item?.type === "weapon") {
+        Icon = item.weapon?.kind === "ranged" ? Crosshair : Sword;
+    } else if (item?.type === "equipment") {
+        Icon = EQUIPMENT_ICON_LOOKUP[getEquipmentIconId(item)]?.Icon || Package;
+    } else if (item?.type === "yantra") {
         const yantra = item.yantra || {};
         const kind = normalizeInventoryText(yantra.kind);
         const tool = normalizeInventoryText(yantra.tool_type);
@@ -525,6 +762,7 @@ export const CombatContent = ({
                                                     name: p.name,
                                                     availability: p.availability ?? 0,
                                                     equipment: {
+                                                        icon: getDefaultEquipmentIconId(p.name),
                                                         bonus: p.bonus ?? 0,
                                                         durability: p.durability ?? 0,
                                                         size: p.size ?? 1,
@@ -862,6 +1100,15 @@ export const CombatContent = ({
                                 {/* Equipment fields */}
                                 {invType === "equipment" && (
                                     <div className="space-y-2 pt-2 border-t border-zinc-800">
+                                        <EquipmentIconPicker
+                                            value={invDraft.equipment?.icon || ""}
+                                            itemName={invDraft.name}
+                                            onChange={(icon) => setInvDraft((previous) => ({
+                                                ...previous,
+                                                equipment: { ...(previous.equipment || {}), icon },
+                                            }))}
+                                            testId="inventory-add-equipment-icon"
+                                        />
                                         <div className="grid grid-cols-2 gap-2">
                                             <div>
                                                 <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Bonus</label>
@@ -1215,6 +1462,17 @@ export const CombatContent = ({
                                                     }}
                                                     className="h-7 input-geist text-xs"
                                                     placeholder="Ballistic"
+                                                />
+                                            </div>
+                                        )}
+
+                                        {it.type === "equipment" && (
+                                            <div className="col-span-2">
+                                                <EquipmentIconPicker
+                                                    value={it.equipment?.icon || ""}
+                                                    itemName={it.name}
+                                                    onChange={(icon) => updateInventoryItemNested(idx, "equipment", { icon })}
+                                                    testId={`inventory-edit-equipment-icon-${idx}`}
                                                 />
                                             </div>
                                         )}
