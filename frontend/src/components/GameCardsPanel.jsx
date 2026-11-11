@@ -676,15 +676,15 @@ export const GameCardsPanel = ({
     const cardNavigationItems = isMage
         ? [
             { id: "combat", label: "Combat" },
-            { id: "conditions", label: "Conditions" },
-            { id: "activeSpells", label: "Active Spells & Abilities" },
+            { id: "conditions", label: "Conditions", count: activeConditions.length },
+            { id: "activeSpells", label: "Active Spells & Abilities", count: activeSpells.length },
             { id: "merits", label: "Merits" },
             { id: "places", label: "Places & NPCs" },
             { id: "caseTruth", label: "Case File" },
         ]
         : [
             { id: "combat", label: "Combat" },
-            { id: "conditions", label: "Conditions" },
+            { id: "conditions", label: "Conditions", count: activeConditions.length },
             { id: "haunts", label: "Haunts" },
             { id: "keys", label: "Keys" },
             { id: "ceremonies", label: "Ceremonies" },
@@ -719,7 +719,7 @@ export const GameCardsPanel = ({
                 data-testid="cards-top-navigation"
             >
                 <div className="grid grid-cols-3 gap-1.5">
-                    {cardNavigationItems.map(({ id, label }) => (
+                    {cardNavigationItems.map(({ id, label, count }) => (
                         <Button
                             key={id}
                             type="button"
