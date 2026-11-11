@@ -9,6 +9,7 @@ import {
     BriefcaseMedical, Pill, Stethoscope, Backpack, Tent, Compass, Map, Glasses,
     Shirt, Biohazard, Wallet, BookMarked, ScrollText, Gem, Skull, FlaskRound,
 } from "lucide-react";
+import * as GameIcons from "react-icons/gi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,6 +25,83 @@ import {
 } from "../../data/character-data";
 import { useState } from "react";
 import { HealthTrack, getHealthCounts, buildHealthBoxes, formatLabel } from "./StatComponents";
+// Game-icons.net illustrations are distributed via react-icons/gi (CC BY 3.0).
+const GAME_ICON_NAMES = Object.keys(GameIcons).filter((id) => /^Gi[A-Z]/.test(id));
+const gameIconLabel = (id) => String(id || "").replace(/^Gi/, "").replace(/([a-z0-9])([A-Z])/g, "$1 $2");
+const GAME_ICON_LIST = GAME_ICON_NAMES.map((id) => ({
+    id, label: gameIconLabel(id), search: gameIconLabel(id).toLowerCase(),
+}));
+const GAME_ICON_FEATURES = [
+    { title: "Investigation & Surveillance", words: ["Magnifying Glass", "Fingerprint", "Camera", "Cctv Camera", "Binoculars", "Spyglass", "Flashlight", "Microscope"] },
+    { title: "Computers & Communications", words: ["Laptop", "Smartphone", "Walkie Talkie", "Radio Tower", "Headphones", "Computer", "Microchip", "Satellite"] },
+    { title: "Tools & Access", words: ["Wrench", "Hammer", "Screwdriver", "Key", "Padlock", "Scissors", "Rope", "Crowbar"] },
+    { title: "Medicine & Survival", words: ["First Aid Kit", "Pill", "Stethoscope", "Backpack", "Camping Tent", "Compass", "Gas Mask", "Biohazard"] },
+    { title: "Documents & Occult", words: ["Coins", "Wallet", "Open Book", "Scroll Quill", "Gem Pendant", "Skull", "Potion Ball", "Crystal Ball"] },
+];
+const findGameIconId = (term) => {
+    if (!term) return "";
+    const q = String(term).toLowerCase().replace(/[^a-z0-9]/g, "");
+    return GAME_ICON_LIST.find((icon) => icon.search.replace(/[^a-z0-9]/g, "") === q)?.id ||
+        GAME_ICON_LIST.find((icon) => icon.search.replace(/[^a-z0-9]/g, "").includes(q))?.id || "";
+};
+// Prefer the nested equipment icon, the established inventory data field.
+// Legacy Lucide icon IDs continue to render without changing saved characters.
+// Previously saved top-level Game Icon IDs remain readable.
+const getEquipmentIconId = (item) => {
+    if (item?.type !== "equipment") return "";
+    const stored = item?.equipment?.icon;
+    if (stored && GameIcons[stored]) return stored;
+    if (item?.icon && GameIcons[item.icon]) return item.icon;
+    if (stored && EQUIPMENT_ICON_LOOKUP[stored]) return "";
+    return findGameIconId(item?.name);
+};
+
+const GameIconPicker = ({ value, onChange, itemName = "", testId }) => {
+    const [query, setQuery] = useState("");
+    const [expanded, setExpanded] = useState(false);
+    const isLegacy = !!(value && EQUIPMENT_ICON_LOOKUP[value]);
+    const chosenId = value && GameIcons[value] ? value : isLegacy ? "" : findGameIconId(itemName);
+    const Chosen = isLegacy ? EQUIPMENT_ICON_LOOKUP[value].Icon : chosenId ? GameIcons[chosenId] : Package;
+    const label = isLegacy ? EQUIPMENT_ICON_LOOKUP[value].label : chosenId ? gameIconLabel(chosenId) : "Default icon";
+    const normalized = query.trim().toLowerCase();
+    const shown = normalized
+        ? GAME_ICON_LIST.filter((icon) => icon.search.includes(normalized) || icon.id.toLowerCase().includes(normalized)).slice(0, 60)
+        : GAME_ICON_FEATURES.flatMap((group) => group.words.map((word) => {
+            const id = findGameIconId(word);
+            return id ? { id, label: word, search: word.toLowerCase() } : null;
+        }).filter(Boolean)).filter((icon, index, all) => all.findIndex((i) => i.id === icon.id) === index);
+    return (
+        <div className="space-y-2" data-testid={testId || "game-icon-picker"}>
+            <div className="flex items-center gap-2">
+                <Chosen className="h-5 w-5 text-amber-200/80" />
+                <span className="min-w-0 flex-1 truncate text-xs text-zinc-400">{label}{isLegacy ? " (existing icon)" : ""}</span>
+                <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={() => setExpanded((open) => !open)}>
+                    {expanded ? "Close icons" : "Choose icon"}
+                </Button>
+                {value && <Button type="button" variant="ghost" size="sm" className="h-7 text-xs" onClick={() => onChange("")}>Reset</Button>}
+            </div>
+            {expanded && (
+                <div className="rounded-md border border-zinc-700 bg-zinc-950/80 p-2 space-y-2">
+                    <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search all Game Icons..." className="h-7 input-geist text-xs" data-testid="game-icon-search" />
+                    {!normalized && <p className="text-[10px] text-zinc-500">Suggestions by category: {GAME_ICON_FEATURES.map((g) => g.title).join(" / ")}. Search for more.</p>}
+                    <div className="max-h-52 overflow-y-auto grid grid-cols-6 sm:grid-cols-8 gap-1">
+                        {shown.map(({ id, label: iconLabel }) => {
+                            const Icon = GameIcons[id];
+                            return (
+                                <button key={id} type="button" title={iconLabel} aria-label={iconLabel}
+                                    className={`flex items-center justify-center rounded border p-2 hover:bg-zinc-800 ${chosenId === id ? "border-teal-400" : "border-zinc-800"}`}
+                                    onClick={() => { onChange(id); setExpanded(false); }}>
+                                    <Icon className="h-5 w-5 text-amber-200/80" />
+                                </button>
+                            );
+                        })}
+                    </div>
+                    {shown.length === 0 && <p className="text-xs text-zinc-500">No matching icons.</p>}
+                </div>
+            )}
+        </div>
+    );
+};
 const INVENTORY_TYPE_ORDER = {
     armor: 0,
     equipment: 1,
@@ -238,107 +316,27 @@ const getDefaultEquipmentIconId = (name) =>
         pattern.test(String(name || ""))
     )?.[1] || "";
 
-const getEquipmentIconId = (item) => {
+const getLegacyEquipmentIconId = (item) => {
     const custom = item?.equipment?.icon;
     if (custom && EQUIPMENT_ICON_LOOKUP[custom]) return custom;
     return getDefaultEquipmentIconId(item?.name);
 };
 
-const EquipmentIconPicker = ({ value, itemName, onChange, testId }) => {
-    const [open, setOpen] = useState(false);
-    const [searchText, setSearchText] = useState("");
-    const effectiveId = (value && EQUIPMENT_ICON_LOOKUP[value])
-        ? value
-        : getDefaultEquipmentIconId(itemName);
-    const selection = EQUIPMENT_ICON_LOOKUP[effectiveId];
-    const SelectedIcon = selection?.Icon || Package;
-    const automaticLabel = selection?.label || "Package";
-    const matchingGroups = EQUIPMENT_ICON_GROUPS.map((group) => ({
-        ...group,
-        icons: group.icons.filter(([id, label]) =>
-            `${id} ${label}`.toLowerCase().includes(searchText.trim().toLowerCase())
-        ),
-    })).filter((group) => group.icons.length > 0);
-
-    return (
-        <div className="space-y-1" data-testid={testId}>
-            <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Icon</label>
-            <button
-                type="button"
-                onClick={() => setOpen((previous) => !previous)}
-                aria-expanded={open}
-                className="flex h-8 w-full items-center gap-2 rounded-sm border border-zinc-700 bg-zinc-900/50 px-2 text-left text-xs text-zinc-200 hover:border-teal-600"
-            >
-                <SelectedIcon className="h-4 w-4 shrink-0 text-teal-300" />
-                <span className="min-w-0 flex-1 truncate">
-                    {value && EQUIPMENT_ICON_LOOKUP[value]
-                        ? selection.label
-                        : `${automaticLabel} (automatic)`}
-                </span>
-                <ChevronDown className={`h-3.5 w-3.5 text-zinc-400 ${open ? "rotate-180" : ""}`} />
-            </button>
-
-            {open && (
-                <div className="space-y-2 rounded-md border border-zinc-700 bg-zinc-950/95 p-2">
-                    <Input
-                        value={searchText}
-                        onChange={(event) => setSearchText(event.target.value)}
-                        placeholder="Search equipment icons..."
-                        aria-label="Search equipment icons"
-                        className="h-8 input-geist text-xs"
-                    />
-                    <button
-                        type="button"
-                        onClick={() => { onChange(""); setOpen(false); }}
-                        className="flex w-full items-center gap-2 rounded-sm border border-zinc-700 px-2 py-1.5 text-left text-xs text-zinc-300 hover:border-teal-600"
-                    >
-                        <Package className="h-4 w-4 text-zinc-400" />
-                        Automatic / default
-                    </button>
-                    <div className="max-h-64 space-y-3 overflow-y-auto pr-1">
-                        {matchingGroups.length === 0 && (
-                            <p className="text-xs text-zinc-500">No matching icons.</p>
-                        )}
-                        {matchingGroups.map((group) => (
-                            <section key={group.label}>
-                                <p className="mb-1 text-[10px] uppercase tracking-wider text-zinc-500">
-                                    {group.label}
-                                </p>
-                                <div className="grid grid-cols-5 gap-1">
-                                    {group.icons.map(([id, label, Icon]) => (
-                                        <button
-                                            key={id}
-                                            type="button"
-                                            title={label}
-                                            aria-label={`Use ${label} icon`}
-                                            aria-pressed={value === id}
-                                            onClick={() => { onChange(id); setOpen(false); }}
-                                            className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-sm border p-1 text-center transition-colors ${
-                                                value === id
-                                                    ? "border-teal-500 bg-teal-900/30 text-teal-200"
-                                                    : "border-zinc-800 bg-zinc-900/50 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
-                                            }`}
-                                        >
-                                            <Icon className="h-5 w-5 shrink-0" strokeWidth={1.7} />
-                                            <span className="text-[9px] leading-tight">{label}</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            </section>
-                        ))}
-                    </div>
-                </div>
-            )}
-        </div>
-    );
-};
 const InventoryItemIcon = ({ item, FallbackIcon, order }) => {
+    if (item?.type === "equipment") {
+        const id = getEquipmentIconId(item);
+        const EquipmentIcon = id ? GameIcons[id] : null;
+        if (EquipmentIcon) return <EquipmentIcon className="h-5 w-5 text-amber-200/80" />;
+    }
+    if (item?.type === "weapon" && item?.weapon?.kind === "ranged") {
+        return <Crosshair className="h-5 w-5 text-amber-200/80" strokeWidth={1.6} />;
+    }
     let Icon = FallbackIcon;
 
     if (item?.type === "weapon") {
         Icon = item.weapon?.kind === "ranged" ? Crosshair : Sword;
     } else if (item?.type === "equipment") {
-        Icon = EQUIPMENT_ICON_LOOKUP[getEquipmentIconId(item)]?.Icon || Package;
+        Icon = EQUIPMENT_ICON_LOOKUP[getLegacyEquipmentIconId(item)]?.Icon || Package;
     } else if (item?.type === "yantra") {
         const yantra = item.yantra || {};
         const kind = normalizeInventoryText(yantra.kind);
@@ -1100,7 +1098,7 @@ export const CombatContent = ({
                                 {/* Equipment fields */}
                                 {invType === "equipment" && (
                                     <div className="space-y-2 pt-2 border-t border-zinc-800">
-                                        <EquipmentIconPicker
+                                        <GameIconPicker
                                             value={invDraft.equipment?.icon || ""}
                                             itemName={invDraft.name}
                                             onChange={(icon) => setInvDraft((previous) => ({
@@ -1468,7 +1466,7 @@ export const CombatContent = ({
 
                                         {it.type === "equipment" && (
                                             <div className="col-span-2">
-                                                <EquipmentIconPicker
+                                                <GameIconPicker
                                                     value={it.equipment?.icon || ""}
                                                     itemName={it.name}
                                                     onChange={(icon) => updateInventoryItemNested(idx, "equipment", { icon })}
