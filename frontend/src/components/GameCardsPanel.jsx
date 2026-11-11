@@ -734,7 +734,21 @@ export const GameCardsPanel = ({
                                     : "border-zinc-700 bg-zinc-900/40 text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-200"
                             }`}
                         >
-                            {label}
+                            <span className="inline-flex flex-wrap items-center justify-center gap-1.5">
+                                <span>{label}</span>
+                                {typeof count === "number" && (
+                                    <span
+                                        data-testid={`cards-nav-count-${id}`}
+                                        className={`inline-flex min-w-5 items-center justify-center rounded-full border px-1.5 py-0.5 font-mono text-[10px] leading-none ${
+                                            count > 0
+                                                ? "border-teal-500/50 bg-teal-900/40 text-teal-200"
+                                                : "border-zinc-700 bg-zinc-800/60 text-zinc-400"
+                                        }`}
+                                    >
+                                        {count}
+                                    </span>
+                                )}
+                            </span>
                         </Button>
                     ))}
                 </div>
