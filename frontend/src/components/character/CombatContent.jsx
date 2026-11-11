@@ -1029,7 +1029,7 @@ export const CombatContent = ({
                                             <div className="truncate text-sm font-semibold text-zinc-100">{it.name || "Unnamed"}</div>
                                             <div className="text-[11px] leading-snug text-zinc-400">
                                                 {it.type === "yantra"
-                                                    ? `Yantra (${getYantraDisplayType(it)})`
+                                                    ? getYantraDisplayType(it)
                                                     : it.type === "weapon"
                                                         ? `${it.weapon?.kind === "ranged" ? "Ranged" : "Melee"} Weapon`
                                                         : it.type === "armor" ? "Armor" : it.type === "equipment" ? "Equipment" : "Item"}
