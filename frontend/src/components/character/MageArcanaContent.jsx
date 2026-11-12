@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Trash2, Sparkles } from "lucide-react";
+import { Plus, Trash2, Sparkles, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -21,6 +21,24 @@ const getPracticesForDots = (dots = 1) => {
     return [...new Set(practices)];
 };
 
+// Primary Factor belongs to the spell; Scale is available only through Reach override.
+const SpellPrimaryFactorSelect = ({ value, onChange, testId }) => (
+    <Select value={value || undefined} onValueChange={onChange}>
+        <SelectTrigger
+            className="h-6 w-[116px] bg-zinc-900/50 border-zinc-800 text-[10px] shrink-0"
+            aria-label="Primary Factor"
+            title="Fixed Primary Factor of this spell"
+            data-testid={testId}
+        >
+            <SelectValue placeholder="Primary Factor" />
+        </SelectTrigger>
+        <SelectContent className="bg-zinc-900 border-zinc-800">
+            <SelectItem value="potency" className="text-xs">Potency</SelectItem>
+            <SelectItem value="duration" className="text-xs">Duration</SelectItem>
+        </SelectContent>
+    </Select>
+);
+
 const makePraxisId = () =>
     globalThis.crypto?.randomUUID?.() ||
     `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -31,6 +49,7 @@ const createPraxisDraft = () => ({
     arcanum: "Death",
     dots: 1,
     practice: getPracticesForDots(1)[0] || "",
+    primary_factor: null,
 });
 
 export const MageArcanaContent = ({
@@ -39,6 +58,8 @@ export const MageArcanaContent = ({
     onAddRecentRoll,
 }) => {
     const [praxisDraft, setPraxisDraft] = useState(null);
+    const [editingRotePrimaryFactor, setEditingRotePrimaryFactor] = useState(null);
+    const [editingPraxisPrimaryFactor, setEditingPraxisPrimaryFactor] = useState(null);
 
     const learnedPraxes = Array.isArray(getValue("praxes"))
         ? getValue("praxes")
@@ -76,6 +97,7 @@ export const MageArcanaContent = ({
     const learnPraxisDraft = () => {
         if (!activePraxisDraft) return;
         if (!activePraxisDraft.spell.trim()) return;
+        if (!["potency", "duration"].includes(activePraxisDraft.primary_factor)) return;
 
         handleChange("praxes", [
             ...learnedPraxes,
@@ -167,7 +189,8 @@ export const MageArcanaContent = ({
                         size="sm" 
                         onClick={() => {
                             const rotes = getValue("rotes") || [];
-                            handleChange("rotes", [...rotes, { spell: "", arcanum: "Death", dots: 1, practice: getPracticesForDots(1)[0] || "", skill: "occult" }]);
+                            handleChange("rotes", [...rotes, { spell: "", arcanum: "Death", dots: 1, practice: getPracticesForDots(1)[0] || "", skill: "occult", primary_factor: null }]);
+                            setEditingRotePrimaryFactor(rotes.length);
                         }} 
                         className="h-5 px-2 text-[10px] btn-secondary" 
                         data-testid="add-rote-btn"
@@ -185,7 +208,7 @@ export const MageArcanaContent = ({
                             const rotePracticeOptions = getPracticesForDots(rote.dots || 1);
                             const rotePractice = rote.practice || rotePracticeOptions[0] || "";
                             return (
-                            <div key={index} className="flex items-center gap-1.5 p-1.5 bg-zinc-900/30 border border-zinc-800 rounded-sm">
+                            <div key={index} className="flex flex-wrap items-center gap-1.5 p-1.5 bg-zinc-900/30 border border-zinc-800 rounded-sm">
                                 <Input
                                     value={rote.spell || ""}
                                     onChange={(e) => {
@@ -262,12 +285,39 @@ export const MageArcanaContent = ({
                                         })}
                                     </SelectContent>
                                 </Select>
-                                <Button variant="ghost" size="sm" onClick={() => openSpellcastingPopup(rote.arcanum, rotePractice, "rote", rote.skill, rote.spell || "")} className="h-6 px-1.5 text-[10px] text-violet-400 hover:text-violet-300 shrink-0" data-testid={`rote-${index}-cast`}>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setEditingRotePrimaryFactor((current) => current === index ? null : index)}
+                                    className="h-6 px-1.5 text-[10px] text-zinc-400 hover:text-violet-300 shrink-0"
+                                    title={rote.primary_factor ? `Edit Primary Factor (${rote.primary_factor})` : "Set Primary Factor"}
+                                    aria-label="Edit Rote Primary Factor"
+                                    data-testid={`rote-${index}-edit-primary-factor`}
+                                >
+                                    <Pencil className="w-3 h-3" />
+                                </Button>
+                                <Button variant="ghost" size="sm" disabled={!rote.primary_factor} title={!rote.primary_factor ? "Set Primary Factor before casting" : "Cast Rote"} onClick={() => openSpellcastingPopup(rote.arcanum, rotePractice, "rote", rote.skill, rote.spell || "", rote.primary_factor)} className="h-6 px-1.5 text-[10px] text-violet-400 hover:text-violet-300 shrink-0" data-testid={`rote-${index}-cast`}>
                                     <Sparkles className="w-3 h-3" />
                                 </Button>
-                                <Button variant="ghost" size="sm" onClick={() => { const rotes = (getValue("rotes") || []).filter((_, i) => i !== index); handleChange("rotes", rotes); }} className="h-6 w-6 text-zinc-400 hover:text-red-400 shrink-0" data-testid={`rote-${index}-delete`}>
+                                <Button variant="ghost" size="sm" onClick={() => { const rotes = (getValue("rotes") || []).filter((_, i) => i !== index); handleChange("rotes", rotes); setEditingRotePrimaryFactor(null); }} className="h-6 w-6 text-zinc-400 hover:text-red-400 shrink-0" data-testid={`rote-${index}-delete`}>
                                     <Trash2 className="w-3 h-3" />
                                 </Button>
+                                {editingRotePrimaryFactor === index && (
+                                    <div className="w-full flex items-center gap-2 border-t border-zinc-800 pt-1.5 mt-1">
+                                        <span className="text-[10px] text-zinc-400">Primary Factor (required)</span>
+                                        <SpellPrimaryFactorSelect
+                                            value={rote.primary_factor}
+                                            onChange={(primary_factor) => {
+                                                const rotes = [...(getValue("rotes") || [])];
+                                                rotes[index] = { ...rotes[index], primary_factor };
+                                                handleChange("rotes", rotes);
+                                                setEditingRotePrimaryFactor(null);
+                                            }}
+                                            testId={`rote-${index}-primary-factor`}
+                                        />
+                                    </div>
+                                )}
                             </div>
                             );
                         })
@@ -423,6 +473,15 @@ export const MageArcanaContent = ({
                                     </Select>
                                 </div>
 
+                                <div className="flex items-center gap-2">
+                                    <label className="text-[10px] text-zinc-400">Primary Factor (required)</label>
+                                    <SpellPrimaryFactorSelect
+                                        value={activePraxisDraft.primary_factor}
+                                        onChange={(primary_factor) => updatePraxisDraft({ primary_factor })}
+                                        testId="praxis-draft-primary-factor"
+                                    />
+                                </div>
+
                                 <div className="flex justify-end gap-2">
                                     <Button
                                         type="button"
@@ -443,7 +502,8 @@ export const MageArcanaContent = ({
                                         className="h-6 px-2 text-[10px] bg-violet-800 hover:bg-violet-700 text-white"
                                         disabled={
                                             !activePraxisDraft.spell.trim() ||
-                                            !activePraxisDraft.practice
+                                            !activePraxisDraft.practice ||
+                                             !activePraxisDraft.primary_factor
                                         }
                                         onClick={learnPraxisDraft}
                                         data-testid="learn-praxis-btn"
@@ -464,7 +524,7 @@ export const MageArcanaContent = ({
                             const praxisPractice = praxis.practice || praxisPracticeOptions[0] || "";
 
                             return (
-                            <div key={index} className="flex items-center gap-1.5 p-1.5 bg-zinc-900/30 border border-zinc-800 rounded-sm">
+                            <div key={index} className="flex flex-wrap items-center gap-1.5 p-1.5 bg-zinc-900/30 border border-zinc-800 rounded-sm">
                                 <Input
                                     value={praxis.spell || ""}
                                     onChange={(e) => {
@@ -526,12 +586,39 @@ export const MageArcanaContent = ({
                                         ))}
                                     </SelectContent>
                                 </Select>
-                                <Button variant="ghost" size="sm" onClick={() => openSpellcastingPopup(praxis.arcanum, praxisPractice, "praxis", null, praxis.spell || "")} className="h-6 px-1.5 text-[10px] text-teal-400 hover:text-teal-300 shrink-0" data-testid={`praxis-${index}-cast`}>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setEditingPraxisPrimaryFactor((current) => current === index ? null : index)}
+                                    className="h-6 px-1.5 text-[10px] text-zinc-400 hover:text-teal-300 shrink-0"
+                                    title={praxis.primary_factor ? `Edit Primary Factor (${praxis.primary_factor})` : "Set Primary Factor"}
+                                    aria-label="Edit Praxis Primary Factor"
+                                    data-testid={`praxis-${index}-edit-primary-factor`}
+                                >
+                                    <Pencil className="w-3 h-3" />
+                                </Button>
+                                <Button variant="ghost" size="sm" disabled={!praxis.primary_factor} title={!praxis.primary_factor ? "Set Primary Factor before casting" : "Cast Praxis"} onClick={() => openSpellcastingPopup(praxis.arcanum, praxisPractice, "praxis", null, praxis.spell || "", praxis.primary_factor)} className="h-6 px-1.5 text-[10px] text-teal-400 hover:text-teal-300 shrink-0" data-testid={`praxis-${index}-cast`}>
                                     <Sparkles className="w-3 h-3" />
                                 </Button>
-                                <Button variant="ghost" size="sm" onClick={() => { const praxes = (getValue("praxes") || []).filter((_, i) => i !== index); handleChange("praxes", praxes); }} className="h-6 w-6 text-zinc-400 hover:text-red-400 shrink-0" data-testid={`praxis-${index}-delete`}>
+                                <Button variant="ghost" size="sm" onClick={() => { const praxes = (getValue("praxes") || []).filter((_, i) => i !== index); handleChange("praxes", praxes); setEditingPraxisPrimaryFactor(null); }} className="h-6 w-6 text-zinc-400 hover:text-red-400 shrink-0" data-testid={`praxis-${index}-delete`}>
                                     <Trash2 className="w-3 h-3" />
                                 </Button>
+                                {editingPraxisPrimaryFactor === index && (
+                                    <div className="w-full flex items-center gap-2 border-t border-zinc-800 pt-1.5 mt-1">
+                                        <span className="text-[10px] text-zinc-400">Primary Factor (required)</span>
+                                        <SpellPrimaryFactorSelect
+                                            value={praxis.primary_factor}
+                                            onChange={(primary_factor) => {
+                                                const praxes = [...(getValue("praxes") || [])];
+                                                praxes[index] = { ...praxes[index], primary_factor };
+                                                handleChange("praxes", praxes);
+                                                setEditingPraxisPrimaryFactor(null);
+                                            }}
+                                            testId={`praxis-${index}-primary-factor`}
+                                        />
+                                    </div>
+                                )}
                             </div>
                         );
                     })
