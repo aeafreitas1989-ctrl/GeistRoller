@@ -57,10 +57,10 @@ const PRACTICE_DOTS = {
 const ALL_PRACTICES = Object.entries(PRACTICE_DOTS).map(([name, dots]) => ({ name, dots }));
 const ARCANA_NAMES = ["Death", "Fate", "Forces", "Life", "Matter", "Mind", "Prime", "Space", "Spirit", "Time"];
 const WITHSTAND_TRAITS = [
-    { value: "none", label: "None" },
     { value: "resistance", label: "Resistance" },
-    { value: "defense", label: "Defense" },
-    { value: "tolerance_trait", label: "Tolerance Trait" },
+    { value: "rank", label: "Rank" },
+    { value: "gauntlet", label: "Gauntlet" },
+    { value: "arcanum", label: "Arcanum" },
     { value: "other", label: "Other" },
 ];
 
@@ -233,6 +233,7 @@ export const SpellcastingPopup = ({
     roteSkillDots,
     isRoteOrderSkill,
     defaultPrimaryFactor = null,
+    defaultWithstandType = null,
     allArcana = {},
     athleticsDots = 0,
     firearmsDots = 0,
@@ -267,7 +268,7 @@ export const SpellcastingPopup = ({
     const [specialRangeMode, setSpecialRangeMode] = useState("none");
     const [remoteRange, setRemoteRange] = useState(false);
     const [sympatheticWithstand, setSympatheticWithstand] = useState(0);
-    const [withstandTrait, setWithstandTrait] = useState("none");
+    const [withstandTrait, setWithstandTrait] = useState(defaultWithstandType || "");
     const [withstandValue, setWithstandValue] = useState(0);
     const [aimedTargetDefense, setAimedTargetDefense] = useState(0);
     const [scaleMode, setScaleMode] = useState("targets");
@@ -340,7 +341,7 @@ export const SpellcastingPopup = ({
         setSpecialRangeMode("none");
         setRemoteRange(false);
         setSympatheticWithstand(0);
-        setWithstandTrait("none");
+        setWithstandTrait(defaultWithstandType || "");
         setWithstandValue(0);
         setAimedTargetDefense(0);
         setScaleMode("targets");
@@ -348,7 +349,7 @@ export const SpellcastingPopup = ({
         setAdditionalMana(0);
         setCombinedSpellCount(0);
         setCombinedSpellArcana([]);
-    }, [isOpen, arcanum, initialPractice, defaultPrimaryFactor, gnosis, effectiveSpellType, roteSkillDots, defaultSpellName]);
+    }, [isOpen, arcanum, initialPractice, defaultPrimaryFactor, defaultWithstandType, gnosis, effectiveSpellType, roteSkillDots, defaultSpellName]);
 
     useEffect(() => {
         if (!overridePrimaryFactor && primaryFactor === "scale") setPrimaryFactor(null);
@@ -546,7 +547,7 @@ export const SpellcastingPopup = ({
     const paradoxRollQuality = getParadoxRollQuality();
     const totalManaCost = committedSpellManaCost + actualManaMitigation;
 
-    const manualWithstandValue = withstandTrait === "none" ? 0 : Math.max(0, Number(withstandValue) || 0);
+    const manualWithstandValue = !withstandTrait ? 0 : Math.max(0, Number(withstandValue) || 0);
     const sympatheticWithstandValue = specialRangeMode !== "none" ? Math.max(0, Number(sympatheticWithstand) || 0) : 0;
     const withstandRatings = [manualWithstandValue, sympatheticWithstandValue].filter((value) => value > 0);
     const effectiveWithstand = withstandRatings.length
@@ -1085,10 +1086,10 @@ export const SpellcastingPopup = ({
                             <div className="h-7 flex items-center justify-between gap-3"><p className="text-xs text-zinc-500 uppercase">Withstand</p><div className="h-7 w-[100px] px-2 rounded border border-amber-800 bg-amber-900/50 flex items-center justify-center gap-1 text-xs text-amber-500 shrink-0"><span>Potency</span><span className="font-mono text-violet-300">{basePotency}</span></div></div>
                             <div className="grid grid-cols-[minmax(0,1fr)_72px] gap-2 items-center">
                                 <Select value={withstandTrait} onValueChange={setWithstandTrait}>
-                                    <SelectTrigger className="h-8 text-xs bg-zinc-900/50 border-zinc-700" data-testid="withstand-trait-select"><SelectValue /></SelectTrigger>
+                                    <SelectTrigger className="h-8 text-xs bg-zinc-900/50 border-zinc-700" data-testid="withstand-trait-select"><SelectValue placeholder="Withstand" /></SelectTrigger>
                                     <SelectContent className="bg-zinc-900 border-zinc-700 z-[200]">{WITHSTAND_TRAITS.map((trait) => <SelectItem key={trait.value} value={trait.value} className="text-xs text-zinc-200">{trait.label}</SelectItem>)}</SelectContent>
                                 </Select>
-                                <Input type="number" min="0" value={withstandValue} onChange={(event) => setWithstandValue(Math.max(0, Number(event.target.value) || 0))} disabled={withstandTrait === "none"} className="h-8 text-xs bg-zinc-900/50 border-zinc-700 text-right font-mono" data-testid="withstand-value-input" />
+                                <Input type="number" min="0" value={withstandValue} onChange={(event) => setWithstandValue(Math.max(0, Number(event.target.value) || 0))} disabled={!withstandTrait} className="h-8 text-xs bg-zinc-900/50 border-zinc-700 text-right font-mono" data-testid="withstand-value-input" />
                             </div>
                             <div className="h-5 flex items-center justify-between text-xs"><span className="text-zinc-500">Effective Potency</span><span className={`font-mono ${effectivePotency > 0 ? "text-teal-400" : "text-red-400"}`}>{effectivePotency}</span></div>
                         </div>
