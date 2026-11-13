@@ -196,6 +196,7 @@ class Character(BaseModel):
     aspiration_burden: str = ""
     notes: str = ""
     scrutiny_state: Optional[Dict[str, Any]] = None
+    exploration_map: Dict[str, Any] = Field(default_factory=dict)
     scene_tracker: Dict[str, Any] = Field(default_factory=lambda: {
         "location_name": "",
         "location_type": "exterior",
@@ -310,6 +311,7 @@ class CharacterUpdate(BaseModel):
     aspiration_burden: Optional[str] = None
     notes: Optional[str] = None
     scrutiny_state: Optional[Dict[str, Any]] = None
+    exploration_map: Optional[Dict[str, Any]] = None
     scene_tracker: Optional[Dict[str, Any]] = None
 
 # Dice Models
