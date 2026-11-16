@@ -6,6 +6,7 @@ import axios from "axios";
 import { toast } from "sonner";
 import { normalizeHealthBoxes, getHealthCounts, buildHealthBoxes } from "@/components/character/StatComponents";
 import { advanceSceneTime, sleepUntilMorning } from "@/utils/timeUtils";
+import { expireTimedEffects, startTimedEffect } from "@/utils/effectDuration";
 import { useCharacterSync } from "@/hooks/useCharacterSync";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -345,16 +346,16 @@ export const CharacterSheetPage = () => {
 
         const currentTracker = activeCharacter?.scene_tracker || {};
         const nextTime = sleepUntilMorning(currentTracker);
+        const nextTracker = { ...currentTracker, date: nextTime.date, time: nextTime.time };
+        const spells = activeCharacter?.active_spells || [];
+        const expiredSpells = expireTimedEffects(spells, nextTracker);
 
         await updateCharacter({
             health_boxes: updatedBoxes,
             health: filled,
             willpower: Math.min(maxWillpower, currentWillpower + 1),
-            scene_tracker: {
-                ...currentTracker,
-                date: nextTime.date,
-                time: nextTime.time,
-            },
+            scene_tracker: nextTracker,
+            ...(expiredSpells !== spells ? { active_spells: expiredSpells } : {}),
         });
     };
 
@@ -362,12 +363,12 @@ export const CharacterSheetPage = () => {
         if (!activeCharacter) return;
         const currentTracker = activeCharacter?.scene_tracker || {};
         const next = advanceSceneTime(currentTracker, hours, minutes);
+        const nextTracker = { ...currentTracker, date: next.date, time: next.time };
+        const spells = activeCharacter?.active_spells || [];
+        const expiredSpells = expireTimedEffects(spells, nextTracker);
         await updateCharacter({
-            scene_tracker: {
-                ...currentTracker,
-                date: next.date,
-                time: next.time,
-            },
+            scene_tracker: nextTracker,
+            ...(expiredSpells !== spells ? { active_spells: expiredSpells } : {}),
         });
     };
 
@@ -463,7 +464,9 @@ export const CharacterSheetPage = () => {
 
     const addActiveSpell = async (spell) => {
         const currentActiveSpells = activeCharacter?.active_spells || [];
-        await updateCharacter({ active_spells: [...currentActiveSpells, spell] });
+        await updateCharacter({
+            active_spells: [...currentActiveSpells, startTimedEffect(spell, activeCharacter?.scene_tracker)],
+        });
     };
 
     const dispelActiveSpell = async (spellId) => {

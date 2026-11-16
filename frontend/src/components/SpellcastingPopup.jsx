@@ -604,7 +604,10 @@ export const SpellcastingPopup = ({
         }
         if (factorName === "duration" && lastingDuration) return "Lasting";
         const levels = FACTOR_LEVELS[factorName]?.[isAdvanced ? "advanced" : "standard"];
-        const levelData = levels?.[factor.level - 1];
+        const selectedLevel = factorName === "duration"
+            ? Math.min(levels?.length || 1, factor.level + fateDurationBonus)
+            : factor.level;
+        const levelData = levels?.[selectedLevel - 1];
         if (factorName === "scale") {
             const scaleDescription = scaleMode === "area" ? levelData?.area || "" : levelData?.targets || "";
             return `up to ${scaleDescription}`;

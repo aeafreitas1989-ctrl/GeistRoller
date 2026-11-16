@@ -15,6 +15,7 @@ import {
 } from "../../data/cards-data";
 import { HealthTrack } from "../character/StatComponents";
 import { normalizeSkillSpecialty } from "../../utils/skillSpecialties";
+import { getEffectTimer, isEffectExpired, getGameTimestamp } from "../../utils/effectDuration";
 
 export const MeritCard = ({ merit, definition }) => {
     const [expanded, setExpanded] = useState(false);
@@ -1106,13 +1107,15 @@ export const KeyCard = ({ name, active, definition, onToggle, locked = false, so
     );
 };
 
-export const ActiveSpellCard = ({ spell, onDispel, onRelinquish, onRelinquishSafely }) => {
+export const ActiveSpellCard = ({ spell, sceneTracker, onStartTimer, onDispel, onRelinquish, onRelinquishSafely }) => {
+    const timer = getEffectTimer(spell, sceneTracker);
+    const expired = timer.kind === "expired";
     const isEffect = spell.kind === "effect";
     const subtitle = spell.subtitle || [spell.arcanum, spell.practice].filter(Boolean).join(" • ");
     const showStats = !!(spell.potency || spell.duration || spell.scale);
 
     return (
-        <div className="bg-zinc-950 border border-zinc-800 rounded-md p-3 space-y-2">
+        <div className={`bg-zinc-950 border border-zinc-800 rounded-md p-3 space-y-2 ${expired ? "opacity-50 grayscale" : ""}`}>
             <div className="flex items-start justify-between gap-2">
                 <div>
                     <h4 className="text-sm font-medium text-zinc-100">{spell.name}</h4>
@@ -1121,6 +1124,26 @@ export const ActiveSpellCard = ({ spell, onDispel, onRelinquish, onRelinquishSaf
                     )}
                 </div>
             </div>
+
+            {timer.kind !== "untimed" && (
+                <div className="flex items-center justify-between gap-2 text-xs" data-testid={`active-spell-timer-${spell.id}`}>
+                    <span className={expired ? "font-semibold text-zinc-400" : "text-teal-300"}>
+                        {timer.label}
+                    </span>
+                    {timer.kind === "untracked" && onStartTimer && (
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 px-2 text-[10px] border border-zinc-700"
+                            disabled={getGameTimestamp(sceneTracker) === null}
+                            onClick={onStartTimer}
+                        >
+                            Start Timer
+                        </Button>
+                    )}
+                </div>
+            )}
 
             {spell.description && (
                 <div className="rounded-sm bg-zinc-900/40 border border-zinc-800 p-2">
@@ -1160,10 +1183,10 @@ export const ActiveSpellCard = ({ spell, onDispel, onRelinquish, onRelinquishSaf
                     onClick={() => onDispel?.(spell.id)}
                     data-testid={`active-spell-dispel-${spell.id}`}
                 >
-                    {isEffect ? "End Effect" : "Dispel"}
+                    {expired ? "Remove" : isEffect ? "End Effect" : "Dispel"}
                 </Button>
 
-                {!isEffect && onRelinquish && (
+                {!expired && !isEffect && onRelinquish && (
                     <Button
                         type="button"
                         variant="ghost"
@@ -1176,7 +1199,7 @@ export const ActiveSpellCard = ({ spell, onDispel, onRelinquish, onRelinquishSaf
                     </Button>
                 )}
 
-                {!isEffect && onRelinquishSafely && (
+                {!expired && !isEffect && onRelinquishSafely && (
                     <Button
                         type="button"
                         variant="ghost"
@@ -1242,7 +1265,7 @@ export const CombatTrackerCard = ({
     const currentMana = activeCharacter?.mana || 0;
 
     const preciseForceEffect = (activeCharacter?.active_spells || []).find(
-        (effect) => effect?.effect_key === "precise-force-prepared"
+        (effect) => effect?.effect_key === "precise-force-prepared" && !isEffectExpired(effect, activeCharacter?.scene_tracker)
     );
 
     const preciseForcePrepared = !!preciseForceEffect;

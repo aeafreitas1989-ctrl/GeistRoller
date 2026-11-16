@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Dices, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { isEffectExpired } from "../../utils/effectDuration";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -89,7 +90,8 @@ export const MageAttainmentsContent = ({
     );
 
     const hasActiveEffect = (effectKey) =>
-        activeSpells.some((effect) => effect?.effect_key === effectKey);
+        activeSpells.some((effect) => effect?.effect_key === effectKey &&
+            !isEffectExpired(effect, getValue("scene_tracker")));
 
     const commitImmediate = async (patch) => {
         if (typeof onUpdateCharacter === "function") {

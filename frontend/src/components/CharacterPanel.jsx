@@ -8,6 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useLiveCharacterTool } from "../hooks/useLiveCharacterTool";
 import { buildLiveCharacterState } from "../utils/liveCharacterState";
+import { isEffectExpired, startTimedEffect } from "../utils/effectDuration";
 import {
     Select,
     SelectContent,
@@ -423,7 +424,7 @@ export const CharacterPanel = ({
     const addActiveSpell = async (spell) => {
         const currentActiveSpells = activeCharacter?.active_spells || [];
         await onUpdateCharacter({
-            active_spells: [...currentActiveSpells, spell],
+            active_spells: [...currentActiveSpells, startTimedEffect(spell, activeCharacter?.scene_tracker)],
         });
     };
 
@@ -4122,7 +4123,9 @@ export const CharacterPanel = ({
                     initialPractice={spellcastingPractice}
                     onCreateActiveSpell={addActiveSpell}
                     onAwardSpellcastingExceptionalSuccess={awardSpellcastingExceptionalSuccess}
-                    activeSpellCount={(activeCharacter?.active_spells || []).filter((entry) => entry?.kind === "spell").length}
+                    activeSpellCount={(activeCharacter?.active_spells || []).filter((entry) =>
+                        entry?.kind === "spell" && !isEffectExpired(entry, activeCharacter?.scene_tracker)
+                    ).length}
                     orderRoteSkills={isMage && getValue("order") ? ORDER_ROTE_SKILLS[getValue("order")] || [] : []}
                     spellType={spellcastingType}
                     defaultSpellName={spellcastingDefaultName}

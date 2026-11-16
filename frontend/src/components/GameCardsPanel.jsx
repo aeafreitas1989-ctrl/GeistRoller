@@ -50,6 +50,7 @@ import {
 } from "./cards/CardComponents";
 import { MageSightCard } from "./cards/MageSightCard";
 import { SceneTrackerCard } from "./cards/SceneTrackerCard";
+import { expireTimedEffects, isEffectExpired } from "../utils/effectDuration";
 import { ConditionsSection } from "./game-cards/ConditionsSection";
 import { ActiveSpellsSection } from "./game-cards/ActiveSpellsSection";
 
@@ -436,8 +437,10 @@ export const GameCardsPanel = ({
             );
     const characterType = activeCharacter?.character_type || "geist";
     const isMage = characterType === "mage";
+    const gameClock = activeCharacter?.scene_tracker || {};
     const activeSpells = [...(activeCharacter?.active_spells || [])].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
-    const activeMageSight = activeSpells.find((spell) => spell.effect_key === "mage-sight") || null;
+    const activeEffectsCount = activeSpells.filter((effect) => !isEffectExpired(effect, gameClock)).length;
+    const activeMageSight = activeSpells.find((spell) => spell.effect_key === "mage-sight" && !isEffectExpired(spell, gameClock)) || null;
     const meritsList = activeCharacter?.merits_list || [];
     const activeConditionNames = new Set((activeCharacter?.conditions || []).map((condition) => (condition?.name || "").toLowerCase()));
     const hasCondition = (name) => activeConditionNames.has(name.toLowerCase());
@@ -614,10 +617,13 @@ export const GameCardsPanel = ({
         const currentConditions = activeCharacter?.conditions || [];
         const preservedConditions = currentConditions.filter((condition) => !condition?.weather_auto);
         const weatherConditions = buildWeatherConditions(nextTracker);
+        const spells = activeCharacter?.active_spells || [];
+        const expiredSpells = expireTimedEffects(spells, nextTracker);
 
         await onUpdateCharacter({
             scene_tracker: nextTracker,
             conditions: [...preservedConditions, ...weatherConditions],
+            ...(expiredSpells !== spells ? { active_spells: expiredSpells } : {}),
         });
     };
 
@@ -677,7 +683,7 @@ export const GameCardsPanel = ({
         ? [
             { id: "combat", label: "Combat" },
             { id: "conditions", label: "Conditions", count: activeConditions.length },
-            { id: "activeSpells", label: "Active Spells & Abilities", count: activeSpells.length },
+            { id: "activeSpells", label: "Active Spells & Abilities", count: activeEffectsCount },
             { id: "merits", label: "Merits" },
             { id: "places", label: "Places & NPCs" },
             { id: "caseTruth", label: "Case File" },

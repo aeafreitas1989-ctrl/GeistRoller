@@ -7,6 +7,7 @@ import {
 
 import { ActiveSpellCard } from "../cards/CardComponents";
 import { MageSightCard } from "../cards/MageSightCard";
+import { expireTimedEffects, isEffectExpired, startTimedEffect } from "../../utils/effectDuration";
 
 /**
  * Active Spells & Effects section of the Game Cards panel.
@@ -26,7 +27,24 @@ export const ActiveSpellsSection = ({
     onRelinquishActiveSpell,
     onRelinquishActiveSpellSafely,
 }) => {
-    const nonSightSpells = activeSpells.filter((spell) => spell.effect_key !== "mage-sight");
+    const gameClock = activeCharacter?.scene_tracker || {};
+    const activeCount = activeSpells.filter((spell) => !isEffectExpired(spell, gameClock)).length;
+    const nonSightSpells = activeSpells
+        .filter((spell) => spell.effect_key !== "mage-sight")
+        .sort((a, b) =>
+            Number(isEffectExpired(a, gameClock)) - Number(isEffectExpired(b, gameClock)) ||
+            (a.name || "").localeCompare(b.name || "")
+        );
+
+    const startExistingTimer = async (spellId) => {
+        if (!onUpdateCharacter) return;
+        const existing = activeCharacter?.active_spells || [];
+        const updated = existing.map((spell) =>
+            spell.id === spellId ? startTimedEffect(spell, gameClock) : spell
+        );
+        if (updated.every((spell, index) => spell === existing[index])) return;
+        await onUpdateCharacter({ active_spells: expireTimedEffects(updated, gameClock) });
+    };
 
     return (
         <Collapsible
@@ -38,7 +56,7 @@ export const ActiveSpellsSection = ({
             <CollapsibleTrigger className={`${navMode ? "!hidden " : ""}w-full flex items-center justify-between p-3`} data-testid="cards-section-active-spells-toggle">
                 <div className="flex items-center gap-2">
                     <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">Active Spells & Effects</span>
-                    <span className="text-[10px] text-zinc-500">{activeSpells.length}</span>
+                    <span className="text-[10px] text-zinc-500">{activeCount}</span>
                 </div>
                 {open ? (
                     <ChevronDown className="w-4 h-4 text-zinc-500" />
@@ -59,6 +77,8 @@ export const ActiveSpellsSection = ({
                         <ActiveSpellCard
                             key={spell.id || `${spell.name}-${spell.arcanum}-${spell.practice}`}
                             spell={spell}
+                            sceneTracker={gameClock}
+                            onStartTimer={() => startExistingTimer(spell.id)}
                             onDispel={onDispelActiveSpell}
                             onRelinquish={onRelinquishActiveSpell}
                             onRelinquishSafely={onRelinquishActiveSpellSafely}
