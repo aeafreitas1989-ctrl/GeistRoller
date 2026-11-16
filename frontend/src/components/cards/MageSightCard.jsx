@@ -55,6 +55,8 @@ const MageSightCard = ({
     const [target, setTarget] = useState("");
     const [obsessionApplies, setObsessionApplies] = useState(false);
     const [scrutinyActive, setScrutinyActive] = useState(false);
+    const [extendingMageSight, setExtendingMageSight] = useState(false);
+    const extendPendingRef = useRef(false);
     const [scrutinyLayers, setScrutinyLayers] = useState([]);
     // Each layer: { successes: number, target: number, complete: boolean }
 
@@ -132,6 +134,7 @@ const MageSightCard = ({
                 .map((name) => `${name}: ${MAGE_SIGHT_DESCRIPTIONS[name]}`)
                 .join("\n"),
             extra_arcana: extraArcana,
+            mage_sight_extended: activeMageSight?.mage_sight_extended === true,
         };
     };
 
@@ -141,9 +144,31 @@ const MageSightCard = ({
         await onUpdateCharacter?.({
             active_spells: [
                 ...activeSpells.filter((spell) => spell.effect_key !== "mage-sight"),
-                buildMageSightEffect(rulingArcana),
+                { ...buildMageSightEffect(rulingArcana), mage_sight_extended: false },
             ],
         });
+    };
+
+    const extendMageSight = async () => {
+        if (!activeMageSight || activeMageSight.mage_sight_extended ||
+            currentWillpower < 1 || extendPendingRef.current || !onUpdateCharacter) return;
+
+        extendPendingRef.current = true;
+        setExtendingMageSight(true);
+        try {
+            // Update cost and effect in one character save. Other active spells are untouched.
+            await onUpdateCharacter({
+                willpower: currentWillpower - 1,
+                active_spells: activeSpells.map((spell) =>
+                    spell.effect_key === "mage-sight"
+                        ? { ...spell, mage_sight_extended: true }
+                        : spell
+                ),
+            });
+        } finally {
+            extendPendingRef.current = false;
+            setExtendingMageSight(false);
+        }
     };
 
     const addArcanumToMageSight = async (arcanum) => {
@@ -362,17 +387,33 @@ const MageSightCard = ({
                 </div>
 
                 {activeMageSight ? (
-                    <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 px-2 text-[10px] border border-zinc-800 text-zinc-400 hover:text-rose-400 hover:bg-rose-950/30"
-                        onClick={deactivateMageSight}
-                        title="Deactivate Mage Sight"
-                        data-testid="deactivate-mage-sight-btn"
-                    >
-                        Dismiss
-                    </Button>
+                    <div className="flex items-center gap-1">
+                        {!activeMageSight.mage_sight_extended && (
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 px-2 text-[10px] border border-blue-800 text-blue-300 hover:bg-blue-950/30"
+                                onClick={extendMageSight}
+                                disabled={currentWillpower < 1 || extendingMageSight}
+                                title="Spend 1 Willpower to extend Mage Sight once for this activation"
+                                data-testid="extend-mage-sight-btn"
+                            >
+                                Extend (1 WP)
+                            </Button>
+                        )}
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 px-2 text-[10px] border border-zinc-800 text-zinc-400 hover:text-rose-400 hover:bg-rose-950/30"
+                            onClick={deactivateMageSight}
+                            title="Deactivate Mage Sight"
+                            data-testid="deactivate-mage-sight-btn"
+                        >
+                            Dismiss
+                        </Button>
+                    </div>
                 ) : (
                     <Button
                         type="button"
