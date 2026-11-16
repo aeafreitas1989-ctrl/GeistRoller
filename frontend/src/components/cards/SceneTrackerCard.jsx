@@ -13,7 +13,7 @@ const CLOUD_COVER_OPTIONS = [
 ];
 
 const PRECIPITATION_OPTIONS = [
-    { value: "dry", label: "∅ Dry" },
+    { value: "dry", label: "∅ None" },
     { value: "drizzle", label: "💧 Drizzle" },
     { value: "rain", label: "🌧 Rain" },
     { value: "snow", label: "❄ Snow" },
