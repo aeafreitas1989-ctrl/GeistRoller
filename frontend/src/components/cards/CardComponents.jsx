@@ -741,6 +741,7 @@ export const ConditionCard = ({
     name,
     type,
     persistent = false,
+    beatType = "regular",
     group = "",
     mitigatedByShelter = false,
     description,
@@ -751,9 +752,12 @@ export const ConditionCard = ({
     onResolve,
     conditionIndex,
 }) => {
-    const colors =
-        CardTypeColors[type] ||
-        CardTypeColors.custom;
+    // Card colour identifies the Beat awarded on resolution.
+    // Existing Conditions without beat_type award a normal Beat.
+    const isArcaneBeat = beatType === "arcane";
+    const colors = isArcaneBeat
+        ? { bg: "bg-violet-950/30", border: "border-violet-500/40", text: "text-violet-300", badge: "bg-violet-900/50" }
+        : { bg: "bg-amber-950/30", border: "border-amber-500/40", text: "text-amber-300", badge: "bg-amber-900/50" };
 
     const safeName =
         typeof name === "string"
@@ -820,6 +824,17 @@ export const ConditionCard = ({
                         >
                             {name}
                         </h4>
+
+                        <span
+                            className={`text-[9px] px-1.5 py-0.5 rounded font-mono uppercase tracking-wider border ${
+                                isArcaneBeat
+                                    ? "border-violet-500/40 bg-violet-900/40 text-violet-200"
+                                    : "border-amber-500/40 bg-amber-900/40 text-amber-200"
+                            }`}
+                            data-testid={`condition-beat-${safeName.toLowerCase().replace(/\s+/g, "-")}`}
+                        >
+                            {isArcaneBeat ? "Arcane Beat" : "Regular Beat"}
+                        </span>
 
                         {persistent && (
                             <span className="text-[9px] px-1.5 py-0.5 rounded border border-amber-600/40 bg-amber-950/30 text-amber-300 font-mono uppercase tracking-wider">

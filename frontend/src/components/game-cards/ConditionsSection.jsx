@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Plus, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, ChevronDown, ChevronRight, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -137,10 +137,14 @@ export const ConditionsSection = ({
 
                         const searchableText =
                             [
+                                definitionKey,
                                 displayName,
                                 definition?.splat || "",
                                 definition?.type || "",
                                 definition?.group || "",
+                                definition?.effect || "",
+                                definition?.description || "",
+                                definition?.resolution || "",
                             ]
                                 .join(" ")
                                 .toLowerCase();
@@ -578,7 +582,7 @@ export const ConditionsSection = ({
                             </Button>
                         </DialogTrigger>
 
-                        <DialogContent className="bg-zinc-900 border-zinc-800 max-w-lg">
+                        <DialogContent className="bg-zinc-900 border-zinc-800 max-w-lg max-h-[90vh] overflow-y-auto">
                             <DialogHeader>
                                 <DialogTitle className="text-zinc-100 font-heading">
                                     Add Condition
@@ -591,17 +595,37 @@ export const ConditionsSection = ({
 
                             <div className="space-y-3">
 
-                                <Input
-                                    placeholder="Search conditions or tilts..."
-                                    value={searchTerm}
-                                    onChange={(event) =>
-                                        setSearchTerm(
-                                            event.target.value
-                                        )
-                                    }
-                                    className="input-geist"
-                                    data-testid="search-conditions-input"
-                                />
+                                <div className="space-y-1">
+                                    <label htmlFor="add-condition-search" className="text-[10px] uppercase tracking-wider text-zinc-400">
+                                        Search Conditions &amp; Tilts
+                                    </label>
+                                    <div className="relative">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500 pointer-events-none" />
+                                        <Input
+                                            id="add-condition-search"
+                                            type="text"
+                                            placeholder="Search name, effect or resolution..."
+                                            value={searchTerm}
+                                            onChange={(event) => setSearchTerm(event.target.value)}
+                                            className="input-geist pl-9 pr-9"
+                                            data-testid="search-conditions-input"
+                                        />
+                                        {searchTerm && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setSearchTerm("")}
+                                                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-1 text-zinc-400 hover:text-zinc-100"
+                                                aria-label="Clear Condition search"
+                                                data-testid="condition-search-clear"
+                                            >
+                                                <X className="w-3.5 h-3.5" />
+                                            </button>
+                                        )}
+                                    </div>
+                                    <p className="text-[10px] text-zinc-500" role="status">
+                                        {filteredConditions.length} matching Conditions and Tilts
+                                    </p>
+                                </div>
 
                                 {/* Filters */}
                                 <div className="rounded-sm border border-zinc-800 bg-zinc-950/40 p-2">
@@ -969,6 +993,7 @@ export const ConditionsSection = ({
                                         key={`${condition.name}-${idx}`}
                                         conditionIndex={idx}
                                         name={condition.name}
+                                        beatType={condition.beat_type || "regular"}
                                         type={
                                             condition.type ||
                                             "custom"
