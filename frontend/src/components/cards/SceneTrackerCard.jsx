@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SceneDateField, SceneTimeField } from "./SceneDateTimePickers";
 
 const CLOUD_COVER_OPTIONS = [
     { value: "clear", label: "☀ Clear" },
@@ -152,12 +153,9 @@ export const SceneTrackerCard = ({
                 <label className="text-[10px] uppercase tracking-wider text-zinc-500 flex items-center gap-1">
                     <CalendarDays className="w-3 h-3" /> Date
                 </label>
-                <Input
-                    type="date"
-                    value={sceneTracker.date}
-                    onChange={(e) => updateSceneTracker({ date: e.target.value })}
-                    className="input-geist h-8"
-                    data-testid="scene-date-input"
+                <SceneDateField
+                    value={sceneTracker.date || ""}
+                    onChange={(date) => updateSceneTracker({ date })}
                 />
             </div>
 
@@ -165,12 +163,9 @@ export const SceneTrackerCard = ({
                 <label className="text-[10px] uppercase tracking-wider text-zinc-500 flex items-center gap-1">
                     <Clock3 className="w-3 h-3" /> Time
                 </label>
-                <Input
-                    type="time"
-                    value={sceneTracker.time}
-                    onChange={(e) => updateSceneTracker({ time: e.target.value })}
-                    className="input-geist h-8"
-                    data-testid="scene-time-input"
+                <SceneTimeField
+                    value={sceneTracker.time || ""}
+                    onChange={(time) => updateSceneTracker({ time })}
                 />
             </div>
 
