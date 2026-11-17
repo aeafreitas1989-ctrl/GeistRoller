@@ -229,6 +229,7 @@ export const InlineDiceRoller = ({
     const [plasmSpent, setPlasmSpent] = useState(1);
     const [selectedEnhancements, setSelectedEnhancements] = useState([]);
     const [avoidDoom, setAvoidDoom] = useState(true);
+    const [keyResonant, setKeyResonant] = useState(false);
 
     const attributeValue = (attr) => getNestedValue("attributes", attr) || 0;
     const skillValue = (skillKey) => getNestedValue("skills", skillKey) || 0;
@@ -245,7 +246,9 @@ export const InlineDiceRoller = ({
             .map(([name]) => name);
     }, [arcana]);
     const meritsList = getValue("merits_list") || [];
-    const activeConditions = getValue("conditions") || [];
+    const activeConditions = (getValue("conditions") || []).filter((condition) =>
+        !condition?.target_type || condition.target_type === "character"
+    );
     const activeConditionNames = useMemo(
         () => new Set((activeConditions || []).map((condition) => (condition?.name || "").toLowerCase())),
         [activeConditions]
@@ -367,8 +370,9 @@ export const InlineDiceRoller = ({
     const modifierBonus = manualMod + equipMod;
 
     // Calculate net Plasm cost for Haunt (base + enhancements - key unlock attribute)
-    const netPlasmCost = rollType === "haunt" 
-        ? Math.max(0, plasmSpent + enhancementCost - keyBonus)
+    // Negative means a Key provides surplus Plasm, which persists until scene end.
+    const netPlasmCost = rollType === "haunt"
+        ? plasmSpent + enhancementCost - keyBonus
         : 0;
 
     const basePool = (() => {
@@ -521,7 +525,7 @@ export const InlineDiceRoller = ({
 
         // Handle Willpower spending (for +3 bonus OR avoiding doom)
         const needsWillpowerForBonus = spendWillpower;
-        const needsWillpowerForDoom = rollType === "haunt" && key !== "__none__" && avoidDoom;
+        const needsWillpowerForDoom = rollType === "haunt" && key !== "__none__" && avoidDoom && !spendWillpower;
         const totalWillpowerNeeded = (needsWillpowerForBonus ? 1 : 0) + (needsWillpowerForDoom ? 1 : 0);
         
         if (totalWillpowerNeeded > 0) {
@@ -539,7 +543,7 @@ export const InlineDiceRoller = ({
         }
 
         // Handle Plasm spending for Haunt
-        if (rollType === "haunt" && netPlasmCost > 0) {
+        if (rollType === "haunt" && netPlasmCost !== 0) {
             if (currentPlasm < netPlasmCost) {
                 toast.error(`Not enough Plasm (need ${netPlasmCost}, have ${currentPlasm})`);
                 return;
@@ -549,17 +553,6 @@ export const InlineDiceRoller = ({
                 toast.error("Failed to spend Plasm");
                 return;
             }
-        }
-
-        // Add Doomed condition if not avoiding doom
-        if (rollType === "haunt" && key !== "__none__" && !avoidDoom) {
-            await onAddCondition({
-                name: "Doomed",
-                type: "geist",
-                description: `You have embraced your Key's doom. The next time you would resolve this Key's doom effect, it triggers automatically.`,
-                origin: key,
-            });
-            toast.warning(`Gained Doomed condition for ${key}`);
         }
 
         setIsRolling(true);
@@ -577,6 +570,7 @@ export const InlineDiceRoller = ({
                     ? false
                     : ((rollType === "attr-attr" || rollType === "attr-skill") ? useRote : false),
                 chance: isComputedChanceDie,
+                exceptional_target: rollType === "haunt" && key !== "__none__" && keyResonant ? 3 : 5,
             });
 
             await new Promise(resolve => setTimeout(resolve, 300));
@@ -601,6 +595,13 @@ export const InlineDiceRoller = ({
             }
             
             setResult(response.data);
+            if (rollType === "haunt" && key !== "__none__" && !avoidDoom && !spendWillpower && !response.data.is_exceptional) {
+                await onAddCondition?.({
+                    name: "Doomed", type: "geist", origin: key,
+                    description: "The Key's Doom is active until resolved.",
+                });
+                toast.warning("Gained Doomed condition for " + key);
+            }
 
             // Build roll description for chat
             let rollDescription = "";
@@ -967,7 +968,7 @@ export const InlineDiceRoller = ({
 
                             {/* Net Plasm Cost */}
                             <div className="bg-zinc-800/50 rounded p-2 text-center">
-                                <div className="text-[10px] text-zinc-500">Net Plasm Cost</div>
+                                <div className="text-[10px] text-zinc-500">Net Plasm (negative = gain)</div>
                                 <div className="text-sm font-mono">
                                     <span className="text-zinc-400">{plasmSpent}</span>
                                     {enhancementCost > 0 && <span className="text-cyan-400"> + {enhancementCost}</span>}
@@ -983,6 +984,13 @@ export const InlineDiceRoller = ({
                                 <div className="text-[10px] text-zinc-500 mt-1">Current Plasm: {currentPlasm}</div>
                             </div>
 
+                            {key && key !== "__none__" && (
+                                <label className="flex items-center gap-2 text-xs text-zinc-400">
+                                    <Switch checked={keyResonant} onCheckedChange={setKeyResonant} data-testid="dice-key-resonant-toggle" />
+                                    Resonant Key (exceptional on 3 successes)
+                                </label>
+                            )}
+
                             {/* Avoid Doom Option */}
                             {key && key !== "__none__" && (
                                 <div className="bg-amber-950/30 border border-amber-500/30 rounded p-2 space-y-2">
@@ -991,10 +999,10 @@ export const InlineDiceRoller = ({
                                             <span className="text-[10px] text-amber-300 uppercase tracking-wider">Avoid Key's Doom</span>
                                             <p className="text-[10px] text-zinc-500">Spend 1 Willpower to avoid the Doomed condition</p>
                                         </div>
-                                        <Switch checked={avoidDoom} onCheckedChange={setAvoidDoom} data-testid="dice-avoid-doom-toggle" />
+                                        <Switch checked={avoidDoom} onCheckedChange={(value) => { setAvoidDoom(value); if (value) setSpendWillpower(false); }} data-testid="dice-avoid-doom-toggle" />
                                     </div>
                                     {!avoidDoom && (
-                                        <p className="text-[10px] text-amber-400 italic">You will gain the Doomed condition for {key}</p>
+                                        <p className="text-[10px] text-amber-400 italic">Doomed applies unless the Haunt rolls an exceptional success.</p>
                                     )}
                                 </div>
                             )}
@@ -1117,7 +1125,7 @@ export const InlineDiceRoller = ({
 
                     <div className="flex items-center justify-between text-[10px] text-zinc-500">
                         <span>Spend 1 Willpower</span>
-                        <Switch checked={spendWillpower} onCheckedChange={setSpendWillpower} disabled={brokenConditionActive} data-testid="dice-willpower-toggle" />
+                        <Switch checked={spendWillpower} onCheckedChange={(value) => { setSpendWillpower(value); if (value && rollType === "haunt") setAvoidDoom(false); }} disabled={brokenConditionActive} data-testid="dice-willpower-toggle" />
                     </div>
                     <div className="flex items-center justify-between text-[10px] text-zinc-500">
                         <span>Current Willpower</span>

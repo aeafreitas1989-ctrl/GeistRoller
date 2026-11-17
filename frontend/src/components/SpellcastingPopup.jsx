@@ -226,6 +226,8 @@ export const SpellcastingPopup = ({
     onCreateActiveSpell,
     onAwardSpellcastingExceptionalSuccess,
     onResolveParadoxContainment,
+    onParadoxDramaticFailure,
+    combatActive = false,
     activeSpellCount = 0,
     orderRoteSkills,
     spellType,
@@ -320,8 +322,8 @@ export const SpellcastingPopup = ({
         setFactors({
             casting: { advanced: false, level: 1 },
             range: { advanced: false, level: 1 },
-            potency: { advanced: false, level: 1 },
-            duration: { advanced: false, level: 1 },
+            potency: { advanced: false, level: defaultPrimaryFactor === "potency" ? Math.min(5, Math.max(1, Number(arcanumDots) || 1)) : 1 },
+            duration: { advanced: false, level: defaultPrimaryFactor === "duration" ? Math.min(7, Math.max(1, Number(arcanumDots) || 1)) : 1 },
             scale: { advanced: false, level: 1 },
         });
         setLastingDuration(false);
@@ -349,7 +351,7 @@ export const SpellcastingPopup = ({
         setAdditionalMana(0);
         setCombinedSpellCount(0);
         setCombinedSpellArcana([]);
-    }, [isOpen, arcanum, initialPractice, defaultPrimaryFactor, defaultWithstandType, gnosis, effectiveSpellType, roteSkillDots, defaultSpellName]);
+    }, [isOpen, arcanum, arcanumDots, initialPractice, defaultPrimaryFactor, defaultWithstandType, gnosis, effectiveSpellType, roteSkillDots, defaultSpellName]);
 
     useEffect(() => {
         if (!overridePrimaryFactor && primaryFactor === "scale") setPrimaryFactor(null);
@@ -421,7 +423,8 @@ export const SpellcastingPopup = ({
     const specialRangeReach = specialRangeMode !== "none" ? 1 : 0;
     const totalReachUsed = advancedReachUsed + indefiniteReach + changePrimaryReach + activeSpellReachSurcharge + spellReach + remoteRangeReach + specialRangeReach;
     const reachRemaining = freeReach - totalReachUsed;
-    const primaryFreeLevels = Math.max(0, baseArcanumDots - 1);
+    const primaryArcanumDots = combinedSpellCount > 0 ? Math.max(Number(arcanumDots) || 1, ...selectedCombinedArcanaDots) : Number(arcanumDots) || 1;
+    const primaryFreeLevels = Math.max(0, primaryArcanumDots - 1);
     const effectivePrimaryFactor = primaryFactor;
 
     const calculatePenalty = () => {
@@ -564,6 +567,17 @@ export const SpellcastingPopup = ({
     const aimedRangeBands = { short: gnosis * 10, medium: gnosis * 20, long: gnosis * 40 };
     const isTouchSelfRange = !factors.range.advanced && specialRangeMode === "none";
 
+    const selectPrimaryFactor = (name) => {
+        if (name === primaryFactor) return;
+        setFactors((prev) => {
+            const next = { ...prev };
+            if (primaryFactor && next[primaryFactor]) next[primaryFactor] = { ...next[primaryFactor], level: 1 };
+            const max = FACTOR_LEVELS[name]?.[next[name]?.advanced ? "advanced" : "standard"]?.length || 1;
+            if (next[name]) next[name] = { ...next[name], level: Math.min(max, Math.max(1, Number(primaryArcanumDots) || 1)) };
+            return next;
+        });
+        setPrimaryFactor(name);
+    };
     const updateFactor = (factorName, updates) => {
         setFactors((prev) => ({ ...prev, [factorName]: { ...prev[factorName], ...updates } }));
     };
@@ -693,7 +707,7 @@ export const SpellcastingPopup = ({
 
         if (totalManaCost > 0) onSpendMana(totalManaCost);
 
-        const activeSpellData = !lastingDuration && factors.duration.advanced && onCreateActiveSpell
+        const activeSpellData = !lastingDuration && (factors.duration.advanced || combatActive) && onCreateActiveSpell
             ? {
                 id: Date.now(), kind: "spell", name: spellName.trim(), arcanum, practice: selectedPractice,
                 potency: getFactorDescription("potency"),
@@ -811,9 +825,17 @@ export const SpellcastingPopup = ({
         if (paradoxMode === "release") {
             onRollDice({
                 ...paradoxConfig, resetSummary: true, summaryKey: "paradox", summaryLabel: "Paradox",
-                onResult: (paradoxResult) => {
+                onResult: async (paradoxResult) => {
                     registerParadoxRollForScene(paradoxResult);
+                    if (paradoxResult?.is_dramatic_failure) {
+                        await onParadoxDramaticFailure?.();
+                        rollSpell(0, { appendToSummary: true, summaryKey: "spell", summaryLabel: "Spell" });
+                        return;
+                    }
                     const penalty = paradoxResult?.successes || 0;
+                    if (paradoxResult?.is_exceptional && onResolveParadoxContainment) {
+                        await onResolveParadoxContainment({ mode: "release", cancelled: 0, remaining: penalty, paradoxExceptional: true });
+                    }
                     if (penalty > 0) toast.info(`Release: ${penalty} Paradox success${penalty === 1 ? "" : "es"} = -${penalty} die${penalty === 1 ? "" : "s"} to the spell.`);
                     rollSpell(-penalty, { appendToSummary: true, summaryKey: "spell", summaryLabel: "Spell" });
                 },
@@ -824,9 +846,18 @@ export const SpellcastingPopup = ({
         if (paradoxMode === "contain") {
             onRollDice({
                 ...paradoxConfig, resetSummary: true, summaryKey: "paradox", summaryLabel: "Paradox",
-                onResult: (paradoxResult) => {
+                onResult: async (paradoxResult) => {
                     registerParadoxRollForScene(paradoxResult);
+                    if (paradoxResult?.is_dramatic_failure) {
+                        await onParadoxDramaticFailure?.();
+                        rollSpell(0, { appendToSummary: true, summaryKey: "spell", summaryLabel: "Spell" });
+                        return;
+                    }
                     const paradoxSuccesses = paradoxResult?.successes || 0;
+                    if (paradoxSuccesses === 0) {
+                        rollSpell(0, { appendToSummary: true, summaryKey: "spell", summaryLabel: "Spell" });
+                        return;
+                    }
                     onRollDice({
                         pool: currentWisdom > 0 ? currentWisdom : 1,
                         chance: currentWisdom <= 0,
@@ -842,7 +873,7 @@ export const SpellcastingPopup = ({
                             if (onResolveParadoxContainment) await onResolveParadoxContainment({
                                 cancelled,
                                 remaining,
-                                wisdomExceptional: !!wisdomResult?.is_exceptional,
+                                paradoxExceptional: !!paradoxResult?.is_exceptional,
                             });
                             toast.info(`Contain: ${cancelled} cancelled, ${remaining} remaining${cancelled > 0 ? `, ${cancelled} Bashing dealt` : ""}.`);
                             rollSpell(0, { appendToSummary: true, summaryKey: "spell", summaryLabel: "Spell" });
@@ -884,16 +915,16 @@ export const SpellcastingPopup = ({
                 isEffectivePrimary={isEffectivePrimary}
                 hasPrimary={hasPrimary}
                 canTogglePrimary={canTogglePrimary}
-                onSelectPrimary={setPrimaryFactor}
+                onSelectPrimary={selectPrimaryFactor}
                 overridePrimaryFactor={overridePrimaryFactor}
                 onToggleStandard={() => {
                     if (isDuration) setLastingDuration(false);
                     if (isRange) setRemoteRange(false);
-                    updateFactor(factorName, { advanced: false, ...(hasLevels ? { level: 1 } : {}) });
+                    updateFactor(factorName, { advanced: false, ...(hasLevels ? { level: isEffectivePrimary ? Math.min(FACTOR_LEVELS[factorName]?.standard?.length || 1, Math.max(1, Number(primaryArcanumDots) || 1)) : 1 } : {}) });
                 }}
                 onToggleAdvanced={() => {
                     if (isDuration) setLastingDuration(false);
-                    updateFactor(factorName, { advanced: true, ...(hasLevels ? { level: 1 } : {}) });
+                    updateFactor(factorName, { advanced: true, ...(hasLevels ? { level: isEffectivePrimary ? Math.min(FACTOR_LEVELS[factorName]?.advanced?.length || 1, Math.max(1, Number(primaryArcanumDots) || 1)) : 1 } : {}) });
                 }}
                 onDecreaseLevel={() => updateFactor(factorName, { level: Math.max(1, f.level - 1) })}
                 onIncreaseLevel={() => updateFactor(factorName, { level: Math.min(getMaxLevel(factorName, f.advanced), f.level + 1) })}

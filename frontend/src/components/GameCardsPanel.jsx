@@ -52,6 +52,7 @@ import { MageSightCard } from "./cards/MageSightCard";
 import { SceneTrackerCard } from "./cards/SceneTrackerCard";
 import { expireTimedEffects, isEffectExpired } from "../utils/effectDuration";
 import { advanceNaturalHealing } from "../utils/naturalHealing";
+import { restoreScouredAttributes } from "../utils/mageRecovery";
 import { ConditionsSection } from "./game-cards/ConditionsSection";
 import { ActiveSpellsSection } from "./game-cards/ActiveSpellsSection";
 
@@ -444,7 +445,9 @@ export const GameCardsPanel = ({
     const activeEffectsCount = activeSpells.filter((effect) => !isEffectExpired(effect, gameClock)).length;
     const activeMageSight = activeSpells.find((spell) => spell.effect_key === "mage-sight" && !isEffectExpired(spell, gameClock)) || null;
     const meritsList = activeCharacter?.merits_list || [];
-    const activeConditionNames = new Set((activeCharacter?.conditions || []).map((condition) => (condition?.name || "").toLowerCase()));
+    const activeConditionNames = new Set((activeCharacter?.conditions || [])
+        .filter((condition) => !condition?.target_type || condition.target_type === "character")
+        .map((condition) => (condition?.name || "").toLowerCase()));
     const hasCondition = (name) => activeConditionNames.has(name.toLowerCase());
     const getAttributeForDerivedTrait = (attr, fallback = 1) => {
         const rawValue = activeCharacter?.attributes?.[attr];
@@ -614,9 +617,11 @@ export const GameCardsPanel = ({
         const spells = activeCharacter?.active_spells || [];
         const expiredSpells = expireTimedEffects(spells, nextTracker);
         const healing = advanceNaturalHealing(healthBoxes, activeCharacter?.natural_healing, activeCharacter?.scene_tracker || {}, nextTracker, activeCharacter?.resistant_wounds);
+        const restoredAttributes = restoreScouredAttributes(activeCharacter, nextTracker);
 
         await onUpdateCharacter({
             scene_tracker: nextTracker,
+            ...restoredAttributes,
             conditions: [...preservedConditions, ...weatherConditions],
             natural_healing: healing.recovery,
             ...(healing.healed > 0 ? {

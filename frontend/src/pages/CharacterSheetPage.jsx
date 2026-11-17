@@ -6,8 +6,9 @@ import axios from "axios";
 import { toast } from "sonner";
 import { normalizeHealthBoxes, getHealthCounts, buildHealthBoxes } from "@/components/character/StatComponents";
 import { advanceSceneTime, sleepUntilMorning } from "@/utils/timeUtils";
-import { expireTimedEffects, startTimedEffect, getGameTimestamp } from "@/utils/effectDuration";
+import { expireTimedEffects, startTimedEffect, getGameTimestamp, advanceTurnEffects, expireCombatEffects } from "@/utils/effectDuration";
 import { advanceNaturalHealing, restartNaturalHealing } from "@/utils/naturalHealing";
+import { restoreScouredAttributes } from "@/utils/mageRecovery";
 import { addWoundDamage, healWound, hasHealableWound, normalizeResistance, toggleResistance } from "@/utils/resistantWounds";
 import { useCharacterSync } from "@/hooks/useCharacterSync";
 
@@ -233,7 +234,10 @@ export const CharacterSheetPage = () => {
         })();
 
     const handleCombatEndTurn = async () => {
-        if (!activeCharacter) return;
+        if (!activeCharacter || !activeCharacter.combat_active) return;
+        const effects = activeCharacter.active_spells || [];
+        const ticked = advanceTurnEffects(effects);
+        if (ticked !== effects) await updateCharacter({ active_spells: ticked });
 
         const conditions = activeCharacter.conditions || [];
         const hasModeratePoison = conditions.some(
@@ -280,20 +284,23 @@ export const CharacterSheetPage = () => {
         const maxWillpower = Math.max(0, resolve + composure + willpowerModifier);
         const currentWillpower = activeCharacter?.willpower || 0;
         const spells = activeCharacter?.active_spells || [];
-        const expiredSpells = expireTimedEffects(spells, nextTracker);
+        const expiredSpells = expireCombatEffects(expireTimedEffects(spells, nextTracker));
+        const restoredAttributes = restoreScouredAttributes(activeCharacter, nextTracker);
 
         await updateCharacter({
+            ...restoredAttributes,
             health_boxes: updatedBoxes,
             resistant_wounds: healing.resistant_wounds,
             health: filled,
             natural_healing: healing.recovery,
             willpower: Math.min(maxWillpower, currentWillpower + 1),
+            combat_active: false,
             scene_tracker: nextTracker,
             ...(expiredSpells !== spells ? { active_spells: expiredSpells } : {}),
         });
     };
 
-    const handleAdvanceTime = async (hours = 0, minutes = 0) => {
+    const handleAdvanceTime = async (hours = 0, minutes = 0, extraUpdates = {}) => {
         if (!activeCharacter) return;
         const currentTracker = activeCharacter?.scene_tracker || {};
         if (getGameTimestamp(currentTracker) === null) {
@@ -303,10 +310,13 @@ export const CharacterSheetPage = () => {
         const next = advanceSceneTime(currentTracker, hours, minutes);
         const nextTracker = { ...currentTracker, date: next.date, time: next.time };
         const healing = advanceNaturalHealing(combatHealthBoxes, activeCharacter?.natural_healing, currentTracker, nextTracker, combatResistantWounds);
+        const restoredAttributes = restoreScouredAttributes(activeCharacter, nextTracker);
         const spells = activeCharacter?.active_spells || [];
         const expiredSpells = expireTimedEffects(spells, nextTracker);
         await updateCharacter({
             scene_tracker: nextTracker,
+            ...restoredAttributes,
+            ...extraUpdates,
             natural_healing: healing.recovery,
             ...(healing.healed > 0 ? {
                 health_boxes: healing.boxes,

@@ -2134,15 +2134,19 @@ export const CharacterPanel = ({
     const getParadoxTaintDuration = (wisdom) => {
         const safeWisdom = Number.isFinite(Number(wisdom)) ? Number(wisdom) : 0;
 
-        if (safeWisdom >= 8) return "1 Month";
-        if (safeWisdom >= 4) return "1 Day";
-        if (safeWisdom >= 1) return "1 Hour";
-        return "3 Seconds";
+        if (safeWisdom >= 8) return "1 Story / 1 Month";
+        if (safeWisdom >= 4) return "1 Chapter / 1 Day";
+        if (safeWisdom >= 2) return "1 Scene";
+        return "1 Turn";
     };
 
     const geistRank = parseInt(getValue("geist_rank"), 10) || 1;
     const maxHealth = calculateHealthMax();
-    const resolveParadoxContainment = async ({ cancelled, remaining, wisdomExceptional = false }) => {
+    const handleParadoxDramaticFailure = async () => {
+        const willpower = Number(getValue("willpower")) || 0;
+        await commitCharacterUpdate({ willpower: Math.min(calculateWillpowerMax(), willpower + 1) });
+    };
+    const resolveParadoxContainment = async ({ cancelled, remaining, paradoxExceptional = false, mode = "contain" }) => {
         const safeCancelled = Math.max(0, cancelled || 0);
         const safeRemaining = Math.max(0, remaining || 0);
     
@@ -2152,7 +2156,7 @@ export const CharacterPanel = ({
             getValue("health") || 0
         );
     
-        const backlash = addWoundDamage(currentBoxes, getValue("resistant_wounds"), "bashing", safeCancelled, true);
+        const backlash = addWoundDamage(currentBoxes, getValue("resistant_wounds"), "bashing", mode === "contain" ? safeCancelled : 0, true);
         const nextHealthBoxes = backlash.boxes;
 
         const currentConditions = getValue("conditions") || [];
@@ -2163,14 +2167,14 @@ export const CharacterPanel = ({
         const currentWisdom = parseInt(getValue("wisdom"), 10) || 0;
         const paradoxTaintDuration = getParadoxTaintDuration(currentWisdom);
 
-        const paradoxTaintDescription = wisdomExceptional
+        const paradoxTaintDescription = paradoxExceptional
             ? "Your Nimbus is disfigured by the Abyss. You and any subjects affected by your Nimbus, gain the Open Condition applicable to Abyssal entities."
             : "Your Nimbus is disfigured by the Abyss. You and any subjects affected by your Nimbus, gain the Resonant Condition applicable to Abyssal entities.";
 
         const paradoxTaintResolution = `An Abyssal Entity uses the Condition to Manifest, you Scour the Condition from your Pattern, or you allow the Condition to lapse after ${paradoxTaintDuration}.`;
 
         const nextConditions =
-            safeRemaining > 0 && !hasParadoxTaint
+            (mode === "release" ? paradoxExceptional : safeRemaining > 0) && !hasParadoxTaint
                 ? [
                     ...currentConditions,
                     {
@@ -2179,6 +2183,8 @@ export const CharacterPanel = ({
                         origin: "Spellcasting",
                         description: paradoxTaintDescription,
                         resolution: paradoxTaintResolution,
+                        beat_type: "arcane",
+                        paradox_successes: safeRemaining,
                     },
                 ]
                 : currentConditions;
@@ -2187,7 +2193,7 @@ export const CharacterPanel = ({
             health_boxes: nextHealthBoxes,
             resistant_wounds: backlash.resistant_wounds,
             health: nextHealthBoxes.filter((box) => box !== "empty").length,
-            natural_healing: restartNaturalHealing(nextHealthBoxes, getValue("scene_tracker")),
+            natural_healing: mode === "release" ? getValue("natural_healing") : restartNaturalHealing(nextHealthBoxes, getValue("scene_tracker")),
             conditions: nextConditions,
         });
     };
@@ -4076,6 +4082,8 @@ export const CharacterPanel = ({
                     onPreviousParadoxRollsChange={setMageSceneParadoxRolls}
                     onResetPreviousParadoxRolls={resetMageSceneParadoxRolls}
                     onResolveParadoxContainment={resolveParadoxContainment}
+                    onParadoxDramaticFailure={handleParadoxDramaticFailure}
+                    combatActive={!!getValue("combat_active")}
                 />
             )}
 

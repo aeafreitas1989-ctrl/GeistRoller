@@ -88,7 +88,7 @@ export const ActiveSpellsSection = ({
                     {nonSightSpells.length === 0 && (
                         <div className="text-center py-4">
                             <p className="text-zinc-500 text-sm">No active spells or effects</p>
-                            <p className="text-zinc-600 text-xs mt-1">Spells cast with Advanced Duration appear here</p>
+                            <p className="text-zinc-600 text-xs mt-1">Advanced Duration spells, plus Standard Duration spells cast during Combat, appear here</p>
                         </div>
                     )}
                 </div>

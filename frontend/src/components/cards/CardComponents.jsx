@@ -17,7 +17,7 @@ import { HealthTrack } from "../character/StatComponents";
 import { getNaturalHealingLabel } from "../../utils/naturalHealing";
 import { hasHealableWound } from "../../utils/resistantWounds";
 import { normalizeSkillSpecialty } from "../../utils/skillSpecialties";
-import { getEffectTimer, isEffectExpired, getGameTimestamp } from "../../utils/effectDuration";
+import { getEffectTimer, isEffectExpired, getGameTimestamp, expireCombatEffects } from "../../utils/effectDuration";
 
 export const MeritCard = ({ merit, definition }) => {
     const [expanded, setExpanded] = useState(false);
@@ -1274,7 +1274,9 @@ export const CombatTrackerCard = ({
     const formatLabel = (value) => value.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
     const getValue = (parent, field) => activeCharacter?.[parent]?.[field] || 0;
     const meritsList = activeCharacter?.merits_list || [];
-    const activeConditionNames = new Set((activeCharacter?.conditions || []).map((condition) => (condition?.name || "").toLowerCase()));
+    const activeConditionNames = new Set((activeCharacter?.conditions || [])
+        .filter((condition) => !condition?.target_type || condition.target_type === "character")
+        .map((condition) => (condition?.name || "").toLowerCase()));
     const hasCondition = (name) => activeConditionNames.has(name.toLowerCase());
     const hasGiant = meritsList.some((m) => (m?.name || "") === "Giant");
     const hasSmallFramed = meritsList.some((m) => (m?.name || "") === "Small-Framed");
@@ -1561,6 +1563,20 @@ export const CombatTrackerCard = ({
 
     return (
         <div className="space-y-3" data-testid="combat-tracker-card">
+            <div className="flex items-center justify-between gap-2 border-b border-zinc-800 pb-2">
+                <span className="text-[10px] text-zinc-400">{activeCharacter?.combat_active ? "Combat ongoing — turns tracked" : "Combat inactive"}</span>
+                <Button type="button" size="sm" variant="outline" className="h-7 text-xs border-zinc-700" data-testid="combat-toggle-active"
+                    onClick={async () => {
+                        if (!onUpdateCharacter || !activeCharacter) return;
+                        const starting = !activeCharacter.combat_active;
+                        await onUpdateCharacter({
+                            combat_active: starting,
+                            ...(!starting ? { active_spells: expireCombatEffects(activeCharacter.active_spells || []) } : {}),
+                        });
+                    }}>
+                    {activeCharacter?.combat_active ? "End Combat" : "Start Combat"}
+                </Button>
+            </div>
             <div className="space-y-2">
                 <div className="grid grid-cols-3 gap-2 text-xs">
                     <button
@@ -2096,6 +2112,7 @@ export const CombatTrackerCard = ({
                             await onEndTurn();
                         }
                     }}
+                    disabled={!activeCharacter?.combat_active}
                     data-testid="combat-card-end-turn-btn"
                 >
                     End Turn

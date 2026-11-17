@@ -7,6 +7,9 @@ import { GNOSIS_TABLE as BASE_GNOSIS_TABLE } from "../../data/character-data";
 import { SynergyTrack, ResourceTrack, getHealthCounts, buildHealthBoxes } from "./StatComponents";
 import { restartNaturalHealing } from "../../utils/naturalHealing";
 import { addWoundDamage } from "../../utils/resistantWounds";
+import { getGameTimestamp } from "../../utils/effectDuration";
+import { remainingScourings, registerScouring, hallowManaRemaining, recordHallowMana } from "../../utils/mageRecovery";
+import { toast } from "sonner";
 
 const GNOSIS_TABLE = {
     ...BASE_GNOSIS_TABLE,
@@ -51,29 +54,33 @@ export const MageGnosisContent = ({
 
     const rollHallow = () => {
         if (!onTriggerDiceRoll) return;
-        const gnosis = getValue("gnosis") || 1;
-        const composure = getNestedValue("attributes", "composure") || 1;
+        const tracker = getValue("scene_tracker") || {};
+        if (getGameTimestamp(tracker) === null) { toast.error("Set an in-game date and time before Oblation."); return; }
+        const gnosis = Number(getValue("gnosis")) || 1;
+        const composure = Number(getNestedValue("attributes", "composure")) || 1;
         const pool = gnosis + composure;
-        const rating = effectiveHallowRating;
-
+        const rating = Number(effectiveHallowRating) || 1;
+        const allowance = hallowManaRemaining(getValue("oblation_hallow"), rating, tracker);
+        if (!allowance) { toast.error("This Hallow's 24-hour Mana allowance is exhausted."); return; }
         setHallowRolling(true);
         onTriggerDiceRoll({
             pool,
-            label: "Hallow Harvest",
-            dicePoolBreakdown: `Gnosis ${gnosis} + Composure ${composure}`,
-            spellSummary: `Harvesting Hallow (rating ${rating}). Success recovers ${rating} Mana. Advances time by 1 hour.`,
-            onResult: (result) => {
+            label: "Hallow Oblation",
+            dicePoolBreakdown: "Gnosis " + gnosis + " + Composure " + composure,
+            spellSummary: "Hallow rating " + rating + ". Each success grants 1 Mana (24-hour cap). Advances time 1 hour.",
+            onResult: async (result) => {
                 setHallowRolling(false);
-                const successes = result?.successes || 0;
-                const gnosisLevel = getValue("gnosis") || 1;
-                const gd = GNOSIS_TABLE[gnosisLevel] || GNOSIS_TABLE[1];
-                const currentMana = getValue("mana") || 0;
-                const gained = successes > 0 ? rating : 0;
-                if (gained > 0) {
-                    handleChange("mana", Math.min(gd.maxMana, currentMana + gained));
-                }
+                const successes = Math.max(0, Number(result?.successes) || 0);
+                const gd = GNOSIS_TABLE[gnosis] || GNOSIS_TABLE[1];
+                const currentMana = Number(getValue("mana")) || 0;
+                const gained = Math.min(successes, allowance, Math.max(0, gd.maxMana - currentMana));
+                const updates = {
+                    mana: currentMana + gained,
+                    oblation_hallow: recordHallowMana(getValue("oblation_hallow"), gained, tracker),
+                };
                 setHallowResult({ successes, gained });
-                if (onAdvanceTime) onAdvanceTime(1, 0);
+                if (onAdvanceTime) await onAdvanceTime(1, 0, updates);
+                else applyScourUpdates(updates);
             },
         });
     };
@@ -93,8 +100,14 @@ export const MageGnosisContent = ({
         const gnosisLevel = getValue("gnosis") || 1;
         const gd = GNOSIS_TABLE[gnosisLevel] || GNOSIS_TABLE[1];
         const currentMana = getValue("mana") || 0;
+        const tracker = getValue("scene_tracker") || {};
+        const attr = choice === "damage" ? null : choice;
+        const recorded = registerScouring(getValue("pattern_scouring"), gnosisLevel, tracker, attr);
+        if (!recorded) { toast.error("Scouring unavailable: set the game clock or wait for the Gnosis-based 24-hour allowance."); return; }
+        if (attr && (Number(getNestedValue("attributes", attr)) || 0) < 1) { toast.error("Cannot Scour an Attribute below zero."); return; }
         const updates = {
             mana: Math.min(gd.maxMana, currentMana + 3),
+            pattern_scouring: recorded,
         };
 
         if (choice === "damage") {
@@ -206,7 +219,7 @@ export const MageGnosisContent = ({
                         <button
                             onClick={() => setScourOpen(true)}
                             className="text-[9px] px-1.5 py-0.5 rounded bg-red-900/30 text-red-400 hover:bg-red-800/40 transition-colors"
-                            title="Reduce 1 Physical Attribute or take 1 Resistant Lethal damage, gain 3 Mana"
+                             title="Reduce 1 Physical Attribute for 24 in-game hours or take 1 Resistant Lethal; gain 3 Mana (Gnosis limit per day)"
                             data-testid="scour-pattern-btn"
                         >Scour Pattern</button>
 
@@ -215,7 +228,8 @@ export const MageGnosisContent = ({
                                 <DialogHeader>
                                     <DialogTitle className="text-red-300 font-heading text-sm">Scour Pattern</DialogTitle>
                                 </DialogHeader>
-                                <p className="text-[10px] text-zinc-400 -mt-2">Choose what to sacrifice for 3 Mana:</p>
+                                <p className="text-[10px] text-zinc-400 -mt-2">Choose what to sacrifice for 3 Mana. Attribute dots recover after 24 in-game hours.</p>
+                                <p className="text-[10px] text-zinc-400">Remaining Scourings: {remainingScourings(getValue("pattern_scouring"), getValue("gnosis"), getValue("scene_tracker")) ?? "Set game clock"}</p>
                                 <div className="grid grid-cols-2 gap-2">
                                     {["strength", "dexterity", "stamina"].map((attr) => (
                                         <Button
@@ -255,7 +269,7 @@ export const MageGnosisContent = ({
                                 </DialogHeader>
                                 <div className="space-y-3">
                                     <p className="text-[10px] text-zinc-400">
-                                        Roll Gnosis + Composure. On a success, recover the Hallow's rating in Mana. Time advances by 1 hour either way.
+                                        Roll Gnosis + Composure: 1 Mana per success, limited by the Hallow's remaining 24-hour allowance. Time advances 1 hour even on failure.
                                     </p>
 
                                     {hasHallowMerit ? (

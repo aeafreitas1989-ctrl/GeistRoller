@@ -181,6 +181,9 @@ class Character(BaseModel):
     size: int = 5
     health: int = 7
     health_boxes: List[str] = Field(default_factory=list)
+    pattern_scouring: List[Dict[str, Any]] = Field(default_factory=list)
+    oblation_hallow: List[Dict[str, Any]] = Field(default_factory=list)
+    combat_active: bool = False
     resistant_wounds: List[bool] = Field(default_factory=list)
     natural_healing: Dict[str, Any] = Field(default_factory=dict)
     willpower: int = 5
@@ -298,6 +301,9 @@ class CharacterUpdate(BaseModel):
     size: Optional[int] = None
     health: Optional[int] = None
     health_boxes: Optional[List[str]] = None
+    pattern_scouring: Optional[List[Dict[str, Any]]] = None
+    oblation_hallow: Optional[List[Dict[str, Any]]] = None
+    combat_active: Optional[bool] = None
     resistant_wounds: Optional[List[bool]] = None
     natural_healing: Optional[Dict[str, Any]] = None
     willpower: Optional[int] = None

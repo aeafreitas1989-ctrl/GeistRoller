@@ -1,6 +1,6 @@
 import {
     expireTimedEffects, getEffectTimer, hasFiniteDuration,
-    isEffectExpired, startTimedEffect,
+    isEffectExpired, startTimedEffect, advanceTurnEffects, expireCombatEffects,
 } from "./effectDuration";
 
 const tracker = (date, time) => ({ date, time });
@@ -46,5 +46,18 @@ describe("in-game effect timers", () => {
             expect(hasFiniteDuration({ duration })).toBe(false);
             expect(getEffectTimer({ duration }, tracker("2025-12-05", "12:00")).kind).toBe("untimed");
         }
+    });
+});
+
+
+describe("Combat-only Standard Duration", () => {
+    test("turn countdown and End Combat expiry", () => {
+        const effect = startTimedEffect({ kind: "spell", duration: "3 turns" }, tracker("2025-12-05", "10:00"));
+        expect(effect.turns_remaining).toBe(3);
+        expect(getEffectTimer(effect, tracker("2025-12-05", "10:00")).label).toBe("3 turns remaining");
+        const tick1 = advanceTurnEffects([effect]);
+        expect(tick1[0].turns_remaining).toBe(2);
+        expect(advanceTurnEffects(advanceTurnEffects(tick1))[0].status).toBe("expired");
+        expect(expireCombatEffects([effect])[0].status).toBe("expired");
     });
 });

@@ -172,6 +172,7 @@ export const DiceRoller = forwardRef(({
 
             if (
                 response.data.beat_awarded &&
+                completedPayload.config?.summaryKey !== "paradox" &&
                 typeof onAwardDramaticFailure === "function"
             ) {
                 await onAwardDramaticFailure({

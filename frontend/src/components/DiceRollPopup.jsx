@@ -338,17 +338,6 @@ export const DiceRollPopup = ({
                 await onSpendPlasm(netPlasmChange);
             }
 
-            // Add Doomed condition if not avoiding (and not using WP for +3)
-            if (key !== "__none__" && !avoidDoom && !spendWillpower) {
-                await onAddCondition({
-                    name: "Doomed",
-                    type: "geist",
-                    description: `Embraced ${actualKey}'s doom. The next doom effect triggers automatically.`,
-                    origin: doomOrigin,
-                });
-                toast.warning(`Gained Doomed condition for ${actualKey} (${doomOrigin})`);
-            }
-
             // Roll dice
             const poolTotal = Math.max(1, dicePool + (spendWillpower ? 3 : 0));
             const response = await axios.post(`${API}/dice/roll`, {
@@ -371,6 +360,13 @@ export const DiceRollPopup = ({
             };
 
             setResult(patchedResult);
+            if (key !== "__none__" && !avoidDoom && !spendWillpower && !patchedResult.is_exceptional) {
+                await onAddCondition?.({
+                    name: "Doomed", type: "geist", origin: doomOrigin,
+                    description: "The Key's Doom is active until resolved.",
+                });
+                toast.warning("Gained Doomed condition for " + actualKey + " (" + doomOrigin + ")");
+            }
 
             // On a successful Haunt activation, add the appropriate Haunt Condition.
             // For charge-based Haunts, store charges to enable charge counters in the Cards → Haunts section.

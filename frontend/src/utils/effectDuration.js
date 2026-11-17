@@ -38,7 +38,33 @@ const addDuration = (start, { amount, unit }) => {
 
 export const hasFiniteDuration = (effect) => Boolean(parseDuration(effect?.duration));
 
+const TURN_DURATION = /^(\d+)\s+turns?$/i;
+export const advanceTurnEffects = (effects) => {
+    if (!Array.isArray(effects)) return [];
+    let changed = false;
+    const result = effects.map((effect) => {
+        if (effect?.tracking_mode !== "turn" || effect.status === "expired") return effect;
+        changed = true;
+        const turns = Math.max(0, (Number(effect.turns_remaining) || 0) - 1);
+        return { ...effect, turns_remaining: turns, ...(turns === 0 ? { status: "expired" } : {}) };
+    });
+    return changed ? result : effects;
+};
+export const expireCombatEffects = (effects) => {
+    if (!Array.isArray(effects)) return [];
+    let changed = false;
+    const result = effects.map((effect) => {
+        if (effect?.tracking_mode !== "turn" || effect.status === "expired") return effect;
+        changed = true;
+        return { ...effect, turns_remaining: 0, status: "expired" };
+    });
+    return changed ? result : effects;
+};
 export const startTimedEffect = (effect, tracker) => {
+    const turnMatch = String(effect?.duration || "").trim().match(TURN_DURATION);
+    if (effect?.kind === "spell" && turnMatch && effect?.status !== "expired") {
+        return { ...effect, tracking_mode: "turn", turns_remaining: Number(turnMatch[1]), status: "active" };
+    }
     const duration = parseDuration(effect?.duration);
     const start = getGameTimestamp(tracker);
     // Do not invent an activation time when the in-game clock is unset.
@@ -55,6 +81,7 @@ export const startTimedEffect = (effect, tracker) => {
 
 export const isEffectExpired = (effect, tracker) => {
     if (effect?.status === "expired") return true;
+    if (effect?.tracking_mode === "turn" && (Number(effect.turns_remaining) || 0) <= 0) return true;
     const current = getGameTimestamp(tracker);
     const expiry = effect?.expires_at ? Date.parse(effect.expires_at) : NaN;
     return current !== null && Number.isFinite(expiry) && current >= expiry;
@@ -84,6 +111,10 @@ const remainingLabel = (ms) => {
 
 export const getEffectTimer = (effect, tracker) => {
     if (isEffectExpired(effect, tracker)) return { kind: "expired", label: "Expired" };
+    if (effect?.tracking_mode === "turn") {
+        const count = Math.max(0, Number(effect.turns_remaining) || 0);
+        return { kind: "running", label: count + (count === 1 ? " turn remaining" : " turns remaining") };
+    }
     if (!hasFiniteDuration(effect)) return { kind: "untimed", label: "" };
     const current = getGameTimestamp(tracker);
     const expiry = effect?.expires_at ? Date.parse(effect.expires_at) : NaN;
