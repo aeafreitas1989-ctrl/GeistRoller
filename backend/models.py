@@ -170,6 +170,8 @@ class Character(BaseModel):
     synergy_max: int = 10
     touchstones: List[str] = Field(default_factory=list)
     plasm: int = 5
+    temporary_plasm: int = 0  # Key surplus remaining until explicit End Scene
+    scene_paradox_rolls: int = 0  # Mage Paradox rolls in the current scene
     haunts: Dict[str, int] = Field(default_factory=dict)
     keys: List[str] = Field(default_factory=list)
     mementos: List[Dict[str, Any]] = Field(default_factory=list)
@@ -290,6 +292,8 @@ class CharacterUpdate(BaseModel):
     synergy_max: Optional[int] = None
     touchstones: Optional[List[str]] = None
     plasm: Optional[int] = None
+    temporary_plasm: Optional[int] = None
+    scene_paradox_rolls: Optional[int] = None
     haunts: Optional[Dict[str, int]] = None
     keys: Optional[List[str]] = None
     mementos: Optional[List[Dict[str, Any]]] = None

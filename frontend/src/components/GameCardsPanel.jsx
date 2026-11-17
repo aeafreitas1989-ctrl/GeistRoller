@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { toast } from "sonner";
 import {
     Tooltip,
     TooltipContent,
@@ -50,6 +51,7 @@ import {
 } from "./cards/CardComponents";
 import { MageSightCard } from "./cards/MageSightCard";
 import { SceneTrackerCard } from "./cards/SceneTrackerCard";
+import { isSceneDurationEffect } from "../utils/sceneLifecycle";
 import { expireTimedEffects, isEffectExpired } from "../utils/effectDuration";
 import { advanceNaturalHealing } from "../utils/naturalHealing";
 import { restoreScouredAttributes } from "../utils/mageRecovery";
@@ -345,6 +347,7 @@ export const GameCardsPanel = ({
     patternRestorationDisabled,
     onEndTurn,
     onSleep,
+    onEndScene,
 }) => {
     const cardsScrollAreaRef = useRef(null);
     const [showAddPlacePerson, setShowAddPlacePerson] = useState(false);
@@ -374,6 +377,8 @@ export const GameCardsPanel = ({
     const [rollingCeremony, setRollingCeremony] = useState(false);
     const [caseFileDraft, setCaseFileDraft] = useState("");
     const [sceneTracker, setSceneTracker] = useState(DEFAULT_SCENE_TRACKER);
+    const [endSceneOpen, setEndSceneOpen] = useState(false);
+    const [endingScene, setEndingScene] = useState(false);
 
     useEffect(() => {
         setCaseFileDraft(activeCharacter?.case_truth || "");
@@ -443,6 +448,14 @@ export const GameCardsPanel = ({
     const gameClock = activeCharacter?.scene_tracker || {};
     const activeSpells = [...(activeCharacter?.active_spells || [])].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
     const activeEffectsCount = activeSpells.filter((effect) => !isEffectExpired(effect, gameClock)).length;
+    const sceneEffectsToExpire = activeSpells.filter((effect) =>
+        !isEffectExpired(effect, gameClock) && isSceneDurationEffect(effect)
+    ).length;
+    const sceneParadoxRolls = Math.max(0, Number(activeCharacter?.scene_paradox_rolls) || 0);
+    const temporaryPlasmToLose = Math.min(
+        Math.max(0, Number(activeCharacter?.plasm) || 0),
+        Math.max(0, Number(activeCharacter?.temporary_plasm) || 0)
+    );
     const activeMageSight = activeSpells.find((spell) => spell.effect_key === "mage-sight" && !isEffectExpired(spell, gameClock)) || null;
     const meritsList = activeCharacter?.merits_list || [];
     const activeConditionNames = new Set((activeCharacter?.conditions || [])
@@ -684,6 +697,19 @@ export const GameCardsPanel = ({
     }, {});
 
 
+    const confirmEndScene = async () => {
+        if (!onEndScene || !activeCharacter || endingScene) return;
+        setEndingScene(true);
+        try {
+            const completed = await onEndScene();
+            if (completed) setEndSceneOpen(false);
+        } catch (error) {
+            toast.error("Could not end the scene.");
+        } finally {
+            setEndingScene(false);
+        }
+    };
+
     // Same one-at-a-time navigation pattern as Character Sheet.
     const cardNavigationItems = isMage
         ? [
@@ -707,8 +733,48 @@ export const GameCardsPanel = ({
 
     return (
         <div className="h-full min-h-0 flex flex-col" data-testid="game-cards-panel">
-            <div className="px-4 py-3 border-b border-zinc-800/50 shrink-0">
+            <div className="px-4 py-3 border-b border-zinc-800/50 shrink-0 flex items-center justify-between gap-3">
                 <h2 className="font-heading text-lg text-zinc-200">Cards</h2>
+                <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-8 border-zinc-700 bg-zinc-900/40 text-zinc-200 hover:text-white"
+                    onClick={() => setEndSceneOpen(true)}
+                    disabled={!activeCharacter || !onEndScene}
+                    data-testid="cards-end-scene-btn"
+                >
+                    End Scene
+                </Button>
+                <Dialog open={endSceneOpen} onOpenChange={(open) => { if (!endingScene) setEndSceneOpen(open); }}>
+                    <DialogContent className="bg-zinc-950 border-zinc-700 text-zinc-100 max-w-md" data-testid="end-scene-dialog">
+                        <DialogHeader>
+                            <DialogTitle>End the current scene?</DialogTitle>
+                            <DialogDescription className="text-zinc-400">
+                                Confirm when the fiction moves to a new dramatic situation. Time and location will not change.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-2 text-xs text-zinc-300">
+                            <p>Scene-duration spells and effects expiring: <strong>{sceneEffectsToExpire}</strong></p>
+                            {isMage && <p>Paradox roll counter resetting: <strong>{sceneParadoxRolls}</strong> → 0</p>}
+                            {!isMage && <p>Temporary Key Plasm expiring: <strong>{temporaryPlasmToLose}</strong></p>}
+                            {activeCharacter?.combat_active && (
+                                <p className="text-amber-300" data-testid="end-scene-combat-warning">
+                                    Combat is still active. Ending this scene will not end combat or expire turn-based effects.
+                                </p>
+                            )}
+                            <p className="text-zinc-500">Longer-duration effects, game date, time, location and combat state are preserved.</p>
+                        </div>
+                        <div className="flex justify-end gap-2 pt-2">
+                            <Button type="button" variant="outline" disabled={endingScene}
+                                onClick={() => setEndSceneOpen(false)} data-testid="end-scene-cancel">Cancel</Button>
+                            <Button type="button" variant="secondary" disabled={endingScene}
+                                onClick={confirmEndScene} data-testid="end-scene-confirm">
+                                {endingScene ? "Ending..." : "End Scene"}
+                            </Button>
+                        </div>
+                    </DialogContent>
+                </Dialog>
             </div>
 
             <div className="px-4 py-3 shrink-0" data-testid="cards-section-scene">

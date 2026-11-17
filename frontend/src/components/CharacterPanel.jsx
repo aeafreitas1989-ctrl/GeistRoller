@@ -9,6 +9,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { useLiveCharacterTool } from "../hooks/useLiveCharacterTool";
 import { buildLiveCharacterState } from "../utils/liveCharacterState";
 import { isEffectExpired, startTimedEffect } from "../utils/effectDuration";
+import { applyPlasmTransaction, reconcileManualPlasm } from "../utils/sceneLifecycle";
 import {
     Select,
     SelectContent,
@@ -178,34 +179,19 @@ export const CharacterPanel = ({
     const [spellcastingDefaultName, setSpellcastingDefaultName] = useState("");
     const [spellcastingPrimaryFactor, setSpellcastingPrimaryFactor] = useState(null);
     const [spellcastingWithstandType, setSpellcastingWithstandType] = useState(null);
-    const [mageSceneParadoxRollsByCharacter, setMageSceneParadoxRollsByCharacter] = useState({});
-
-    const getMageSceneParadoxKey = () => activeCharacter?.id || "__active_mage__";
-
-    const getMageSceneParadoxRolls = () => {
-        const key = getMageSceneParadoxKey();
-        return Math.max(0, Number(mageSceneParadoxRollsByCharacter[key]) || 0);
-    };
+    // Persisted on the character: refreshing the page does not reset the scene.
+    const getMageSceneParadoxRolls = () =>
+        Math.max(0, Math.floor(Number(getValue("scene_paradox_rolls")) || 0));
 
     const setMageSceneParadoxRolls = (valueOrUpdater) => {
-        const key = getMageSceneParadoxKey();
-
-        setMageSceneParadoxRollsByCharacter((previous) => {
-            const current = Math.max(0, Number(previous[key]) || 0);
-            const nextValue = typeof valueOrUpdater === "function"
-                ? valueOrUpdater(current)
-                : valueOrUpdater;
-
-            return {
-                ...previous,
-                [key]: Math.max(0, Number(nextValue) || 0),
-            };
-        });
+        const current = getMageSceneParadoxRolls();
+        const next = typeof valueOrUpdater === "function"
+            ? valueOrUpdater(current)
+            : valueOrUpdater;
+        void commitCharacterUpdate({ scene_paradox_rolls: Math.max(0, Math.floor(Number(next) || 0)) });
     };
 
-    const resetMageSceneParadoxRolls = () => {
-        setMageSceneParadoxRolls(0);
-    };
+    const resetMageSceneParadoxRolls = () => setMageSceneParadoxRolls(0);
 
     // Mage advancement purchase flow
     const [xpPurchaseOpen, setXpPurchaseOpen] = useState(false);
@@ -843,6 +829,13 @@ export const CharacterPanel = ({
 
         if (requestFieldTraitPurchase(field, value, currentValue)) return;
         if (requestListTraitPurchase(field, value, currentValue)) return;
+
+        if (field === "plasm") {
+            // Manual Plasm spending consumes temporary Key surplus first.
+            const change = reconcileManualPlasm(getValue("plasm"), getValue("temporary_plasm"), value);
+            void commitCharacterUpdate(change);
+            return;
+        }
 
         if (LIVE_STATE_AUTO_SAVE_FIELDS.has(field)) {
             void commitCharacterUpdate({ [field]: value });
@@ -1920,13 +1913,16 @@ export const CharacterPanel = ({
     };
 
     const spendPlasm = async (amount) => {
-        const currentPlasm = getValue("plasm") || 0;
-        if (currentPlasm < amount) return false;
-        const updated = currentPlasm - amount;
-        await onUpdateCharacter({ plasm: updated });
+        // Negative Haunt costs represent Key-generated surplus, not a free refill.
+        const transaction = applyPlasmTransaction(
+            getValue("plasm"), getValue("temporary_plasm"), amount
+        );
+        if (!transaction) return false;
+        await onUpdateCharacter(transaction);
         setPendingChanges((prev) => {
             const next = { ...prev };
             delete next.plasm;
+            delete next.temporary_plasm;
             return next;
         });
         return true;

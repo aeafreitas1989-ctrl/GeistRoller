@@ -11,6 +11,7 @@ import { advanceNaturalHealing, restartNaturalHealing } from "@/utils/naturalHea
 import { restoreScouredAttributes } from "@/utils/mageRecovery";
 import { addWoundDamage, healWound, hasHealableWound, normalizeResistance, toggleResistance } from "@/utils/resistantWounds";
 import { useCharacterSync } from "@/hooks/useCharacterSync";
+import { getEndScenePatch } from "@/utils/sceneLifecycle";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -485,6 +486,7 @@ export const CharacterSheetPage = () => {
                     c.id === activeCharacter.id ? response.data : c
                 )
             );
+            return true;
         } catch (error) {
             setActiveCharacter(previousCharacter);
             setCharacters((prevCharacters) =>
@@ -493,7 +495,17 @@ export const CharacterSheetPage = () => {
                 )
             );
             toast.error("Failed to update character");
+            return false;
         }
+    };
+
+    const handleEndScene = async () => {
+        if (!activeCharacter) return false;
+        const changes = getEndScenePatch(activeCharacter);
+        if (!changes) return false;
+        const saved = await updateCharacter(changes);
+        if (saved) toast.success("Scene ended. Scene-duration effects and resources updated.");
+        return saved;
     };
 
     const awardDramaticFailureBeat = async ({
@@ -707,6 +719,7 @@ export const CharacterSheetPage = () => {
                                     isMage={activeCharacter?.character_type === "mage"}
                                     onEndTurn={handleCombatEndTurn}
                                     onSleep={handleCombatSleep}
+                                    onEndScene={handleEndScene}
                                 />
                             </div>
                         </section>
@@ -733,4 +746,3 @@ export const CharacterSheetPage = () => {
         </div>
     );
 };
-     
