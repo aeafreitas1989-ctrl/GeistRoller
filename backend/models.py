@@ -181,6 +181,7 @@ class Character(BaseModel):
     size: int = 5
     health: int = 7
     health_boxes: List[str] = Field(default_factory=list)
+    natural_healing: Dict[str, Any] = Field(default_factory=dict)
     willpower: int = 5
     willpower_max_modifier: int = 0
     armor: int = 0
@@ -296,6 +297,7 @@ class CharacterUpdate(BaseModel):
     size: Optional[int] = None
     health: Optional[int] = None
     health_boxes: Optional[List[str]] = None
+    natural_healing: Optional[Dict[str, Any]] = None
     willpower: Optional[int] = None
     willpower_max_modifier: Optional[int] = None
     armor: Optional[int] = None

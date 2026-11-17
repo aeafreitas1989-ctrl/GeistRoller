@@ -6,7 +6,8 @@ import axios from "axios";
 import { toast } from "sonner";
 import { normalizeHealthBoxes, getHealthCounts, buildHealthBoxes } from "@/components/character/StatComponents";
 import { advanceSceneTime, sleepUntilMorning } from "@/utils/timeUtils";
-import { expireTimedEffects, startTimedEffect } from "@/utils/effectDuration";
+import { expireTimedEffects, startTimedEffect, getGameTimestamp } from "@/utils/effectDuration";
+import { advanceNaturalHealing, restartNaturalHealing } from "@/utils/naturalHealing";
 import { useCharacterSync } from "@/hooks/useCharacterSync";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -179,6 +180,7 @@ export const CharacterSheetPage = () => {
         await updateCharacter({
             health_boxes: updatedBoxes,
             health: filled,
+            natural_healing: restartNaturalHealing(updatedBoxes, activeCharacter?.scene_tracker),
         });
 
         toast.info(`${remaining} ${finalType} damage applied.`);
@@ -226,6 +228,7 @@ export const CharacterSheetPage = () => {
         await updateCharacter({
             health_boxes: updatedBoxes,
             health: filled,
+            natural_healing: restartNaturalHealing(updatedBoxes, activeCharacter?.scene_tracker),
         });
     };
 
@@ -277,6 +280,7 @@ export const CharacterSheetPage = () => {
             mana: currentMana - manaCost,
             health_boxes: updatedBoxes,
             health: filled,
+            natural_healing: restartNaturalHealing(updatedBoxes, activeCharacter?.scene_tracker),
         });
 
         toast.success(
@@ -332,10 +336,15 @@ export const CharacterSheetPage = () => {
     const handleCombatSleep = async () => {
         if (!activeCharacter) return;
 
-        const counts = getHealthCounts(combatHealthBoxes);
-        counts.bashing = 0;
-
-        const updatedBoxes = buildHealthBoxes(counts, combatMaxHealth);
+        const currentTracker = activeCharacter?.scene_tracker || {};
+        if (getGameTimestamp(currentTracker) === null) {
+            toast.error("Set an in-game date and time before sleeping.");
+            return;
+        }
+        const nextTime = sleepUntilMorning(currentTracker);
+        const nextTracker = { ...currentTracker, date: nextTime.date, time: nextTime.time };
+        const healing = advanceNaturalHealing(combatHealthBoxes, activeCharacter?.natural_healing, currentTracker, nextTracker);
+        const updatedBoxes = healing.boxes;
         const filled = updatedBoxes.filter((state) => state !== "empty").length;
 
         const resolve = activeCharacter?.attributes?.resolve || 1;
@@ -343,16 +352,13 @@ export const CharacterSheetPage = () => {
         const willpowerModifier = activeCharacter?.willpower_max_modifier || 0;
         const maxWillpower = Math.max(0, resolve + composure + willpowerModifier);
         const currentWillpower = activeCharacter?.willpower || 0;
-
-        const currentTracker = activeCharacter?.scene_tracker || {};
-        const nextTime = sleepUntilMorning(currentTracker);
-        const nextTracker = { ...currentTracker, date: nextTime.date, time: nextTime.time };
         const spells = activeCharacter?.active_spells || [];
         const expiredSpells = expireTimedEffects(spells, nextTracker);
 
         await updateCharacter({
             health_boxes: updatedBoxes,
             health: filled,
+            natural_healing: healing.recovery,
             willpower: Math.min(maxWillpower, currentWillpower + 1),
             scene_tracker: nextTracker,
             ...(expiredSpells !== spells ? { active_spells: expiredSpells } : {}),
@@ -362,12 +368,22 @@ export const CharacterSheetPage = () => {
     const handleAdvanceTime = async (hours = 0, minutes = 0) => {
         if (!activeCharacter) return;
         const currentTracker = activeCharacter?.scene_tracker || {};
+        if (getGameTimestamp(currentTracker) === null) {
+            toast.error("Set an in-game date and time before advancing time.");
+            return;
+        }
         const next = advanceSceneTime(currentTracker, hours, minutes);
         const nextTracker = { ...currentTracker, date: next.date, time: next.time };
+        const healing = advanceNaturalHealing(combatHealthBoxes, activeCharacter?.natural_healing, currentTracker, nextTracker);
         const spells = activeCharacter?.active_spells || [];
         const expiredSpells = expireTimedEffects(spells, nextTracker);
         await updateCharacter({
             scene_tracker: nextTracker,
+            natural_healing: healing.recovery,
+            ...(healing.healed > 0 ? {
+                health_boxes: healing.boxes,
+                health: healing.boxes.filter((state) => state !== "empty").length,
+            } : {}),
             ...(expiredSpells !== spells ? { active_spells: expiredSpells } : {}),
         });
     };

@@ -51,6 +51,7 @@ import {
 import { MageSightCard } from "./cards/MageSightCard";
 import { SceneTrackerCard } from "./cards/SceneTrackerCard";
 import { expireTimedEffects, isEffectExpired } from "../utils/effectDuration";
+import { advanceNaturalHealing } from "../utils/naturalHealing";
 import { ConditionsSection } from "./game-cards/ConditionsSection";
 import { ActiveSpellsSection } from "./game-cards/ActiveSpellsSection";
 
@@ -601,17 +602,9 @@ export const GameCardsPanel = ({
     };
 
     const updateSceneTracker = async (updates) => {
-        const nextTracker = {
-            ...sceneTracker,
-            ...updates,
-        };
-
-        if (nextTracker.precipitation === "dry") {
-            nextTracker.intensity = "none";
-        }
-
+        const nextTracker = { ...sceneTracker, ...updates };
+        if (nextTracker.precipitation === "dry") nextTracker.intensity = "none";
         setSceneTracker(nextTracker);
-
         if (!activeCharacter?.id || !onUpdateCharacter) return;
 
         const currentConditions = activeCharacter?.conditions || [];
@@ -619,10 +612,16 @@ export const GameCardsPanel = ({
         const weatherConditions = buildWeatherConditions(nextTracker);
         const spells = activeCharacter?.active_spells || [];
         const expiredSpells = expireTimedEffects(spells, nextTracker);
+        const healing = advanceNaturalHealing(healthBoxes, activeCharacter?.natural_healing, activeCharacter?.scene_tracker || {}, nextTracker);
 
         await onUpdateCharacter({
             scene_tracker: nextTracker,
             conditions: [...preservedConditions, ...weatherConditions],
+            natural_healing: healing.recovery,
+            ...(healing.healed > 0 ? {
+                health_boxes: healing.boxes,
+                health: healing.boxes.filter((state) => state !== "empty").length,
+            } : {}),
             ...(expiredSpells !== spells ? { active_spells: expiredSpells } : {}),
         });
     };

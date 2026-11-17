@@ -5,6 +5,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { GNOSIS_TABLE as BASE_GNOSIS_TABLE } from "../../data/character-data";
 import { SynergyTrack, ResourceTrack, getHealthCounts, buildHealthBoxes } from "./StatComponents";
+import { restartNaturalHealing } from "../../utils/naturalHealing";
 
 const GNOSIS_TABLE = {
     ...BASE_GNOSIS_TABLE,
@@ -105,6 +106,7 @@ export const MageGnosisContent = ({
             const updatedBoxes = buildHealthBoxes(counts, maxHealth);
             updates.health_boxes = updatedBoxes;
             updates.health = updatedBoxes.filter((state) => state !== "empty").length;
+            updates.natural_healing = restartNaturalHealing(updatedBoxes, getValue("scene_tracker"));
         } else {
             const scoured = getValue("scoured_attributes") || {};
             const attributes = getValue("attributes") || {};

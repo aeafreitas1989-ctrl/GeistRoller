@@ -25,6 +25,7 @@ import {
 } from "../../data/character-data";
 import { useState } from "react";
 import { HealthTrack, getHealthCounts, buildHealthBoxes, formatLabel } from "./StatComponents";
+import { getNaturalHealingLabel } from "../../utils/naturalHealing";
 // Game-icons.net illustrations are distributed via react-icons/gi (CC BY 3.0).
 const GAME_ICON_NAMES = Object.keys(GameIcons).filter((id) => /^Gi[A-Z]/.test(id));
 const gameIconLabel = (id) => String(id || "").replace(/^Gi/, "").replace(/([a-z0-9])([A-Z])/g, "$1 $2");
@@ -568,6 +569,11 @@ export const CombatContent = ({
                         {woundPenalty < 0 && (
                             <p className="text-[10px] text-rose-400 mt-1" data-testid="health-wound-penalty">
                                 Wound Penalty {woundPenalty}
+                            </p>
+                        )}
+                        {getNaturalHealingLabel(healthBoxes, getValue("natural_healing"), getValue("scene_tracker")) && (
+                            <p className="text-[10px] text-zinc-400 mt-1" data-testid="natural-healing-character">
+                                {getNaturalHealingLabel(healthBoxes, getValue("natural_healing"), getValue("scene_tracker"))}
                             </p>
                         )}
                     </div>

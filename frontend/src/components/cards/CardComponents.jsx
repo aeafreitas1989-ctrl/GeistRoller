@@ -14,6 +14,7 @@ import {
     HAUNT_DEFINITIONS, KEY_DEFINITIONS,
 } from "../../data/cards-data";
 import { HealthTrack } from "../character/StatComponents";
+import { getNaturalHealingLabel } from "../../utils/naturalHealing";
 import { normalizeSkillSpecialty } from "../../utils/skillSpecialties";
 import { getEffectTimer, isEffectExpired, getGameTimestamp } from "../../utils/effectDuration";
 
@@ -1989,6 +1990,11 @@ export const CombatTrackerCard = ({
                             testIdPrefix="combat-health"
                         />
                     </div>
+                    {getNaturalHealingLabel(healthBoxes, activeCharacter?.natural_healing, activeCharacter?.scene_tracker) && (
+                        <p className="text-[10px] text-zinc-400" data-testid="natural-healing-cards">
+                            {getNaturalHealingLabel(healthBoxes, activeCharacter?.natural_healing, activeCharacter?.scene_tracker)}
+                        </p>
+                    )}
 
                     <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-[10px] text-zinc-500 uppercase tracking-wider">HEAL</span>

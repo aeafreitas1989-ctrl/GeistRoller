@@ -64,6 +64,7 @@ import {
 } from "./character/StatComponents";
 import { InlineDiceRoller } from "./character/InlineDiceRoller";
 import { normalizeSkillSpecialty, formatSkillSpecialty } from "../utils/skillSpecialties";
+import { restartNaturalHealing } from "../utils/naturalHealing";
 import { MageArcanaContent } from "./character/MageArcanaContent";
 import { MageGnosisContent } from "./character/MageGnosisContent";
 import { GeistSynergyContent } from "./character/GeistSynergyContent";
@@ -2194,6 +2195,7 @@ export const CharacterPanel = ({
         await onUpdateCharacter({
             health_boxes: nextHealthBoxes,
             health: nextHealthBoxes.filter((box) => box !== "empty").length,
+            natural_healing: restartNaturalHealing(nextHealthBoxes, getValue("scene_tracker")),
             conditions: nextConditions,
         });
     };
@@ -2221,6 +2223,7 @@ export const CharacterPanel = ({
         const updates = {
             health_boxes: normalized,
             health: filled,
+            natural_healing: restartNaturalHealing(normalized, getValue("scene_tracker")),
         };
 
         if (isDead && !hasDead) {
