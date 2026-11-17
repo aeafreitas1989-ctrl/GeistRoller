@@ -65,6 +65,7 @@ import {
 import { InlineDiceRoller } from "./character/InlineDiceRoller";
 import { normalizeSkillSpecialty, formatSkillSpecialty } from "../utils/skillSpecialties";
 import { restartNaturalHealing } from "../utils/naturalHealing";
+import { addWoundDamage, adjustWoundClick, healWound, normalizeResistance, reconcileResistance, toggleResistance } from "../utils/resistantWounds";
 import { MageArcanaContent } from "./character/MageArcanaContent";
 import { MageGnosisContent } from "./character/MageGnosisContent";
 import { GeistSynergyContent } from "./character/GeistSynergyContent";
@@ -2151,19 +2152,9 @@ export const CharacterPanel = ({
             getValue("health") || 0
         );
     
-        const currentCounts = getHealthCounts(currentBoxes);
-    
-        const nextCounts = {
-            ...currentCounts,
-            bashing: currentCounts.bashing + safeCancelled,
-        };
-    
-        const nextHealthBoxes = normalizeHealthBoxes(
-            buildHealthBoxes(nextCounts, maxHealth),
-            maxHealth,
-            0
-        );
-    
+        const backlash = addWoundDamage(currentBoxes, getValue("resistant_wounds"), "bashing", safeCancelled, true);
+        const nextHealthBoxes = backlash.boxes;
+
         const currentConditions = getValue("conditions") || [];
         const hasParadoxTaint = currentConditions.some(
             (cond) => (cond?.name || "").toLowerCase() === "paradox taint"
@@ -2194,12 +2185,14 @@ export const CharacterPanel = ({
     
         await onUpdateCharacter({
             health_boxes: nextHealthBoxes,
+            resistant_wounds: backlash.resistant_wounds,
             health: nextHealthBoxes.filter((box) => box !== "empty").length,
             natural_healing: restartNaturalHealing(nextHealthBoxes, getValue("scene_tracker")),
             conditions: nextConditions,
         });
     };
     const healthBoxes = normalizeHealthBoxes(getValue("health_boxes"), maxHealth, getValue("health") || 0);
+    const resistantWounds = normalizeResistance(healthBoxes, getValue("resistant_wounds"));
     const filledHealth = healthBoxes.filter((state) => state !== "empty").length;
     const isDeadTrack = healthBoxes.length > 0 && healthBoxes.every((state) => state === "aggravated");
     const woundPenalty = filledHealth >= maxHealth
@@ -2210,121 +2203,57 @@ export const CharacterPanel = ({
         ? -1
         : 0;
 
-    const handleHealthBoxesChange = async (boxes) => {
+    const handleHealthBoxesChange = async (boxes, resistanceOverride = null) => {
         const normalized = normalizeHealthBoxes(boxes, maxHealth, 0);
+        const marks = Array.isArray(resistanceOverride)
+            ? normalizeResistance(normalized, resistanceOverride)
+            : reconcileResistance(healthBoxes, resistantWounds, normalized);
         const filled = normalized.filter((state) => state !== "empty").length;
         handleChange("health_boxes", normalized);
+        handleChange("resistant_wounds", marks);
         handleChange("health", filled);
-
         const isDead = normalized.length > 0 && normalized.every((state) => state === "aggravated");
         const currentConditions = getValue("conditions") || [];
         const hasDead = currentConditions.some((cond) => (cond?.name || "").toLowerCase() === "dead");
-
         const updates = {
             health_boxes: normalized,
+            resistant_wounds: marks,
             health: filled,
             natural_healing: restartNaturalHealing(normalized, getValue("scene_tracker")),
         };
-
-        if (isDead && !hasDead) {
-            updates.conditions = [
-                ...currentConditions,
-                {
-                    name: "Dead",
-                    type: "condition",
-                    description: "All health boxes are filled with aggravated damage.",
-                    origin: "Health Track",
-                    resolution: "None",
-                },
-            ];
-        }
-
-        if (!isDead && hasDead) {
-            updates.conditions = currentConditions.filter((cond) => (cond?.name || "").toLowerCase() !== "dead");
-        }
-
+        if (isDead && !hasDead) updates.conditions = [...currentConditions, {
+            name: "Dead", type: "condition", description: "All health boxes are filled with aggravated damage.",
+            origin: "Health Track", resolution: "None",
+        }];
+        if (!isDead && hasDead) updates.conditions = currentConditions.filter(
+            (cond) => (cond?.name || "").toLowerCase() !== "dead"
+        );
         await onUpdateCharacter(updates);
         setPendingChanges((prev) => {
             const next = { ...prev };
             delete next.health_boxes;
+            delete next.resistant_wounds;
             delete next.health;
-            if (updates.conditions) {
-                delete next.conditions;
-            }
+            if (updates.conditions) delete next.conditions;
             return next;
         });
     };
 
     const handleHealthBoxClick = async (index, state) => {
-        const counts = getHealthCounts(healthBoxes);
-        const totalDamage = counts.aggravated + counts.lethal + counts.bashing;
-        const fullTrack = totalDamage >= maxHealth;
-        const leftmostDamageIndex = healthBoxes.findIndex((boxState) => boxState !== "empty");
+        const next = adjustWoundClick(healthBoxes, resistantWounds, index, state);
+        await handleHealthBoxesChange(next.boxes, next.resistant_wounds);
+    };
 
-        if (state === "empty") {
-            if (fullTrack) return;
-            counts.bashing += 1;
-        } else if (state === "bashing") {
-            if (fullTrack) {
-                if (counts.bashing > 0) {
-                    counts.bashing -= 1;
-                    counts.lethal += 1;
-                } else if (counts.lethal > 0) {
-                    counts.lethal -= 1;
-                    counts.aggravated += 1;
-                }
-            } else {
-                if (counts.bashing > 0) {
-                    counts.bashing -= 1;
-                    counts.lethal += 1;
-                }
-                if (counts.aggravated + counts.lethal + counts.bashing < maxHealth) {
-                    counts.bashing += 1;
-                }
-            }
-        } else if (state === "lethal") {
-            if (counts.lethal > 0) {
-                counts.lethal -= 1;
-                counts.aggravated += 1;
-                if (counts.bashing > 0) {
-                    counts.bashing -= 1;
-                    counts.lethal += 1;
-                }
-                if (!fullTrack && counts.aggravated + counts.lethal + counts.bashing < maxHealth) {
-                    counts.bashing += 1;
-                }
-            }
-        } else if (state === "aggravated") {
-            if (index === leftmostDamageIndex) {
-                counts.aggravated = 0;
-                counts.lethal = 0;
-                counts.bashing = 0;
-            } else if (counts.aggravated > 0) {
-                counts.aggravated -= 1;
-            }
-        }
-
-        const updatedBoxes = buildHealthBoxes(counts, maxHealth);
-        await handleHealthBoxesChange(updatedBoxes);
+    const toggleWoundResistance = async (index) => {
+        const next = toggleResistance(healthBoxes, resistantWounds, index);
+        await onUpdateCharacter({ resistant_wounds: next });
     };
 
     const healHealthState = async (stateToHeal) => {
-        const counts = getHealthCounts(healthBoxes);
-
-        if (stateToHeal === "bashing" && counts.bashing > 0) {
-            counts.bashing -= 1;
-        }
-
-        if (stateToHeal === "lethal" && counts.lethal > 0) {
-            counts.lethal -= 1;
-        }
-
-        if (stateToHeal === "aggravated" && counts.aggravated > 0) {
-            counts.aggravated -= 1;
-        }
-
-        const updatedBoxes = buildHealthBoxes(counts, maxHealth);
-        await handleHealthBoxesChange(updatedBoxes);
+        // Explicit Storyteller correction; may also remove Resistant wounds.
+        const healed = healWound(healthBoxes, resistantWounds, stateToHeal, true);
+        if (!healed) return;
+        await handleHealthBoxesChange(healed.boxes, healed.resistant_wounds);
     };
 
     // Mementos management
@@ -3314,6 +3243,7 @@ export const CharacterPanel = ({
                                 woundPenalty={woundPenalty}
                                 handleHealthBoxClick={handleHealthBoxClick}
                                 handleHealthBoxesChange={handleHealthBoxesChange}
+                                onToggleResistance={toggleWoundResistance}
                                 onHealHealthState={healHealthState}
                                 showCombat={false}
                                 showMageArmor={false}

@@ -26,6 +26,7 @@ import {
 import { useState } from "react";
 import { HealthTrack, getHealthCounts, buildHealthBoxes, formatLabel } from "./StatComponents";
 import { getNaturalHealingLabel } from "../../utils/naturalHealing";
+import { hasHealableWound, healWound } from "../../utils/resistantWounds";
 // Game-icons.net illustrations are distributed via react-icons/gi (CC BY 3.0).
 const GAME_ICON_NAMES = Object.keys(GameIcons).filter((id) => /^Gi[A-Z]/.test(id));
 const gameIconLabel = (id) => String(id || "").replace(/^Gi/, "").replace(/([a-z0-9])([A-Z])/g, "$1 $2");
@@ -439,7 +440,7 @@ export const CombatContent = ({
     editingInventoryIndex, setEditingInventoryIndex,
     invType, setInvType, invPremade, setInvPremade, invDraft, setInvDraft,
     healthBoxes, maxHealth, filledHealth, isDeadTrack, woundPenalty,
-    handleHealthBoxClick, onHealHealthState,
+    handleHealthBoxClick, onHealHealthState, onToggleResistance,
     handleHealthBoxesChange,
     onStartCombat,
     showCombat = true,
@@ -495,11 +496,11 @@ export const CombatContent = ({
                                         DEAD
                                     </span>
                                 )}
-                                <HealthTrack boxes={healthBoxes} max={maxHealth} onBoxClick={handleHealthBoxClick} />
+                                <HealthTrack boxes={healthBoxes} max={maxHealth} onBoxClick={handleHealthBoxClick} resistant={getValue("resistant_wounds") || []} onToggleResistance={onToggleResistance} />
                             </div>
 
                             <div className="flex items-center gap-2 flex-wrap justify-end">
-                                <span className="text-[10px] text-zinc-500 uppercase tracking-wider">Heal</span>
+                                <span className="text-[10px] text-zinc-500 uppercase tracking-wider" title="Storyteller correction, including Resistant wounds">Adjust (ST)</span>
 
                                 <Button
                                     type="button"
@@ -539,25 +540,20 @@ export const CombatContent = ({
                                         onClick={() => {
                                             const currentMana = getValue("mana") || 0;
                                             if (currentMana < 3) return;
-
-                                            const counts = getHealthCounts(healthBoxes);
-                                            if (counts.lethal > 0) {
-                                                counts.lethal -= 1;
-                                            } else if (counts.bashing > 0) {
-                                                counts.bashing -= 1;
-                                            } else {
-                                                return;
-                                            }
-
+                                            const marks = getValue("resistant_wounds") || [];
+                                            const type = hasHealableWound(healthBoxes, marks, "lethal") ? "lethal" :
+                                                hasHealableWound(healthBoxes, marks, "bashing") ? "bashing" : null;
+                                            if (!type) return;
+                                            const healed = healWound(healthBoxes, marks, type, false);
+                                            if (!healed) return;
                                             handleChange("mana", currentMana - 3);
-                                            const updatedBoxes = buildHealthBoxes(counts, maxHealth);
-                                            handleHealthBoxesChange(updatedBoxes);
+                                            handleHealthBoxesChange(healed.boxes, healed.resistant_wounds);
                                         }}
-                                        disabled={(getValue("mana") || 0) < 3 || (() => {
-                                            const c = getHealthCounts(healthBoxes);
-                                            return c.lethal + c.bashing === 0;
-                                        })()}
-                                        title="Spend 3 Mana to heal 1 Lethal or Bashing"
+                                        disabled={(getValue("mana") || 0) < 3 || !(
+                                            hasHealableWound(healthBoxes, getValue("resistant_wounds"), "lethal") ||
+                                            hasHealableWound(healthBoxes, getValue("resistant_wounds"), "bashing")
+                                        )}
+                                        title="Spend 3 Mana to heal 1 non-Resistant Lethal or Bashing"
                                         data-testid="pattern-restoration-btn"
                                     >
                                         Pattern Restoration

@@ -8,6 +8,7 @@ import { normalizeHealthBoxes, getHealthCounts, buildHealthBoxes } from "@/compo
 import { advanceSceneTime, sleepUntilMorning } from "@/utils/timeUtils";
 import { expireTimedEffects, startTimedEffect, getGameTimestamp } from "@/utils/effectDuration";
 import { advanceNaturalHealing, restartNaturalHealing } from "@/utils/naturalHealing";
+import { addWoundDamage, healWound, hasHealableWound, normalizeResistance, toggleResistance } from "@/utils/resistantWounds";
 import { useCharacterSync } from "@/hooks/useCharacterSync";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -133,52 +134,12 @@ export const CharacterSheetPage = () => {
             maxHealth,
             activeCharacter?.health || 0
         );
-        const counts = getHealthCounts(startingBoxes);
-
-        for (let i = 0; i < remaining; i += 1) {
-            const total = counts.aggravated + counts.lethal + counts.bashing;
-
-            if (finalType === "bashing") {
-                if (total < maxHealth) {
-                    counts.bashing += 1;
-                } else if (counts.bashing > 0) {
-                    counts.bashing -= 1;
-                    counts.lethal += 1;
-                } else if (counts.lethal > 0) {
-                    counts.lethal -= 1;
-                    counts.aggravated += 1;
-                }
-            }
-
-            if (finalType === "lethal") {
-                if (total < maxHealth) {
-                    counts.lethal += 1;
-                } else if (counts.bashing > 0) {
-                    counts.bashing -= 1;
-                    counts.lethal += 1;
-                } else if (counts.lethal > 0) {
-                    counts.lethal -= 1;
-                    counts.aggravated += 1;
-                }
-            }
-
-            if (finalType === "aggravated") {
-                if (total < maxHealth) {
-                    counts.aggravated += 1;
-                } else if (counts.bashing > 0) {
-                    counts.bashing -= 1;
-                    counts.aggravated += 1;
-                } else if (counts.lethal > 0) {
-                    counts.lethal -= 1;
-                    counts.aggravated += 1;
-                }
-            }
-        }
-
-        const updatedBoxes = buildHealthBoxes(counts, maxHealth);
+        const damaged = addWoundDamage(startingBoxes, activeCharacter?.resistant_wounds, finalType, remaining, false);
+        const updatedBoxes = damaged.boxes;
         const filled = updatedBoxes.filter((state) => state !== "empty").length;
         await updateCharacter({
             health_boxes: updatedBoxes,
+            resistant_wounds: damaged.resistant_wounds,
             health: filled,
             natural_healing: restartNaturalHealing(updatedBoxes, activeCharacter?.scene_tracker),
         });
@@ -199,6 +160,7 @@ export const CharacterSheetPage = () => {
         activeCharacter?.health || 0
     );
 
+    const combatResistantWounds = normalizeResistance(combatHealthBoxes, activeCharacter?.resistant_wounds);
     const combatFilledHealth = combatHealthBoxes.filter((state) => state !== "empty").length;
     const combatIsDeadTrack =
         combatHealthBoxes.length > 0 &&
@@ -213,86 +175,51 @@ export const CharacterSheetPage = () => {
             ? -1
             : 0;
 
+    const toggleResistantCombatWound = async (index) => {
+        if (!activeCharacter) return;
+        await updateCharacter({ resistant_wounds: toggleResistance(combatHealthBoxes, combatResistantWounds, index) });
+    };
+
     const healCombatHealthState = async (stateToHeal) => {
         if (!activeCharacter) return;
-
-        const counts = getHealthCounts(combatHealthBoxes);
-
-        if (stateToHeal === "bashing" && counts.bashing > 0) counts.bashing -= 1;
-        if (stateToHeal === "lethal" && counts.lethal > 0) counts.lethal -= 1;
-        if (stateToHeal === "aggravated" && counts.aggravated > 0) counts.aggravated -= 1;
-
-        const updatedBoxes = buildHealthBoxes(counts, combatMaxHealth);
-        const filled = updatedBoxes.filter((state) => state !== "empty").length;
-
+        // Manual Heal controls are Storyteller corrections, including Resistant wounds.
+        const healed = healWound(combatHealthBoxes, combatResistantWounds, stateToHeal, true);
+        if (!healed) return;
         await updateCharacter({
-            health_boxes: updatedBoxes,
-            health: filled,
-            natural_healing: restartNaturalHealing(updatedBoxes, activeCharacter?.scene_tracker),
+            health_boxes: healed.boxes,
+            resistant_wounds: healed.resistant_wounds,
+            health: healed.boxes.filter((state) => state !== "empty").length,
+            natural_healing: restartNaturalHealing(healed.boxes, activeCharacter?.scene_tracker),
         });
     };
 
     const handlePatternRestoration = async (damageType = null) => {
         if (!activeCharacter || activeCharacter.character_type !== "mage") return;
-
         const currentMana = Number(activeCharacter?.mana) || 0;
-        const hasImprovedPatternRestoration =
-            (activeCharacter?.arcana?.Life || 0) >= 2;
-
-        const counts = getHealthCounts(combatHealthBoxes);
-
-        const selectedType =
-            damageType ||
-            (counts.lethal > 0
-                ? "lethal"
-                : counts.bashing > 0
-                ? "bashing"
-                : null);
-
-        if (!selectedType) return;
-
-        if (selectedType === "lethal" && counts.lethal <= 0) return;
-        if (selectedType === "bashing" && counts.bashing <= 0) return;
-
-        const manaCost = hasImprovedPatternRestoration
-            ? selectedType === "bashing"
-                ? 1
-                : 2
-            : 3;
-
-        if (currentMana < manaCost) {
-            toast.error(`Pattern Restoration requires ${manaCost} Mana.`);
-            return;
-        }
-
-        if (selectedType === "lethal") {
-            counts.lethal -= 1;
-        } else {
-            counts.bashing -= 1;
-        }
-
-        const updatedBoxes = buildHealthBoxes(counts, combatMaxHealth);
-        const filled = updatedBoxes.filter(
-            (state) => state !== "empty"
-        ).length;
-
+        const improved = (activeCharacter?.arcana?.Life || 0) >= 2;
+        const selectedType = damageType ||
+            (hasHealableWound(combatHealthBoxes, combatResistantWounds, "lethal") ? "lethal" :
+             hasHealableWound(combatHealthBoxes, combatResistantWounds, "bashing") ? "bashing" : null);
+        if (!selectedType) { toast.info("No non-Resistant wounds available for Pattern Restoration."); return; }
+        const healed = healWound(combatHealthBoxes, combatResistantWounds, selectedType, false);
+        if (!healed) { toast.info("Resistant damage cannot be healed using Pattern Restoration."); return; }
+        const manaCost = improved ? (selectedType === "bashing" ? 1 : 2) : 3;
+        if (currentMana < manaCost) { toast.error(`Pattern Restoration requires ${manaCost} Mana.`); return; }
         await updateCharacter({
             mana: currentMana - manaCost,
-            health_boxes: updatedBoxes,
-            health: filled,
-            natural_healing: restartNaturalHealing(updatedBoxes, activeCharacter?.scene_tracker),
+            health_boxes: healed.boxes,
+            resistant_wounds: healed.resistant_wounds,
+            health: healed.boxes.filter((state) => state !== "empty").length,
+            natural_healing: restartNaturalHealing(healed.boxes, activeCharacter?.scene_tracker),
         });
-
-        toast.success(
-            `Healed 1 ${selectedType} wound for ${manaCost} Mana.`
-        );
+        toast.success(`Healed 1 ${selectedType} wound for ${manaCost} Mana.`);
     };
 
     const patternRestorationDisabled =
         activeCharacter?.character_type !== "mage" ||
         (() => {
-            const counts = getHealthCounts(combatHealthBoxes);
-            const hasDamage = counts.lethal + counts.bashing > 0;
+            const hasDamage = hasHealableWound(combatHealthBoxes, combatResistantWounds, "lethal") ||
+                hasHealableWound(combatHealthBoxes, combatResistantWounds, "bashing");
 
             const hasImproved =
                 (activeCharacter?.arcana?.Life || 0) >= 2;
@@ -343,7 +270,7 @@ export const CharacterSheetPage = () => {
         }
         const nextTime = sleepUntilMorning(currentTracker);
         const nextTracker = { ...currentTracker, date: nextTime.date, time: nextTime.time };
-        const healing = advanceNaturalHealing(combatHealthBoxes, activeCharacter?.natural_healing, currentTracker, nextTracker);
+        const healing = advanceNaturalHealing(combatHealthBoxes, activeCharacter?.natural_healing, currentTracker, nextTracker, combatResistantWounds);
         const updatedBoxes = healing.boxes;
         const filled = updatedBoxes.filter((state) => state !== "empty").length;
 
@@ -357,6 +284,7 @@ export const CharacterSheetPage = () => {
 
         await updateCharacter({
             health_boxes: updatedBoxes,
+            resistant_wounds: healing.resistant_wounds,
             health: filled,
             natural_healing: healing.recovery,
             willpower: Math.min(maxWillpower, currentWillpower + 1),
@@ -374,7 +302,7 @@ export const CharacterSheetPage = () => {
         }
         const next = advanceSceneTime(currentTracker, hours, minutes);
         const nextTracker = { ...currentTracker, date: next.date, time: next.time };
-        const healing = advanceNaturalHealing(combatHealthBoxes, activeCharacter?.natural_healing, currentTracker, nextTracker);
+        const healing = advanceNaturalHealing(combatHealthBoxes, activeCharacter?.natural_healing, currentTracker, nextTracker, combatResistantWounds);
         const spells = activeCharacter?.active_spells || [];
         const expiredSpells = expireTimedEffects(spells, nextTracker);
         await updateCharacter({
@@ -382,6 +310,7 @@ export const CharacterSheetPage = () => {
             natural_healing: healing.recovery,
             ...(healing.healed > 0 ? {
                 health_boxes: healing.boxes,
+                resistant_wounds: healing.resistant_wounds,
                 health: healing.boxes.filter((state) => state !== "empty").length,
             } : {}),
             ...(expiredSpells !== spells ? { active_spells: expiredSpells } : {}),
@@ -762,6 +691,7 @@ export const CharacterSheetPage = () => {
                                     isDeadTrack={combatIsDeadTrack}
                                     woundPenalty={combatWoundPenalty}
                                     onHealHealthState={healCombatHealthState}
+                                    onToggleResistantWound={toggleResistantCombatWound}
                                     onPatternRestoration={handlePatternRestoration}
                                     patternRestorationDisabled={patternRestorationDisabled}
                                     isMage={activeCharacter?.character_type === "mage"}

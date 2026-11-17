@@ -15,6 +15,7 @@ import {
 } from "../../data/cards-data";
 import { HealthTrack } from "../character/StatComponents";
 import { getNaturalHealingLabel } from "../../utils/naturalHealing";
+import { hasHealableWound } from "../../utils/resistantWounds";
 import { normalizeSkillSpecialty } from "../../utils/skillSpecialties";
 import { getEffectTimer, isEffectExpired, getGameTimestamp } from "../../utils/effectDuration";
 
@@ -1251,6 +1252,7 @@ export const CombatTrackerCard = ({
     isDeadTrack,
     woundPenalty,
     onHealHealthState,
+    onToggleResistantWound,
     onPatternRestoration,
     patternRestorationDisabled,
     isMage,
@@ -1988,6 +1990,8 @@ export const CombatTrackerCard = ({
                             max={maxHealth}
                             onBoxClick={() => {}}
                             testIdPrefix="combat-health"
+                            resistant={activeCharacter?.resistant_wounds || []}
+                            onToggleResistance={onToggleResistantWound}
                         />
                     </div>
                     {getNaturalHealingLabel(healthBoxes, activeCharacter?.natural_healing, activeCharacter?.scene_tracker) && (
@@ -1997,7 +2001,7 @@ export const CombatTrackerCard = ({
                     )}
 
                     <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[10px] text-zinc-500 uppercase tracking-wider">HEAL</span>
+                        <span className="text-[10px] text-zinc-500 uppercase tracking-wider" title="Storyteller correction, including Resistant wounds">ADJUST (ST)</span>
 
                         <Button
                             type="button"
@@ -2038,7 +2042,7 @@ export const CombatTrackerCard = ({
                                     onClick={() => onPatternRestoration?.("bashing")}
                                     disabled={
                                         currentMana < 1 ||
-                                        !healthBoxes.includes("bashing")
+                                        !hasHealableWound(healthBoxes, activeCharacter?.resistant_wounds, "bashing")
                                     }
                                     data-testid="combat-pattern-restoration-bashing-btn"
                                 >
@@ -2052,7 +2056,7 @@ export const CombatTrackerCard = ({
                                     onClick={() => onPatternRestoration?.("lethal")}
                                     disabled={
                                         currentMana < 2 ||
-                                        !healthBoxes.includes("lethal")
+                                        !hasHealableWound(healthBoxes, activeCharacter?.resistant_wounds, "lethal")
                                     }
                                     data-testid="combat-pattern-restoration-lethal-btn"
                                 >

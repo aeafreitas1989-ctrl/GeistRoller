@@ -339,6 +339,7 @@ export const GameCardsPanel = ({
     isDeadTrack,
     woundPenalty,
     onHealHealthState,
+    onToggleResistantWound,
     onPatternRestoration,
     patternRestorationDisabled,
     onEndTurn,
@@ -612,7 +613,7 @@ export const GameCardsPanel = ({
         const weatherConditions = buildWeatherConditions(nextTracker);
         const spells = activeCharacter?.active_spells || [];
         const expiredSpells = expireTimedEffects(spells, nextTracker);
-        const healing = advanceNaturalHealing(healthBoxes, activeCharacter?.natural_healing, activeCharacter?.scene_tracker || {}, nextTracker);
+        const healing = advanceNaturalHealing(healthBoxes, activeCharacter?.natural_healing, activeCharacter?.scene_tracker || {}, nextTracker, activeCharacter?.resistant_wounds);
 
         await onUpdateCharacter({
             scene_tracker: nextTracker,
@@ -620,6 +621,7 @@ export const GameCardsPanel = ({
             natural_healing: healing.recovery,
             ...(healing.healed > 0 ? {
                 health_boxes: healing.boxes,
+                resistant_wounds: healing.resistant_wounds,
                 health: healing.boxes.filter((state) => state !== "empty").length,
             } : {}),
             ...(expiredSpells !== spells ? { active_spells: expiredSpells } : {}),
@@ -798,6 +800,7 @@ export const GameCardsPanel = ({
                                     isDeadTrack={isDeadTrack}
                                     woundPenalty={woundPenalty}
                                     onHealHealthState={onHealHealthState}
+                                    onToggleResistantWound={onToggleResistantWound}
                                     onPatternRestoration={onPatternRestoration}
                                     patternRestorationDisabled={patternRestorationDisabled}
                                     isMage={isMage}

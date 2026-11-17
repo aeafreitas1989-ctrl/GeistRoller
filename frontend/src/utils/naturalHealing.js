@@ -1,6 +1,7 @@
 // Natural recovery is driven only by the character's in-game Scene Tracker.
 // Chronicles of Darkness 2e: rightmost wound first; 15m/2d/7d per bashing/lethal/aggravated.
 import { getGameTimestamp } from "./effectDuration";
+import { normalizeResistance } from "./resistantWounds";
 
 const INTERVAL_MS = Object.freeze({
     bashing: 15 * 60 * 1000,
@@ -36,21 +37,22 @@ export const naturalHealingBlocked = (boxes = []) =>
 // Returns a patch and details. Never restores wounds when the game clock moves backwards.
 // If an older character has wounds but no checkpoint, start at the PREVIOUS valid game time;
 // if the previous time was missing, initialize at the new time without retroactive healing.
-export const advanceNaturalHealing = (boxes, recovery, oldTracker, newTracker) => {
+export const advanceNaturalHealing = (boxes, recovery, oldTracker, newTracker, resistant = []) => {
     const nextBoxes = Array.isArray(boxes) ? [...boxes] : [];
+    const nextMarks = normalizeResistance(nextBoxes, resistant);
     const oldNow = getGameTimestamp(oldTracker);
     const newNow = getGameTimestamp(newTracker);
     const currentType = rightmostWound(nextBoxes);
     const previous = recovery || {};
 
     if (!currentType) return {
-        boxes: nextBoxes,
+        boxes: nextBoxes, resistant_wounds: nextMarks,
         healed: 0,
         recovery: { last_at: iso(newNow), progress_ms: 0, wound_type: null },
     };
 
     if (newNow === null) return {
-        boxes: nextBoxes, healed: 0,
+        boxes: nextBoxes, resistant_wounds: nextMarks, healed: 0,
         recovery: {
             last_at: previous.last_at || null,
             progress_ms: previous.wound_type === currentType ? Math.max(0, Number(previous.progress_ms) || 0) : 0,
@@ -65,14 +67,14 @@ export const advanceNaturalHealing = (boxes, recovery, oldTracker, newTracker) =
 
     // No elapsed time and no checkpoint rewind. Keep a future checkpoint intact.
     if (newNow < start) return {
-        boxes: nextBoxes, healed: 0,
+        boxes: nextBoxes, resistant_wounds: nextMarks, healed: 0,
         recovery: { last_at: iso(start), progress_ms: progress, wound_type: currentType },
     };
 
     // A fully Lethal track is bleeding out and cannot recover without treatment.
     // A fully Aggravated track is dead, so natural healing cannot revive it.
     if (naturalHealingBlocked(nextBoxes)) return {
-        boxes: nextBoxes, healed: 0,
+        boxes: nextBoxes, resistant_wounds: nextMarks, healed: 0,
         recovery: { last_at: iso(newNow), progress_ms: 0, wound_type: currentType },
     };
 
@@ -83,6 +85,7 @@ export const advanceNaturalHealing = (boxes, recovery, oldTracker, newTracker) =
         // Actual rightmost damaged Health box is the one that heals.
         const index = nextBoxes.lastIndexOf(wound);
         nextBoxes[index] = "empty";
+        nextMarks[index] = false;
         available -= INTERVAL_MS[wound];
         healed += 1;
         wound = rightmostWound(nextBoxes);
@@ -93,7 +96,7 @@ export const advanceNaturalHealing = (boxes, recovery, oldTracker, newTracker) =
     }
 
     return {
-        boxes: nextBoxes,
+        boxes: nextBoxes, resistant_wounds: nextMarks,
         healed,
         recovery: {
             last_at: iso(newNow),

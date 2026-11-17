@@ -140,11 +140,12 @@ export const StatRow = ({ label, value, max, onChange, color, onLabelClick, sele
     </div>
 );
 
-export const HealthTrack = ({ boxes = [], max, onBoxClick, testIdPrefix = "health" }) => {
+export const HealthTrack = ({ boxes = [], max, onBoxClick, testIdPrefix = "health", resistant = [], onToggleResistance }) => {
     return (
-        <div className="flex gap-0.5 flex-wrap">
+        <div className={`flex gap-0.5 flex-wrap ${resistant.some(Boolean) ? "pb-2" : ""}`}>
             {Array.from({ length: max }, (_, i) => {
                 const state = boxes[i] || "empty";
+                const isResistant = state !== "empty" && resistant[i] === true;
                 const symbol = HEALTH_SYMBOLS[state] || "";
                 const stateClasses = {
                     empty: "bg-zinc-900 border-zinc-700 text-zinc-600 hover:border-zinc-600",
@@ -156,11 +157,15 @@ export const HealthTrack = ({ boxes = [], max, onBoxClick, testIdPrefix = "healt
                 return (
                     <button
                         key={i}
-                        onClick={() => onBoxClick(i, state)}
-                        className={`w-5 h-5 rounded-sm border text-[10px] font-mono flex items-center justify-center transition-all ${stateClasses[state] || stateClasses.empty}`}
+                        type="button"
+                        onClick={() => onBoxClick?.(i, state)}
+                        onContextMenu={(event) => { if (onToggleResistance && state !== "empty") { event.preventDefault(); onToggleResistance(i); } }}
+                        title={isResistant ? "Resistant wound: natural healing only. Right-click to toggle (ST)." : state !== "empty" && onToggleResistance ? "Right-click to mark Resistant wound (ST)." : undefined}
+                        className={`relative w-5 h-5 rounded-sm border text-[10px] font-mono flex items-center justify-center transition-all ${stateClasses[state] || stateClasses.empty}`}
                         data-testid={`${testIdPrefix}-track-${i + 1}`}
                     >
                         {symbol}
+                        {isResistant && <span className="absolute -bottom-[7px] left-1/2 -translate-x-1/2 text-[9px] font-bold leading-none text-zinc-200" aria-label="Resistant wound" data-testid={`${testIdPrefix}-resistant-${i + 1}`}>•</span>}
                     </button>
                 );
             })}

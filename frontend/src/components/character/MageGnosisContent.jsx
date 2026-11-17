@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { GNOSIS_TABLE as BASE_GNOSIS_TABLE } from "../../data/character-data";
 import { SynergyTrack, ResourceTrack, getHealthCounts, buildHealthBoxes } from "./StatComponents";
 import { restartNaturalHealing } from "../../utils/naturalHealing";
+import { addWoundDamage } from "../../utils/resistantWounds";
 
 const GNOSIS_TABLE = {
     ...BASE_GNOSIS_TABLE,
@@ -97,16 +98,12 @@ export const MageGnosisContent = ({
         };
 
         if (choice === "damage") {
-            const counts = getHealthCounts(healthBoxes);
-            counts.lethal += 1;
-            const totalAfter = counts.aggravated + counts.lethal + counts.bashing;
-            if (totalAfter > maxHealth) {
-                if (counts.bashing > 0) counts.bashing -= 1;
-            }
-            const updatedBoxes = buildHealthBoxes(counts, maxHealth);
-            updates.health_boxes = updatedBoxes;
-            updates.health = updatedBoxes.filter((state) => state !== "empty").length;
-            updates.natural_healing = restartNaturalHealing(updatedBoxes, getValue("scene_tracker"));
+            const damage = addWoundDamage(healthBoxes, getValue("resistant_wounds"), "lethal", 1, true);
+            if (damage.applied === 0) return;
+            updates.health_boxes = damage.boxes;
+            updates.resistant_wounds = damage.resistant_wounds;
+            updates.health = damage.boxes.filter((state) => state !== "empty").length;
+            updates.natural_healing = restartNaturalHealing(damage.boxes, getValue("scene_tracker"));
         } else {
             const scoured = getValue("scoured_attributes") || {};
             const attributes = getValue("attributes") || {};
@@ -209,7 +206,7 @@ export const MageGnosisContent = ({
                         <button
                             onClick={() => setScourOpen(true)}
                             className="text-[9px] px-1.5 py-0.5 rounded bg-red-900/30 text-red-400 hover:bg-red-800/40 transition-colors"
-                            title="Reduce 1 Physical Attribute or deal 1 Lethal, gain 3 Mana"
+                            title="Reduce 1 Physical Attribute or take 1 Resistant Lethal damage, gain 3 Mana"
                             data-testid="scour-pattern-btn"
                         >Scour Pattern</button>
 
@@ -236,8 +233,9 @@ export const MageGnosisContent = ({
                                         className="h-8 text-xs bg-zinc-800 border border-zinc-600 text-zinc-300 hover:bg-zinc-700"
                                         onClick={() => doScour("damage")}
                                         data-testid="scour-damage"
+                                        disabled={healthBoxes.length > 0 && healthBoxes.every((state) => state === "aggravated")}
                                     >
-                                        Damage
+                                        Resistant Lethal
                                     </Button>
                                 </div>
                             </DialogContent>
