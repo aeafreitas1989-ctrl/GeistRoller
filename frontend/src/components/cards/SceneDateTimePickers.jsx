@@ -55,23 +55,6 @@ export const SceneDateField = ({ value = "", onChange }) => {
 
     return (
         <div className="relative min-w-0">
-            <Input
-                type="text"
-                inputMode="numeric"
-                placeholder="DD/MM/YYYY"
-                value={draft}
-                onChange={(event) => setDraft(event.target.value)}
-                onBlur={commitDraft}
-                onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                        commitDraft();
-                        event.currentTarget.blur();
-                    }
-                }}
-                className="input-geist h-8 w-full min-w-0 pr-9 text-sm tabular-nums"
-                aria-label="In-game date, day/month/year"
-                data-testid="scene-date-input"
-            />
             <Popover
                 open={open}
                 onOpenChange={(nextOpen) => {
@@ -82,13 +65,32 @@ export const SceneDateField = ({ value = "", onChange }) => {
                 <PopoverTrigger asChild>
                     <button
                         type="button"
-                        className="absolute right-0 top-0 flex h-8 w-8 items-center justify-center rounded-r-sm text-zinc-400 hover:text-violet-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-violet-400"
+                        className="mb-1 inline-flex h-3.5 items-center gap-1 text-[10px] uppercase tracking-wider text-zinc-500 hover:text-violet-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-violet-400"
                         aria-label="Open in-game calendar"
+                        title="Open in-game calendar"
                         data-testid="scene-open-calendar"
                     >
-                        <CalendarDays className="h-4 w-4" />
+                        <CalendarDays className="h-3 w-3" />
+                        Date
                     </button>
                 </PopoverTrigger>
+                <Input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="DD/MM/YYYY"
+                    value={draft}
+                    onChange={(event) => setDraft(event.target.value)}
+                    onBlur={commitDraft}
+                    onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                            commitDraft();
+                            event.currentTarget.blur();
+                        }
+                    }}
+                    className="input-geist h-8 w-full min-w-0 px-3 text-sm tabular-nums"
+                    aria-label="In-game date, day/month/year"
+                    data-testid="scene-date-input"
+                />
                 <PopoverContent
                     align="start"
                     side="bottom"

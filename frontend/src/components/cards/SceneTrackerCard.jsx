@@ -1,4 +1,4 @@
-import { CalendarDays, Clock3, Cloud, Thermometer, Leaf, Wind, Gauge, Droplets, MapPin, Map, Building2, ShieldCheck, } from "lucide-react";
+import { Clock3, Cloud, Thermometer, Leaf, Wind, Gauge, Droplets, MapPin, Map, Building2, ShieldCheck, } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -80,13 +80,13 @@ export const SceneTrackerCard = ({
                                     type="button"
                                     size="icon"
                                     variant="outline"
-                                    className="h-6 w-7 shrink-0 border-zinc-700 bg-zinc-900/50 text-zinc-400 hover:text-teal-300"
+                                    className="h-5 w-5 shrink-0 border-0 bg-transparent p-0 text-zinc-500 shadow-none hover:bg-transparent hover:text-teal-300 focus-visible:ring-1 focus-visible:ring-teal-400"
                                     disabled={!onExplorationMapChange}
                                     aria-label="Open exploration map"
                                     title="Exploration Map"
                                     data-testid="scene-location-map-button"
                                 >
-                                    <Map className="h-3.5 w-3.5" />
+                                    <Map className="h-3 w-3" />
                                 </Button>
                             </DialogTrigger>
                             <DialogContent
@@ -188,9 +188,6 @@ export const SceneTrackerCard = ({
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-2">
             <div className="space-y-1">
-                <label className="text-[10px] uppercase tracking-wider text-zinc-500 flex items-center gap-1">
-                    <CalendarDays className="w-3 h-3" /> Date
-                </label>
                 <SceneDateField
                     value={sceneTracker.date || ""}
                     onChange={(date) => updateSceneTracker({ date })}
