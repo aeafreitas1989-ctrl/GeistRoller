@@ -1,3 +1,5 @@
+import { isSceneDurationEffect } from "./sceneLifecycle";
+
 // Timed effects use the character's in-game Scene Tracker, never the real clock.
 // Dates are interpreted as game-local calendar dates, with UTC only for arithmetic.
 
@@ -61,8 +63,11 @@ export const expireCombatEffects = (effects) => {
     return changed ? result : effects;
 };
 export const startTimedEffect = (effect, tracker) => {
+    if (isSceneDurationEffect(effect) && effect?.status !== "expired") {
+        return { ...effect, tracking_mode: "scene", status: "active" };
+    }
     const turnMatch = String(effect?.duration || "").trim().match(TURN_DURATION);
-    if (effect?.kind === "spell" && turnMatch && effect?.status !== "expired") {
+    if (turnMatch && effect?.status !== "expired") {
         return { ...effect, tracking_mode: "turn", turns_remaining: Number(turnMatch[1]), status: "active" };
     }
     const duration = parseDuration(effect?.duration);
@@ -111,6 +116,7 @@ const remainingLabel = (ms) => {
 
 export const getEffectTimer = (effect, tracker) => {
     if (isEffectExpired(effect, tracker)) return { kind: "expired", label: "Expired" };
+    if (isSceneDurationEffect(effect)) return { kind: "scene", label: "Until end of scene" };
     if (effect?.tracking_mode === "turn") {
         const count = Math.max(0, Number(effect.turns_remaining) || 0);
         return { kind: "running", label: count + (count === 1 ? " turn remaining" : " turns remaining") };

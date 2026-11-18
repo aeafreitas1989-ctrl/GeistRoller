@@ -247,7 +247,7 @@ export const InlineDiceRoller = ({
     }, [arcana]);
     const meritsList = getValue("merits_list") || [];
     const activeConditions = (getValue("conditions") || []).filter((condition) =>
-        !condition?.target_type || condition.target_type === "character"
+        condition?.status !== "expired" && (!condition?.target_type || condition.target_type === "character")
     );
     const activeConditionNames = useMemo(
         () => new Set((activeConditions || []).map((condition) => (condition?.name || "").toLowerCase())),

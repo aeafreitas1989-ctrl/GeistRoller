@@ -459,7 +459,7 @@ export const GameCardsPanel = ({
     const activeMageSight = activeSpells.find((spell) => spell.effect_key === "mage-sight" && !isEffectExpired(spell, gameClock)) || null;
     const meritsList = activeCharacter?.merits_list || [];
     const activeConditionNames = new Set((activeCharacter?.conditions || [])
-        .filter((condition) => !condition?.target_type || condition.target_type === "character")
+        .filter((condition) => condition?.status !== "expired" && (!condition?.target_type || condition.target_type === "character"))
         .map((condition) => (condition?.name || "").toLowerCase()));
     const hasCondition = (name) => activeConditionNames.has(name.toLowerCase());
     const getAttributeForDerivedTrait = (attr, fallback = 1) => {
@@ -627,6 +627,7 @@ export const GameCardsPanel = ({
         const currentConditions = activeCharacter?.conditions || [];
         const preservedConditions = currentConditions.filter((condition) => !condition?.weather_auto);
         const weatherConditions = buildWeatherConditions(nextTracker);
+        const expiredConditions = expireTimedEffects([...preservedConditions, ...weatherConditions], nextTracker);
         const spells = activeCharacter?.active_spells || [];
         const expiredSpells = expireTimedEffects(spells, nextTracker);
         const healing = advanceNaturalHealing(healthBoxes, activeCharacter?.natural_healing, activeCharacter?.scene_tracker || {}, nextTracker, activeCharacter?.resistant_wounds);
@@ -635,7 +636,7 @@ export const GameCardsPanel = ({
         await onUpdateCharacter({
             scene_tracker: nextTracker,
             ...restoredAttributes,
-            conditions: [...preservedConditions, ...weatherConditions],
+            conditions: expiredConditions,
             natural_healing: healing.recovery,
             ...(healing.healed > 0 ? {
                 health_boxes: healing.boxes,
@@ -726,6 +727,7 @@ export const GameCardsPanel = ({
             { id: "haunts", label: "Haunts" },
             { id: "keys", label: "Keys" },
             { id: "ceremonies", label: "Ceremonies" },
+            { id: "activeSpells", label: "Effects", count: activeEffectsCount },
             { id: "merits", label: "Merits" },
             { id: "places", label: "Places & NPCs" },
             { id: "caseTruth", label: "Case File" },
@@ -1028,7 +1030,7 @@ export const GameCardsPanel = ({
                         </>
                     )}
 
-                    {isMage && (
+                    {
                         <ActiveSpellsSection
                             navMode
                             open={openSections.activeSpells}
@@ -1036,13 +1038,14 @@ export const GameCardsPanel = ({
                             activeCharacter={activeCharacter}
                             activeSpells={activeSpells}
                             activeMageSight={activeMageSight}
+                            isMage={isMage}
                             onUpdateCharacter={onUpdateCharacter}
                             onTriggerDiceRoll={onTriggerDiceRoll}
                             onDispelActiveSpell={onDispelActiveSpell}
                             onRelinquishActiveSpell={onRelinquishActiveSpell}
                             onRelinquishActiveSpellSafely={onRelinquishActiveSpellSafely}
                         />
-                    )}
+                    }
 
                     {/* Merits Section */}
                     <Collapsible

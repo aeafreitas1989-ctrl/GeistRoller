@@ -7,6 +7,7 @@ import {
 
 import { ActiveSpellCard } from "../cards/CardComponents";
 import { MageSightCard } from "../cards/MageSightCard";
+import { TrackedEffectsToolbar } from "./TrackedEffectsToolbar";
 import { expireTimedEffects, isEffectExpired, startTimedEffect } from "../../utils/effectDuration";
 
 /**
@@ -21,6 +22,7 @@ export const ActiveSpellsSection = ({
     activeCharacter,
     activeSpells,
     activeMageSight,
+    isMage = true,
     onUpdateCharacter,
     onTriggerDiceRoll,
     onDispelActiveSpell,
@@ -55,7 +57,7 @@ export const ActiveSpellsSection = ({
         >
             <CollapsibleTrigger className={`${navMode ? "!hidden " : ""}w-full flex items-center justify-between p-3`} data-testid="cards-section-active-spells-toggle">
                 <div className="flex items-center gap-2">
-                    <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">Active Spells & Effects</span>
+                    <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">{isMage ? "Active Spells & Effects" : "Timed Effects"}</span>
                     <span className="text-[10px] text-zinc-500">{activeCount}</span>
                 </div>
                 {open ? (
@@ -66,12 +68,13 @@ export const ActiveSpellsSection = ({
             </CollapsibleTrigger>
             <CollapsibleContent className="px-3 pt-3 pb-3">
                 <div className="space-y-2" data-testid="active-spells-list">
-                    <MageSightCard
+                    <TrackedEffectsToolbar activeCharacter={activeCharacter} onUpdateCharacter={onUpdateCharacter} />
+                    {isMage && <MageSightCard
                         activeCharacter={activeCharacter}
                         activeMageSight={activeMageSight}
                         onUpdateCharacter={onUpdateCharacter}
                         onTriggerDiceRoll={onTriggerDiceRoll}
-                    />
+                    />}
 
                     {nonSightSpells.map((spell) => (
                         <ActiveSpellCard
@@ -88,7 +91,7 @@ export const ActiveSpellsSection = ({
                     {nonSightSpells.length === 0 && (
                         <div className="text-center py-4">
                             <p className="text-zinc-500 text-sm">No active spells or effects</p>
-                            <p className="text-zinc-600 text-xs mt-1">Advanced Duration spells, plus Standard Duration spells cast during Combat, appear here</p>
+                            <p className="text-zinc-600 text-xs mt-1">{isMage ? "Advanced Duration spells and combat-duration spells appear here" : "Add a manual effect above to track its duration"}</p>
                         </div>
                     )}
                 </div>

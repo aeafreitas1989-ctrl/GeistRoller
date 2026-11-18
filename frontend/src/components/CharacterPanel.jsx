@@ -10,6 +10,7 @@ import { useLiveCharacterTool } from "../hooks/useLiveCharacterTool";
 import { buildLiveCharacterState } from "../utils/liveCharacterState";
 import { isEffectExpired, startTimedEffect } from "../utils/effectDuration";
 import { applyPlasmTransaction, reconcileManualPlasm } from "../utils/sceneLifecycle";
+import { getChannelManaPatch } from "../utils/mageManaActions";
 import {
     Select,
     SelectContent,
@@ -174,6 +175,7 @@ export const CharacterPanel = ({
     const [spellcastingArcanum, setSpellcastingArcanum] = useState(null);
     const [spellcastingPractice, setSpellcastingPractice] = useState(null);
     const [spellcastingType, setSpellcastingType] = useState(null);
+    const [channelManaRequest, setChannelManaRequest] = useState(null);
     const [spellcastingRoteSkill, setSpellcastingRoteSkill] = useState(null);
     const [spellcastingDefaultName, setSpellcastingDefaultName] = useState("");
     const [spellcastingPrimaryFactor, setSpellcastingPrimaryFactor] = useState(null);
@@ -408,6 +410,32 @@ export const CharacterPanel = ({
         setDicePopupOpen(true);
     };
     
+    const openChannelManaSpell = (request) => {
+        if ((Number((getValue("arcana") || {}).Prime) || 0) < 3) {
+            toast.error("Channel Mana requires Prime 3.");
+            return;
+        }
+        setChannelManaRequest(request);
+        setSpellcastingArcanum("Prime");
+        setSpellcastingPractice("Weaving");
+        setSpellcastingType("improvised");
+        setSpellcastingDefaultName("Channel Mana");
+        setSpellcastingPrimaryFactor("potency");
+        setSpellcastingWithstandType(null);
+        setSpellcastingOpen(true);
+    };
+
+    const handleChannelManaResult = async (data) => {
+        const result = getChannelManaPatch({ ...activeCharacter, ...pendingChanges }, data);
+        if (!result) { toast.error("Could not apply Channel Mana."); return; }
+        try {
+            await commitCharacterUpdate(result.patch);
+            toast.info(result.gained > 0
+                ? "Channel Mana transferred " + result.gained + " Mana."
+                : "Channel Mana transferred no Mana" + (result.spent ? " (casting cost spent)." : "."));
+        } catch (error) { toast.error("Could not save Channel Mana result."); }
+    };
+
     const addActiveSpell = async (spell) => {
         const currentActiveSpells = activeCharacter?.active_spells || [];
         await onUpdateCharacter({
@@ -3152,6 +3180,8 @@ export const CharacterPanel = ({
                                     onRebuyWillpowerDot={rebuyWillpowerDot}
                                     onTriggerDiceRoll={onTriggerDiceRoll}
                                     onAdvanceTime={onAdvanceTime}
+                                    onCommitCharacterUpdate={commitCharacterUpdate}
+                                    onOpenChannelMana={openChannelManaSpell}
                                 />
                             ) : (
                                 <GeistSynergyContent
@@ -4020,7 +4050,7 @@ export const CharacterPanel = ({
             {isMage && spellcastingArcanum && (
                 <SpellcastingPopup
                     isOpen={spellcastingOpen}
-                    onClose={() => { setSpellcastingOpen(false); setSpellcastingArcanum(null); setSpellcastingPractice(null); setSpellcastingType(null); setSpellcastingRoteSkill(null); setSpellcastingDefaultName(""); setSpellcastingPrimaryFactor(null); setSpellcastingWithstandType(null); }}
+                    onClose={() => { setChannelManaRequest(null); setSpellcastingOpen(false); setSpellcastingArcanum(null); setSpellcastingPractice(null); setSpellcastingType(null); setSpellcastingRoteSkill(null); setSpellcastingDefaultName(""); setSpellcastingPrimaryFactor(null); setSpellcastingWithstandType(null); }}
                     arcanum={spellcastingArcanum}
                     arcanumDots={getNestedValue("arcana", spellcastingArcanum) || 0}
                     allArcana={getValue("arcana") || {}}
@@ -4065,6 +4095,8 @@ export const CharacterPanel = ({
                     onResolveParadoxContainment={resolveParadoxContainment}
                     onParadoxDramaticFailure={handleParadoxDramaticFailure}
                     combatActive={!!getValue("combat_active")}
+                    channelManaRequest={channelManaRequest}
+                    onChannelManaResult={handleChannelManaResult}
                 />
             )}
 

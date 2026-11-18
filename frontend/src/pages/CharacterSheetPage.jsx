@@ -238,9 +238,16 @@ export const CharacterSheetPage = () => {
         if (!activeCharacter || !activeCharacter.combat_active) return;
         const effects = activeCharacter.active_spells || [];
         const ticked = advanceTurnEffects(effects);
-        if (ticked !== effects) await updateCharacter({ active_spells: ticked });
+        const conditionsBefore = activeCharacter.conditions || [];
+        const tickedConditions = advanceTurnEffects(conditionsBefore);
+        if (ticked !== effects || tickedConditions !== conditionsBefore) {
+            await updateCharacter({
+                ...(ticked !== effects ? { active_spells: ticked } : {}),
+                ...(tickedConditions !== conditionsBefore ? { conditions: tickedConditions } : {}),
+            });
+        }
 
-        const conditions = activeCharacter.conditions || [];
+        const conditions = (activeCharacter.conditions || []).filter((entry) => entry?.status !== "expired");
         const hasModeratePoison = conditions.some(
             (condition) => (condition?.name || "") === "Poisoned (Moderate)"
         );
@@ -286,6 +293,8 @@ export const CharacterSheetPage = () => {
         const currentWillpower = activeCharacter?.willpower || 0;
         const spells = activeCharacter?.active_spells || [];
         const expiredSpells = expireCombatEffects(expireTimedEffects(spells, nextTracker));
+        const beforeConditions = activeCharacter?.conditions || [];
+        const expiredConditions = expireCombatEffects(expireTimedEffects(beforeConditions, nextTracker));
         const restoredAttributes = restoreScouredAttributes(activeCharacter, nextTracker);
 
         await updateCharacter({
@@ -298,6 +307,7 @@ export const CharacterSheetPage = () => {
             combat_active: false,
             scene_tracker: nextTracker,
             ...(expiredSpells !== spells ? { active_spells: expiredSpells } : {}),
+            ...(expiredConditions !== beforeConditions ? { conditions: expiredConditions } : {}),
         });
     };
 
@@ -314,6 +324,8 @@ export const CharacterSheetPage = () => {
         const restoredAttributes = restoreScouredAttributes(activeCharacter, nextTracker);
         const spells = activeCharacter?.active_spells || [];
         const expiredSpells = expireTimedEffects(spells, nextTracker);
+        const previousConditions = activeCharacter?.conditions || [];
+        const expiredConditions = expireTimedEffects(previousConditions, nextTracker);
         await updateCharacter({
             scene_tracker: nextTracker,
             ...restoredAttributes,
@@ -325,6 +337,7 @@ export const CharacterSheetPage = () => {
                 health: healing.boxes.filter((state) => state !== "empty").length,
             } : {}),
             ...(expiredSpells !== spells ? { active_spells: expiredSpells } : {}),
+            ...(expiredConditions !== previousConditions ? { conditions: expiredConditions } : {}),
         });
     };
 
@@ -541,12 +554,13 @@ export const CharacterSheetPage = () => {
         if (!activeCharacter) return;
         const currentConditions = activeCharacter.conditions || [];
         
-        if (currentConditions.some(c => c.name === condition.name)) {
+        if (currentConditions.some(c => c.name === condition.name && c.status !== "expired")) {
             toast.error("Condition already active");
             return;
         }
         
-        const newConditions = [...currentConditions, condition];
+        const startCondition = startTimedEffect(condition, activeCharacter.scene_tracker);
+        const newConditions = [...currentConditions, startCondition];
         await updateCharacter({ conditions: newConditions });
         toast.success(`Added: ${condition.name}`);
     };

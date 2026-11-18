@@ -185,6 +185,9 @@ class Character(BaseModel):
     health_boxes: List[str] = Field(default_factory=list)
     pattern_scouring: List[Dict[str, Any]] = Field(default_factory=list)
     oblation_hallow: List[Dict[str, Any]] = Field(default_factory=list)
+    oblation_legacy: List[Dict[str, Any]] = Field(default_factory=list)
+    tass_edible: int = 0
+    tass_other: int = 0
     combat_active: bool = False
     resistant_wounds: List[bool] = Field(default_factory=list)
     natural_healing: Dict[str, Any] = Field(default_factory=dict)
@@ -307,6 +310,9 @@ class CharacterUpdate(BaseModel):
     health_boxes: Optional[List[str]] = None
     pattern_scouring: Optional[List[Dict[str, Any]]] = None
     oblation_hallow: Optional[List[Dict[str, Any]]] = None
+    oblation_legacy: Optional[List[Dict[str, Any]]] = None
+    tass_edible: Optional[int] = None
+    tass_other: Optional[int] = None
     combat_active: Optional[bool] = None
     resistant_wounds: Optional[List[bool]] = None
     natural_healing: Optional[Dict[str, Any]] = None

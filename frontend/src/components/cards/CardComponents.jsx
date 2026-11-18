@@ -740,6 +740,8 @@ export const PlacePersonCard = ({
 };
 
 export const ConditionCard = ({
+    timer,
+    expired = false,
     name,
     type,
     persistent = false,
@@ -806,7 +808,7 @@ export const ConditionCard = ({
 
     return (
         <div
-            className={`${colors.bg} ${colors.border} border rounded-sm p-3 relative group transition-all hover:scale-[1.02]`}
+            className={`${colors.bg} ${colors.border} border rounded-sm p-3 relative group transition-all hover:scale-[1.02] ${expired ? "opacity-50 grayscale" : ""}`}
             data-testid={`condition-card-${safeName
                 .toLowerCase()
                 .replace(/\s+/g, "-")}`}
@@ -867,6 +869,11 @@ export const ConditionCard = ({
                             Sheltered — environmental effects currently suppressed.
                         </div>
                     )}
+                    {timer?.kind && timer.kind !== "untimed" && (
+                        <p className="text-[10px] text-teal-300 mb-2" data-testid={"condition-timer-" + conditionIndex}>
+                            {timer.label}
+                        </p>
+                    )}
                     {description && (
                         <p className="text-xs text-zinc-400 leading-relaxed whitespace-pre-line">
                             {description}
@@ -884,7 +891,7 @@ export const ConditionCard = ({
                 </div>
 
                 <div className="flex flex-col gap-1 flex-shrink-0">
-                    {onResolve && (
+                    {onResolve && !expired && (
                         <Button
                             variant="ghost"
                             size="sm"
@@ -1274,7 +1281,7 @@ export const CombatTrackerCard = ({
     const formatLabel = (value) => value.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
     const getValue = (parent, field) => activeCharacter?.[parent]?.[field] || 0;
     const meritsList = activeCharacter?.merits_list || [];
-    const activeConditionNames = new Set((activeCharacter?.conditions || [])
+    const activeConditionNames = new Set((activeCharacter?.conditions || []).filter((entry) => entry?.status !== "expired")
         .filter((condition) => !condition?.target_type || condition.target_type === "character")
         .map((condition) => (condition?.name || "").toLowerCase()));
     const hasCondition = (name) => activeConditionNames.has(name.toLowerCase());
@@ -1571,7 +1578,10 @@ export const CombatTrackerCard = ({
                         const starting = !activeCharacter.combat_active;
                         await onUpdateCharacter({
                             combat_active: starting,
-                            ...(!starting ? { active_spells: expireCombatEffects(activeCharacter.active_spells || []) } : {}),
+                            ...(!starting ? {
+                                active_spells: expireCombatEffects(activeCharacter.active_spells || []),
+                                conditions: expireCombatEffects(activeCharacter.conditions || []),
+                            } : {}),
                         });
                     }}>
                     {activeCharacter?.combat_active ? "End Combat" : "Start Combat"}

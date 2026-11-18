@@ -228,6 +228,8 @@ export const SpellcastingPopup = ({
     onResolveParadoxContainment,
     onParadoxDramaticFailure,
     combatActive = false,
+    channelManaRequest = null,
+    onChannelManaResult,
     activeSpellCount = 0,
     orderRoteSkills,
     spellType,
@@ -421,7 +423,7 @@ export const SpellcastingPopup = ({
     const changePrimaryReach = overridePrimaryFactor && !!primaryFactor ? 1 : 0;
     const remoteRangeReach = remoteRange && factors.range.advanced && specialRangeMode === "none" ? 1 : 0;
     const specialRangeReach = specialRangeMode !== "none" ? 1 : 0;
-    const totalReachUsed = advancedReachUsed + indefiniteReach + changePrimaryReach + activeSpellReachSurcharge + spellReach + remoteRangeReach + specialRangeReach;
+    const totalReachUsed = advancedReachUsed + indefiniteReach + changePrimaryReach + activeSpellReachSurcharge + spellReach + remoteRangeReach + specialRangeReach + (channelManaRequest?.ignorePerTurn ? 1 : 0);
     const reachRemaining = freeReach - totalReachUsed;
     const primaryArcanumDots = combinedSpellCount > 0 ? Math.max(Number(arcanumDots) || 1, ...selectedCombinedArcanaDots) : Number(arcanumDots) || 1;
     const primaryFreeLevels = Math.max(0, primaryArcanumDots - 1);
@@ -705,9 +707,9 @@ export const SpellcastingPopup = ({
             if (chosenSacrament && Number.isInteger(chosenSacrament.index)) onConsumeInventoryYantra(chosenSacrament.index);
         }
 
-        if (totalManaCost > 0) onSpendMana(totalManaCost);
+        if (totalManaCost > 0 && !channelManaRequest) onSpendMana(totalManaCost);
 
-        const activeSpellData = !lastingDuration && (factors.duration.advanced || combatActive) && onCreateActiveSpell
+        const activeSpellData = !channelManaRequest && !lastingDuration && (factors.duration.advanced || combatActive) && onCreateActiveSpell
             ? {
                 id: Date.now(), kind: "spell", name: spellName.trim(), arcanum, practice: selectedPractice,
                 potency: getFactorDescription("potency"),
@@ -742,6 +744,7 @@ export const SpellcastingPopup = ({
         if (indefiniteReach > 0) reachCategories.push(`Indefinite Duration +${indefiniteReach}`);
         if (changePrimaryReach > 0) reachCategories.push(`Primary Factor Override → ${getPrimaryFactorLabel(primaryFactor)} +${changePrimaryReach}`);
         if (spellReach > 0) reachCategories.push(`Spell Options +${spellReach}`);
+        if (channelManaRequest?.ignorePerTurn) reachCategories.push("Channel Mana limit bypass +1");
         if (remoteRangeReach > 0) reachCategories.push(`Remote Range +${remoteRangeReach}`);
         if (specialRangeReach > 0) reachCategories.push(`Sympathetic Casting +${specialRangeReach}`);
         if (activeSpellReachSurcharge > 0) reachCategories.push(`Active Spell surcharge +${activeSpellReachSurcharge}`);
@@ -799,6 +802,13 @@ export const SpellcastingPopup = ({
                         onAwardSpellcastingExceptionalSuccess({ manaSpent: totalManaCost, choiceId: exceptionalChoice?.id || null });
                     }
                     if (spellSucceeded && activeSpellData) onCreateActiveSpell(activeSpellData);
+                    if (channelManaRequest && onChannelManaResult) {
+                        void onChannelManaResult({
+                            ...channelManaRequest, succeeded: spellSucceeded,
+                            spellPotency: Math.max(0, Number(effectivePotency) || 0),
+                            manaPerTurn, manaCost: totalManaCost,
+                        });
+                    }
                 },
             };
         };

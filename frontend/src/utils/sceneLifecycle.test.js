@@ -48,9 +48,11 @@ describe("explicit scene boundaries", () => {
             character_type: "mage", scene_paradox_rolls: 4, combat_active: true,
             scene_tracker: { date: "1607-05-01", time: "12:19" },
             active_spells: [{ id: 1, duration: "Scene" }, { id: 2, duration: "1 day" }],
+            conditions: [{ name: "Scene Fear", duration: "Scene" }, { name: "Ongoing Wound" }],
         };
         const patch = getEndScenePatch(character);
         expect(patch.scene_paradox_rolls).toBe(0);
+        expect(patch.conditions.map(e => e.status || "active")).toEqual(["expired", "active"]);
         expect(patch.active_spells.map(e => e.status || "active")).toEqual(["expired", "active"]);
         expect(patch).not.toHaveProperty("scene_tracker");
         expect(patch).not.toHaveProperty("combat_active");

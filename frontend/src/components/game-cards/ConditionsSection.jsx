@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 
 import { ConditionCard } from "../cards/CardComponents";
+import { getEffectTimer, isEffectExpired } from "../../utils/effectDuration";
 
 import {
     CONDITION_DEFINITIONS,
@@ -59,6 +60,7 @@ export const ConditionsSection = ({
     const [customConditionDesc, setCustomConditionDesc] = useState("");
     const [conditionOrigin, setConditionOrigin] = useState("");
     const [conditionBeatType, setConditionBeatType] = useState("regular");
+    const [conditionDuration, setConditionDuration] = useState("none");
     const [conditionTarget, setConditionTarget] = useState("character");
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedFilters, setSelectedFilters] = useState([]);
@@ -374,6 +376,7 @@ export const ConditionsSection = ({
         setSelectedFilters([]);
         setConditionOrigin("");
         setConditionBeatType("regular");
+        setConditionDuration("none");
         setConditionTarget("character");
         setCustomConditionName("");
         setCustomConditionDesc("");
@@ -455,6 +458,7 @@ export const ConditionsSection = ({
                     ),
 
                 beat_type: conditionBeatType,
+                ...(conditionDuration !== "none" ? { duration: conditionDuration } : {}),
 
                 splat:
                     condition.splat ||
@@ -508,6 +512,7 @@ export const ConditionsSection = ({
                 group: "condition",
                 persistent: false,
                 beat_type: conditionBeatType,
+                ...(conditionDuration !== "none" ? { duration: conditionDuration } : {}),
                 splat: "Custom",
 
                 effect:
@@ -819,6 +824,19 @@ export const ConditionsSection = ({
                                     </p>
                                 </div>
 
+                                <div className="space-y-1">
+                                    <label className="text-[10px] uppercase tracking-wider text-zinc-400">Duration (optional)</label>
+                                    <Select value={conditionDuration} onValueChange={setConditionDuration}>
+                                        <SelectTrigger className="h-8 border-zinc-700 bg-zinc-900 text-xs" data-testid="condition-duration-select"><SelectValue /></SelectTrigger>
+                                        <SelectContent className="border-zinc-700 bg-zinc-950">
+                                            {['none', 'Scene', '1 turn', '2 turns', '3 turns', '5 turns', '1 minute', '10 minutes', '1 hour', '1 day', '1 week'].map((duration) => (
+                                                <SelectItem key={duration} value={duration}>{duration === 'none' ? 'No automatic expiry' : duration}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <p className="text-[10px] text-zinc-500">Expiration retains a record without awarding a Beat. Turn durations advance only with End Turn.</p>
+                                </div>
+
                                 {/* Sorted catalogue */}
                                 <div className="max-h-[300px] overflow-y-auto pr-1">
                                     {groupedConditions.length === 0 ? (
@@ -992,6 +1010,8 @@ export const ConditionsSection = ({
                                     <ConditionCard
                                         key={`${condition.name}-${idx}`}
                                         conditionIndex={idx}
+                                        timer={getEffectTimer(condition, activeCharacter?.scene_tracker)}
+                                        expired={isEffectExpired(condition, activeCharacter?.scene_tracker)}
                                         name={condition.name}
                                         beatType={condition.beat_type || "regular"}
                                         type={

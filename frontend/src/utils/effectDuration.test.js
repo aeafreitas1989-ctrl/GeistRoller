@@ -42,10 +42,14 @@ describe("in-game effect timers", () => {
     });
 
     test("scene and indefinite effects do not get clock expiration", () => {
-        for (const duration of ["Scene", "Next applicable attack", "Indefinite (+1 Reach, 1 Mana)", "Lasting", "5 turns"]) {
+        for (const duration of ["Next applicable attack", "Indefinite (+1 Reach, 1 Mana)", "Lasting", "5 turns"]) {
             expect(hasFiniteDuration({ duration })).toBe(false);
             expect(getEffectTimer({ duration }, tracker("2025-12-05", "12:00")).kind).toBe("untimed");
         }
+        expect(getEffectTimer({ duration: "Scene" }, tracker("2025-12-05", "12:00")).kind).toBe("scene");
+        const condition = startTimedEffect({ name: "Shaken", duration: "2 turns" }, tracker("2025-12-05", "12:00"));
+        expect(condition.turns_remaining).toBe(2);
+        expect(advanceTurnEffects(advanceTurnEffects([condition]))[0].status).toBe("expired");
     });
 });
 

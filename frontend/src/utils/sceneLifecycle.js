@@ -50,7 +50,10 @@ export const reconcileManualPlasm = (currentPlasm, temporaryPlasm, nextPlasm) =>
 
 export const getEndScenePatch = (character) => {
     if (!character || typeof character !== "object") return null;
-    const patch = { active_spells: expireSceneEffects(character.active_spells || []) };
+    const patch = {
+        active_spells: expireSceneEffects(character.active_spells || []),
+        conditions: expireSceneEffects(character.conditions || []),
+    };
     if (character.character_type === "mage") {
         patch.scene_paradox_rolls = 0;
     }

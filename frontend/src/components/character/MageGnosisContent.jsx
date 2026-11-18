@@ -10,6 +10,7 @@ import { addWoundDamage } from "../../utils/resistantWounds";
 import { getGameTimestamp } from "../../utils/effectDuration";
 import { remainingScourings, registerScouring, hallowManaRemaining, recordHallowMana } from "../../utils/mageRecovery";
 import { toast } from "sonner";
+import { MageManaControls } from "./MageManaControls";
 
 const GNOSIS_TABLE = {
     ...BASE_GNOSIS_TABLE,
@@ -30,61 +31,9 @@ export const MageGnosisContent = ({
     onTriggerDiceRoll,
     onAdvanceTime,
     onCommitCharacterUpdate,
+    onOpenChannelMana,
 }) => {
     const [scourOpen, setScourOpen] = useState(false);
-    const [hallowOpen, setHallowOpen] = useState(false);
-    const [hallowRating, setHallowRating] = useState(1);
-    const [hallowRolling, setHallowRolling] = useState(false);
-    const [hallowResult, setHallowResult] = useState(null);
-
-    const hallowMeritDots = (() => {
-        const merits = getValue("merits_list") || [];
-        const h = merits.find((m) => (m?.name || "") === "Hallow");
-        return h?.dots || 0;
-    })();
-    const hasHallowMerit = hallowMeritDots > 0;
-    const effectiveHallowRating = hasHallowMerit ? hallowMeritDots : hallowRating;
-
-    const openHallowDialog = () => {
-        setHallowRating(1);
-        setHallowResult(null);
-        setHallowRolling(false);
-        setHallowOpen(true);
-    };
-
-    const rollHallow = () => {
-        if (!onTriggerDiceRoll) return;
-        const tracker = getValue("scene_tracker") || {};
-        if (getGameTimestamp(tracker) === null) { toast.error("Set an in-game date and time before Oblation."); return; }
-        const gnosis = Number(getValue("gnosis")) || 1;
-        const composure = Number(getNestedValue("attributes", "composure")) || 1;
-        const pool = gnosis + composure;
-        const rating = Number(effectiveHallowRating) || 1;
-        const allowance = hallowManaRemaining(getValue("oblation_hallow"), rating, tracker);
-        if (!allowance) { toast.error("This Hallow's 24-hour Mana allowance is exhausted."); return; }
-        setHallowRolling(true);
-        onTriggerDiceRoll({
-            pool,
-            label: "Hallow Oblation",
-            dicePoolBreakdown: "Gnosis " + gnosis + " + Composure " + composure,
-            spellSummary: "Hallow rating " + rating + ". Each success grants 1 Mana (24-hour cap). Advances time 1 hour.",
-            onResult: async (result) => {
-                setHallowRolling(false);
-                const successes = Math.max(0, Number(result?.successes) || 0);
-                const gd = GNOSIS_TABLE[gnosis] || GNOSIS_TABLE[1];
-                const currentMana = Number(getValue("mana")) || 0;
-                const gained = Math.min(successes, allowance, Math.max(0, gd.maxMana - currentMana));
-                const updates = {
-                    mana: currentMana + gained,
-                    oblation_hallow: recordHallowMana(getValue("oblation_hallow"), gained, tracker),
-                };
-                setHallowResult({ successes, gained });
-                if (onAdvanceTime) await onAdvanceTime(1, 0, updates);
-                else applyScourUpdates(updates);
-            },
-        });
-    };
-
     const applyScourUpdates = (updates) => {
         if (onCommitCharacterUpdate) {
             onCommitCharacterUpdate(updates);
@@ -255,85 +204,6 @@ export const MageGnosisContent = ({
                             </DialogContent>
                         </Dialog>
 
-                        <button
-                            onClick={openHallowDialog}
-                            className="text-[9px] px-1.5 py-0.5 rounded bg-violet-900/30 text-violet-400 hover:bg-violet-800/40 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                            title="Roll Gnosis + Composure to harvest Mana from a Hallow (advances time 1 hour)"
-                            data-testid="hallow-btn"
-                        >Hallow</button>
-
-                        <Dialog open={hallowOpen} onOpenChange={setHallowOpen}>
-                            <DialogContent className="bg-zinc-900 border-zinc-700 max-w-xs">
-                                <DialogHeader>
-                                    <DialogTitle className="text-violet-300 font-heading text-sm">Harvest Hallow</DialogTitle>
-                                </DialogHeader>
-                                <div className="space-y-3">
-                                    <p className="text-[10px] text-zinc-400">
-                                        Roll Gnosis + Composure: 1 Mana per success, limited by the Hallow's remaining 24-hour allowance. Time advances 1 hour even on failure.
-                                    </p>
-
-                                    {hasHallowMerit ? (
-                                        <div className="p-2 rounded-sm bg-violet-900/20 border border-violet-500/30">
-                                            <div className="text-[10px] text-zinc-500 uppercase tracking-wider">Your Hallow Merit</div>
-                                            <div className="text-xs text-violet-200 font-mono mt-0.5" data-testid="hallow-merit-rating">
-                                                Rating {hallowMeritDots}
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div>
-                                            <div className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Hallow Rating</div>
-                                            <div className="flex gap-1" data-testid="hallow-rating-selector">
-                                                {[1, 2, 3, 4, 5].map((n) => (
-                                                    <Button
-                                                        key={n}
-                                                        size="sm"
-                                                        variant={hallowRating === n ? "default" : "outline"}
-                                                        className={`h-7 w-9 text-xs ${hallowRating === n ? "bg-violet-700 text-white hover:bg-violet-600" : "bg-zinc-900 border-zinc-700 text-zinc-300 hover:bg-zinc-800"}`}
-                                                        onClick={() => setHallowRating(n)}
-                                                        data-testid={`hallow-rating-${n}`}
-                                                    >
-                                                        {n}
-                                                    </Button>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    <div className="text-[10px] text-zinc-500">
-                                        Pool: <span className="text-violet-300 font-mono">Gnosis {getValue("gnosis") || 1} + Composure {getNestedValue("attributes", "composure") || 1} = {(getValue("gnosis") || 1) + (getNestedValue("attributes", "composure") || 1)}</span>
-                                    </div>
-
-                                    {hallowResult && (
-                                        <div className={`text-[11px] rounded-sm p-2 ${hallowResult.successes > 0 ? "bg-emerald-900/30 border border-emerald-500/30 text-emerald-300" : "bg-rose-900/30 border border-rose-500/30 text-rose-300"}`} data-testid="hallow-result">
-                                            {hallowResult.successes > 0
-                                                ? `Success (${hallowResult.successes})! Recovered ${hallowResult.gained} Mana.`
-                                                : "Failure (0 successes). No Mana recovered."} Time advanced 1 hour.
-                                        </div>
-                                    )}
-
-                                    <div className="flex gap-2 pt-1">
-                                        <Button
-                                            size="sm"
-                                            className="flex-1 h-8 text-xs bg-violet-700 hover:bg-violet-600 text-white"
-                                            onClick={rollHallow}
-                                            disabled={hallowRolling}
-                                            data-testid="hallow-roll-btn"
-                                        >
-                                            {hallowRolling ? "Rolling..." : hallowResult ? "Roll Again" : "Roll Gnosis + Composure"}
-                                        </Button>
-                                        <Button
-                                            size="sm"
-                                            variant="outline"
-                                            className="h-8 text-xs bg-zinc-900 border-zinc-700 text-zinc-300 hover:bg-zinc-800"
-                                            onClick={() => setHallowOpen(false)}
-                                            data-testid="hallow-close-btn"
-                                        >
-                                            Close
-                                        </Button>
-                                    </div>
-                                </div>
-                            </DialogContent>
-                        </Dialog>
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -368,6 +238,15 @@ export const MageGnosisContent = ({
                     );
                 })()}
             </div>
+
+            <MageManaControls
+                getValue={getValue}
+                getNestedValue={getNestedValue}
+                onTriggerDiceRoll={onTriggerDiceRoll}
+                onAdvanceTime={onAdvanceTime}
+                onCommitCharacterUpdate={onCommitCharacterUpdate}
+                onOpenChannelMana={onOpenChannelMana}
+            />
 
             <div className="p-2 bg-violet-900/20 border border-violet-500/30 rounded-sm space-y-2">
                 <div className="flex items-center justify-between">
