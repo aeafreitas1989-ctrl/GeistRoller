@@ -638,6 +638,48 @@ export const YantrasGrid = ({
                 </div>
 
                 <div className="space-y-0.5">
+                    {renderSingle(
+                        "Dedicated Tool",
+                        "Dedicated Tool",
+                        1
+                    )}
+
+                    {renderSingle(
+                        "Path Tool: Coin",
+                        "Path Tool: Coin",
+                        1
+                    )}
+
+                    {renderSingle(
+                        "Path Tool: Cup",
+                        "Path Tool: Cup",
+                        1
+                    )}
+
+                    {renderSingle(
+                        "Path Tool: Mirror",
+                        "Path Tool: Mirror",
+                        1
+                    )}
+
+                    {renderSingle(
+                        "Path Tool: Rod",
+                        "Path Tool: Rod",
+                        1
+                    )}
+
+                    {renderSingle(
+                        "Path Tool: Weapon",
+                        "Path Tool: Weapon",
+                        1
+                    )}
+
+                    {renderSingle(
+                        "Order Tool",
+                        "Order Tool",
+                        1
+                    )}
+
                     <YantraRatingPicker
                         groupLabel="Legacy Yantra"
                         variants={LEGACY_YANTRA_VARIANTS}
@@ -658,48 +700,6 @@ export const YantrasGrid = ({
                             legacyCurrent && onSelectInventoryYantra?.(legacyCurrent.name, value)
                         }
                     />
-
-                    {renderSingle(
-                        "Dedicated Tool",
-                        "Dedicated Tool",
-                        1
-                    )}
-
-                    {renderSingle(
-                        "Path Tool: Coin",
-                        "Path Tool: Coin",
-                        1
-                    )}
-
-                    {renderSingle(
-                        "Path Tool: Cup",
-                        "Path Tool: Cup",
-                        1
-                    )}
-
-                    {renderSingle(
-                        "Path Tool: Mirror",
-                        "Path Tool: Mirror",
-                        1
-                    )}
-
-                    {renderSingle(
-                        "Path Tool: Rod",
-                        "Path Tool: Rod",
-                        1
-                    )}
-
-                    {renderSingle(
-                        "Path Tool: Weapon",
-                        "Path Tool: Weapon",
-                        1
-                    )}
-
-                    {renderSingle(
-                        "Order Tool",
-                        "Order Tool",
-                        1
-                    )}
 
                     {usesRoteMudra && (
                         <div
