@@ -242,7 +242,7 @@ export const MageArcanaContent = ({
                             const rotePracticeOptions = ALL_SPELL_PRACTICES;
                             const rotePractice = rote.practice || rotePracticeOptions[0] || "";
                             return (
-                            <div key={index} className="flex flex-wrap items-center gap-1.5 p-1.5 bg-zinc-900/30 border border-zinc-800 rounded-sm">
+                            <div key={index} className="grid min-w-0 items-center gap-1.5 p-1.5 bg-zinc-900/30 border border-zinc-800 rounded-sm" style={{ gridTemplateColumns: "minmax(0, 1fr) 80px 110px 90px 24px 24px 24px" }}>
                                 <Input
                                     value={rote.spell || ""}
                                     onChange={(e) => {
@@ -251,7 +251,7 @@ export const MageArcanaContent = ({
                                         handleChange("rotes", rotes);
                                     }}
                                     placeholder="Spell"
-                                    className="input-geist h-6 text-xs flex-[2_1_240px] min-w-[210px] sm:min-w-[230px]"
+                                    className="input-geist h-6 w-full min-w-0 flex-1 text-xs"
                                     data-testid={`rote-${index}-spell`}
                                 />
                                 <Select value={rote.arcanum || "Death"} onValueChange={(v) => {
@@ -316,7 +316,7 @@ export const MageArcanaContent = ({
                                     <Trash2 className="w-3 h-3" />
                                 </Button>
                                 {editingRotePrimaryFactor === index && (
-                                    <div className="w-full flex items-center gap-2 border-t border-zinc-800 pt-1.5 mt-1">
+                                    <div className="col-span-full flex flex-wrap items-center gap-2 border-t border-zinc-800 pt-1.5 mt-1">
                                         <span className="text-[10px] text-zinc-400">Primary Factor (required)</span>
                                         <SpellPrimaryFactorSelect
                                             value={rote.primary_factor}
@@ -385,7 +385,7 @@ export const MageArcanaContent = ({
                                     </span>
                                 </div>
 
-                                <div className="flex items-center gap-1.5">
+                                <div className="flex min-w-0 flex-nowrap items-center gap-1.5">
                                     <Input
                                         value={activePraxisDraft.spell}
                                         onChange={(e) =>
@@ -394,7 +394,7 @@ export const MageArcanaContent = ({
                                             })
                                         }
                                         placeholder="Spell"
-                                        className="input-geist h-6 text-xs flex-[2_1_240px] min-w-[210px] sm:min-w-[230px]"
+                                        className="input-geist h-6 w-full min-w-0 flex-1 text-xs"
                                         data-testid="praxis-draft-spell"
                                     />
 
@@ -517,7 +517,7 @@ export const MageArcanaContent = ({
                             const praxisPractice = praxis.practice || praxisPracticeOptions[0] || "";
 
                             return (
-                            <div key={index} className="flex flex-wrap items-center gap-1.5 p-1.5 bg-zinc-900/30 border border-zinc-800 rounded-sm">
+                            <div key={index} className="grid min-w-0 items-center gap-1.5 p-1.5 bg-zinc-900/30 border border-zinc-800 rounded-sm" style={{ gridTemplateColumns: "minmax(0, 1fr) 80px 110px 24px 24px 24px" }}>
                                 <Input
                                     value={praxis.spell || ""}
                                     onChange={(e) => {
@@ -526,7 +526,7 @@ export const MageArcanaContent = ({
                                         handleChange("praxes", praxes);
                                     }}
                                     placeholder="Spell"
-                                    className="input-geist h-6 text-xs flex-[2_1_240px] min-w-[210px] sm:min-w-[230px]"
+                                    className="input-geist h-6 w-full min-w-0 flex-1 text-xs"
                                     data-testid={`praxis-${index}-spell`}
                                 />
                                 <Select value={praxis.arcanum || "Death"} onValueChange={(v) => {
@@ -576,7 +576,7 @@ export const MageArcanaContent = ({
                                     <Trash2 className="w-3 h-3" />
                                 </Button>
                                 {editingPraxisPrimaryFactor === index && (
-                                    <div className="w-full flex items-center gap-2 border-t border-zinc-800 pt-1.5 mt-1">
+                                    <div className="col-span-full flex flex-wrap items-center gap-2 border-t border-zinc-800 pt-1.5 mt-1">
                                         <span className="text-[10px] text-zinc-400">Primary Factor (required)</span>
                                         <SpellPrimaryFactorSelect
                                             value={praxis.primary_factor}
