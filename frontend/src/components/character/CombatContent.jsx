@@ -155,8 +155,8 @@ const InventoryQuantityControl = ({ value, onChange, testIdPrefix }) => {
 
 const INVENTORY_TYPE_ORDER = {
     armor: 0,
-    equipment: 1,
-    consumable: 2,
+    consumable: 1,
+    equipment: 2,
     weapon: 3,
     yantra: 4,
 };
@@ -511,10 +511,10 @@ export const CombatContent = ({
         .sort(compareInventoryItems);
 
     const inventoryGroups = [
-        { key: "equipment", label: "Equipment", Icon: Package },
-        { key: "consumable", label: "Consumables", Icon: FlaskConical },
-        { key: "weapon", label: "Weapons", Icon: Sword },
         { key: "armor", label: "Armor", Icon: Shield },
+        { key: "consumable", label: "Consumables", Icon: FlaskConical },
+        { key: "equipment", label: "Equipment", Icon: Package },
+        { key: "weapon", label: "Weapons", Icon: Sword },
         { key: "yantra", label: "Yantras", Icon: Sparkles },
         { key: "other", label: "Other", Icon: Package },
     ].map((group) => ({
