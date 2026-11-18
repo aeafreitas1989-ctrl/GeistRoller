@@ -65,7 +65,7 @@ export const SceneTrackerCard = ({
         <div className="bg-zinc-900/40 border border-zinc-800 rounded-sm px-3 py-2.5 space-y-3">
 
             {/* Location */}
-            <div className="grid grid-cols-1 md:grid-cols-[minmax(0,2fr)_minmax(150px,1fr)_110px] gap-2">
+            <div className="grid grid-cols-1 md:grid-cols-[minmax(0,2fr)_minmax(150px,1fr)_110px] items-end gap-2">
 
                 {/* Location name */}
                 <div className="space-y-1">
@@ -186,7 +186,7 @@ export const SceneTrackerCard = ({
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 items-end gap-2">
             <div className="space-y-1">
                 <SceneDateField
                     value={sceneTracker.date || ""}
@@ -283,7 +283,7 @@ export const SceneTrackerCard = ({
             </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 items-end gap-2">
             <div className="space-y-1">
                 <label className="text-[10px] uppercase tracking-wider text-zinc-500 flex items-center gap-1">
                     <Cloud className="w-3 h-3" /> Cloud
