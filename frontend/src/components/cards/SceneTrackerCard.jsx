@@ -1,9 +1,11 @@
-import { CalendarDays, Clock3, Cloud, Thermometer, Leaf, Wind, Gauge, Droplets, MapPin, Building2, ShieldCheck, } from "lucide-react";
+import { CalendarDays, Clock3, Cloud, Thermometer, Leaf, Wind, Gauge, Droplets, MapPin, Map, Building2, ShieldCheck, } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SceneDateField, SceneTimeField } from "./SceneDateTimePickers";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { ExplorationMap } from "../character/ExplorationMap";
 
 const CLOUD_COVER_OPTIONS = [
     { value: "clear", label: "☀ Clear" },
@@ -49,6 +51,10 @@ export const SceneTrackerCard = ({
     sceneTracker,
     updateSceneTracker,
     placeOptions = [],
+    characterId,
+    characterName,
+    explorationMap,
+    onExplorationMapChange,
     sceneTemperature,
     sceneSeason,
     getSeasonColorClass,
@@ -63,10 +69,42 @@ export const SceneTrackerCard = ({
 
                 {/* Location name */}
                 <div className="space-y-1">
-                    <label className="text-[10px] uppercase tracking-wider text-zinc-500 flex items-center gap-1">
-                        <MapPin className="w-3 h-3" />
-                        Location
-                    </label>
+                    <div className="flex items-center gap-2">
+                        <label className="text-[10px] uppercase tracking-wider text-zinc-500 flex items-center gap-1">
+                            <MapPin className="w-3 h-3" />
+                            Location
+                        </label>
+                        <Dialog>
+                            <DialogTrigger asChild>
+                                <Button
+                                    type="button"
+                                    size="icon"
+                                    variant="outline"
+                                    className="h-6 w-7 shrink-0 border-zinc-700 bg-zinc-900/50 text-zinc-400 hover:text-teal-300"
+                                    disabled={!onExplorationMapChange}
+                                    aria-label="Open exploration map"
+                                    title="Exploration Map"
+                                    data-testid="scene-location-map-button"
+                                >
+                                    <Map className="h-3.5 w-3.5" />
+                                </Button>
+                            </DialogTrigger>
+                            <DialogContent
+                                className="w-[95vw] max-w-5xl max-h-[90vh] overflow-y-auto bg-zinc-950 border-zinc-700 text-zinc-100"
+                                data-testid="scene-exploration-map-dialog"
+                            >
+                                <DialogHeader>
+                                    <DialogTitle>Exploration Map</DialogTitle>
+                                </DialogHeader>
+                                <ExplorationMap
+                                    key={characterId}
+                                    characterName={characterName || "PC"}
+                                    value={explorationMap || {}}
+                                    onChange={onExplorationMapChange}
+                                />
+                            </DialogContent>
+                        </Dialog>
+                    </div>
 
                     <Input
                         list="scene-place-options"

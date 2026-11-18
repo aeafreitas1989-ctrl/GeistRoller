@@ -75,7 +75,6 @@ import { GeistRemembranceContent } from "./character/GeistRemembranceContent";
 import { MeritsContent } from "./character/MeritsContent";
 import { FamiliarContent } from "./character/FamiliarContent";
 import { CombatContent } from "./character/CombatContent";
-import { ExplorationMap } from "./character/ExplorationMap";
 import { CharacterCreationAuditPanel } from "./character/CharacterCreationAuditPanel";
 import { CharacterGoalsContent } from "./character/CharacterGoalsContent";
 import {
@@ -2570,7 +2569,7 @@ export const CharacterPanel = ({
     ) ? "header" : activeSection;
 
     const expandedSections = Object.fromEntries(
-        ["header", "geist", "attributesSkills", "sinEater", "inventory", "map",
+        ["header", "geist", "attributesSkills", "sinEater", "inventory",
             "powers", "merits", "familiar", "notes"].map(
             (section) => [section, visibleSection === section]
         )
@@ -2583,7 +2582,6 @@ export const CharacterPanel = ({
             { id: "attributesSkills", label: "Abilities & Skills", title: "Attributes & Skills" },
             { id: "powers", label: "Spellcasting", title: "Arcana, Spells & Attainments" },
             { id: "inventory", label: "Inventory", title: "Inventory" },
-            { id: "map", label: "Map", title: "Exploration Map" },
             { id: "merits", label: "Merits", title: "Merits" },
             ...(hasFamiliar ? [
                 { id: "familiar", label: "Familiar", title: "Familiar" },
@@ -2596,7 +2594,6 @@ export const CharacterPanel = ({
             { id: "attributesSkills", label: "Abilities & Skills", title: "Attributes & Skills" },
             { id: "powers", label: "Haunts & Ceremonies", title: "Haunts, Keys, Mementos & Ceremonies" },
             { id: "inventory", label: "Inventory", title: "Inventory" },
-            { id: "map", label: "Map", title: "Exploration Map" },
             { id: "merits", label: "Merits", title: "Merits" },
             { id: "geist", label: "Geist", title: "Geist & Remembrance" },
             { id: "notes", label: "XP Track", title: "XP Tracker" },
@@ -2814,18 +2811,6 @@ export const CharacterPanel = ({
                             currentPlasm={getValue("plasm") || 0}
                         />
                     )}    
-
-                    {/* Exploration Map - available to all character types */}
-                    <Collapsible open={expandedSections.map}>
-                        <CollapsibleContent className="pt-2">
-                            <ExplorationMap
-                                key={activeCharacter.id}
-                                characterName={getValue("name") || activeCharacter.name}
-                                value={getValue("exploration_map") || {}}
-                                onChange={(nextMap) => commitCharacterUpdate({ exploration_map: nextMap })}
-                            />
-                        </CollapsibleContent>
-                    </Collapsible>
 
                     {/* Character Header Info */}
                     <Collapsible open={expandedSections.header}>

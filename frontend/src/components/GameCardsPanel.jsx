@@ -782,6 +782,12 @@ export const GameCardsPanel = ({
                     sceneTracker={sceneTracker}
                     updateSceneTracker={updateSceneTracker}
                     placeOptions={scenePlaceOptions}
+                    characterId={activeCharacter?.id}
+                    characterName={activeCharacter?.name || "PC"}
+                    explorationMap={activeCharacter?.exploration_map || {}}
+                    onExplorationMapChange={onUpdateCharacter && activeCharacter?.id
+                        ? (nextMap) => onUpdateCharacter({ exploration_map: nextMap })
+                        : undefined}
                     sceneTemperature={sceneTemperature}
                     sceneSeason={sceneSeason}
                     getSeasonColorClass={getSeasonColorClass}
