@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { GNOSIS_TABLE as BASE_GNOSIS_TABLE } from "@/data/character-data";
 import { YantrasGrid } from "./spellcasting/YantrasGrid";
+import { LEGACY_YANTRA_VARIANTS, getLegacyYantraRating, isLegacyYantraTool } from "../utils/legacyYantra";
 import { PrimaryFactorOverride } from "./spellcasting/PrimaryFactorOverride";
 import { FactorRow } from "./spellcasting/FactorRow";
 import { ParadoxSection } from "./spellcasting/ParadoxSection";
@@ -29,6 +30,7 @@ const YANTRAS = [
     { name: "Supernal Verge", bonus: 2, description: "Casting within an appropriate Supernal Verge." },
     { name: "Environment", bonus: 1, description: "A place symbolically linked to the spell." },
     { name: "High Speech", bonus: 2, description: "Chanting in the Supernal tongue. Requires the High Speech Merit." },
+    ...LEGACY_YANTRA_VARIANTS.map(({ name, bonus }) => ({ name, bonus, description: `A Legacy-specific tool, action or other Yantra, rated +${bonus}.` })),
     { name: "Order Tool", bonus: 1, description: "A tool associated with the mage's Order." },
     { name: "Path Tool: Coin", bonus: 1, description: "A Path Tool: Coin." },
     { name: "Path Tool: Cup", bonus: 1, description: "A Path Tool: Cup." },
@@ -106,7 +108,8 @@ const getSacramentRatingFromYantraName = (yantraName) => {
 const getMatchingInventoryYantras = (yantraName, inventoryItems) => {
     const selectedToolType = getSelectedYantraToolType(yantraName);
     const sacramentRating = getSacramentRatingFromYantraName(yantraName);
-    if (!selectedToolType && !sacramentRating) return [];
+    const legacyRating = getLegacyYantraRating(yantraName);
+    if (!selectedToolType && !sacramentRating && !legacyRating) return [];
 
     return (inventoryItems || [])
         .map((item, index) => ({ item, index, key: getInventoryYantraKey(item, index) }))
@@ -117,6 +120,7 @@ const getMatchingInventoryYantras = (yantraName, inventoryItems) => {
                     item?.equipped === true &&
                     Number(item?.yantra?.bonus ?? 1) === sacramentRating;
             }
+            if (legacyRating) return isLegacyYantraTool(item, legacyRating);
             if (selectedToolType === "dedicated") return isInventoryYantraDedicated(item);
             return getInventoryYantraToolType(item) === selectedToolType;
         })
@@ -145,6 +149,13 @@ const getInventoryYantraLabel = (yantraName, inventoryItems, selectedInventoryYa
         const selectedKey = selectedInventoryYantras?.[yantraName];
         const selectedSacrament = matchingSacraments.find((option) => option.key === selectedKey) || matchingSacraments[0];
         return `Sacrament +${sacramentRating} (${selectedSacrament.name})`;
+    }
+
+    const legacyRating = getLegacyYantraRating(yantraName);
+    if (legacyRating) {
+        const selectedKey = selectedInventoryYantras?.[yantraName];
+        const chosenTool = getMatchingInventoryYantras(yantraName, inventoryItems).find((option) => option.key === selectedKey);
+        return chosenTool ? `Legacy Yantra +${legacyRating} (${chosenTool.name})` : `Legacy Yantra +${legacyRating}`;
     }
 
     const selectedToolType = getSelectedYantraToolType(yantraName);
@@ -449,7 +460,13 @@ export const SpellcastingPopup = ({
         const options = {};
         YANTRAS.forEach((yantra) => {
             const matches = getMatchingInventoryYantras(yantra.name, inventoryItems);
-            if (matches.length) options[yantra.name] = matches;
+            if (getLegacyYantraRating(yantra.name)) {
+                // An action or gesture needs no Inventory item; selecting a tool is optional.
+                if (matches.length) options[yantra.name] = [
+                    { key: "__none__", name: "Action / other (no inventory tool)", equipped: false },
+                    ...matches,
+                ];
+            } else if (matches.length) options[yantra.name] = matches;
         });
         return options;
     }, [inventoryItems]);

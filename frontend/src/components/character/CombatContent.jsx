@@ -119,6 +119,7 @@ const YANTRA_TOOL_ORDER = {
     rod: 4,
     weapon: 5,
     order: 6,
+    "legacy yantra": 7,
 };
 
 const YANTRA_PATH_CARD_CLASSES = {
@@ -142,6 +143,11 @@ const DEFAULT_YANTRA_CARD_CLASS =
     "bg-sky-950/20 border-sky-500/25";
 
 const getYantraDisplayType = (item) => {
+    if (normalizeInventoryText(item?.yantra?.tool_type) === "legacy yantra" &&
+        normalizeInventoryText(item?.yantra?.kind) === "tool") {
+        return `Legacy Yantra +${Number(item?.yantra?.bonus) === 2 ? 2 : 1}`;
+    }
+
     if (
         item?.yantra?.dedicated === true ||
         normalizeInventoryText(
@@ -183,6 +189,7 @@ const YANTRA_TOOL_ICONS = {
     mirror: MirrorRound,
     rod: WandSparkles,
     weapon: Sword,
+    "legacy yantra": Sparkles,
 };
 
 const EQUIPMENT_ICON_GROUPS = [
@@ -1169,7 +1176,7 @@ export const CombatContent = ({
                                                         onValueChange={(v) =>
                                                             setInvDraft((prev) => ({
                                                                 ...prev,
-                                                                yantra: { ...(prev.yantra || {}), tool_type: v },
+                                                                yantra: { ...(prev.yantra || {}), tool_type: v, ...(v === "Legacy Yantra" ? { bonus: Number(prev.yantra?.bonus) === 2 ? 2 : 1 } : {}) },
                                                             }))
                                                         }
                                                     >
@@ -1184,6 +1191,7 @@ export const CombatContent = ({
                                                             <SelectItem value="Rod" className="text-xs">Rod</SelectItem>
                                                             <SelectItem value="Weapon" className="text-xs">Weapon</SelectItem>
                                                             <SelectItem value="Order" className="text-xs">Order</SelectItem>
+                                                            <SelectItem value="Legacy Yantra" className="text-xs">Legacy Yantra</SelectItem>
                                                         </SelectContent>
                                                     </Select>
                                                 </div>
@@ -1209,6 +1217,26 @@ export const CombatContent = ({
                                                 </div>
                                             )}
                                         </div>
+
+                                        {invDraft.yantra?.kind === "tool" &&
+                                            String(invDraft.yantra?.tool_type || "").trim().toLowerCase() === "legacy yantra" && (
+                                            <div>
+                                                <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Legacy Yantra Bonus</label>
+                                                <Select
+                                                    value={String(Number(invDraft.yantra?.bonus) === 2 ? 2 : 1)}
+                                                    onValueChange={(v) => setInvDraft((prev) => ({
+                                                        ...prev,
+                                                        yantra: { ...(prev.yantra || {}), bonus: Number(v) },
+                                                    }))}
+                                                >
+                                                    <SelectTrigger className="h-7 bg-zinc-900/50 border-zinc-700 text-xs"><SelectValue /></SelectTrigger>
+                                                    <SelectContent className="bg-zinc-900 border-zinc-700">
+                                                        <SelectItem value="1" className="text-xs">+1</SelectItem>
+                                                        <SelectItem value="2" className="text-xs">+2</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        )}
 
                                         <div>
                                             <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Notes</label>
@@ -1556,6 +1584,7 @@ export const CombatContent = ({
                                                                     "yantra",
                                                                     {
                                                                         tool_type: v,
+                                                                        ...(v === "Legacy Yantra" ? { bonus: Number(it.yantra?.bonus) === 2 ? 2 : 1 } : {}),
 
                                                                         // Converts old starred Dedicated
                                                                         // Yantras to the new category system.
@@ -1595,6 +1624,10 @@ export const CombatContent = ({
                                                                 <SelectItem value="Order" className="text-xs">
                                                                     Order
                                                                 </SelectItem>
+
+                                                                <SelectItem value="Legacy Yantra" className="text-xs">
+                                                                    Legacy Yantra
+                                                                </SelectItem>
                                                             </SelectContent>
                                                         </Select>
                                                     </div>
@@ -1613,6 +1646,23 @@ export const CombatContent = ({
                                                         placeholder="Bonus"
                                                     />
                                                 )}
+                                            </div>
+                                        )}
+
+                                        {it.type === "yantra" && it.yantra?.kind === "tool" &&
+                                            normalizeInventoryText(it.yantra?.tool_type) === "legacy yantra" && (
+                                            <div className="col-span-2">
+                                                <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Legacy Yantra Bonus</label>
+                                                <Select
+                                                    value={String(Number(it.yantra?.bonus) === 2 ? 2 : 1)}
+                                                    onValueChange={(v) => updateInventoryItemNested(idx, "yantra", { bonus: Number(v) })}
+                                                >
+                                                    <SelectTrigger className="h-7 bg-zinc-900/50 border-zinc-700 text-xs"><SelectValue /></SelectTrigger>
+                                                    <SelectContent className="bg-zinc-900 border-zinc-700">
+                                                        <SelectItem value="1" className="text-xs">+1</SelectItem>
+                                                        <SelectItem value="2" className="text-xs">+2</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
                                             </div>
                                         )}
 

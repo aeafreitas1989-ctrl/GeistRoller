@@ -1,4 +1,5 @@
 import { Wrench } from "lucide-react";
+import { LEGACY_YANTRA_VARIANTS } from "../../utils/legacyYantra";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
     Select,
@@ -331,6 +332,15 @@ export const YantrasGrid = ({
               ""
             : "";
 
+    const legacyCurrent = LEGACY_YANTRA_VARIANTS.find((variant) =>
+        selectedNameSet.has(variant.name)) || null;
+    const legacyInventoryOptions = legacyCurrent
+        ? inventoryYantraOptions[legacyCurrent.name] || []
+        : [];
+    const selectedLegacyInventoryKey = legacyCurrent
+        ? selectedInventoryYantras[legacyCurrent.name] || legacyInventoryOptions[0]?.key || ""
+        : "";
+
     const renderSingle = (
         name,
         label,
@@ -628,6 +638,27 @@ export const YantrasGrid = ({
                 </div>
 
                 <div className="space-y-0.5">
+                    <YantraRatingPicker
+                        groupLabel="Legacy Yantra"
+                        variants={LEGACY_YANTRA_VARIANTS}
+                        testIdPrefix="yantra-legacy"
+                        current={legacyCurrent}
+                        isOn={!!legacyCurrent}
+                        disabled={!legacyCurrent && slotsFull}
+                        blockUncheck={false}
+                        onPickVariant={(name) =>
+                            setMutuallyExclusiveYantra(LEGACY_YANTRA_VARIANTS.map((variant) => variant.name), name)
+                        }
+                        onClear={() =>
+                            setMutuallyExclusiveYantra(LEGACY_YANTRA_VARIANTS.map((variant) => variant.name), null)
+                        }
+                        inventoryOptions={legacyInventoryOptions}
+                        selectedInventoryKey={selectedLegacyInventoryKey}
+                        onSelectInventory={(value) =>
+                            legacyCurrent && onSelectInventoryYantra?.(legacyCurrent.name, value)
+                        }
+                    />
+
                     {renderSingle(
                         "Dedicated Tool",
                         "Dedicated Tool",
