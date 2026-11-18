@@ -6,7 +6,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
     parseSceneDate, parseSceneTime, toSceneDisplayDate,
-    toSceneISODate, toSceneTime,
+    toSceneISODate, toSceneTime, maskSceneDateInput, maskSceneTimeInput,
 } from "@/utils/sceneDateTimeValues";
 
 const monthStart = (date) => {
@@ -78,10 +78,16 @@ export const SceneDateField = ({ value = "", onChange }) => {
                     type="text"
                     inputMode="numeric"
                     placeholder="DD/MM/YYYY"
+                    maxLength={10}
                     value={draft}
-                    onChange={(event) => setDraft(event.target.value)}
+                    onChange={(event) => setDraft(maskSceneDateInput(event.target.value))}
                     onBlur={commitDraft}
                     onKeyDown={(event) => {
+                        if (event.key === "Backspace" && event.currentTarget.selectionStart === draft.length &&
+                            event.currentTarget.selectionEnd === draft.length && draft.endsWith("/")) {
+                            event.preventDefault();
+                            setDraft(maskSceneDateInput(draft.replace(/\D/g, "").slice(0, -1)));
+                        }
                         if (event.key === "Enter") {
                             commitDraft();
                             event.currentTarget.blur();
@@ -257,9 +263,14 @@ export const SceneTimeField = ({ value = "", onChange }) => {
                 placeholder="HH:MM"
                 maxLength={5}
                 value={draft}
-                onChange={(event) => setDraft(event.target.value)}
+                onChange={(event) => setDraft(maskSceneTimeInput(event.target.value))}
                 onBlur={commitDraft}
                 onKeyDown={(event) => {
+                    if (event.key === "Backspace" && event.currentTarget.selectionStart === draft.length &&
+                        event.currentTarget.selectionEnd === draft.length && draft.endsWith(":")) {
+                        event.preventDefault();
+                        setDraft(maskSceneTimeInput(draft.replace(/\D/g, "").slice(0, -1)));
+                    }
                     if (event.key === "Enter") {
                         commitDraft();
                         event.currentTarget.blur();

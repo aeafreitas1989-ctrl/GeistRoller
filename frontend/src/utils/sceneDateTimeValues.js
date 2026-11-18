@@ -1,6 +1,21 @@
 // Scene date/time values are game-local; do not use wall-clock time or UTC offsets.
 const pad2 = (number) => String(number).padStart(2, "0");
 
+// Keep separators visible while users type DDMMYYYY / HHMM as digits.
+export const maskSceneDateInput = (value) => {
+    const digits = String(value || "").replace(/\D/g, "").slice(0, 8);
+    return digits.slice(0, 2)
+        + (digits.length >= 2 ? "/" : "")
+        + digits.slice(2, 4)
+        + (digits.length >= 4 ? "/" : "")
+        + digits.slice(4);
+};
+
+export const maskSceneTimeInput = (value) => {
+    const digits = String(value || "").replace(/\D/g, "").slice(0, 4);
+    return digits.slice(0, 2) + (digits.length >= 2 ? ":" : "") + digits.slice(2);
+};
+
 export const parseSceneDate = (value) => {
     const text = String(value || "").trim();
     const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);

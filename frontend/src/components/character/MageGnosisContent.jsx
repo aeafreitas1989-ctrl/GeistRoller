@@ -163,7 +163,7 @@ export const MageGnosisContent = ({
 
             <div>
                 <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex flex-wrap items-center gap-1.5">
                         <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Mana</label>
                         <button
                             onClick={() => setScourOpen(true)}
@@ -171,6 +171,14 @@ export const MageGnosisContent = ({
                              title="Reduce 1 Physical Attribute for 24 in-game hours or take 1 Resistant Lethal; gain 3 Mana (Gnosis limit per day)"
                             data-testid="scour-pattern-btn"
                         >Scour Pattern</button>
+                        <MageManaControls
+                            getValue={getValue}
+                            getNestedValue={getNestedValue}
+                            onTriggerDiceRoll={onTriggerDiceRoll}
+                            onAdvanceTime={onAdvanceTime}
+                            onCommitCharacterUpdate={onCommitCharacterUpdate}
+                            onOpenChannelMana={onOpenChannelMana}
+                        />
 
                         <Dialog open={scourOpen} onOpenChange={setScourOpen}>
                             <DialogContent className="bg-zinc-900 border-zinc-700 max-w-xs">
@@ -238,15 +246,6 @@ export const MageGnosisContent = ({
                     );
                 })()}
             </div>
-
-            <MageManaControls
-                getValue={getValue}
-                getNestedValue={getNestedValue}
-                onTriggerDiceRoll={onTriggerDiceRoll}
-                onAdvanceTime={onAdvanceTime}
-                onCommitCharacterUpdate={onCommitCharacterUpdate}
-                onOpenChannelMana={onOpenChannelMana}
-            />
 
             <div className="p-2 bg-violet-900/20 border border-violet-500/30 rounded-sm space-y-2">
                 <div className="flex items-center justify-between">

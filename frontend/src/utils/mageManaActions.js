@@ -1,5 +1,6 @@
 import { GNOSIS_TABLE } from '../data/character-data';
 import { hallowManaRemaining, recordHallowMana } from './mageRecovery';
+import { getInventoryTassQuantity, consumeInventoryTass } from './inventoryResources';
 
 const integer = (value) => Math.max(0, Math.floor(Number(value) || 0));
 
@@ -17,14 +18,22 @@ export const getChannelManaPatch = (character, request) => {
     const perTurn = request.ignorePerTurn ? Number.MAX_SAFE_INTEGER : Math.max(1, integer(request.manaPerTurn));
     const potency = integer(request.spellPotency);
     const amount = integer(request.amount);
+    const inventory = Array.isArray(character.inventory_items) ? character.inventory_items : [];
+    const stockAvailable = getInventoryTassQuantity(inventory, 'other');
+    const legacyAvailable = integer(character.tass_other);
     const sourceAvailable = request.source === 'tass'
-        ? integer(character.tass_other)
+        ? stockAvailable + legacyAvailable
         : (hallowManaRemaining(character.oblation_hallow, integer(request.hallowRating), character.scene_tracker) ?? 0);
     const gained = request.succeeded
         ? Math.max(0, Math.min(amount, potency, perTurn, sourceAvailable, maxMana - afterCost))
         : 0;
     const patch = { mana: afterCost + gained };
-    if (request.source === 'tass' && gained > 0) patch.tass_other = integer(character.tass_other) - gained;
+    if (request.source === 'tass' && gained > 0) {
+        const spent = consumeInventoryTass(inventory, 'other', gained);
+        if (spent.consumed > 0) patch.inventory_items = spent.items;
+        const remainder = gained - spent.consumed;
+        if (remainder > 0) patch.tass_other = legacyAvailable - remainder;
+    }
     if (request.source === 'hallow' && gained > 0) patch.oblation_hallow = recordHallowMana(
         character.oblation_hallow, gained, character.scene_tracker
     );

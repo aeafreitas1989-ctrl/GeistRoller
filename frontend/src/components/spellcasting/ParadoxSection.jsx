@@ -153,9 +153,6 @@ export const ParadoxSection = ({
                                     Reset
                                 </Button>
 
-                                {scenePreviousParadoxRolls > 0 && (
-                                    <span className="text-red-400 font-mono">+{scenePreviousParadoxRolls}</span>
-                                )}
                             </div>
                         </div>
                     </div>

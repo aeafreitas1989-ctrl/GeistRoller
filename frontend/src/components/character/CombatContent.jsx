@@ -24,6 +24,7 @@ import {
     PREMADE_ARMOR, PREMADE_EQUIPMENT,
 } from "../../data/character-data";
 import { useState } from "react";
+import { isNonEdibleTass } from "../../utils/inventoryResources";
 import { HealthTrack, getHealthCounts, buildHealthBoxes, formatLabel } from "./StatComponents";
 import { getNaturalHealingLabel } from "../../utils/naturalHealing";
 import { hasHealableWound, healWound } from "../../utils/resistantWounds";
@@ -104,11 +105,25 @@ const GameIconPicker = ({ value, onChange, itemName = "", testId }) => {
         </div>
     );
 };
+const InventoryQuantityControl = ({ value, onChange, testIdPrefix }) => {
+    const amount = Math.max(0, Math.floor(Number(value) || 0));
+    return (
+        <div className="inline-flex items-center gap-1 rounded border border-zinc-700 bg-zinc-950/40 px-1 py-0.5" data-testid={testIdPrefix + "-quantity-control"}>
+            <button type="button" className="h-6 w-6 rounded text-zinc-300 hover:bg-zinc-800 disabled:opacity-30"
+                disabled={amount === 0} onClick={() => onChange(amount - 1)} data-testid={testIdPrefix + "-decrease"} aria-label="Decrease quantity">-</button>
+            <span className="min-w-6 text-center font-mono text-xs text-violet-200" data-testid={testIdPrefix + "-quantity"}>{amount}</span>
+            <button type="button" className="h-6 w-6 rounded text-zinc-300 hover:bg-zinc-800 disabled:opacity-30"
+                disabled={amount >= 9999} onClick={() => onChange(Math.min(9999, amount + 1))} data-testid={testIdPrefix + "-increase"} aria-label="Increase quantity">+</button>
+        </div>
+    );
+};
+
 const INVENTORY_TYPE_ORDER = {
     armor: 0,
     equipment: 1,
-    weapon: 2,
-    yantra: 3,
+    consumable: 2,
+    weapon: 3,
+    yantra: 4,
 };
 
 const YANTRA_TOOL_ORDER = {
@@ -462,6 +477,7 @@ export const CombatContent = ({
 
     const inventoryGroups = [
         { key: "equipment", label: "Equipment", Icon: Package },
+        { key: "consumable", label: "Consumables", Icon: FlaskConical },
         { key: "weapon", label: "Weapons", Icon: Sword },
         { key: "armor", label: "Armor", Icon: Shield },
         { key: "yantra", label: "Yantras", Icon: Sparkles },
@@ -470,7 +486,7 @@ export const CombatContent = ({
         ...group,
         items: sortedInventoryItems.filter(({ item }) =>
             group.key === "other"
-                ? !["equipment", "weapon", "armor", "yantra"].includes(item?.type)
+                ? !["equipment", "consumable", "weapon", "armor", "yantra"].includes(item?.type)
                 : item?.type === group.key
         ),
     })).filter((group) => group.items.length > 0);
@@ -722,6 +738,7 @@ export const CombatContent = ({
                                                     Equipment
                                                 </SelectItem>
 
+                                                <SelectItem value="consumable" className="text-xs">Consumable</SelectItem>
                                                 <SelectItem value="yantra" className="text-xs">
                                                     Yantra
                                                 </SelectItem>
@@ -762,7 +779,14 @@ export const CombatContent = ({
                                             onValueChange={(v) => {
                                                 setInvPremade(v);
                                                 if (v === "__none__") return;
-                                                const p = PREMADE_EQUIPMENT.find((x) => x.name === v);
+                                                if (v === "__tass__") {
+                                                     setInvDraft((prev) => ({
+                                                         ...prev, name: "Tass", availability: 0, quantity: 1,
+                                                         equipment: { ...prev.equipment, bonus: 0, durability: 0, size: 1, structure: 1, effect: "Non-edible Tass" },
+                                                     }));
+                                                     return;
+                                                 }
+                                                 const p = PREMADE_EQUIPMENT.find((x) => x.name === v);
                                                 if (!p) return;
                                                 setInvDraft((prev) => ({
                                                     ...prev,
@@ -784,6 +808,7 @@ export const CombatContent = ({
                                             </SelectTrigger>
                                             <SelectContent className="bg-zinc-900 border-zinc-700">
                                                 <SelectItem value="__none__" className="text-xs">None</SelectItem>
+                                                <SelectItem value="__tass__" className="text-xs">Tass (non-edible)</SelectItem>
                                                 {PREMADE_EQUIPMENT.map((p) => (
                                                     <SelectItem key={p.name} value={p.name} className="text-xs">{p.name}</SelectItem>
                                                 ))}
@@ -850,6 +875,15 @@ export const CombatContent = ({
                                         placeholder="Item name..."
                                     />
                                 </div>
+
+                                {(invType === "consumable" || (invType === "equipment" && isNonEdibleTass({ type: "equipment", name: invDraft.name }))) && (
+                                    <div className="flex items-center justify-between rounded border border-zinc-700/70 p-2">
+                                        <label className="text-xs text-zinc-400">Quantity</label>
+                                        <InventoryQuantityControl value={invDraft.quantity ?? 1}
+                                            onChange={(quantity) => setInvDraft((prev) => ({ ...prev, quantity }))}
+                                            testIdPrefix="inventory-add" />
+                                    </div>
+                                )}
 
                                 {/* Weapon fields */}
                                 {invType === "weapon" && (
@@ -1307,7 +1341,7 @@ export const CombatContent = ({
                                                     ? getYantraDisplayType(it)
                                                     : it.type === "weapon"
                                                         ? `${it.weapon?.kind === "ranged" ? "Ranged" : "Melee"} Weapon`
-                                                        : it.type === "armor" ? "Armor" : it.type === "equipment" ? "Equipment" : "Item"}
+                                                        : it.type === "armor" ? "Armor" : it.type === "equipment" ? "Equipment" : it.type === "consumable" ? "Consumable" : "Item"}
                                                 <span className="px-1 text-zinc-600">·</span>
                                                 Availability {AVAILABILITY_OPTIONS.find((a) => a.value === (it.availability ?? 0))?.label ?? "—"}
                                             </div>
@@ -1316,8 +1350,13 @@ export const CombatContent = ({
 
                                     <div className="flex flex-col items-end gap-1 shrink-0">
                                         <div className="flex items-center gap-2">
-                                            <span className="text-[10px] text-zinc-500">Equipped</span>
-                                            <Switch
+                                            {(it.type === "consumable" || isNonEdibleTass(it)) && (
+                                                <InventoryQuantityControl value={it.quantity ?? 0}
+                                                    onChange={(quantity) => updateInventoryItem(idx, { quantity })}
+                                                    testIdPrefix={`inventory-item-${idx}`} />
+                                            )}
+                                            {it.type !== "consumable" && <span className="text-[10px] text-zinc-500">Equipped</span>}
+                                            {it.type !== "consumable" && <Switch
                                                 checked={!!it.equipped}
                                                 onCheckedChange={(v) => {
                                                     const current = getValue("inventory_items") || [];
@@ -1333,7 +1372,7 @@ export const CombatContent = ({
                                                     handleChange("inventory_items", updated);
                                                 }}
                                                 data-testid={`inventory-equipped-${idx}`}
-                                            />
+                                            />}
                                             <Button
                                                 variant="ghost"
                                                 size="sm"

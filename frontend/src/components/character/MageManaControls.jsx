@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -7,11 +7,11 @@ import { GNOSIS_TABLE } from "../../data/character-data";
 import { getGameTimestamp } from "../../utils/effectDuration";
 import { hallowManaRemaining, recordHallowMana } from "../../utils/mageRecovery";
 import { toast } from "sonner";
+import { getInventoryTassQuantity, migrateLegacyTass, consumeInventoryTass } from "../../utils/inventoryResources";
 
 const nonnegative = (value) => Math.max(0, Math.floor(Number(value) || 0));
 
-// The two Tass pools represent units physically available to this character.
-// Edible Tass can be consumed. Other Tass requires Prime 3 Channel Mana.
+// Tass inventories are ordinary Inventory items; old character counters are migrated.
 export const MageManaControls = ({ getValue, getNestedValue, onTriggerDiceRoll,
     onAdvanceTime, onCommitCharacterUpdate, onOpenChannelMana }) => {
     const [oblationOpen, setOblationOpen] = useState(false);
@@ -25,6 +25,7 @@ export const MageManaControls = ({ getValue, getNestedValue, onTriggerDiceRoll,
     const [channelIgnoreLimit, setChannelIgnoreLimit] = useState(false);
     const [channelHallowRating, setChannelHallowRating] = useState(1);
     const [tassBusy, setTassBusy] = useState(false);
+    const migrating = useRef(false);
 
     const gnosis = nonnegative(getValue("gnosis")) || 1;
     const gnosisData = GNOSIS_TABLE[gnosis] || GNOSIS_TABLE[1];
@@ -38,28 +39,43 @@ export const MageManaControls = ({ getValue, getNestedValue, onTriggerDiceRoll,
     const legacyDots = legacyArcanum ? nonnegative((getValue("arcana") || {})[legacyArcanum]) : 0;
     const tracker = getValue("scene_tracker") || {};
     const clockSet = getGameTimestamp(tracker) !== null;
-    const edible = nonnegative(getValue("tass_edible"));
-    const other = nonnegative(getValue("tass_other"));
+    const inventoryItems = getValue("inventory_items") || [];
+    const legacyEdible = nonnegative(getValue("tass_edible"));
+    const legacyOther = nonnegative(getValue("tass_other"));
+    const edible = getInventoryTassQuantity(inventoryItems, "edible") + legacyEdible;
+    const other = getInventoryTassQuantity(inventoryItems, "other") + legacyOther;
+
+    useEffect(() => {
+        if (!onCommitCharacterUpdate || migrating.current || (!legacyEdible && !legacyOther)) return;
+        migrating.current = true;
+        setTassBusy(true);
+        const nextInventory = migrateLegacyTass(inventoryItems, legacyEdible, legacyOther);
+        Promise.resolve().then(() => onCommitCharacterUpdate({
+            inventory_items: nextInventory, tass_edible: 0, tass_other: 0,
+        })).catch(() => toast.error("Could not migrate Tass into Inventory.")).finally(() => {
+            migrating.current = false;
+            setTassBusy(false);
+        });
+    }, [legacyEdible, legacyOther, inventoryItems, onCommitCharacterUpdate]);
+
     const sourceHistory = oblationSource === "legacy" ? "oblation_legacy" : "oblation_hallow";
     const sourceRating = oblationSource === "legacy" ? legacyDots : actualHallowRating;
     const remaining = clockSet ? hallowManaRemaining(getValue(sourceHistory), sourceRating, tracker) : null;
     const channelRating = hallowMeritDots || channelHallowRating;
     const channelRemaining = clockSet ? hallowManaRemaining(getValue("oblation_hallow"), channelRating, tracker) : null;
 
-    const adjustTass = async (field, amount) => {
-        if (!onCommitCharacterUpdate || tassBusy) return;
-        const next = Math.min(999, nonnegative(amount));
-        setTassBusy(true);
-        try { await onCommitCharacterUpdate({ [field]: next }); }
-        finally { setTassBusy(false); }
-    };
-
     const consumeEdibleTass = async () => {
         if (!onCommitCharacterUpdate || tassBusy || edible < 1 || currentMana >= gnosisData.maxMana) return;
         setTassBusy(true);
         try {
-            await onCommitCharacterUpdate({ tass_edible: edible - 1, mana: currentMana + 1 });
+            const allocation = consumeInventoryTass(inventoryItems, "edible", 1);
+            const updates = { mana: currentMana + 1 };
+            if (allocation.consumed) updates.inventory_items = allocation.items;
+            else updates.tass_edible = Math.max(0, legacyEdible - 1);
+            await onCommitCharacterUpdate(updates);
             toast.success("Consumed 1 edible Tass; gained 1 Mana.");
+        } catch (error) {
+            toast.error("Could not consume Tass.");
         } finally { setTassBusy(false); }
     };
 
@@ -113,30 +129,17 @@ export const MageManaControls = ({ getValue, getNestedValue, onTriggerDiceRoll,
     };
 
     return (
-        <div className="mt-2 rounded-sm border border-zinc-800 bg-zinc-900/30 p-2 space-y-2" data-testid="mage-mana-actions">
-            <div className="flex flex-wrap items-center gap-1.5">
-                <Button type="button" size="sm" variant="outline" className="h-7 px-2 text-[10px] border-violet-700/50 text-violet-200"
+        <>
+            <div className="inline-flex flex-wrap items-center gap-1" data-testid="mage-mana-actions">
+                <Button type="button" size="sm" variant="outline" className="h-6 px-1.5 text-[9px] border-violet-700/50 text-violet-200"
                     onClick={() => { setOblationResult(null); setOblationSource("hallow"); setOblationOpen(true); }}
                     data-testid="oblation-btn">Oblation</Button>
-                <Button type="button" size="sm" variant="outline" className="h-7 px-2 text-[10px] border-violet-700/50 text-violet-200"
+                <Button type="button" size="sm" variant="outline" className="h-6 px-1.5 text-[9px] border-violet-700/50 text-violet-200"
                     disabled={primeDots < 3 || !onOpenChannelMana} onClick={() => setChannelOpen(true)}
-                    title="Cast Prime 3 • Channel Mana" data-testid="channel-mana-btn">Channel Mana</Button>
-                <Button type="button" size="sm" variant="outline" className="h-7 px-2 text-[10px] border-violet-700/50 text-violet-200"
+                    title="Cast Prime 3 - Channel Mana" data-testid="channel-mana-btn">Channel Mana</Button>
+                <Button type="button" size="sm" variant="outline" className="h-6 px-1.5 text-[9px] border-violet-700/50 text-violet-200"
                     disabled={!edible || tassBusy || currentMana >= gnosisData.maxMana}
                     onClick={consumeEdibleTass} data-testid="consume-tass-btn">Consume Tass (+1)</Button>
-            </div>
-            <p className="text-[10px] text-zinc-500">Enter Tass quantities; click outside a field to save.</p>
-            <div className="grid grid-cols-2 gap-2">
-                <label className="text-[10px] text-zinc-400">Edible Tass (units)
-                    <Input type="number" inputMode="numeric" min={0} max={999} defaultValue={edible} key={"edible-" + edible}
-                        onBlur={(event) => { void adjustTass("tass_edible", event.target.value); }}
-                        className="mt-1 h-7 bg-zinc-950 text-xs" data-testid="tass-edible-count" />
-                </label>
-                <label className="text-[10px] text-zinc-400">Other Tass (units)
-                    <Input type="number" inputMode="numeric" min={0} max={999} defaultValue={other} key={"other-" + other}
-                        onBlur={(event) => { void adjustTass("tass_other", event.target.value); }}
-                        className="mt-1 h-7 bg-zinc-950 text-xs" data-testid="tass-other-count" />
-                </label>
             </div>
 
             <Dialog open={oblationOpen} onOpenChange={setOblationOpen}>
@@ -191,7 +194,7 @@ export const MageManaControls = ({ getValue, getNestedValue, onTriggerDiceRoll,
                                 <SelectTrigger className="mt-1 h-8 border-zinc-700 bg-zinc-900" data-testid="channel-mana-source"><SelectValue /></SelectTrigger>
                                 <SelectContent className="bg-zinc-950 border-zinc-700">
                                     <SelectItem value="hallow">Hallow</SelectItem>
-                                    <SelectItem value="tass">Other (non-edible) Tass</SelectItem>
+                                    <SelectItem value="tass">Tass (non-edible Equipment)</SelectItem>
                                 </SelectContent>
                             </Select>
                         </label>
@@ -202,7 +205,7 @@ export const MageManaControls = ({ getValue, getNestedValue, onTriggerDiceRoll,
                                     onChange={(event) => setChannelHallowRating(Math.min(5, Math.max(1, nonnegative(event.target.value))))} />
                             </label>
                         )}
-                        {channelSource === "tass" && <p>Available other Tass: {other} units.</p>}
+                        {channelSource === "tass" && <p>Available non-edible Tass in Inventory: {other} units.</p>}
                         <label className="block">Requested Mana to transfer
                             <Input type="number" min={1} max={999} value={channelAmount} className="mt-1 h-8 bg-zinc-900"
                                 onChange={(event) => setChannelAmount(Math.min(999, Math.max(1, nonnegative(event.target.value))))}
@@ -219,6 +222,6 @@ export const MageManaControls = ({ getValue, getNestedValue, onTriggerDiceRoll,
                     </div>
                 </DialogContent>
             </Dialog>
-        </div>
+        </>
     );
 };
