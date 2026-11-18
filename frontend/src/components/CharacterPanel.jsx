@@ -3244,34 +3244,51 @@ export const CharacterPanel = ({
                                     />
                                 </div>
                             </div>
-                            <div
-                                className="mb-3 flex flex-wrap items-center gap-1.5 rounded-sm border border-zinc-800 bg-zinc-900/25 px-2.5 py-2"
-                                data-testid="inventory-equipped-summary"
-                            >
-                                <span className="mr-1 text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
-                                    Equipped
-                                </span>
-                                {inventoryItems.some((item) => item?.equipped && item?.type !== "consumable") ? (
-                                    inventoryItems.map((item, index) =>
-                                        item?.equipped && item?.type !== "consumable" ? (
-                                            <button
-                                                key={index}
-                                                type="button"
-                                                title="Click to unequip"
-                                                aria-label={`Unequip ${item.name || "Unnamed item"}`}
-                                                onClick={() => updateInventoryItem(index, { equipped: false })}
-                                                className="inline-flex max-w-full items-center gap-1 rounded border border-teal-700/40 bg-teal-950/20 px-2 py-1 text-[11px] text-teal-200 hover:border-red-700/50 hover:bg-red-950/20 hover:text-red-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-red-400"
-                                                data-testid={`equipped-item-${index}`}
-                                            >
-                                                <span className="max-w-[220px] truncate">{item.name || "Unnamed item"}</span>
-                                                <span aria-hidden="true" className="text-zinc-500">Ã—</span>
-                                            </button>
-                                        ) : null
-                                    )
-                                ) : (
-                                    <span className="text-[11px] text-zinc-600">None</span>
-                                )}
-                            </div>
+                            {(() => {
+                                const groups = [
+                                    { type: "armor", label: "Equipped Armor" },
+                                    { type: "equipment", label: "Equipment" },
+                                    { type: "weapon", label: "Weapons" },
+                                    { type: "yantra", label: "Yantras" },
+                                ]
+                                    .map(({ type, label }) => ({
+                                        type,
+                                        label,
+                                        items: inventoryItems
+                                            .map((item, index) => ({ item, index }))
+                                            .filter(({ item }) => item?.type === type && !!item.equipped),
+                                    }))
+                                    .filter(({ items }) => items.length > 0);
+                                if (!groups.length) return null;
+                                return (
+                                    <div
+                                        className="mb-3 rounded-sm border border-zinc-800 bg-zinc-900/25 px-2.5 py-2 text-[11px] leading-relaxed text-zinc-400"
+                                        data-testid="inventory-equipped-summary"
+                                    >
+                                        {groups.map(({ type, label, items }, groupIndex) => (
+                                            <span key={type}>
+                                                {groupIndex > 0 ? "; " : null}
+                                                <span className="font-semibold text-zinc-300">{label}: </span>
+                                                {items.map(({ item, index }, position) => (
+                                                    <span key={index}>
+                                                        {position > 0 ? ", " : null}
+                                                        <button
+                                                            type="button"
+                                                            title="Click to unequip"
+                                                            aria-label={`Unequip ${item.name || "Unnamed item"}`}
+                                                            onClick={() => updateInventoryItem(index, { equipped: false })}
+                                                            className="inline text-teal-300 hover:text-red-300 hover:underline underline-offset-2 focus-visible:outline-none focus-visible:underline"
+                                                            data-testid={`equipped-item-${index}`}
+                                                        >
+                                                            {item.name || "Unnamed item"}
+                                                        </button>
+                                                    </span>
+                                                ))}
+                                            </span>
+                                        ))}
+                                    </div>
+                                );
+                            })()}
                             <CombatContent
                                 getValue={getValue} getNestedValue={getNestedValue} handleChange={handleChange}
                                 isMage={isMage}
