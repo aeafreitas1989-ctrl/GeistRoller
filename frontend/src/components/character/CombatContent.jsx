@@ -504,7 +504,7 @@ export const CombatContent = ({
     showMageArmor = true,
     showInventory = true,
 }) => {
-    const [collapsedInventoryGroups, setCollapsedInventoryGroups] = useState([]);
+    const [collapsedInventoryGroups, setCollapsedInventoryGroups] = useState(["armor", "consumable", "equipment", "weapon", "yantra", "other"]);
 
     const sortedInventoryItems = (inventoryItems || [])
         .map((item, originalIndex) => ({ item, originalIndex }))
