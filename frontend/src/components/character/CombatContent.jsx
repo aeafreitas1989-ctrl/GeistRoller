@@ -23,7 +23,7 @@ import {
     AVAILABILITY_OPTIONS, WEAPON_SPECIAL_OPTIONS, ARMOR_COVERAGE_OPTIONS,
     PREMADE_ARMOR, PREMADE_EQUIPMENT,
 } from "../../data/character-data";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { isNonEdibleTass } from "../../utils/inventoryResources";
 import { HealthTrack, getHealthCounts, buildHealthBoxes, formatLabel } from "./StatComponents";
 import { getNaturalHealingLabel } from "../../utils/naturalHealing";
@@ -106,14 +106,49 @@ const GameIconPicker = ({ value, onChange, itemName = "", testId }) => {
     );
 };
 const InventoryQuantityControl = ({ value, onChange, testIdPrefix }) => {
-    const amount = Math.max(0, Math.floor(Number(value) || 0));
+    const amount = Math.min(9999, Math.max(0, Math.floor(Number(value) || 0)));
+    const [draft, setDraft] = useState(String(amount));
+    const [editing, setEditing] = useState(false);
+
+    // Preserve partially typed values (including a blank field) until the edit is committed.
+    useEffect(() => {
+        if (!editing) setDraft(String(amount));
+    }, [amount, editing]);
+
+    const normalizeQuantity = (raw) => Math.min(9999, Math.max(0, Math.floor(Number(raw) || 0)));
+    const commitQuantity = (raw) => {
+        const next = normalizeQuantity(raw);
+        setDraft(String(next));
+        setEditing(false);
+        if (next !== amount) onChange(next);
+    };
+    const pending = editing ? normalizeQuantity(draft) : amount;
+
     return (
-        <div className="inline-flex items-center gap-1 rounded border border-zinc-700 bg-zinc-950/40 px-1 py-0.5" data-testid={testIdPrefix + "-quantity-control"}>
+        <div className="inline-flex items-center gap-1 rounded border border-zinc-700 bg-zinc-950/40 px-1 py-0.5"
+            data-testid={testIdPrefix + "-quantity-control"}>
             <button type="button" className="h-6 w-6 rounded text-zinc-300 hover:bg-zinc-800 disabled:opacity-30"
-                disabled={amount === 0} onClick={() => onChange(amount - 1)} data-testid={testIdPrefix + "-decrease"} aria-label="Decrease quantity">-</button>
-            <span className="min-w-6 text-center font-mono text-xs text-violet-200" data-testid={testIdPrefix + "-quantity"}>{amount}</span>
+                disabled={pending === 0}
+                onClick={() => commitQuantity(pending - 1)}
+                data-testid={testIdPrefix + "-decrease"} aria-label="Decrease quantity">-</button>
+            <input
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                value={draft}
+                maxLength={4}
+                onFocus={() => setEditing(true)}
+                onChange={(event) => setDraft(event.target.value.replace(/\D/g, "").slice(0, 4))}
+                onBlur={() => commitQuantity(draft)}
+                onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }}
+                className="h-6 w-12 min-w-0 rounded-sm border border-zinc-700 bg-zinc-900 px-1 text-center font-mono text-xs text-violet-200 outline-none focus:border-violet-400"
+                aria-label="Quantity"
+                data-testid={testIdPrefix + "-quantity"}
+            />
             <button type="button" className="h-6 w-6 rounded text-zinc-300 hover:bg-zinc-800 disabled:opacity-30"
-                disabled={amount >= 9999} onClick={() => onChange(Math.min(9999, amount + 1))} data-testid={testIdPrefix + "-increase"} aria-label="Increase quantity">+</button>
+                disabled={pending >= 9999}
+                onClick={() => commitQuantity(pending + 1)}
+                data-testid={testIdPrefix + "-increase"} aria-label="Increase quantity">+</button>
         </div>
     );
 };
