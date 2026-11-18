@@ -21,6 +21,15 @@ const getPracticesForDots = (dots = 1) => {
     return [...new Set(practices)];
 };
 
+const ALL_SPELL_PRACTICES = getPracticesForDots(5);
+
+// Keep the required Arcana rating in saved Rote/Praxis data without a separate dot editor.
+const requiredDotsForPractice = (practice) => {
+    const entry = Object.entries(ARCANA_PRACTICES)
+        .find(([, practices]) => practices.includes(practice));
+    return entry ? Number(entry[0]) : 1;
+};
+
 // Primary Factor belongs to the spell; Scale is available only through Reach override.
 const SpellPrimaryFactorSelect = ({ value, onChange, testId }) => (
     <Select value={value || undefined} onValueChange={onChange}>
@@ -230,7 +239,7 @@ export const MageArcanaContent = ({
                         (getValue("rotes") || []).map((rote, index) => {
                             const currentOrder = getValue("order");
                             const roteIsOrderSkill = currentOrder && (ORDER_ROTE_SKILLS[currentOrder] || []).includes(rote.skill);
-                            const rotePracticeOptions = getPracticesForDots(rote.dots || 1);
+                            const rotePracticeOptions = ALL_SPELL_PRACTICES;
                             const rotePractice = rote.practice || rotePracticeOptions[0] || "";
                             return (
                             <div key={index} className="flex flex-wrap items-center gap-1.5 p-1.5 bg-zinc-900/30 border border-zinc-800 rounded-sm">
@@ -242,7 +251,7 @@ export const MageArcanaContent = ({
                                         handleChange("rotes", rotes);
                                     }}
                                     placeholder="Spell"
-                                    className="input-geist h-6 text-xs flex-1 min-w-0"
+                                    className="input-geist h-6 text-xs flex-[2_1_240px] min-w-[210px] sm:min-w-[230px]"
                                     data-testid={`rote-${index}-spell`}
                                 />
                                 <Select value={rote.arcanum || "Death"} onValueChange={(v) => {
@@ -257,31 +266,9 @@ export const MageArcanaContent = ({
                                         {ARCANA.map(a => <SelectItem key={a} value={a} className="text-xs">{a}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
-                                <StatDots
-                                    value={rote.dots || 1}
-                                    max={5}
-                                    onChange={(v) => {
-                                        const rotes = [...(getValue("rotes") || [])];
-                                        const nextPracticeOptions = getPracticesForDots(v);
-                                        const nextPractice = nextPracticeOptions.includes(rote.practice)
-                                            ? rote.practice
-                                            : (nextPracticeOptions[0] || "");
-
-                                        rotes[index] = {
-                                            ...rotes[index],
-                                            dots: v,
-                                            practice: nextPractice,
-                                        };
-
-                                        handleChange("rotes", rotes);
-                                    }}
-                                    color="violet"
-                                    size="small"
-                                    testIdPrefix={`rote-${index}-dots`}
-                                />
                                 <Select value={rotePractice} onValueChange={(v) => {
                                     const rotes = [...(getValue("rotes") || [])];
-                                    rotes[index] = { ...rotes[index], practice: v };
+                                    rotes[index] = { ...rotes[index], practice: v, dots: requiredDotsForPractice(v) };
                                     handleChange("rotes", rotes);
                                 }}>
                                     <SelectTrigger className="h-6 w-[110px] bg-zinc-900/50 border-zinc-800 text-[10px] shrink-0" data-testid={`rote-${index}-practice`}>
@@ -376,10 +363,7 @@ export const MageArcanaContent = ({
                 </div>
                 <div className="space-y-2">
                     {activePraxisDraft && (() => {
-                        const draftPracticeOptions =
-                            getPracticesForDots(
-                                activePraxisDraft.dots || 1
-                            );
+                        const draftPracticeOptions = ALL_SPELL_PRACTICES;
 
                         const draftPractice =
                             activePraxisDraft.practice ||
@@ -410,7 +394,7 @@ export const MageArcanaContent = ({
                                             })
                                         }
                                         placeholder="Spell"
-                                        className="input-geist h-6 text-xs flex-1 min-w-0"
+                                        className="input-geist h-6 text-xs flex-[2_1_240px] min-w-[210px] sm:min-w-[230px]"
                                         data-testid="praxis-draft-spell"
                                     />
 
@@ -445,40 +429,13 @@ export const MageArcanaContent = ({
                                         </SelectContent>
                                     </Select>
 
-                                    <StatDots
-                                        value={
-                                            activePraxisDraft.dots || 1
-                                        }
-                                        max={5}
-                                        onChange={(dots) => {
-                                            const nextPracticeOptions =
-                                                getPracticesForDots(dots);
-
-                                            const nextPractice =
-                                                nextPracticeOptions.includes(
-                                                    activePraxisDraft.practice
-                                                )
-                                                    ? activePraxisDraft.practice
-                                                    : (
-                                                        nextPracticeOptions[0] ||
-                                                        ""
-                                                    );
-
-                                            updatePraxisDraft({
-                                                dots,
-                                                practice: nextPractice,
-                                            });
-                                        }}
-                                        color="violet"
-                                        size="small"
-                                        testIdPrefix="praxis-draft-dots"
-                                    />
 
                                     <Select
                                         value={draftPractice}
                                         onValueChange={(practice) =>
                                             updatePraxisDraft({
                                                 practice,
+                                                dots: requiredDotsForPractice(practice),
                                             })
                                         }
                                     >
@@ -556,7 +513,7 @@ export const MageArcanaContent = ({
                         </p>
                     ) : (
                         learnedPraxes.map((praxis, index) => {
-                            const praxisPracticeOptions = getPracticesForDots(praxis.dots || 1);
+                            const praxisPracticeOptions = ALL_SPELL_PRACTICES;
                             const praxisPractice = praxis.practice || praxisPracticeOptions[0] || "";
 
                             return (
@@ -569,7 +526,7 @@ export const MageArcanaContent = ({
                                         handleChange("praxes", praxes);
                                     }}
                                     placeholder="Spell"
-                                    className="input-geist h-6 text-xs flex-1 min-w-0"
+                                    className="input-geist h-6 text-xs flex-[2_1_240px] min-w-[210px] sm:min-w-[230px]"
                                     data-testid={`praxis-${index}-spell`}
                                 />
                                 <Select value={praxis.arcanum || "Death"} onValueChange={(v) => {
@@ -584,31 +541,9 @@ export const MageArcanaContent = ({
                                         {ARCANA.map(a => <SelectItem key={a} value={a} className="text-xs">{a}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
-                                <StatDots
-                                    value={praxis.dots || 1}
-                                    max={5}
-                                    onChange={(v) => {
-                                        const praxes = [...(getValue("praxes") || [])];
-                                        const nextPracticeOptions = getPracticesForDots(v);
-                                        const nextPractice = nextPracticeOptions.includes(praxis.practice)
-                                            ? praxis.practice
-                                            : (nextPracticeOptions[0] || "");
-
-                                        praxes[index] = {
-                                            ...praxes[index],
-                                            dots: v,
-                                            practice: nextPractice,
-                                        };
-
-                                        handleChange("praxes", praxes);
-                                    }}
-                                    color="violet"
-                                    size="small"
-                                    testIdPrefix={`praxis-${index}-dots`}
-                                />
                                 <Select value={praxisPractice} onValueChange={(v) => {
                                     const praxes = [...(getValue("praxes") || [])];
-                                    praxes[index] = { ...praxes[index], practice: v };
+                                    praxes[index] = { ...praxes[index], practice: v, dots: requiredDotsForPractice(v) };
                                     handleChange("praxes", praxes);
                                 }}>
                                     <SelectTrigger className="h-6 w-[110px] bg-zinc-900/50 border-zinc-800 text-[10px] shrink-0" data-testid={`praxis-${index}-practice`}>
