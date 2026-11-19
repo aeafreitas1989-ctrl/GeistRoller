@@ -1,20 +1,46 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
-import { ChevronDown, ChevronUp, Dices, Minus, Plus } from 'lucide-react';
+import { Dices, Minus, Plus, X } from 'lucide-react';
 import { makeQuickDiceRequest, normalizeQuickDicePool } from '../utils/quickDicePool';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
-/** Standalone CofD dice pool. No character statistics or Conditions are modified. */
+/** A standalone, manually configured CofD roll. It never changes character state. */
 export const QuickDiceRoller = () => {
-    const [expanded, setExpanded] = useState(true);
-    const [pool, setPool] = useState(3);
+    const [open, setOpen] = useState(false);
+    const [pool, setPool] = useState(1);
+    const [again, setAgain] = useState(10);
     const [busy, setBusy] = useState(false);
     const [result, setResult] = useState(null);
     const [error, setError] = useState('');
+    const rootRef = useRef(null);
 
-    const changePool = (next) => {
-        setPool(normalizeQuickDicePool(next));
+    useEffect(() => {
+        if (!open) return undefined;
+        const dismissOutside = (event) => {
+            if (rootRef.current && !rootRef.current.contains(event.target)) setOpen(false);
+        };
+        const dismissEscape = (event) => {
+            if (event.key === 'Escape') setOpen(false);
+        };
+        document.addEventListener('pointerdown', dismissOutside);
+        document.addEventListener('keydown', dismissEscape);
+        return () => {
+            document.removeEventListener('pointerdown', dismissOutside);
+            document.removeEventListener('keydown', dismissEscape);
+        };
+    }, [open]);
+
+    const changePool = (value) => {
+        setPool(normalizeQuickDicePool(value));
+        setResult(null);
+        setError('');
+    };
+
+    const changeAgain = (value) => {
+        setAgain(Number(value));
+        setResult(null);
+        setError('');
     };
 
     const roll = async (event) => {
@@ -24,11 +50,11 @@ export const QuickDiceRoller = () => {
         setError('');
         setResult(null);
         try {
-            const response = await axios.post(`${API}/dice/roll`, makeQuickDiceRequest(pool));
+            const response = await axios.post(`${API}/dice/roll`, makeQuickDiceRequest(pool, again));
             if (!response.data || !Array.isArray(response.data.dice)) {
                 throw new Error('Unexpected dice roll response');
             }
-            setResult({ ...response.data, rolledPool: pool });
+            setResult({ ...response.data, rolledPool: pool, rolledAgain: again });
         } catch (_) {
             setError('Could not roll dice. Check the app connection.');
         } finally {
@@ -37,46 +63,67 @@ export const QuickDiceRoller = () => {
     };
 
     return (
-        <div className="fixed bottom-4 right-4 z-[65]" data-testid="quick-dice-roller">
-            <section className={`${expanded ? 'w-[min(19rem,calc(100vw-2rem))]' : 'w-auto'} rounded-lg border border-zinc-700 bg-zinc-950/95 text-zinc-100 shadow-2xl backdrop-blur-sm`}>
-                <div className="flex items-center gap-2 px-3 py-2">
-                    <Dices className="h-4 w-4 text-teal-300" aria-hidden="true" />
-                    <span className="text-xs font-semibold tracking-wide">Quick dice roll</span>
-                    <button type="button" className="ml-auto rounded p-1 text-zinc-400 hover:bg-zinc-800 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal-300" aria-label={expanded ? 'Collapse quick dice roller' : 'Expand quick dice roller'} aria-expanded={expanded} aria-controls="quick-dice-content" onClick={() => setExpanded(value => !value)} data-testid="quick-dice-toggle">
-                        {expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
-                    </button>
-                </div>
-                {expanded && (
-                    <div id="quick-dice-content" className="border-t border-zinc-800 px-3 pb-3 pt-2">
-                        <form onSubmit={roll} className="flex items-end gap-2">
-                            <div className="min-w-0 flex-1">
-                                <label htmlFor="quick-dice-count" className="mb-1 block text-[11px] text-zinc-400">Number of dice</label>
-                                <div className="flex h-9 items-center overflow-hidden rounded border border-zinc-700 bg-zinc-900">
-                                    <button type="button" className="flex h-full w-9 items-center justify-center hover:bg-zinc-800 disabled:opacity-40" disabled={pool === 0 || busy} aria-label="Remove one die" onClick={() => changePool(pool - 1)}><Minus className="h-4 w-4" /></button>
-                                    <input id="quick-dice-count" type="number" inputMode="numeric" min="0" max="100" step="1" value={pool} disabled={busy} onChange={event => changePool(event.target.value)} className="h-full w-full min-w-0 bg-transparent text-center text-sm text-zinc-100 outline-none" data-testid="quick-dice-count" />
-                                    <button type="button" className="flex h-full w-9 items-center justify-center hover:bg-zinc-800 disabled:opacity-40" disabled={pool === 100 || busy} aria-label="Add one die" onClick={() => changePool(pool + 1)}><Plus className="h-4 w-4" /></button>
-                                </div>
-                            </div>
-                            <button type="submit" disabled={busy} className="h-9 rounded bg-teal-800 px-4 text-xs font-semibold text-white hover:bg-teal-700 disabled:opacity-50" data-testid="quick-dice-roll-button">{busy ? 'Rolling…' : 'Roll'}</button>
-                        </form>
-                        <p className="mt-2 text-[10px] text-zinc-500">D10 · 8+ succeeds · 10-again · 0 = chance die</p>
-                        {error && <p className="mt-2 text-xs text-red-300" role="alert">{error}</p>}
-                        {result && (
-                            <div className="mt-2 border-t border-zinc-800 pt-2" aria-live="polite" data-testid="quick-dice-result">
-                                <div className="flex items-baseline justify-between gap-2">
-                                    <strong className="text-sm text-teal-200">{result.description || `${result.successes} successes`}</strong>
-                                    <span className="text-[10px] text-zinc-500">{result.rolledPool === 0 ? 'Chance die' : `${result.rolledPool} dice`}</span>
-                                </div>
-                                <div className="mt-2 flex max-h-28 flex-wrap gap-1 overflow-y-auto" aria-label="Rolled dice">
-                                    {result.dice.map((face, index) => (
-                                        <span key={index} className={`flex h-7 w-7 items-center justify-center rounded border text-xs tabular-nums ${face >= (result.rolledPool === 0 ? 10 : 8) ? 'border-teal-500/60 bg-teal-900/30 text-teal-100' : 'border-zinc-700 bg-zinc-900 text-zinc-400'}`} title={face >= (result.rolledPool === 0 ? 10 : 8) ? 'Success' : 'No success'}>{face}</span>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
+        <div ref={rootRef} className="fixed bottom-4 right-4 z-[65] flex flex-col items-end gap-2" data-testid="quick-dice-roller">
+            {open && (
+                <section
+                    id="quick-dice-popup"
+                    role="dialog"
+                    aria-label="Quick dice roll"
+                    className="w-[min(19rem,calc(100vw-2rem))] rounded-lg border border-zinc-700 bg-zinc-950/95 p-3 text-zinc-100 shadow-2xl backdrop-blur-sm"
+                    data-testid="quick-dice-popup"
+                >
+                    <div className="mb-3 flex items-center justify-between gap-2">
+                        <span className="text-xs font-semibold tracking-wide">Quick dice roll</span>
+                        <button type="button" className="rounded p-1 text-zinc-400 hover:bg-zinc-800 hover:text-white" aria-label="Close quick dice roll" onClick={() => setOpen(false)}><X className="h-4 w-4" /></button>
                     </div>
-                )}
-            </section>
+                    <form onSubmit={roll}>
+                        <div className="flex items-center justify-center gap-2" aria-label="Dice pool">
+                            <button type="button" disabled={pool === 0 || busy} onClick={() => changePool(pool - 1)} className="flex h-9 w-9 items-center justify-center rounded border border-zinc-700 bg-zinc-900 hover:bg-zinc-800 disabled:opacity-40" aria-label="Remove one die"><Minus className="h-4 w-4" /></button>
+                            <div className="flex h-9 min-w-0 items-center justify-center rounded border border-zinc-700 bg-zinc-900 px-2">
+                                <input id="quick-dice-count" type="number" inputMode="numeric" min="0" max="100" step="1" value={pool} disabled={busy} onChange={event => changePool(event.target.value)} className="w-11 bg-transparent text-right text-sm font-semibold text-zinc-100 outline-none" aria-label="Number of d10 dice" data-testid="quick-dice-count" />
+                                <label htmlFor="quick-dice-count" className="ml-1 text-sm text-zinc-300">d10</label>
+                            </div>
+                            <button type="button" disabled={pool === 100 || busy} onClick={() => changePool(pool + 1)} className="flex h-9 w-9 items-center justify-center rounded border border-zinc-700 bg-zinc-900 hover:bg-zinc-800 disabled:opacity-40" aria-label="Add one die"><Plus className="h-4 w-4" /></button>
+                        </div>
+                        <fieldset className="mt-3 flex items-center justify-center gap-4" aria-label="Again rule">
+                            {[8, 9, 10].map(value => (
+                                <label key={value} className="flex cursor-pointer items-center gap-1.5 text-sm text-zinc-200">
+                                    <input type="radio" name="quick-dice-again" value={value} checked={again === value} onChange={() => changeAgain(value)} disabled={busy} className="accent-teal-400" />
+                                    <span>{value}!</span>
+                                </label>
+                            ))}
+                        </fieldset>
+                        <button type="submit" disabled={busy} className="mt-3 h-9 w-full rounded bg-teal-800 text-xs font-semibold text-white hover:bg-teal-700 disabled:opacity-50" data-testid="quick-dice-roll-button">{busy ? 'Rolling…' : 'Roll'}</button>
+                    </form>
+                    {error && <p className="mt-2 text-xs text-red-300" role="alert">{error}</p>}
+                    {result && (
+                        <div className="mt-3 border-t border-zinc-800 pt-2" aria-live="polite" data-testid="quick-dice-result">
+                            <div className="flex items-baseline justify-between gap-2">
+                                <strong className="text-sm text-teal-200">{result.description || `${result.successes} successes`}</strong>
+                                <span className="text-[10px] text-zinc-500">{result.rolledPool === 0 ? 'Chance die' : `${result.rolledPool}d10 · ${result.rolledAgain}!`}</span>
+                            </div>
+                            <div className="mt-2 flex max-h-28 flex-wrap gap-1 overflow-y-auto" aria-label="Rolled dice">
+                                {result.dice.map((face, index) => (
+                                    <span key={index} className={`flex h-7 w-7 items-center justify-center rounded border text-xs tabular-nums ${face >= (result.rolledPool === 0 ? 10 : 8) ? 'border-teal-500/60 bg-teal-900/30 text-teal-100' : 'border-zinc-700 bg-zinc-900 text-zinc-400'}`} title={face >= (result.rolledPool === 0 ? 10 : 8) ? 'Success' : 'No success'}>{face}</span>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </section>
+            )}
+            <button
+                type="button"
+                aria-label="Quick dice roller"
+                title="Quick dice roller"
+                aria-haspopup="dialog"
+                aria-controls="quick-dice-popup"
+                aria-expanded={open}
+                onClick={() => setOpen(value => !value)}
+                className="flex h-12 w-12 items-center justify-center rounded-full border border-teal-500/60 bg-zinc-950 text-teal-200 shadow-2xl hover:bg-zinc-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-teal-300"
+                data-testid="quick-dice-toggle"
+            >
+                <Dices className="h-6 w-6" aria-hidden="true" />
+            </button>
         </div>
     );
 };
