@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import axios from "axios";
 import { toast } from "sonner";
+import { convertToVoluntaryDramaticFailure, formatVoluntaryDramaticFailure } from "../utils/voluntaryDramaticFailure";
 import { isContainedParadoxOutcome } from "../utils/paradoxResolution";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -319,11 +320,14 @@ export const DiceRoller = forwardRef(({
         });
     };
 
-    const formatOutcomeLine = (rollResult, countOnlyResult = false) => {
+    const formatOutcomeLine = (rollResult, countOnlyResult = false, isSpellcasting = false) => {
         const successes = rollResult?.successes || 0;
         const successText = `${successes} Success${successes === 1 ? "" : "es"}`;
 
         if (countOnlyResult) return successText;
+
+        const voluntaryLabel = formatVoluntaryDramaticFailure(rollResult, isSpellcasting);
+        if (voluntaryLabel) return voluntaryLabel;
 
         if (rollResult?.is_dramatic_failure) {
             return `${successText} = Dramatic Failure...`;
@@ -679,7 +683,7 @@ export const DiceRoller = forwardRef(({
                 : config.spellSummary || "";
         const scrutinyTrackerSummary = buildScrutinyTrackerSummary(rollResult, config);
         const countOnlyResult = !!(config.countOnly || config.isAttack || config.scrutinyTracker);
-        const outcomeLine = formatOutcomeLine(rollResult, countOnlyResult);
+        const outcomeLine = formatOutcomeLine(rollResult, countOnlyResult, config.summaryKey === "spell");
         const exceptionalChoiceTranscript = buildSpellExceptionalChoiceTranscript(
             config.exceptionalSuccessChoice,
             config
@@ -756,11 +760,7 @@ export const DiceRoller = forwardRef(({
         setPendingDramaticFailure(null);
 
         const finalResult = convert
-            ? {
-                ...pending.result,
-                is_dramatic_failure: true,
-                description: "Voluntary Dramatic Failure",
-            }
+            ? convertToVoluntaryDramaticFailure(pending.result)
             : pending.result;
 
         if (convert && typeof onAwardDramaticFailure === "function") {
@@ -890,7 +890,8 @@ export const DiceRoller = forwardRef(({
             transcript,
             outcome: formatOutcomeLine(
                 completedResult,
-                !!(completedConfig?.countOnly || completedConfig?.isAttack || completedConfig?.scrutinyTracker)
+                !!(completedConfig?.countOnly || completedConfig?.isAttack || completedConfig?.scrutinyTracker),
+                completedConfig?.summaryKey === "spell"
             ),
         };
 
