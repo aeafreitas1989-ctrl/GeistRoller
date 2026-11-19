@@ -172,6 +172,7 @@ export const DiceRoller = forwardRef(({
 
             if (
                 response.data.beat_awarded &&
+                !completedPayload.config?.countOnly &&
                 completedPayload.config?.summaryKey !== "paradox" &&
                 typeof onAwardDramaticFailure === "function"
             ) {
@@ -181,11 +182,11 @@ export const DiceRoller = forwardRef(({
                 });
             }
             
-            if (response.data.is_dramatic_failure) {
+            if (!completedPayload.config?.countOnly && response.data.is_dramatic_failure) {
                 toast.error("Dramatic Failure!", {
                     description: "The spirits turn against you...",
                 });
-            } else if (response.data.is_exceptional) {
+            } else if (!completedPayload.config?.countOnly && response.data.is_exceptional) {
                 toast.success("Exceptional Success!", {
                     description: `${response.data.successes} successes!`,
                 });
@@ -321,16 +322,14 @@ export const DiceRoller = forwardRef(({
         const successes = rollResult?.successes || 0;
         const successText = `${successes} Success${successes === 1 ? "" : "es"}`;
 
+        if (countOnlyResult) return successText;
+
         if (rollResult?.is_dramatic_failure) {
             return `${successText} = Dramatic Failure...`;
         }
 
         if (rollResult?.is_exceptional) {
             return `${successText} = Exceptional Success!`;
-        }
-
-        if (countOnlyResult) {
-            return successText;
         }
 
         if (successes > 0) {
@@ -835,6 +834,7 @@ export const DiceRoller = forwardRef(({
     };
 
     const visible = embedded || isOpen;
+    const resultIsCountOnly = Boolean(lastRollConfig?.countOnly);
 
     useEffect(() => {
         if (historyToken === 0 || !completedRollRef.current) return;
@@ -1199,6 +1199,7 @@ export const DiceRoller = forwardRef(({
                             {result && (
                                 <div
                                     className={`p-4 rounded-sm border animate-fade-in ${
+                                        resultIsCountOnly ? "bg-zinc-800/50 border-zinc-700" :
                                         result.is_dramatic_failure
                                             ? "bg-rose-950/30 border-rose-500/30"
                                             : result.is_exceptional
@@ -1216,7 +1217,7 @@ export const DiceRoller = forwardRef(({
                                                 className={`w-10 h-10 rounded-sm flex items-center justify-center font-mono text-lg font-bold transition-all ${
                                                     die >= 8
                                                         ? "bg-teal-900/50 border border-teal-500/50 text-teal-300"
-                                                        : die === 1 && result.is_dramatic_failure
+                                                        : !resultIsCountOnly && die === 1 && result.is_dramatic_failure
                                                         ? "bg-rose-900/50 border border-rose-500/50 text-rose-300"
                                                         : "bg-zinc-800 border border-zinc-700 text-zinc-400"
                                                 }`}
@@ -1231,6 +1232,7 @@ export const DiceRoller = forwardRef(({
                                     <div className="text-center">
                                         <p
                                             className={`font-heading text-xl ${
+                                                resultIsCountOnly ? "text-zinc-200" :
                                                 result.is_dramatic_failure
                                                     ? "text-rose-400"
                                                     : result.is_exceptional
@@ -1242,7 +1244,9 @@ export const DiceRoller = forwardRef(({
                                         >
                                             {result.successes} {result.successes === 1 ? "Success" : "Successes"}
                                         </p>
-                                        <p className="text-xs text-zinc-500 mt-1">{result.description}</p>
+                                        {!resultIsCountOnly && (
+                                            <p className="text-xs text-zinc-500 mt-1">{result.description}</p>
+                                        )}
                                     </div>
                                 </div>
                             )}

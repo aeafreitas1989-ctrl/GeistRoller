@@ -890,6 +890,7 @@ export const SpellcastingPopup = ({
                         chance: currentWisdom <= 0,
                         label: `Contain Paradox (Wisdom ${currentWisdom})`,
                         dicePoolBreakdown: currentWisdom <= 0 ? "Wisdom chance die" : `Wisdom ${currentWisdom}`,
+                        countOnly: true,
                         appendToSummary: true,
                         summaryKey: "wisdom",
                         summaryLabel: "Wisdom",
