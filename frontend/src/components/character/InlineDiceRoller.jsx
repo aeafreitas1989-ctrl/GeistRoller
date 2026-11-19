@@ -53,6 +53,7 @@ const PHYSICAL_SKILLS = new Set([
 ]);
 
 import { formatLabel } from "./StatComponents";
+import { getConditionRollModifiers, getPostRollConditionChoices, applyPostRollCondition, applyInspiredCondition } from "../../utils/condition-roll-rules";
 import { normalizeSkillSpecialty } from "../../utils/skillSpecialties";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -73,6 +74,7 @@ export const InlineDiceRoller = ({
     onAwardBeat,
     onSpendPlasm,
     onAddCondition,
+    onUseRollCondition = null,
     onDiceRollResult,
     onAddRecentRoll,
     onRollComplete = null,
@@ -105,6 +107,13 @@ export const InlineDiceRoller = ({
     const [isRolling, setIsRolling] = useState(false);
     const [result, setResult] = useState(null);
     const [pendingFailureChoice, setPendingFailureChoice] = useState(null);
+    const [pendingConditionChoice, setPendingConditionChoice] = useState(null);
+    const [guiltyDefense, setGuiltyDefense] = useState(false);
+    const [notorietyKnown, setNotorietyKnown] = useState(false);
+    const [connectedRelevant, setConnectedRelevant] = useState(false);
+    const [obsessionRelevant, setObsessionRelevant] = useState(false);
+    const [informedRelevant, setInformedRelevant] = useState(false);
+    const [inspiredRelevant, setInspiredRelevant] = useState(false);
     const [expanded, setExpanded] = useState(false);
 
     const savedSpecialties = Array.isArray(getValue("specialties")) ? getValue("specialties") : [];
@@ -350,18 +359,21 @@ export const InlineDiceRoller = ({
         (rollType === "attr-skill" && PHYSICAL_ATTRIBUTES.has(primaryAttr));
     const usesPhysicalSkill = rollType === "attr-skill" && PHYSICAL_SKILLS.has(skill);
     const sickPenalty = hasCondition("Sick") ? -1 : 0;
-    const guiltyPenalty = hasCondition("Guilty") && rollType === "attr-skill" && skill === "subterfuge" ? -2 : 0;
-    const shakenPenalty = hasCondition("Shaken") && (
-        (rollType === "attr-attr" && [primaryAttr, secondaryAttr].some((attr) => attr === "resolve" || attr === "composure")) ||
-        (rollType === "attr-skill" && (primaryAttr === "resolve" || primaryAttr === "composure"))
-    ) ? -2 : 0;
+    // Guilty is a defensive penalty only. Shaken has no automatic dice penalty.
+    // Source-dependent Conditions require the player to confirm relevance.
+    const conditionalRules = getConditionRollModifiers({
+        conditions: activeConditions, rollType, primaryAttr, secondaryAttr, skill,
+        guiltyDefense, notorietyKnown, connectedRelevant, obsessionRelevant,
+    });
+    const guiltyPenalty = 0;
+    const shakenPenalty = 0;
     const distractedPenalty = hasCondition("Distracted") && (
         isWitsComposureRoll ||
         (rollType === "attr-skill" && skill === "investigation") ||
         trainedObserverApplies
     ) ? -2 : 0;
     const exhaustedPenalty = hasCondition("Exhausted") && (usesPhysicalAttribute || usesPhysicalSkill) ? -2 : 0;
-    const conditionModifier = sickPenalty + guiltyPenalty + shakenPenalty + distractedPenalty + exhaustedPenalty;
+    const conditionModifier = sickPenalty + distractedPenalty + exhaustedPenalty + conditionalRules.modifier;
     const willpowerBonus = spendWillpower ? 3 : 0;
     const manualMod =
         (rollType === "attr-attr" || rollType === "attr-skill")
@@ -401,9 +413,11 @@ export const InlineDiceRoller = ({
         return 1;
     })();
 
-    const displayedAgainRule = trainedObserverApplies
+    const baseAgainRule = trainedObserverApplies
         ? trainedObserverAgainRule
         : (professionalTrainingApplies ? "9" : againRule);
+    const displayedAgainRule = conditionalRules.obsessionNineAgain
+        ? String(Math.min(9, Number(baseAgainRule) || 10)) : baseAgainRule;
 
     const againIsForced = trainedObserverApplies || professionalTrainingApplies;
 
@@ -491,8 +505,7 @@ export const InlineDiceRoller = ({
         parts.push(formatPoolPart("Willpower", willpowerBonus));
         parts.push(formatPoolPart("Wound", woundPenalty));
         parts.push(formatPoolPart("Sick", sickPenalty));
-        parts.push(formatPoolPart("Guilty", guiltyPenalty));
-        parts.push(formatPoolPart("Shaken", shakenPenalty));
+        conditionalRules.breakdown.forEach((item) => parts.push(formatPoolPart(item.name, item.amount)));
         parts.push(formatPoolPart("Distracted", distractedPenalty));
         parts.push(formatPoolPart("Exhausted", exhaustedPenalty));
 
@@ -593,7 +606,38 @@ export const InlineDiceRoller = ({
             });
 
             await new Promise(resolve => setTimeout(resolve, 300));
-            
+
+            let inspiredUsed = false;
+            if (inspiredRelevant && hasCondition("Inspired") && typeof onUseRollCondition === "function") {
+                inspiredUsed = await onUseRollCondition("Inspired", { restoreWillpower: 1 });
+                if (inspiredUsed) response.data = applyInspiredCondition(response.data);
+            }
+            const postRollChoices = !inspiredUsed && typeof onUseRollCondition === "function"
+                ? getPostRollConditionChoices({
+                    conditions: activeConditions, rollType, nonCombatInformed: informedRelevant,
+                    result: response.data,
+                }) : [];
+            if (postRollChoices.length) {
+                const selected = await new Promise((resolve) => setPendingConditionChoice({
+                    resolve, options: postRollChoices, successes: response.data.successes,
+                }));
+                if (selected && await onUseRollCondition(selected)) {
+                    if (selected === "Steadfast" && isComputedChanceDie) {
+                        // Steadfast replaces a chance die with one REGULAR die;
+                        // it does not automatically award one success.
+                        const oneRegularDie = await axios.post(API + '/dice/roll', {
+                            pool: 1, again: 10, rote: false, chance: false,
+                        });
+                        response.data = { ...oneRegularDie.data,
+                            condition_benefit: "Steadfast (regular die)",
+                            description: "Steadfast: one regular die instead of a chance die",
+                        };
+                    } else {
+                        response.data = applyPostRollCondition(response.data, selected);
+                    }
+                }
+            }
+
             if (
                 response.data.successes === 0 &&
                 !response.data.is_dramatic_failure
@@ -715,6 +759,25 @@ export const InlineDiceRoller = ({
     return (
         <div className="bg-zinc-900/50 border border-zinc-800 rounded-sm" data-testid="inline-dice-roller">
             
+            <Dialog open={!!pendingConditionChoice}>
+                <DialogContent className="bg-zinc-950 border-zinc-800 text-zinc-100">
+                    <DialogHeader><DialogTitle>Use a Condition?</DialogTitle>
+                        <DialogDescription>Base result: {pendingConditionChoice?.successes || 0} successes. Choose whether to resolve a Condition for its benefit.</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-2">
+                        {(pendingConditionChoice?.options || []).map(name => (
+                            <Button key={name} type="button" className="w-full btn-secondary" onClick={() => {
+                                const resolve = pendingConditionChoice.resolve;
+                                setPendingConditionChoice(null); resolve(name);
+                            }}>{name === "Informed" ? "Informed: failure → success, or success → exceptional" : "Steadfast: failure → 1 success (chance die: reroll one regular die)"}</Button>
+                        ))}
+                        <Button type="button" variant="outline" className="w-full" onClick={() => {
+                            const resolve = pendingConditionChoice.resolve;
+                            setPendingConditionChoice(null); resolve(null);
+                        }}>Keep original roll</Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
             <Dialog open={!!pendingFailureChoice}>
                 <DialogContent className="bg-zinc-950 border-zinc-800 text-zinc-100">
                     <DialogHeader>
@@ -1147,6 +1210,20 @@ export const InlineDiceRoller = ({
                         </div>
                     )}
 
+                    {(rollType === "attr-attr" || rollType === "attr-skill") &&
+                        (["Informed", "Inspired", "Steadfast", "Guilty", "Connected", "Notoriety", "Obsession", "Shaken"].some(hasCondition)) && (
+                        <div className="space-y-1 rounded-sm border border-zinc-700 bg-zinc-950/50 p-2" data-testid="roll-condition-options">
+                            <p className="text-[10px] font-semibold uppercase text-zinc-400">Conditions — applicability</p>
+                            {hasCondition("Guilty") && <label className="flex items-center gap-2 text-[10px]"><input type="checkbox" checked={guiltyDefense} onChange={e=>setGuiltyDefense(e.target.checked)}/> Defending with Resolve/Composure against Subterfuge, Empathy or Intimidation (−2)</label>}
+                            {hasCondition("Notoriety") && <label className="flex items-center gap-2 text-[10px]"><input type="checkbox" checked={notorietyKnown} onChange={e=>setNotorietyKnown(e.target.checked)}/> Social target knows my Notoriety (−2)</label>}
+                            {hasCondition("Connected") && <label className="flex items-center gap-2 text-[10px]"><input type="checkbox" checked={connectedRelevant} onChange={e=>setConnectedRelevant(e.target.checked)}/> Interacting with my Connected group (+2)</label>}
+                            {hasCondition("Obsession") && <label className="flex items-center gap-2 text-[10px]"><input type="checkbox" checked={obsessionRelevant} onChange={e=>setObsessionRelevant(e.target.checked)}/> Roll directly pursues my Obsession (9-again)</label>}
+                            {hasCondition("Informed") && rollType === "attr-skill" && <label className="flex items-center gap-2 text-[10px]"><input type="checkbox" checked={informedRelevant} onChange={e=>setInformedRelevant(e.target.checked)}/> Relevant non-combat Skill roll: offer Informed AFTER rolling</label>}
+                            {hasCondition("Inspired") && <label className="flex items-center gap-2 text-[10px]"><input type="checkbox" checked={inspiredRelevant} onChange={e=>setInspiredRelevant(e.target.checked)}/> Use Inspired on this relevant roll (+1 WP, exceptional at 3 successes)</label>}
+                            {hasCondition("Steadfast") && <p className="text-[10px] text-zinc-500">Steadfast: option to turn an ordinary failure into 1 success after the roll.</p>}
+                            {hasCondition("Shaken") && <p className="text-[10px] text-zinc-500">Shaken: no automatic penalty. To resolve, choose to fail an eligible roll BEFORE making it; use Resolve in Conditions.</p>}
+                        </div>
+                    )}
                     <div className="flex items-center justify-between text-[10px] text-zinc-500">
                         <span>Spend 1 Willpower</span>
                         <Switch checked={spendWillpower} onCheckedChange={(value) => { setSpendWillpower(value); if (value && rollType === "haunt") setAvoidDoom(false); }} disabled={brokenConditionActive} data-testid="dice-willpower-toggle" />

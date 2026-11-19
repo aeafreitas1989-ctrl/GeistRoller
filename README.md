@@ -1,6 +1,6 @@
-# GeistRoller
+# CofDRoller
 
-A personal digital character-sheet and dice-rolling tool for **Geist: The Sin-Eaters 2nd Edition** and **Mage: The Awakening 2nd Edition**.
+CofDRoller is a personal digital character-sheet and dice-rolling tool for **Geist: The Sin-Eaters 2nd Edition** and **Mage: The Awakening 2nd Edition**.
 
 Built with React, FastAPI, and MongoDB. The application does not use an AI Storyteller or any external LLM service.
 

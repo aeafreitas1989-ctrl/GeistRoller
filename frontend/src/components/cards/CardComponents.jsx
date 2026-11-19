@@ -750,6 +750,7 @@ export const ConditionCard = ({
     mitigatedByShelter = false,
     description,
     resolution,
+    sourceCitation = "",
     origin,
     targetName,
     onRemove,
@@ -887,6 +888,10 @@ export const ConditionCard = ({
                             </span>{" "}
                             {resolution}
                         </p>
+                    )}
+
+                    {sourceCitation && (
+                        <p className="text-[10px] text-zinc-600 mt-1">Source: {sourceCitation}</p>
                     )}
                 </div>
 

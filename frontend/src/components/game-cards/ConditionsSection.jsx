@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 
 import { ConditionCard } from "../cards/CardComponents";
+import { getDisplayedConditionRules } from "../../utils/condition-display";
 import { getEffectTimer, isEffectExpired } from "../../utils/effectDuration";
 
 import {
@@ -467,7 +468,7 @@ export const ConditionsSection = ({
                 effect,
 
                 description:
-                    effect,
+                    condition.description || effect,
 
                 resolution:
                     condition.resolution ||
@@ -1036,15 +1037,9 @@ export const ConditionsSection = ({
                                             condition.splat ||
                                             ""
                                         }
-                                        description={
-                                            condition.effect ||
-                                            condition.description ||
-                                            ""
-                                        }
-                                        resolution={
-                                            condition.resolution ||
-                                            ""
-                                        }
+                                        description={getDisplayedConditionRules(condition, CONDITION_DEFINITIONS).effect}
+                                        resolution={getDisplayedConditionRules(condition, CONDITION_DEFINITIONS).resolution}
+                                        sourceCitation={getDisplayedConditionRules(condition, CONDITION_DEFINITIONS).source}
                                         origin={
                                             condition.origin
                                         }

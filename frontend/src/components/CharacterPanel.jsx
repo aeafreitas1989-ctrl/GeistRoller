@@ -1261,7 +1261,7 @@ export const CharacterPanel = ({
         const fileName = `${(characterToExport.name || "character").replace(/[^a-z0-9-_]+/gi, "_")}.json`;
 
         const payload = {
-            app: "GeistRoller",
+            app: "CofDRoller",
             exported_at: new Date().toISOString(),
             character: characterToExport,
         };
@@ -1979,6 +1979,26 @@ export const CharacterPanel = ({
             delete next.experience;
             return next;
         });
+    };
+
+    const useRollCondition = async (name, { restoreWillpower = 0 } = {}) => {
+        const conditions = getValue("conditions") || [];
+        const index = conditions.findIndex((entry) => entry?.name === name && entry?.status !== "expired");
+        if (index < 0 || !onUpdateCharacter) return false;
+        const condition = conditions[index];
+        const isArcane = condition.beat_type === "arcane";
+        const beatField = isArcane ? "arcane_beats" : "beats";
+        const xpField = isArcane ? "arcane_experience" : "experience";
+        const nextBeats = (Number(getValue(beatField)) || 0) + 1;
+        const patch = {
+            conditions: conditions.filter((_, i) => i !== index),
+            [beatField]: nextBeats >= 5 ? nextBeats - 5 : nextBeats,
+            ...(nextBeats >= 5 ? { [xpField]: (Number(getValue(xpField)) || 0) + 1 } : {}),
+            xp_reason: "Condition used: " + name,
+            ...(restoreWillpower > 0 ? { willpower: Math.min(calculateWillpowerMax(), (Number(getValue("willpower")) || 0) + restoreWillpower) } : {}),
+        };
+        const result = await onUpdateCharacter(patch);
+        return result !== false;
     };
 
     const spendPlasm = async (amount) => {
@@ -2914,6 +2934,7 @@ export const CharacterPanel = ({
                             onAwardBeat={awardBeat}
                             onSpendPlasm={spendPlasm}
                             onAddCondition={addConditionFromDiceRoller}
+                            onUseRollCondition={useRollCondition}
                             onDiceRollResult={onDiceRollResult}
                             geistRank={geistRank}
                             remembranceActivation={getValue("remembrance_activation")}
@@ -4022,6 +4043,7 @@ export const CharacterPanel = ({
                         onAwardBeat={awardBeat}
                         onSpendPlasm={spendPlasm}
                         onAddCondition={addConditionFromDiceRoller}
+                            onUseRollCondition={useRollCondition}
                         onDiceRollResult={onDiceRollResult}
                         onAddRecentRoll={onAddRecentRoll}
                         onRollPressed={() => setSelectedRollTraits([])}

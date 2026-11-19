@@ -1,3 +1,5 @@
+import { CONDITION_RULE_OVERRIDES } from "./condition-rule-overrides";
+
 // Consolidated Chronicles of Darkness 2e Conditions and Tilts.
 // Filters are used by the Conditions picker.
 // Multiple selected filters use intersection logic.
@@ -2351,10 +2353,11 @@ export const CONDITION_FILTER_OPTIONS = [
     "Tilts",
 ];
 
-export const CONDITION_DEFINITIONS = {
-    ...CONDITION_CATALOGUE,
-    ...TILT_DEFINITIONS,
-};
+export const CONDITION_DEFINITIONS = Object.fromEntries(
+    Object.entries({ ...CONDITION_CATALOGUE, ...TILT_DEFINITIONS }).map(([key, entry]) => [
+        key, { ...entry, ...(CONDITION_RULE_OVERRIDES[key] || {}) },
+    ])
+);
 
 export const getConditionDefinition = (key) =>
     CONDITION_DEFINITIONS[key] || null;
