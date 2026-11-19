@@ -75,15 +75,16 @@ export const MeritCard = ({ merit, index, onDelete, onUpdate, onRollPerception }
     const isFixedDotMerit = minDots === maxDots;
     const isOrderStatusMerit = merit.source === "order_free" && (merit.name || "").startsWith("Status:");
     const isLockedMerit = !!merit.locked || merit.source === "professional_training_free" || (merit.source === "order_free" && !isOrderStatusMerit);
-    const canEditDots = !isLockedMerit && !isFixedDotMerit;
+    const invalidStoredRating = !!(meritDef?.allowedDots?.length && !meritDef.allowedDots.includes(Number(merit.dots)));
+    const canEditDots = !isLockedMerit && (!isFixedDotMerit || invalidStoredRating);
 
     const handleDotChange = (nextValue) => {
         if (!canEditDots) return;
 
-        const safeNextValue = Math.max(
-            minDots,
-            Math.min(maxDots, Number(nextValue) || minDots)
-        );
+        const bounded = Math.max(minDots, Math.min(maxDots, Number(nextValue) || minDots));
+        const safeNextValue = meritDef?.allowedDots?.length
+            ? meritDef.allowedDots.reduce((best, dot) => Math.abs(dot - bounded) < Math.abs(best - bounded) ? dot : best)
+            : bounded;
 
         if (safeNextValue === (Number(merit.dots) || 0)) return;
 
@@ -116,6 +117,12 @@ export const MeritCard = ({ merit, index, onDelete, onUpdate, onRollPerception }
                         testIdPrefix={`merit-${(merit.name || "merit").toLowerCase().replace(/\s+/g, '-')}`}
                     />
 
+                    {invalidStoredRating && (
+                        <span className="text-[10px] text-amber-300" title="Previously saved Merit rating is not legal under these rules">
+                            Invalid rating: {meritDef.allowedDots.join(' or ')}
+                        </span>
+                    )}
+
                     {isLockedMerit && (
                         <span className="text-[9px] text-zinc-500 uppercase tracking-wider">
                             locked
@@ -133,6 +140,15 @@ export const MeritCard = ({ merit, index, onDelete, onUpdate, onRollPerception }
                     <X className="w-3 h-3" />
                 </Button>
             </div>
+
+            {meritDef && (
+                <details className="rounded-sm border border-zinc-700/60 bg-zinc-900/40 px-2 py-1 text-xs">
+                    <summary className="cursor-pointer select-none text-zinc-400">Rules and prerequisites</summary>
+                    {meritDef.requirements && <p className="mt-1 text-amber-200/80">Requirements: {meritDef.requirements}</p>}
+                    <p className="mt-1 whitespace-pre-wrap leading-relaxed text-zinc-300">{meritDef.description}</p>
+                    {meritDef.source_citation && <p className="mt-1 text-[10px] text-zinc-500">Source: {meritDef.source_citation}</p>}
+                </details>
+            )}
 
             {merit.name === "Trained Observer" && (
                 <div className="mt-2">

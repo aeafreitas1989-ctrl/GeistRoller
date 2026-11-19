@@ -1,3 +1,5 @@
+import { MERIT_RULE_CORRECTIONS } from "./merit-rule-corrections";
+
 // Geist: The Sin-Eaters - Character Data Constants
 
 export const HAUNTS = [
@@ -973,7 +975,7 @@ export const SYNERGY_TABLE = {
 };
 
 // Merits (alphabetical, from provided list)
-export const MERIT_LIST = [
+const MERIT_LIST_BASE = [
     { name: "Adamant Hand", minDots: 2, maxDots: 2, hasSpecialty: true, specialtyPlaceholder: "Athletics, Brawl or Weaponry", description: "Choose Athletics, Brawl, or Weaponry when purchasing this Merit; the chosen Skill must be 3 dots or higher. The chosen combat style may be used as a reflexive Order tool Yantra for instant spells, adding dice on subsequent turns or to a reflexive spell cast in the same turn as the combat action. May be purchased multiple times for different styles." },
     { name: "Advanced Library", minDots: 1, maxDots: 5, hasSpecialty: true, specialtyPlaceholder: "Topics", description: "Gain the Informed Condition about a highly secretive supernatural topic. Each Dot represents a distinct topic, and each topic can only be used once per story." },
     { name: "Allies", maxDots: 5, description: "Allies help your character. They might be friends, employees, associates, or people your character has black-mailed. Each instance of this Merit represents one type of ally. This could be an organization, a society, a clique, or an individual. Examples include the police, a secret society, criminal organizations, unions, local politicians, or the academic community. Each purchase has its own rating. Your character might have Allies (Masons) ••, Allies (Carter Crime Family) •••, and Allies (Catholic Church) •." },
@@ -1101,6 +1103,8 @@ export const MERIT_LIST = [
     { name: "Vice-Ridden", minDots: 2, maxDots: 2, description: "Your character is one of the worst examples of humanity in the Chronicles of Darkness. He has two Vices, although he may still only regain one Willpower per scene he indulges himself." },
     { name: "Virtuous", maxDots: 2, description: "Your character is a light of good in the Chronicles of Darkness. She has two Virtues. The limitations of how many times she may refresh Willpower using a Virtue remain the same, but it’s up to you which Virtue she uses each time." }
 ];
+
+export const MERIT_LIST = MERIT_LIST_BASE.map((merit) => ({ ...merit, ...(MERIT_RULE_CORRECTIONS[merit.name] || {}) }));
 
 export const MERIT_CATEGORY_BY_NAME = {
     // Mental

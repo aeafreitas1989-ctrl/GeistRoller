@@ -1,5 +1,7 @@
 // Geist: The Sin-Eaters - Cards Panel Data Constants
 
+import { MERIT_LIST, getMeritCategory } from "./character-data";
+
 import {
     CONDITION_DEFINITIONS,
     CONDITION_FILTER_OPTIONS,
@@ -231,7 +233,7 @@ export const KEY_DEFINITIONS = {
 export const KEY_NAMES = Object.keys(KEY_DEFINITIONS);
 
 // Geist-specific Merit definitions
-export const MERIT_DEFINITIONS = {
+const LEGACY_MERIT_DEFINITIONS = {
     // Geist Merits
     "Architect": { category: "Geist", maxDots: 5, description: "When taking an extended action to create something significant, gain additional dice equal to Merit dots. Any roll benefiting from these dice gains 8-again." },
     "Cenote": { category: "Geist", maxDots: 5, description: "Generates Plasm equal to its dot rating every chapter. Each instance must be tied to a Safe Place Merit of at least one dot." },
@@ -324,6 +326,17 @@ export const MERIT_DEFINITIONS = {
     "Martial Arts": { category: "Fighting", maxDots: 5, description: "Style Merit for unarmed martial arts. Focused attack, defensive strike, whirlwind, lethal unarmed." },
     "Street Fighting": { category: "Fighting", maxDots: 5, description: "Style Merit for street combat. Duck and weave, knock wind out, kick while down." },
 };
+
+export const MERIT_DEFINITIONS = Object.fromEntries(MERIT_LIST.map((merit) => [merit.name, {
+    ...(LEGACY_MERIT_DEFINITIONS[merit.name] || {}),
+    category: getMeritCategory(merit.name),
+    minDots: merit.minDots || 1,
+    maxDots: merit.maxDots || 5,
+    allowedDots: merit.allowedDots || null,
+    description: merit.description || LEGACY_MERIT_DEFINITIONS[merit.name]?.description || "",
+    requirements: merit.requirements || "",
+    source_citation: merit.source_citation || "",
+}]));
 
 export const MERIT_CATEGORIES = ["Geist", "Mage", "Social", "Mental", "Physical", "Fighting"];
 

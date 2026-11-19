@@ -46,7 +46,9 @@ export const MeritsContent = ({
                                 if (merit) {
                                     const min = merit.minDots || 1;
                                     const max = merit.maxDots || 5;
-                                    if (min === max) {
+                                    if (merit.allowedDots?.length) {
+                                        setNewMeritDots(merit.allowedDots.includes(newMeritDots) ? newMeritDots : merit.allowedDots[0]);
+                                    } else if (min === max) {
                                         setNewMeritDots(max);
                                     } else if (newMeritDots < min) {
                                         setNewMeritDots(min);
@@ -102,7 +104,14 @@ export const MeritsContent = ({
                                 {!isFixedDotMerit && (
                                     <div className="flex items-center justify-between">
                                         <label className="text-sm text-zinc-400">Rating ({minDotsForMerit} to {maxDotsForMerit}):</label>
-                                        <StatDots value={newMeritDots} max={maxDotsForMerit} onChange={(v) => setNewMeritDots(Math.max(minDotsForMerit, v))} color="amber" testIdPrefix="new-merit-rating" />
+                                        {selectedMerit?.allowedDots?.length ? (
+                                            <Select value={String(newMeritDots)} onValueChange={(value) => setNewMeritDots(Number(value))}>
+                                                <SelectTrigger className="w-28 border-zinc-700 bg-zinc-900 text-xs"><SelectValue /></SelectTrigger>
+                                                <SelectContent className="bg-zinc-900 border-zinc-700">
+                                                    {selectedMerit.allowedDots.map((dots) => <SelectItem key={dots} value={String(dots)}>{dots} dots</SelectItem>)}
+                                                </SelectContent>
+                                            </Select>
+                                        ) : <StatDots value={newMeritDots} max={maxDotsForMerit} onChange={(v) => setNewMeritDots(Math.max(minDotsForMerit, v))} color="amber" testIdPrefix="new-merit-rating" />}
                                     </div>
                                 )}
                                 {isFixedDotMerit && selectedMerit && (

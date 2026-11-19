@@ -2413,6 +2413,16 @@ export const CharacterPanel = ({
     const sortedMeritsList = [...meritsList].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
     const selectedMeritDef = MERIT_LIST.find((m) => m.name === newMeritName);
     const addMerit = () => {
+        if (selectedMeritDef) {
+            const allowed = selectedMeritDef.allowedDots || Array.from(
+                {length: (selectedMeritDef.maxDots || 5) - (selectedMeritDef.minDots || 1) + 1},
+                (_, index) => index + (selectedMeritDef.minDots || 1)
+            );
+            if (!allowed.includes(Number(newMeritDots))) {
+                toast.error("That rating is not valid for this Merit.");
+                return;
+            }
+        }
         if (newMeritName === "Grimoire" && newGrimoireRotesText.split(/\r?\n/).filter((line) => line.trim()).length > newMeritDots * 2) {
             toast.error("A Grimoire holds two Rotes per Merit dot.");
             return;
@@ -2618,6 +2628,9 @@ export const CharacterPanel = ({
         // Legacy merits without minDots: treat as variable 1 to maxDots
         const min = merit.minDots || 1;
         const max = merit.maxDots || 5;
+        if (merit.allowedDots?.length) {
+            return merit.allowedDots.map((dots) => String(dots)).join(' or ');
+        }
         if (min === max) {
             return `${max} dot${max > 1 ? 's' : ''}`;
         }
