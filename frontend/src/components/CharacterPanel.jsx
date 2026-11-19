@@ -10,6 +10,7 @@ import { useLiveCharacterTool } from "../hooks/useLiveCharacterTool";
 import { buildLiveCharacterState } from "../utils/liveCharacterState";
 import { isEffectExpired, startTimedEffect } from "../utils/effectDuration";
 import { applyPlasmTransaction, reconcileManualPlasm } from "../utils/sceneLifecycle";
+import { getDoomedKeySources } from "../utils/geistKeys";
 import { getChannelManaPatch } from "../utils/mageManaActions";
 import {
     Select,
@@ -71,6 +72,7 @@ import { addWoundDamage, adjustWoundClick, healWound, normalizeResistance, recon
 import { MageArcanaContent } from "./character/MageArcanaContent";
 import { MageGnosisContent } from "./character/MageGnosisContent";
 import { GeistSynergyContent } from "./character/GeistSynergyContent";
+import { GeistCreationAuditPanel } from "./character/GeistCreationAuditPanel";
 import { GeistHauntsContent } from "./character/GeistHauntsContent";
 import { GeistRemembranceContent } from "./character/GeistRemembranceContent";
 import { MeritsContent } from "./character/MeritsContent";
@@ -135,6 +137,7 @@ export const CharacterPanel = ({
     const [newMeritName, setNewMeritName] = useState("");
     const [newMeritDots, setNewMeritDots] = useState(1);
     const [newMeritSpecialty, setNewMeritSpecialty] = useState("");
+    const [newGrimoireRotesText, setNewGrimoireRotesText] = useState("");
     const [newSpecialty, setNewSpecialty] = useState("");
     const [newSpecialtySkill, setNewSpecialtySkill] = useState("__none__");
     const [showSpecialtyForm, setShowSpecialtyForm] = useState(false);
@@ -181,19 +184,48 @@ export const CharacterPanel = ({
     const [spellcastingDefaultName, setSpellcastingDefaultName] = useState("");
     const [spellcastingPrimaryFactor, setSpellcastingPrimaryFactor] = useState(null);
     const [spellcastingWithstandType, setSpellcastingWithstandType] = useState(null);
+    const [spellcastingRoteSource, setSpellcastingRoteSource] = useState("memory");
+    // Synchronous local counter prevents two Paradox completions from reading the same stale render.
+    const paradoxSceneRef = useRef({ id: null, count: 0, skip: false });
+    if (paradoxSceneRef.current.id !== activeCharacter?.id) {
+        paradoxSceneRef.current = {
+            id: activeCharacter?.id,
+            count: Math.max(0, Number(activeCharacter?.scene_paradox_rolls) || 0),
+            skip: !!activeCharacter?.skip_previous_paradox_modifier_next_roll,
+        };
+    }
+    useEffect(() => {
+        if (!activeCharacter?.id || paradoxSceneRef.current.id !== activeCharacter.id) return;
+        paradoxSceneRef.current.count = Math.max(0, Number(activeCharacter.scene_paradox_rolls) || 0);
+        paradoxSceneRef.current.skip = !!activeCharacter.skip_previous_paradox_modifier_next_roll;
+    }, [activeCharacter?.id, activeCharacter?.scene_paradox_rolls, activeCharacter?.skip_previous_paradox_modifier_next_roll]);
     // Persisted on the character: refreshing the page does not reset the scene.
-    const getMageSceneParadoxRolls = () =>
-        Math.max(0, Math.floor(Number(getValue("scene_paradox_rolls")) || 0));
+    const getMageSceneParadoxRolls = () => paradoxSceneRef.current.count;
 
     const setMageSceneParadoxRolls = (valueOrUpdater) => {
         const current = getMageSceneParadoxRolls();
         const next = typeof valueOrUpdater === "function"
             ? valueOrUpdater(current)
             : valueOrUpdater;
-        void commitCharacterUpdate({ scene_paradox_rolls: Math.max(0, Math.floor(Number(next) || 0)) });
+        const safe = Math.max(0, Math.floor(Number(next) || 0));
+        paradoxSceneRef.current.count = safe;
+        void commitCharacterUpdate({ scene_paradox_rolls: safe });
     };
 
-    const resetMageSceneParadoxRolls = () => setMageSceneParadoxRolls(0);
+    const resetMageSceneParadoxRolls = () => {
+        paradoxSceneRef.current.count = 0;
+        paradoxSceneRef.current.skip = false;
+        void commitCharacterUpdate({ scene_paradox_rolls: 0, skip_previous_paradox_modifier_next_roll: false });
+    };
+    const recordParadoxRollForScene = ({ dramatic = false } = {}) => {
+        const count = getMageSceneParadoxRolls();
+        paradoxSceneRef.current.count = dramatic ? count : count + 1;
+        paradoxSceneRef.current.skip = !!dramatic;
+        void commitCharacterUpdate({
+            scene_paradox_rolls: paradoxSceneRef.current.count,
+            skip_previous_paradox_modifier_next_roll: paradoxSceneRef.current.skip,
+        });
+    };
 
     // Mage advancement purchase flow
     const [xpPurchaseOpen, setXpPurchaseOpen] = useState(false);
@@ -208,7 +240,7 @@ export const CharacterPanel = ({
     const [xpDeleteEntry, setXpDeleteEntry] = useState(null);
     const [savingXPChange, setSavingXPChange] = useState(false);
 
-    const openSpellcastingPopup = (arcanum, practice = null, spellType = null, roteSkill = null, defaultName = "", primaryFactor = null, withstandType = null) => {
+    const openSpellcastingPopup = (arcanum, practice = null, spellType = null, roteSkill = null, defaultName = "", primaryFactor = null, withstandType = null, roteSource = "memory") => {
         setSpellcastingArcanum(arcanum);
         setSpellcastingPractice(practice);
         setSpellcastingType(spellType);
@@ -216,6 +248,7 @@ export const CharacterPanel = ({
         setSpellcastingDefaultName(defaultName);
         setSpellcastingPrimaryFactor(primaryFactor);
         setSpellcastingWithstandType(withstandType);
+        setSpellcastingRoteSource(roteSource);
         setSpellcastingOpen(true);
     };
 
@@ -2023,27 +2056,23 @@ export const CharacterPanel = ({
     const hasPendingChanges = Object.keys(pendingChanges).length > 0;
 
     // Get synergy-based values
-    const currentSynergy = getValue("synergy") || 7;
-    const synergyData = SYNERGY_TABLE[currentSynergy] || SYNERGY_TABLE[7];
+    const currentSynergy = getValue("synergy") ?? 1;
+    const synergyData = SYNERGY_TABLE[currentSynergy] || SYNERGY_TABLE[1];
 
-    const doomedKeySources = useMemo(() => {
-        const sources = {};
-        const conditions = activeCharacter?.conditions || [];
-        conditions.forEach((condition) => {
-            const name = condition?.name || "";
-            const origin = condition?.origin || "";
-            if (name.toLowerCase().startsWith("doomed")) {
-                KEYS.forEach((key) => {
-                    if (name.includes(key) || origin.includes(key)) {
-                        sources[key] = origin || name;
-                    }
-                });
-            }
-        });
-        return sources;
-    }, [activeCharacter?.conditions]);
+    const doomedKeySources = useMemo(
+        () => getDoomedKeySources({
+            conditions: activeCharacter?.conditions || [],
+            innate_key: getValue("innate_key"),
+            geist_innate_key: getValue("geist_innate_key"),
+            mementos: getValue("mementos") || [],
+        }),
+        [activeCharacter?.conditions, activeCharacter?.innate_key, activeCharacter?.geist_innate_key, activeCharacter?.mementos, pendingChanges]
+    );
 
-    const doomedKeys = useMemo(() => new Set(Object.keys(doomedKeySources)), [doomedKeySources]);
+    const doomedKeys = useMemo(
+        () => new Set(KEYS.filter((name) => Boolean(doomedKeySources[name]))),
+        [doomedKeySources]
+    );
 
     // Calculate all available keys (from Character, Geist, and Mementos)
     const allAvailableKeys = useMemo(() => {
@@ -2171,7 +2200,7 @@ export const CharacterPanel = ({
         const willpower = Number(getValue("willpower")) || 0;
         await commitCharacterUpdate({ willpower: Math.min(calculateWillpowerMax(), willpower + 1) });
     };
-    const resolveParadoxContainment = async ({ cancelled, remaining, paradoxExceptional = false, mode = "contain" }) => {
+    const resolveParadoxContainment = async ({ cancelled, remaining, paradoxExceptional = false, mode = "contain", conditionType = "pending", conditionName = "" }) => {
         const safeCancelled = Math.max(0, cancelled || 0);
         const safeRemaining = Math.max(0, remaining || 0);
     
@@ -2185,34 +2214,22 @@ export const CharacterPanel = ({
         const nextHealthBoxes = backlash.boxes;
 
         const currentConditions = getValue("conditions") || [];
-        const hasParadoxTaint = currentConditions.some(
-            (cond) => (cond?.name || "").toLowerCase() === "paradox taint"
-        );
-
-        const currentWisdom = parseInt(getValue("wisdom"), 10) || 0;
+        const currentWisdom = Number(getValue("wisdom")) || 0;
         const paradoxTaintDuration = getParadoxTaintDuration(currentWisdom);
-
-        const paradoxTaintDescription = paradoxExceptional
-            ? "Your Nimbus is disfigured by the Abyss. You and any subjects affected by your Nimbus, gain the Open Condition applicable to Abyssal entities."
-            : "Your Nimbus is disfigured by the Abyss. You and any subjects affected by your Nimbus, gain the Resonant Condition applicable to Abyssal entities.";
-
-        const paradoxTaintResolution = `An Abyssal Entity uses the Condition to Manifest, you Scour the Condition from your Pattern, or you allow the Condition to lapse after ${paradoxTaintDuration}.`;
-
-        const nextConditions =
-            (mode === "release" ? paradoxExceptional : safeRemaining > 0) && !hasParadoxTaint
-                ? [
-                    ...currentConditions,
-                    {
-                        name: "Paradox Taint",
-                        type: "condition",
-                        origin: "Spellcasting",
-                        description: paradoxTaintDescription,
-                        resolution: paradoxTaintResolution,
-                        beat_type: "arcane",
-                        paradox_successes: safeRemaining,
-                    },
-                ]
-                : currentConditions;
+        const shouldRecord = mode === "release" ? paradoxExceptional : safeRemaining > 0;
+        const chosenName = conditionType === "taint" ? "Paradox Taint"
+            : conditionType === "custom" && String(conditionName).trim() ? String(conditionName).trim()
+            : "Paradox Condition (Pending ST)";
+        const nextConditions = shouldRecord
+            ? [...currentConditions, {
+                id: 'paradox-' + Date.now() + '-' + Math.random().toString(36).slice(2),
+                name: chosenName, type: "condition", origin: "Spellcasting",
+                description: conditionType === "taint"
+                    ? (paradoxExceptional ? "Paradox Taint (exceptional Paradox); Open to Abyssal entities." : "Paradox Taint; Resonant to Abyssal entities.")
+                    : "Storyteller assigns the Abyssal Condition and its effects. Do not automatically create anomalies.",
+                resolution: conditionType === "taint" ? `ST-defined resolution or expiry after ${paradoxTaintDuration}.` : "As determined by the Storyteller.",
+                beat_type: "arcane", paradox_successes: safeRemaining,
+            }] : currentConditions;
     
         await onUpdateCharacter({
             health_boxes: nextHealthBoxes,
@@ -2319,6 +2336,10 @@ export const CharacterPanel = ({
     const sortedMeritsList = [...meritsList].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
     const selectedMeritDef = MERIT_LIST.find((m) => m.name === newMeritName);
     const addMerit = () => {
+        if (newMeritName === "Grimoire" && newGrimoireRotesText.split(/\r?\n/).filter((line) => line.trim()).length > newMeritDots * 2) {
+            toast.error("A Grimoire holds two Rotes per Merit dot.");
+            return;
+        }
         if (newMeritName) {
             const meritToAdd = {
                 id: Date.now(),
@@ -2329,6 +2350,9 @@ export const CharacterPanel = ({
                     : {}),
                 ...(newMeritName === "Professional Training"
                     ? { assetSkills: ["__none__", "__none__", "__none__"] }
+                    : {}),
+                ...(newMeritName === "Grimoire"
+                    ? { grimoire_rotes: newGrimoireRotesText.split(/\r?\n/).map((line) => line.trim()).filter(Boolean).slice(0, Math.max(0, newMeritDots * 2)).map((spell) => ({ spell, arcanum: "Death", practice: "Compelling", skill: "occult", primary_factor: null, withstand_type: null })) }
                     : {}),
             };
 
@@ -2377,6 +2401,7 @@ export const CharacterPanel = ({
             setNewMeritName("");
             setNewMeritDots(1);
             setNewMeritSpecialty("");
+            setNewGrimoireRotesText("");
             setShowMeritDialog(false);
         }
     };
@@ -2660,21 +2685,17 @@ export const CharacterPanel = ({
                     )}
                 </div>
                 
-                <div className="flex gap-2 items-center flex-wrap">
+                <div className="flex min-w-0 flex-nowrap items-center gap-1.5">
                     {/* Character Type Badge */}
-                    <span className={`px-2 py-1 text-[10px] font-mono uppercase tracking-wider rounded ${
-                        isMage 
-                            ? "bg-violet-900/50 text-violet-300 border border-violet-500/30" 
-                            : "bg-teal-900/50 text-teal-300 border border-teal-500/30"
-                    }`} data-testid="character-type-badge">
-                        {isMage ? "Mage" : "Sin-Eater"}
+                    <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded border ${isMage ? "border-violet-500/30 bg-violet-900/50 text-violet-300" : "border-teal-500/30 bg-teal-900/50 text-teal-300"}`} data-testid="character-type-badge" title={isMage ? "Mage" : "Sin-Eater"} aria-label={isMage ? "Mage" : "Sin-Eater"}>
+                        {isMage ? (<svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2 L17.88 20.09 L2.49 8.91 H21.51 L6.12 20.09 Z" /></svg>) : (<svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3a5 5 0 0 1 2.5 9.33L16 21H8l1.5-8.67A5 5 0 0 1 12 3Z"/></svg>)}
                     </span>
                     
                     <Select value={activeCharacter.id} onValueChange={(id) => {
                         const char = characters.find(c => c.id === id);
                         if (char) onSelectCharacter(char);
                     }}>
-                        <SelectTrigger className="flex-1 min-w-[180px] bg-zinc-900/50 border-zinc-800 h-8 text-sm" data-testid="character-select">
+                        <SelectTrigger className="min-w-[90px] flex-1 bg-zinc-900/50 border-zinc-800 h-8 text-sm overflow-hidden" data-testid="character-select">
                             <SelectValue placeholder="Select character" />
                         </SelectTrigger>
                         <SelectContent className="bg-zinc-900 border-zinc-800">
@@ -2727,7 +2748,7 @@ export const CharacterPanel = ({
                     {/* Add Character Dialog */}
                     <Dialog open={showAddCharacterDialog} onOpenChange={setShowAddCharacterDialog}>
                         <DialogTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-400 hover:text-teal-400" data-testid="add-character-button"><Plus className="w-4 h-4" /></Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 text-zinc-400 hover:text-teal-400" data-testid="add-character-button"><Plus className="w-4 h-4" /></Button>
                         </DialogTrigger>
                         <DialogContent className="bg-zinc-900 border-zinc-800">
                             <DialogHeader>
@@ -2757,7 +2778,7 @@ export const CharacterPanel = ({
                     
                     <AlertDialog>
                         <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-400 hover:text-red-400" data-testid="delete-character-button"><Trash2 className="w-4 h-4" /></Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 text-zinc-400 hover:text-red-400" data-testid="delete-character-button"><Trash2 className="w-4 h-4" /></Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent className="bg-zinc-900 border-zinc-800">
                             <AlertDialogHeader>
@@ -2831,6 +2852,7 @@ export const CharacterPanel = ({
                             getNestedValue={getNestedValue}
                             availableKeys={allAvailableKeys}
                             doomedKeys={doomedKeys}
+                            onOpenHauntRoll={openHauntRollPopup}
                             onSpendWillpower={spendWillpower}
                             onAwardBeat={awardBeat}
                             onSpendPlasm={spendPlasm}
@@ -3186,11 +3208,14 @@ export const CharacterPanel = ({
                                     onOpenChannelMana={openChannelManaSpell}
                                 />
                             ) : (
-                                <GeistSynergyContent
+                                <>
+                                    <GeistSynergyContent
                                     getValue={getValue} handleChange={handleChange}
                                     currentSynergy={currentSynergy} synergyData={synergyData}
                                     calculateWillpowerMax={calculateWillpowerMax}
                                 />
+                                    <GeistCreationAuditPanel character={{ ...activeCharacter, ...pendingChanges }} />
+                                </>
                             )}
                         </CollapsibleContent>
                     </Collapsible>
@@ -3379,6 +3404,7 @@ export const CharacterPanel = ({
                                 meritsList={meritsList} sortedMeritsList={sortedMeritsList} deleteMerit={deleteMerit} updateMerit={updateMerit}
                                 showMeritDialog={showMeritDialog} setShowMeritDialog={setShowMeritDialog}
                                 newMeritName={newMeritName} setNewMeritName={setNewMeritName} newMeritDots={newMeritDots} setNewMeritDots={setNewMeritDots} newMeritSpecialty={newMeritSpecialty} setNewMeritSpecialty={setNewMeritSpecialty}
+                                    newGrimoireRotesText={newGrimoireRotesText} setNewGrimoireRotesText={setNewGrimoireRotesText}
                                 addMerit={addMerit} openDicePopup={openDicePopup}
                                 selectedMerit={selectedMerit} minDotsForMerit={minDotsForMerit} maxDotsForMerit={maxDotsForMerit} isFixedDotMerit={isFixedDotMerit} getMeritDotDisplay={getMeritDotDisplay}
                                 ceremoniesList={ceremoniesList} sortedCeremoniesList={sortedCeremoniesList}
@@ -3893,13 +3919,14 @@ export const CharacterPanel = ({
                     innate_key: getValue("innate_key") || activeCharacter?.innate_key,
                     geist_innate_key: getValue("geist_innate_key") || activeCharacter?.geist_innate_key,
                     mementos: getValue("mementos") || activeCharacter?.mementos || [],
-                    synergy: getValue("synergy") || 7,
+                    synergy: getValue("synergy") ?? 1,
                     willpower: getValue("willpower") || 0,
                     plasm: getValue("plasm") || 0,
-                    geist_rank: getValue("geist_rank") || 1,
+                    geist_rank: getValue("geist_rank") ?? 3,
                 }}
                 availableKeys={allAvailableKeys}
                 doomedKeys={doomedKeys}
+                doomedKeySources={doomedKeySources}
                 onSpendWillpower={spendWillpower}
                 onSpendPlasm={spendPlasm}
                 onAddCondition={addConditionFromDiceRoller}
@@ -3922,6 +3949,7 @@ export const CharacterPanel = ({
                         getNestedValue={getNestedValue}
                         availableKeys={allAvailableKeys}
                         doomedKeys={doomedKeys}
+                        onOpenHauntRoll={openHauntRollPopup}
                         onSpendWillpower={spendWillpower}
                         onAwardBeat={awardBeat}
                         onSpendPlasm={spendPlasm}
@@ -4137,6 +4165,10 @@ export const CharacterPanel = ({
                         }
                     }}
                     previousParadoxRolls={getMageSceneParadoxRolls()}
+                previousParadoxSkipNextRoll={paradoxSceneRef.current.skip}
+                onParadoxRollRecorded={recordParadoxRollForScene}
+                knownPraxes={getValue("praxes") || []}
+                roteSource={spellcastingRoteSource}
                     onPreviousParadoxRollsChange={setMageSceneParadoxRolls}
                     onResetPreviousParadoxRolls={resetMageSceneParadoxRolls}
                     onResolveParadoxContainment={resolveParadoxContainment}

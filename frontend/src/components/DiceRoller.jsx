@@ -1245,7 +1245,7 @@ export const DiceRoller = forwardRef(({
                                             {result.successes} {result.successes === 1 ? "Success" : "Successes"}
                                         </p>
                                         {!resultIsCountOnly && (
-                                            <p className="text-xs text-zinc-500 mt-1">{result.description}</p>
+                                            <p className="text-xs text-zinc-500 mt-1">{resultIsCountOnly ? `${result.successes} successes counted` : result.description}</p>
                                         )}
                                     </div>
                                 </div>

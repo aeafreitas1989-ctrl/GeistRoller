@@ -12,6 +12,7 @@ import { restoreScouredAttributes } from "@/utils/mageRecovery";
 import { addWoundDamage, healWound, hasHealableWound, normalizeResistance, toggleResistance } from "@/utils/resistantWounds";
 import { useCharacterSync } from "@/hooks/useCharacterSync";
 import { getEndScenePatch } from "@/utils/sceneLifecycle";
+import { applyPendingCharacterPatches, isStaleCharacterSnapshot } from "@/utils/characterUpdateQueue";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -21,24 +22,27 @@ export const CharacterSheetPage = () => {
     const [rollColumnCollapsed, setRollColumnCollapsed] = useState(false);
 
     const diceRollerRef = useRef(null);
+    const latestCharacterRef = useRef(null);
+    const characterWriteQueuesRef = useRef(new Map());
+    const pendingCharacterPatchesRef = useRef(new Map());
+    useEffect(() => { latestCharacterRef.current = activeCharacter; }, [activeCharacter?.id]);
+
+    const overlayPending = (snapshot) =>
+        applyPendingCharacterPatches(snapshot, pendingCharacterPatchesRef.current.get(snapshot.id) || []);
     const lastCharacterStorageKey = "geistroller-last-active-character-id";
 
     useCharacterSync(activeCharacter?.id, (updatedCharacter) => {
         setActiveCharacter((current) => {
-            if (!current || current.id !== updatedCharacter.id) {
-                return current;
-            }
-
-            return updatedCharacter;
+            if (!current || current.id !== updatedCharacter.id) return current;
+            if (isStaleCharacterSnapshot(current, updatedCharacter)) return current;
+            const next = overlayPending(updatedCharacter);
+            latestCharacterRef.current = next;
+            return next;
         });
-
-        setCharacters((currentCharacters) =>
-            currentCharacters.map((character) =>
-                character.id === updatedCharacter.id
-                    ? updatedCharacter
-                    : character
-            )
-        );
+        setCharacters((currentCharacters) => currentCharacters.map((character) =>
+            character.id === updatedCharacter.id && !isStaleCharacterSnapshot(character, updatedCharacter)
+                ? overlayPending(updatedCharacter) : character
+        ));
     });
 
     const triggerDiceRoll = (config) => {
@@ -473,43 +477,47 @@ export const CharacterSheetPage = () => {
     };
 
     const updateCharacter = async (updates) => {
-        if (!activeCharacter) return;
+        const current = latestCharacterRef.current || activeCharacter;
+        if (!current?.id) return false;
+        const characterId = current.id;
+        const patch = { ...updates };
+        const token = Symbol('character-update');
+        const pending = pendingCharacterPatchesRef.current.get(characterId) || [];
+        pendingCharacterPatchesRef.current.set(characterId, [...pending, { token, updates: patch }]);
+        const optimistic = { ...current, ...patch };
+        latestCharacterRef.current = optimistic;
+        setActiveCharacter((previous) => previous?.id === characterId ? { ...previous, ...patch } : previous);
+        setCharacters((list) => list.map((item) => item.id === characterId ? { ...item, ...patch } : item));
 
-        const previousCharacter = activeCharacter;
-        const optimisticCharacter = {
-            ...activeCharacter,
-            ...updates,
-        };
-
-        setActiveCharacter(optimisticCharacter);
-        setCharacters((prevCharacters) =>
-            prevCharacters.map((c) =>
-                c.id === activeCharacter.id ? optimisticCharacter : c
-            )
-        );
-
-        try {
-            const response = await axios.put(
-                `${API}/characters/${activeCharacter.id}`,
-                updates
-            );
-            setActiveCharacter(response.data);
-            setCharacters((prevCharacters) =>
-                prevCharacters.map((c) =>
-                    c.id === activeCharacter.id ? response.data : c
-                )
-            );
-            return true;
-        } catch (error) {
-            setActiveCharacter(previousCharacter);
-            setCharacters((prevCharacters) =>
-                prevCharacters.map((c) =>
-                    c.id === previousCharacter.id ? previousCharacter : c
-                )
-            );
-            toast.error("Failed to update character");
-            return false;
-        }
+        const previousWrite = characterWriteQueuesRef.current.get(characterId) || Promise.resolve();
+        const task = previousWrite.catch(() => false).then(async () => {
+            try {
+                const response = await axios.put(`${API}/characters/${characterId}`, patch);
+                const remaining = (pendingCharacterPatchesRef.current.get(characterId) || []).filter((entry) => entry.token !== token);
+                pendingCharacterPatchesRef.current.set(characterId, remaining);
+                const next = applyPendingCharacterPatches(response.data, remaining);
+                if (latestCharacterRef.current?.id === characterId) latestCharacterRef.current = next;
+                setActiveCharacter((prev) => prev?.id === characterId ? next : prev);
+                setCharacters((list) => list.map((item) => item.id === characterId ? next : item));
+                return true;
+            } catch (error) {
+                const remaining = (pendingCharacterPatchesRef.current.get(characterId) || []).filter((entry) => entry.token !== token);
+                pendingCharacterPatchesRef.current.set(characterId, remaining);
+                try {
+                    const response = await axios.get(`${API}/characters/${characterId}`);
+                    const next = applyPendingCharacterPatches(response.data, remaining);
+                    if (latestCharacterRef.current?.id === characterId) latestCharacterRef.current = next;
+                    setActiveCharacter((prev) => prev?.id === characterId ? next : prev);
+                    setCharacters((list) => list.map((item) => item.id === characterId ? next : item));
+                } catch (refreshError) {
+                    toast.error('Character save failed; server refresh also failed. Reload before continuing.');
+                }
+                toast.error('Failed to update character');
+                return false;
+            }
+        });
+        characterWriteQueuesRef.current.set(characterId, task);
+        return task;
     };
 
     const handleEndScene = async () => {

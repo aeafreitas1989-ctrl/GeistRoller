@@ -52,6 +52,7 @@ import {
 import { MageSightCard } from "./cards/MageSightCard";
 import { SceneTrackerCard } from "./cards/SceneTrackerCard";
 import { isSceneDurationEffect } from "../utils/sceneLifecycle";
+import { getDoomedKeySources } from "../utils/geistKeys";
 import { expireTimedEffects, isEffectExpired } from "../utils/effectDuration";
 import { advanceNaturalHealing } from "../utils/naturalHealing";
 import { restoreScouredAttributes } from "../utils/mageRecovery";
@@ -659,24 +660,9 @@ export const GameCardsPanel = ({
         .map((memento) => memento.key)
         .filter(Boolean);
 
-    const doomedKeySources = useMemo(() => {
-        const sources = {};
-        const conditions = activeCharacter?.conditions || [];
-        conditions.forEach((condition) => {
-            const name = condition?.name || "";
-            const origin = condition?.origin || "";
-            if (name.toLowerCase().startsWith("doomed")) {
-                KEY_NAMES.forEach((key) => {
-                    if (name.includes(key) || origin.includes(key)) {
-                        sources[key] = origin || name;
-                    }
-                });
-            }
-        });
-        return sources;
-    }, [activeCharacter?.conditions]);
+    const doomedKeySources = useMemo(() => getDoomedKeySources(activeCharacter || {}), [activeCharacter]);
 
-    const doomedKeys = new Set(Object.keys(doomedKeySources));
+    const doomedKeys = new Set(KEY_NAMES.filter((name) => !!doomedKeySources[name]));
 
     const availableKeys = Array.from(new Set([
         ...keys,

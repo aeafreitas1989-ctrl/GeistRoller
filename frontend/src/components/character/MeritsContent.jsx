@@ -16,6 +16,7 @@ export const MeritsContent = ({
     newMeritName, setNewMeritName,
     newMeritDots, setNewMeritDots,
     newMeritSpecialty, setNewMeritSpecialty,
+    newGrimoireRotesText, setNewGrimoireRotesText,
     addMerit, openDicePopup,
     selectedMerit, minDotsForMerit, maxDotsForMerit, isFixedDotMerit, getMeritDotDisplay,
     ceremoniesList, sortedCeremoniesList,
@@ -79,6 +80,14 @@ export const MeritsContent = ({
                                     className="input-geist"
                                     data-testid="custom-merit-name-input"
                                 />
+
+                                {isMage && newMeritName === "Grimoire" && (
+                                    <label className="block space-y-1 text-xs text-zinc-400">
+                                        Rotes contained in this Grimoire (one spell name per line; maximum {newMeritDots * 2})
+                                        <textarea rows={4} value={newGrimoireRotesText} onChange={(event) => setNewGrimoireRotesText(event.target.value)} className="w-full rounded border border-zinc-700 bg-zinc-950 p-2 text-sm text-zinc-200" data-testid="new-grimoire-rotes" placeholder="Enter each Rote's name on a new line" />
+                                        <span className="text-[10px] text-zinc-500">Configure Arcanum, Practice, Skill and Primary Factor under GRIMOIRE after adding the Merit.</span>
+                                    </label>
+                                )}
 
                                 {selectedMerit?.hasSpecialty && (
                                     <Input

@@ -116,7 +116,7 @@ class Character(BaseModel):
     archetype: str = ""
     innate_key: str = ""
     geist_innate_key: str = ""
-    geist_rank: int = 1
+    geist_rank: int = 3
     # Mage-specific fields
     path: str = ""  # Acanthus, Mastigos, Moros, Obrimos, Thyrsus
     order: str = ""  # Adamantine Arrow, Guardians of the Veil, Mysterium, Silver Ladder, Free Council
@@ -166,12 +166,13 @@ class Character(BaseModel):
         "persuasion": 0, "socialize": 0, "streetwise": 0, "subterfuge": 0
     })
     specialties: List[Any] = Field(default_factory=list)  # {skill, name}; legacy strings accepted
-    synergy: int = 7
+    synergy: int = 1
     synergy_max: int = 10
     touchstones: List[str] = Field(default_factory=list)
     plasm: int = 5
     temporary_plasm: int = 0  # Key surplus remaining until explicit End Scene
     scene_paradox_rolls: int = 0  # Mage Paradox rolls in the current scene
+    skip_previous_paradox_modifier_next_roll: bool = False
     haunts: Dict[str, int] = Field(default_factory=dict)
     keys: List[str] = Field(default_factory=list)
     mementos: List[Dict[str, Any]] = Field(default_factory=list)
@@ -272,6 +273,7 @@ class CharacterUpdate(BaseModel):
     advancement_ledger: Optional[List[Dict[str, Any]]] = None
     xp_history: Optional[List[Dict[str, Any]]] = None
     xp_reason: Optional[str] = None
+    allow_rules_override: Optional[bool] = None  # Explicit ST override for bounded traits
     free_skill_specialty_slots: Optional[int] = None
     free_praxis_slots: Optional[int] = None
     remembrance_trait_type: Optional[str] = None
@@ -297,6 +299,7 @@ class CharacterUpdate(BaseModel):
     plasm: Optional[int] = None
     temporary_plasm: Optional[int] = None
     scene_paradox_rolls: Optional[int] = None
+    skip_previous_paradox_modifier_next_roll: Optional[bool] = None
     haunts: Optional[Dict[str, int]] = None
     keys: Optional[List[str]] = None
     mementos: Optional[List[Dict[str, Any]]] = None

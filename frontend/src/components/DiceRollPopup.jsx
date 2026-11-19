@@ -177,6 +177,7 @@ export const DiceRollPopup = ({
     character,
     availableKeys = [],
     doomedKeys = new Set(),
+    doomedKeySources = {},
     onSpendWillpower,
     onSpendPlasm,
     onAddCondition,
@@ -232,13 +233,14 @@ export const DiceRollPopup = ({
     }, [haunt, hauntRating, hauntEnhancements]);
 
     // Calculate key bonus
+    const getSelectedMemento = () => (character?.mementos || []).find((memento, index) =>
+        String(memento?.id ?? ('legacy-index-' + index)) === String(key.split('::')[1] || '')
+    );
     const actualKey =
-        key?.startsWith("innate::")
-            ? key.split("::")[1]
-            : key?.startsWith("geist::")
+        key?.startsWith("innate::") || key?.startsWith("geist::")
             ? key.split("::")[1]
             : key?.startsWith("memento::")
-            ? character?.mementos?.[parseInt(key.split("::")[1])]?.key
+            ? getSelectedMemento()?.key
             : null;
     const keyAttr = actualKey ? KEY_UNLOCK_ATTRIBUTES[actualKey] : null;
     const keyBonus = (actualKey && keyAttr)
@@ -246,7 +248,7 @@ export const DiceRollPopup = ({
         : 0;
     const doomOrigin =
         key?.startsWith("memento::")
-            ? (character?.mementos?.[parseInt(key.split("::")[1], 10)]?.name || actualKey)
+            ? (getSelectedMemento()?.name || actualKey)
             : actualKey;
 
     // Calculate total enhancement cost
@@ -262,7 +264,7 @@ export const DiceRollPopup = ({
     const netPlasmChange = (plasmSpent + totalEnhancementCost) - keyBonus; // spend if >0, gain if <0
 
     // Plasm spent that counts toward per-turn limit (Key free Plasm is exempt)
-    const plasmCountingTowardLimit = plasmSpent + totalEnhancementCost;
+    const plasmCountingTowardLimit = Math.max(0, netPlasmChange);
     const turnsToResolve = Math.ceil(plasmCountingTowardLimit / plasmPerTurn);
     const exceedsPerTurnLimit = plasmCountingTowardLimit > plasmPerTurn;
 
@@ -362,7 +364,7 @@ export const DiceRollPopup = ({
             setResult(patchedResult);
             if (key !== "__none__" && !avoidDoom && !spendWillpower && !patchedResult.is_exceptional) {
                 await onAddCondition?.({
-                    name: "Doomed", type: "geist", origin: doomOrigin,
+                    name: "Doomed", type: "geist", origin: doomOrigin, key_name: actualKey, key_source_id: key,
                     description: "The Key's Doom is active until resolved.",
                 });
                 toast.warning("Gained Doomed condition for " + actualKey + " (" + doomOrigin + ")");
@@ -533,7 +535,7 @@ export const DiceRollPopup = ({
                                     (character?.mementos || []).forEach((m, index) => {
                                         if (!m?.key) return;
                                         options.push({
-                                            value: `memento::${index}`,
+                                            value: `memento::${m.id ?? ('legacy-index-' + index)}`,
                                             keyName: m.key,
                                             label: `${m.name} (${m.key})`,
                                         });
@@ -542,9 +544,9 @@ export const DiceRollPopup = ({
                                         <SelectItem
                                             key={opt.value}
                                             value={opt.value}
-                                            disabled={doomedKeys.has(opt.keyName)}
+                                            disabled={Boolean(doomedKeySources[opt.value] || doomedKeySources[`legacy::${opt.keyName}`])}
                                         >
-                                            {opt.label} {doomedKeys.has(opt.keyName) ? "(Doomed)" : ""}
+                                            {opt.label} {(doomedKeySources[opt.value] || doomedKeySources[`legacy::${opt.keyName}`]) ? "(Doomed)" : ""}
                                         </SelectItem>
                                     ));
                                 })()}

@@ -132,6 +132,7 @@ export const MageArcanaContent = ({
         if (!activePraxisDraft) return;
         if (!activePraxisDraft.spell.trim()) return;
         if (!["potency", "duration"].includes(activePraxisDraft.primary_factor)) return;
+        if (requiredDotsForPractice(activePraxisDraft.practice) > Number((getValue("arcana") || {})[activePraxisDraft.arcanum] || 0)) return;
 
         handleChange("praxes", [
             ...learnedPraxes,
@@ -223,7 +224,7 @@ export const MageArcanaContent = ({
                         size="sm" 
                         onClick={() => {
                             const rotes = getValue("rotes") || [];
-                            handleChange("rotes", [...rotes, { spell: "", arcanum: "Death", dots: 1, practice: getPracticesForDots(1)[0] || "", skill: "occult", primary_factor: null, withstand_type: null }]);
+                            handleChange("rotes", [...rotes, { spell: "", arcanum: "Death", dots: 1, practice: getPracticesForDots(1)[0] || "", skill: "occult", primary_factor: null, withstand_type: null, created_by_caster: false }]);
                             setEditingRotePrimaryFactor(rotes.length);
                         }} 
                         className="h-5 px-2 text-[10px] btn-secondary" 
@@ -240,6 +241,7 @@ export const MageArcanaContent = ({
                             const currentOrder = getValue("order");
                             const roteIsOrderSkill = currentOrder && (ORDER_ROTE_SKILLS[currentOrder] || []).includes(rote.skill);
                             const rotePracticeOptions = ALL_SPELL_PRACTICES;
+                            const roteArcanumDots = Number((getValue("arcana") || {})[rote.arcanum] || 0);
                             const rotePractice = rote.practice || rotePracticeOptions[0] || "";
                             return (
                             <div key={index} className="grid min-w-0 items-center gap-1.5 p-1.5 bg-zinc-900/30 border border-zinc-800 rounded-sm" style={{ gridTemplateColumns: "minmax(0, 1fr) 80px 110px 90px 24px 24px 24px" }}>
@@ -276,7 +278,7 @@ export const MageArcanaContent = ({
                                     </SelectTrigger>
                                     <SelectContent className="bg-zinc-900 border-zinc-800">
                                         {rotePracticeOptions.map((practice) => (
-                                            <SelectItem key={practice} value={practice} className="text-xs">
+                                            <SelectItem key={practice} value={practice} disabled={requiredDotsForPractice(practice) > roteArcanumDots} className="text-xs">
                                                 {practice}
                                             </SelectItem>
                                         ))}
@@ -309,7 +311,7 @@ export const MageArcanaContent = ({
                                 >
                                     <Pencil className="w-3 h-3" />
                                 </Button>
-                                <Button variant="ghost" size="sm" disabled={!rote.primary_factor} title={!rote.primary_factor ? "Set Primary Factor before casting" : "Cast Rote"} onClick={() => openSpellcastingPopup(rote.arcanum, rotePractice, "rote", rote.skill, rote.spell || "", rote.primary_factor, rote.withstand_type)} className="h-6 px-1.5 text-[10px] text-violet-400 hover:text-violet-300 shrink-0" data-testid={`rote-${index}-cast`}>
+                                <Button variant="ghost" size="sm" disabled={!rote.primary_factor || requiredDotsForPractice(rotePractice) > roteArcanumDots} title={!rote.primary_factor ? "Set Primary Factor before casting" : requiredDotsForPractice(rotePractice) > roteArcanumDots ? "Requires higher Arcanum" : "Cast Rote"} onClick={() => openSpellcastingPopup(rote.arcanum, rotePractice, "rote", rote.skill, rote.spell || "", rote.primary_factor, rote.withstand_type, rote.created_by_caster ? "creator" : "memory")} className="h-6 px-1.5 text-[10px] text-violet-400 hover:text-violet-300 shrink-0" data-testid={`rote-${index}-cast`}>
                                     <Sparkles className="w-3 h-3" />
                                 </Button>
                                 <Button variant="ghost" size="sm" onClick={() => { const rotes = (getValue("rotes") || []).filter((_, i) => i !== index); handleChange("rotes", rotes); setEditingRotePrimaryFactor(null); }} className="h-6 w-6 text-zinc-400 hover:text-red-400 shrink-0" data-testid={`rote-${index}-delete`}>
@@ -334,6 +336,13 @@ export const MageArcanaContent = ({
                                             rotes[index] = { ...rotes[index], withstand_type };
                                             handleChange("rotes", rotes);
                                         }} testId={`rote-${index}-withstand`} />
+                                        <label className="flex items-center gap-1 text-[10px] text-zinc-300" data-testid={`rote-${index}-creator-editor`}>
+                                            <input type="checkbox" checked={!!rote.created_by_caster} onChange={(event) => {
+                                                const rotes = [...(getValue("rotes") || [])];
+                                                rotes[index] = { ...rotes[index], created_by_caster: event.target.checked };
+                                                handleChange("rotes", rotes);
+                                            }} /> Creator?
+                                        </label>
                                         <Button type="button" variant="ghost" size="sm" className="h-6 px-2 text-[10px]" onClick={() => setEditingRotePrimaryFactor(null)}>Done</Button>
                                     </div>
                                 )}
@@ -343,6 +352,50 @@ export const MageArcanaContent = ({
                     )}
                 </div>
             </div>
+
+            {/* GRIMOIRE: shown only when the Grimoire Merit is owned; actual spell data belongs to that Merit. */}
+            {(() => {
+                const merits = getValue("merits_list") || [];
+                const meritIndex = merits.findIndex((merit) => merit.name === "Grimoire");
+                if (meritIndex < 0) return null;
+                const merit = merits[meritIndex];
+                const grimoireRotes = Array.isArray(merit.grimoire_rotes) ? merit.grimoire_rotes : [];
+                const capacity = Math.max(0, Number(merit.dots) || 0) * 2;
+                const updateGrimoire = (next) => {
+                    const updated = [...merits];
+                    updated[meritIndex] = { ...merit, grimoire_rotes: next };
+                    handleChange("merits_list", updated);
+                };
+                const updateEntry = (index, patch) => updateGrimoire(grimoireRotes.map((entry, itemIndex) => itemIndex === index ? { ...entry, ...patch } : entry));
+                return (
+                    <div data-testid="grimoire-section">
+                        <div className="flex items-center justify-between mb-1">
+                            <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Grimoire <span className="text-zinc-600">({grimoireRotes.length}/{capacity})</span></p>
+                            <Button type="button" size="sm" className="h-5 px-2 text-[10px] btn-secondary" disabled={grimoireRotes.length >= capacity} onClick={() => updateGrimoire([...grimoireRotes, { spell: "", arcanum: "Death", practice: "Compelling", dots: 1, skill: "occult", primary_factor: null, withstand_type: null }])} data-testid="add-grimoire-rote"><Plus className="w-3 h-3 mr-1" /> Add</Button>
+                        </div>
+                        <p className="text-[10px] text-zinc-600 mb-1">Only Rotes cast from this Grimoire or marked Creator gain rote-quality rerolls. Grimoire casting is ritual-only.</p>
+                        <div className="space-y-2">
+                            {grimoireRotes.map((rote, index) => {
+                                const dots = Number((getValue("arcana") || {})[rote.arcanum] || 0);
+                                const practiceDots = requiredDotsForPractice(rote.practice);
+                                const valid = !!rote.spell?.trim() && !!rote.primary_factor && practiceDots <= dots;
+                                return <div key={index} className="grid min-w-0 items-center gap-1 p-1.5 border border-zinc-800 bg-zinc-900/30 rounded-sm" style={{ gridTemplateColumns: 'minmax(0,1fr) 80px 108px 80px 24px 24px' }}>
+                                    <Input value={rote.spell || ""} onChange={(e) => updateEntry(index, { spell: e.target.value })} placeholder="Rote name" className="input-geist h-6 w-full min-w-0 text-xs" data-testid={`grimoire-rote-${index}-name`} />
+                                    <Select value={rote.arcanum || "Death"} onValueChange={(value) => updateEntry(index, { arcanum: value })}><SelectTrigger className="h-6 w-[80px] border-zinc-800 bg-zinc-900 text-[10px]"><SelectValue /></SelectTrigger><SelectContent className="bg-zinc-900 border-zinc-800">{ARCANA.map((name) => <SelectItem key={name} value={name}>{name}</SelectItem>)}</SelectContent></Select>
+                                    <Select value={rote.practice || "Compelling"} onValueChange={(value) => updateEntry(index, { practice: value, dots: requiredDotsForPractice(value) })}><SelectTrigger className="h-6 w-[108px] border-zinc-800 bg-zinc-900 text-[10px]"><SelectValue /></SelectTrigger><SelectContent className="bg-zinc-900 border-zinc-800">{ALL_SPELL_PRACTICES.map((practice) => <SelectItem key={practice} value={practice} disabled={requiredDotsForPractice(practice) > dots}>{practice}</SelectItem>)}</SelectContent></Select>
+                                    <Select value={rote.skill || "occult"} onValueChange={(value) => updateEntry(index, { skill: value })}><SelectTrigger className="h-6 w-[80px] border-zinc-800 bg-zinc-900 text-[10px]"><SelectValue /></SelectTrigger><SelectContent className="bg-zinc-900 border-zinc-800">{SKILL_LIST.map((skill) => <SelectItem key={skill} value={skill}>{formatLabel(skill)}</SelectItem>)}</SelectContent></Select>
+                                    <Button type="button" size="sm" variant="ghost" disabled={!valid} title={valid ? 'Cast Rote from Grimoire' : 'Complete Rote details and meet Arcanum requirement'} onClick={() => openSpellcastingPopup(rote.arcanum, rote.practice, 'rote', rote.skill, rote.spell, rote.primary_factor, rote.withstand_type, 'grimoire')} className="h-6 w-6 p-0 text-violet-400" data-testid={`grimoire-rote-${index}-cast`}><Sparkles className="w-3 h-3" /></Button>
+                                    <Button type="button" size="sm" variant="ghost" title="Remove from Grimoire" onClick={() => updateGrimoire(grimoireRotes.filter((_, i) => i !== index))} className="h-6 w-6 p-0 text-zinc-400"><Trash2 className="w-3 h-3" /></Button>
+                                    <div className="col-span-full flex flex-wrap items-center gap-2 text-[10px] text-zinc-400">
+                                        <span>Primary Factor</span><SpellPrimaryFactorSelect value={rote.primary_factor} onChange={(primary_factor) => updateEntry(index, { primary_factor })} testId={`grimoire-rote-${index}-primary-factor`} />
+                                        <span>Withstand</span><SpellWithstandSelect value={rote.withstand_type} onChange={(withstand_type) => updateEntry(index, { withstand_type })} testId={`grimoire-rote-${index}-withstand`} />
+                                    </div>
+                                </div>;
+                            })}
+                        </div>
+                    </div>
+                );
+            })()}
 
             {/* Praxes for Mages */}
             <div>
@@ -450,6 +503,7 @@ export const MageArcanaContent = ({
                                             {draftPracticeOptions.map(
                                                 (practice) => (
                                                     <SelectItem
+                                                        disabled={requiredDotsForPractice(practice) > Number((getValue("arcana") || {})[activePraxisDraft.arcanum] || 0)}
                                                         key={practice}
                                                         value={practice}
                                                         className="text-xs"
@@ -514,6 +568,7 @@ export const MageArcanaContent = ({
                     ) : (
                         learnedPraxes.map((praxis, index) => {
                             const praxisPracticeOptions = ALL_SPELL_PRACTICES;
+                            const praxisArcanumDots = Number((getValue("arcana") || {})[praxis.arcanum] || 0);
                             const praxisPractice = praxis.practice || praxisPracticeOptions[0] || "";
 
                             return (
@@ -551,7 +606,7 @@ export const MageArcanaContent = ({
                                     </SelectTrigger>
                                     <SelectContent className="bg-zinc-900 border-zinc-800">
                                         {praxisPracticeOptions.map((practice) => (
-                                            <SelectItem key={practice} value={practice} className="text-xs">
+                                            <SelectItem key={practice} value={practice} disabled={requiredDotsForPractice(practice) > praxisArcanumDots} className="text-xs">
                                                 {practice}
                                             </SelectItem>
                                         ))}
@@ -569,7 +624,7 @@ export const MageArcanaContent = ({
                                 >
                                     <Pencil className="w-3 h-3" />
                                 </Button>
-                                <Button variant="ghost" size="sm" disabled={!praxis.primary_factor} title={!praxis.primary_factor ? "Set Primary Factor before casting" : "Cast Praxis"} onClick={() => openSpellcastingPopup(praxis.arcanum, praxisPractice, "praxis", null, praxis.spell || "", praxis.primary_factor, praxis.withstand_type)} className="h-6 px-1.5 text-[10px] text-teal-400 hover:text-teal-300 shrink-0" data-testid={`praxis-${index}-cast`}>
+                                <Button variant="ghost" size="sm" disabled={!praxis.primary_factor || requiredDotsForPractice(praxisPractice) > praxisArcanumDots} title={!praxis.primary_factor ? "Set Primary Factor before casting" : requiredDotsForPractice(praxisPractice) > praxisArcanumDots ? "Requires higher Arcanum" : "Cast Praxis"} onClick={() => openSpellcastingPopup(praxis.arcanum, praxisPractice, "praxis", null, praxis.spell || "", praxis.primary_factor, praxis.withstand_type)} className="h-6 px-1.5 text-[10px] text-teal-400 hover:text-teal-300 shrink-0" data-testid={`praxis-${index}-cast`}>
                                     <Sparkles className="w-3 h-3" />
                                 </Button>
                                 <Button variant="ghost" size="sm" onClick={() => { const praxes = (getValue("praxes") || []).filter((_, i) => i !== index); handleChange("praxes", praxes); setEditingPraxisPrimaryFactor(null); }} className="h-6 w-6 text-zinc-400 hover:text-red-400 shrink-0" data-testid={`praxis-${index}-delete`}>

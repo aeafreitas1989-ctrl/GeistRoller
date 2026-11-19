@@ -56,6 +56,7 @@ export const getEndScenePatch = (character) => {
     };
     if (character.character_type === "mage") {
         patch.scene_paradox_rolls = 0;
+        patch.skip_previous_paradox_modifier_next_roll = false;
     }
     if (character.character_type !== "mage") {
         const current = nonNegativeInt(character.plasm);

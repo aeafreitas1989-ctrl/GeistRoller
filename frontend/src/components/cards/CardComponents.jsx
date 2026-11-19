@@ -1571,7 +1571,22 @@ export const CombatTrackerCard = ({
     return (
         <div className="space-y-3" data-testid="combat-tracker-card">
             <div className="flex items-center justify-between gap-2 border-b border-zinc-800 pb-2">
-                <span className="text-[10px] text-zinc-400">{activeCharacter?.combat_active ? "Combat ongoing — turns tracked" : "Combat inactive"}</span>
+                <div className="min-w-0 flex-1 space-y-1" data-testid="combat-health-header">
+                    <div className="flex items-center flex-wrap gap-x-2 gap-y-1 text-[10px]">
+                        <span className="font-semibold uppercase tracking-wider text-zinc-400">Health</span>
+                        <span className="font-mono text-zinc-300">{filledHealth}/{maxHealth}</span>
+                        {isDeadTrack && <span className="font-semibold text-rose-400">DEAD</span>}
+                        {activeCharacter?.combat_active && <span className="text-teal-400">Combat active</span>}
+                    </div>
+                    <HealthTrack
+                        boxes={healthBoxes}
+                        max={maxHealth}
+                        onBoxClick={() => {}}
+                        testIdPrefix="combat-health"
+                        resistant={activeCharacter?.resistant_wounds || []}
+                        onToggleResistance={onToggleResistantWound}
+                    />
+                </div>
                 <Button type="button" size="sm" variant="outline" className="h-7 text-xs border-zinc-700" data-testid="combat-toggle-active"
                     onClick={async () => {
                         if (!onUpdateCharacter || !activeCharacter) return;
@@ -1998,28 +2013,6 @@ export const CombatTrackerCard = ({
                         Apply Damage
                     </Button>
                 <div className="space-y-2 border-t border-zinc-800 pt-2">
-                    <div className="flex items-center justify-between">
-                        <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Health</label>
-                        <span className="text-[10px] text-zinc-600 font-mono">
-                            {filledHealth}/{maxHealth}
-                        </span>
-                    </div>
-
-                    <div className="flex items-center gap-2 flex-wrap">
-                        {isDeadTrack && (
-                            <span className="text-[10px] text-rose-400 font-mono">
-                                DEAD
-                            </span>
-                        )}
-                        <HealthTrack
-                            boxes={healthBoxes}
-                            max={maxHealth}
-                            onBoxClick={() => {}}
-                            testIdPrefix="combat-health"
-                            resistant={activeCharacter?.resistant_wounds || []}
-                            onToggleResistance={onToggleResistantWound}
-                        />
-                    </div>
                     {getNaturalHealingLabel(healthBoxes, activeCharacter?.natural_healing, activeCharacter?.scene_tracker) && (
                         <p className="text-[10px] text-zinc-400" data-testid="natural-healing-cards">
                             {getNaturalHealingLabel(healthBoxes, activeCharacter?.natural_healing, activeCharacter?.scene_tracker)}

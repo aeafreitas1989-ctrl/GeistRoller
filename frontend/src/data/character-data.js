@@ -1560,15 +1560,15 @@ export const MAGE_ATTAINMENTS = {
 // Gnosis table (similar to Synergy for Mages)
 export const GNOSIS_TABLE = {
     1: { maxMana: 10, perTurn: 1, traitMax: 5, ritualInterval: "3 hours", combinedSpells: 1, paradoxDie: 1, highestArcanum: "3 or less", otherArcana: "2 or less", yantras: 2 },
-    2: { maxMana: 11, perTurn: 2, traitMax: 5, ritualInterval: "3 hours", combinedSpells: 1, paradoxDie: 1, highestArcanum: "3 or less", otherArcana: "2 or less", yantras: 2 },
+    2: { maxMana: 11, perTurn: 2, traitMax: 5, ritualInterval: "3 hours", combinedSpells: 1, paradoxDie: 1, highestArcanum: "3 or less", otherArcana: "3 or less", yantras: 2 },
     3: { maxMana: 12, perTurn: 3, traitMax: 5, ritualInterval: "1 hour", combinedSpells: 2, paradoxDie: 2, highestArcanum: "4 or less", otherArcana: "3 or less", yantras: 3 },
-    4: { maxMana: 13, perTurn: 4, traitMax: 5, ritualInterval: "1 hour", combinedSpells: 2, paradoxDie: 2, highestArcanum: "4 or less", otherArcana: "3 or less", yantras: 3 },
+    4: { maxMana: 13, perTurn: 4, traitMax: 5, ritualInterval: "1 hour", combinedSpells: 2, paradoxDie: 2, highestArcanum: "4 or less", otherArcana: "4 or less", yantras: 3 },
     5: { maxMana: 15, perTurn: 5, traitMax: 5, ritualInterval: "30 min", combinedSpells: 2, paradoxDie: 3, highestArcanum: "5 or less", otherArcana: "4 or less", yantras: 4 },
     6: { maxMana: 20, perTurn: 6, traitMax: 6, ritualInterval: "30 min", combinedSpells: 3, paradoxDie: 3, highestArcanum: 5, otherArcana: 5, yantras: 4 },
     7: { maxMana: 25, perTurn: 7, traitMax: 7, ritualInterval: "10 min", combinedSpells: 3, paradoxDie: 4, highestArcanum: 5, otherArcana: 5, yantras: 5 },
     8: { maxMana: 30, perTurn: 8, traitMax: 8, ritualInterval: "10 min", combinedSpells: 3, paradoxDie: 4, highestArcanum: 5, otherArcana: 5, yantras: 5 },
     9: { maxMana: 50, perTurn: 10, traitMax: 9, ritualInterval: "1 min", combinedSpells: 4, paradoxDie: 5, highestArcanum: 5, otherArcana: 5, yantras: 6 },
-    10: { maxMana: 75, perTurn: 15, traitMax: 10, ritualInterval: "1 turn", combinedSpells: 5, paradoxDie: 5, highestArcanum: 5, otherArcana: 5, yantras: 7 }
+    10: { maxMana: 75, perTurn: 15, traitMax: 10, ritualInterval: "1 min", combinedSpells: 4, paradoxDie: 5, highestArcanum: 5, otherArcana: 5, yantras: 6 }
 };
 
 // Mage Paths

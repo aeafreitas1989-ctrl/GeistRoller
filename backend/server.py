@@ -15,6 +15,7 @@ from fastapi.staticfiles import StaticFiles
 
 from database import client, db
 from dice_engine import resolve_dice_roll
+from rules_validation import validate_rule_bounded_fields
 from models import (
     Campaign,
     CampaignCreate,
@@ -170,6 +171,10 @@ async def create_character(input: CharacterCreate):
         character_type=input.character_type or "geist",
     )
 
+    if character.character_type == "geist":
+        character.synergy = 1
+        character.geist_rank = 3
+
     if character.character_type == "mage":
         character.creation_mode = "creation"
         character.creation_locked = False
@@ -300,6 +305,11 @@ def build_xp_history_entry(previous, updates, reason=""):
 @api_router.put("/characters/{character_id}", response_model=Character)
 async def update_character(character_id: str, input: CharacterUpdate):
     update_data = input.model_dump(exclude_unset=True)
+    allow_override = bool(update_data.pop("allow_rules_override", False))
+    try:
+        validate_rule_bounded_fields(update_data, allow_override)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     reason = (update_data.pop("xp_reason", "") or "").strip()
 
     previous = await db.characters.find_one(

@@ -12,15 +12,7 @@ import { remainingScourings, registerScouring, hallowManaRemaining, recordHallow
 import { toast } from "sonner";
 import { MageManaControls } from "./MageManaControls";
 
-const GNOSIS_TABLE = {
-    ...BASE_GNOSIS_TABLE,
-    10: {
-        ...BASE_GNOSIS_TABLE[10],
-        ritualInterval: "1 min",
-        combinedSpells: 4,
-        yantras: 6,
-    },
-};
+const GNOSIS_TABLE = BASE_GNOSIS_TABLE;
 
 export const MageGnosisContent = ({
     getValue, handleChange, getNestedValue, handleNestedChange,

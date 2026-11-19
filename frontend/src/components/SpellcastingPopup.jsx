@@ -13,15 +13,7 @@ import { toast } from "sonner";
 
 // Spellcasting-specific corrections are kept local so this rules pass does not
 // require replacing the shared character-data catalogue.
-const GNOSIS_TABLE = {
-    ...BASE_GNOSIS_TABLE,
-    10: {
-        ...BASE_GNOSIS_TABLE[10],
-        ritualInterval: "1 min",
-        combinedSpells: 4,
-        yantras: 6,
-    },
-};
+const GNOSIS_TABLE = BASE_GNOSIS_TABLE;
 
 const YANTRAS = [
     { name: "Concentration", bonus: 2, description: "Focus your full attention on a spell with Duration longer than one turn." },
@@ -244,6 +236,10 @@ export const SpellcastingPopup = ({
     activeSpellCount = 0,
     orderRoteSkills,
     spellType,
+    roteSource = "memory",
+    knownPraxes = [],
+    previousParadoxSkipNextRoll = false,
+    onParadoxRollRecorded,
     defaultSpellName = "",
     roteSkillDots,
     isRoteOrderSkill,
@@ -290,9 +286,12 @@ export const SpellcastingPopup = ({
     const [ritualCastingBonus, setRitualCastingBonus] = useState(0);
     const [additionalMana, setAdditionalMana] = useState(0);
     const [combinedSpellCount, setCombinedSpellCount] = useState(0);
-    const [combinedSpellArcana, setCombinedSpellArcana] = useState([]);
+    const [combinedSpellDetails, setCombinedSpellDetails] = useState([]);
 
     const effectiveSpellType = spellType || "improvised";
+    const [paradoxPreparationTurns, setParadoxPreparationTurns] = useState(1);
+    const [paradoxConditionType, setParadoxConditionType] = useState("pending");
+    const [paradoxConditionName, setParadoxConditionName] = useState("");
     const getMeritDots = (meritName) => {
         const normalizedName = normalizeYantraText(meritName);
         const merit = (meritsList || []).find((entry) => normalizeYantraText(entry?.name) === normalizedName);
@@ -321,11 +320,11 @@ export const SpellcastingPopup = ({
     };
 
     const registerParadoxRollForScene = (paradoxResult = {}) => {
-        if (paradoxResult?.is_dramatic_failure) {
-            toast.info("Paradox dramatic failure: previous Paradox roll counter does not increase.");
+        if (onParadoxRollRecorded) {
+            onParadoxRollRecorded({ dramatic: !!paradoxResult?.is_dramatic_failure });
             return;
         }
-        setPreviousParadoxRolls((current) => current + 1);
+        if (!paradoxResult?.is_dramatic_failure) setPreviousParadoxRolls((current) => current + 1);
     };
 
     useEffect(() => {
@@ -343,6 +342,9 @@ export const SpellcastingPopup = ({
         setParadoxInured(false);
         setSleeperWitnesses("none");
         setManaMitigation(0);
+        setParadoxPreparationTurns(1);
+        setParadoxConditionType("pending");
+        setParadoxConditionName("");
         setParadoxMode("");
         setSelectedInventoryYantras({});
         // Initialize to the Gnosis maximum; the yantraSlotLimit effect below
@@ -363,7 +365,7 @@ export const SpellcastingPopup = ({
         setRitualCastingBonus(0);
         setAdditionalMana(0);
         setCombinedSpellCount(0);
-        setCombinedSpellArcana([]);
+        setCombinedSpellDetails([]);
     }, [isOpen, arcanum, arcanumDots, initialPractice, defaultPrimaryFactor, defaultWithstandType, gnosis, effectiveSpellType, roteSkillDots, defaultSpellName]);
 
     useEffect(() => {
@@ -394,7 +396,7 @@ export const SpellcastingPopup = ({
     const canUseMatterDurationMana = matterDots >= 2 && arcanum === "Matter";
     const canUseSpaceSympathetic = spaceDots >= 2;
     const canUseTimeSympathetic = timeDots >= 2;
-    const maxCombinedSpellCount = Math.max(0, (Number(gnosisData.combinedSpells) || 1) - 1);
+    const maxCombinedSpellCount = effectiveSpellType === "rote" ? 0 : Math.max(0, (Number(gnosisData.combinedSpells) || 1) - 1);
 
     const getArcanaDotsForCombinedSpell = (arcanaName) => {
         if (arcanaName === arcanum) return Number(arcanumDots) || 0;
@@ -409,10 +411,19 @@ export const SpellcastingPopup = ({
     }, [combinedSpellCount, maxCombinedSpellCount]);
 
     useEffect(() => {
-        setCombinedSpellArcana((prev) => Array.from({ length: combinedSpellCount }, (_, index) => prev[index] || arcanum));
+        setCombinedSpellDetails((prev) => Array.from({ length: combinedSpellCount }, (_, index) =>
+            prev[index] || { name: "", arcanum: arcanum || "Death", practice: "", reach: 0, praxisId: "" }
+        ));
     }, [combinedSpellCount, arcanum]);
 
-    const selectedCombinedArcana = combinedSpellArcana.slice(0, combinedSpellCount);
+    const selectedCombinedDetails = combinedSpellDetails.slice(0, combinedSpellCount);
+    const selectedCombinedArcana = selectedCombinedDetails.map((part) => part.arcanum || arcanum);
+    const selectedCombinedPractices = selectedCombinedDetails.map((part) => part.practice || "");
+    const combinedExtraReach = selectedCombinedDetails.reduce((sum, part) => sum + Math.max(0, Number(part.reach) || 0), 0);
+    const combinedPartsValid = selectedCombinedDetails.length === combinedSpellCount && selectedCombinedDetails.every((part) =>
+        !!part.name?.trim() && !!part.practice && Number(PRACTICE_DOTS[part.practice] || 99) <= getArcanaDotsForCombinedSpell(part.arcanum) &&
+        (effectiveSpellType !== "praxis" || (part.praxisId && knownPraxes.some((praxis) => String(praxis.id || praxis.spell) === String(part.praxisId) && praxis.spell === part.name)))
+    );
     const selectedCombinedArcanaDots = selectedCombinedArcana.map(getArcanaDotsForCombinedSpell);
     const combinedLowestArcanumDots = selectedCombinedArcanaDots.length
         ? Math.min(Number(arcanumDots) || 0, ...selectedCombinedArcanaDots)
@@ -421,8 +432,10 @@ export const SpellcastingPopup = ({
     const baseArcanumDots = combinedSpellCount > 0 ? combinedLowestArcanumDots : Number(arcanumDots) || 0;
     const availablePractices = useMemo(() => ALL_PRACTICES.filter((p) => p.dots <= arcanumDots), [arcanumDots]);
     const practiceDots = selectedPractice ? PRACTICE_DOTS[selectedPractice] : 0;
-    const reachArcanumDots = effectiveSpellType === "rote" ? 5 : baseArcanumDots;
-    const freeReach = selectedPractice ? Math.max(0, reachArcanumDots - practiceDots + 1) : 0;
+    const reachArcanumDots = effectiveSpellType === "rote" ? 5 : Math.max(Number(arcanumDots) || 0, ...selectedCombinedArcanaDots);
+    const highestPracticeDots = Math.max(practiceDots, ...selectedCombinedPractices.map((name) => PRACTICE_DOTS[name] || 0));
+    const freeReach = selectedPractice ? Math.max(0, reachArcanumDots - highestPracticeDots + 1) : 0;
+    const selectedPracticeIsLegal = !!selectedPractice && practiceDots > 0 && practiceDots <= Number(arcanumDots || 0);
     const advancedReachUsed = Object.entries(factors).reduce((sum, [key, value]) => {
         if (!value.advanced) return sum;
         if (key === "duration" && lastingDuration) return sum;
@@ -434,7 +447,7 @@ export const SpellcastingPopup = ({
     const changePrimaryReach = overridePrimaryFactor && !!primaryFactor ? 1 : 0;
     const remoteRangeReach = remoteRange && factors.range.advanced && specialRangeMode === "none" ? 1 : 0;
     const specialRangeReach = specialRangeMode !== "none" ? 1 : 0;
-    const totalReachUsed = advancedReachUsed + indefiniteReach + changePrimaryReach + activeSpellReachSurcharge + spellReach + remoteRangeReach + specialRangeReach + (channelManaRequest?.ignorePerTurn ? 1 : 0);
+    const totalReachUsed = advancedReachUsed + indefiniteReach + changePrimaryReach + activeSpellReachSurcharge + spellReach + combinedExtraReach + remoteRangeReach + specialRangeReach + (channelManaRequest?.ignorePerTurn ? 1 : 0);
     const reachRemaining = freeReach - totalReachUsed;
     const primaryArcanumDots = combinedSpellCount > 0 ? Math.max(Number(arcanumDots) || 1, ...selectedCombinedArcanaDots) : Number(arcanumDots) || 1;
     const primaryFreeLevels = Math.max(0, primaryArcanumDots - 1);
@@ -525,7 +538,9 @@ export const SpellcastingPopup = ({
 
     const ritualBonus = factors.casting.advanced ? 0 : ritualCastingBonus;
     const baseDicePool = gnosis + baseArcanumDots;
-    const finalDicePool = Math.max(0, baseDicePool + dicePenalty + yantraBonus + ritualBonus + combinedSpellPenalty);
+    const rawSpellcastingPool = baseDicePool + dicePenalty + yantraBonus + ritualBonus + combinedSpellPenalty;
+    const finalDicePool = Math.max(0, rawSpellcastingPool);
+    const spellIsImpossible = rawSpellcastingPool <= -6;
 
     const getManaCost = () => {
         let cost = 0;
@@ -544,11 +559,11 @@ export const SpellcastingPopup = ({
     if (paradoxInured) paradoxModifiers += 2;
     if (sleeperWitnesses !== "none") paradoxModifiers += 1;
     if (hasDedicatedTool) paradoxModifiers -= 2;
-    paradoxModifiers += scenePreviousParadoxRolls;
+    paradoxModifiers += previousParadoxSkipNextRoll ? 0 : scenePreviousParadoxRolls;
     const paradoxAfterModifiers = baseParadoxDice + paradoxModifiers;
     const committedSpellManaCost = manaCost + additionalMana;
     const maxManaMitigation = Math.max(0, Math.min(
-        manaPerTurn - committedSpellManaCost,
+        manaPerTurn * paradoxPreparationTurns - committedSpellManaCost,
         currentMana - committedSpellManaCost,
         Math.max(0, paradoxAfterModifiers)
     ));
@@ -629,7 +644,9 @@ export const SpellcastingPopup = ({
                 const turnsLabel = `Instant (${totalTurns} turn${totalTurns === 1 ? "" : "s"})`;
                 return hasRunesYantra ? `${turnsLabel} + ${gnosisData.ritualInterval}` : turnsLabel;
             }
-            return `${getCastingTime(gnosis)} Ritual`;
+            return roteSource === "grimoire" && effectiveSpellType === "rote"
+                ? `${getCastingTime(gnosis)} x2 Grimoire Ritual`
+                : `${getCastingTime(gnosis)} Ritual`;
         }
         if (factorName === "range") {
             if (!isAdvanced) return "Touch Range / Self";
@@ -709,6 +726,18 @@ export const SpellcastingPopup = ({
     };
 
     const handleCastSpell = () => {
+        if (!selectedPracticeIsLegal || !combinedPartsValid || combinedSpellCount > maxCombinedSpellCount) {
+            toast.error("Each constituent spell must be known at the selected Arcanum and Practice; Rotes cannot be combined.");
+            return;
+        }
+        if (spellIsImpossible) {
+            toast.error("Spellcasting pool -6 or lower: spell is impossible.");
+            return;
+        }
+        if (roteSource === "grimoire" && factors.casting.advanced) {
+            toast.error("Grimoire Rotes require ritual casting.");
+            return;
+        }
         if (!effectivePrimaryFactor) {
             toast.error("Select a Primary Spell Factor before casting.");
             return;
@@ -750,10 +779,12 @@ export const SpellcastingPopup = ({
             : "";
         const ritualSummary = ritualBonus > 0 ? `Ritual Casting: +${ritualBonus} dice` : "";
         const combinedSpellSummary = combinedSpellCount > 0
-            ? `Combined Spell: ${combinedSpellCount + 1} spells (${[arcanum, ...selectedCombinedArcana].join(", ")}); lowest Arcanum ${combinedLowestArcanumDots}; ${combinedSpellPenalty} dice`
+            ? `Combined Spells: ${[{ name: spellName.trim(), arcanum, practice: selectedPractice, reach: spellReach }, ...selectedCombinedDetails].map((part, index) => `${index + 1}. ${part.name || '(unnamed)'} [${part.arcanum} / ${part.practice}; +${part.reach || 0} Reach]`).join('; ')}; shared factors; lowest Arcanum ${combinedLowestArcanumDots}; ${combinedSpellPenalty} dice`
             : "";
         const arcanaManaSurchargeSummary = effectiveSpellType === "improvised" && !isRuling
             ? (isInferior ? "Inferior Arcanum" : "Common Arcanum") : "";
+        const preparationSummary = paradoxPreparationTurns > 1 && actualManaMitigation > 0
+            ? `Paradox mitigation prepared over ${paradoxPreparationTurns} turns (advance scene/combat turns before casting).` : "";
         const spentSpellManaSummary = committedSpellManaCost > 0
             ? `Spent Mana: ${committedSpellManaCost}${arcanaManaSurchargeSummary ? ` (${arcanaManaSurchargeSummary})` : ""}` : "";
         const reachCategories = [];
@@ -761,6 +792,7 @@ export const SpellcastingPopup = ({
         if (indefiniteReach > 0) reachCategories.push(`Indefinite Duration +${indefiniteReach}`);
         if (changePrimaryReach > 0) reachCategories.push(`Primary Factor Override → ${getPrimaryFactorLabel(primaryFactor)} +${changePrimaryReach}`);
         if (spellReach > 0) reachCategories.push(`Spell Options +${spellReach}`);
+        if (combinedExtraReach > 0) reachCategories.push(`Additional combined-spell Reach +${combinedExtraReach}`);
         if (channelManaRequest?.ignorePerTurn) reachCategories.push("Channel Mana limit bypass +1");
         if (remoteRangeReach > 0) reachCategories.push(`Remote Range +${remoteRangeReach}`);
         if (specialRangeReach > 0) reachCategories.push(`Sympathetic Casting +${specialRangeReach}`);
@@ -773,6 +805,7 @@ export const SpellcastingPopup = ({
             spellReachSummary,
             ...(reachBreakdownLine ? [reachBreakdownLine] : []),
             ...(spentSpellManaSummary ? [spentSpellManaSummary] : []),
+            ...(preparationSummary ? [preparationSummary] : []),
             ...(selectedYantrasSummary ? [selectedYantrasSummary] : []),
             ...(ritualSummary ? [ritualSummary] : []),
             ...(combinedSpellSummary ? [combinedSpellSummary] : []),
@@ -787,7 +820,12 @@ export const SpellcastingPopup = ({
         const castLabel = spellNameTrimmed || defaultSpellNameTrimmed || baseCastLabel;
 
         const buildSpellRollConfig = (poolModifier = 0) => {
-            const adjustedPool = Math.max(0, finalDicePool + poolModifier);
+            const adjustedPoolRaw = rawSpellcastingPool + poolModifier;
+            if (adjustedPoolRaw <= -6) {
+                toast.error("Released Paradox makes the casting pool -6 or lower; spell cannot be cast.");
+                return null;
+            }
+            const adjustedPool = Math.max(0, adjustedPoolRaw);
             const dicePoolBreakdownParts = [
                 `Gnosis ${gnosis}`,
                 combinedSpellCount > 0
@@ -800,6 +838,7 @@ export const SpellcastingPopup = ({
                 ...(poolModifier < 0 ? [`Release Penalty ${poolModifier}`] : []),
             ];
             return {
+                rote: effectiveSpellType === "rote" && ["creator", "grimoire"].includes(roteSource),
                 pool: adjustedPool <= 0 ? 1 : adjustedPool,
                 chance: adjustedPool <= 0,
                 label: castLabel,
@@ -842,6 +881,7 @@ export const SpellcastingPopup = ({
 
         const rollSpell = (poolModifier = 0, summaryOptions = null) => {
             const spellConfig = buildSpellRollConfig(poolModifier);
+            if (!spellConfig) return;
             onRollDice(summaryOptions ? { ...spellConfig, ...summaryOptions } : spellConfig);
         };
         if (!paradoxConfig) {
@@ -861,7 +901,7 @@ export const SpellcastingPopup = ({
                     }
                     const penalty = paradoxResult?.successes || 0;
                     if (paradoxResult?.is_exceptional && onResolveParadoxContainment) {
-                        await onResolveParadoxContainment({ mode: "release", cancelled: 0, remaining: penalty, paradoxExceptional: true });
+                        await onResolveParadoxContainment({ mode: "release", cancelled: 0, remaining: penalty, paradoxExceptional: true, conditionType: paradoxConditionType, conditionName: paradoxConditionName });
                     }
                     if (penalty > 0) toast.info(`Release: ${penalty} Paradox success${penalty === 1 ? "" : "es"} = -${penalty} die${penalty === 1 ? "" : "s"} to the spell.`);
                     rollSpell(-penalty, { appendToSummary: true, summaryKey: "spell", summaryLabel: "Spell" });
@@ -902,6 +942,8 @@ export const SpellcastingPopup = ({
                                 cancelled,
                                 remaining,
                                 paradoxExceptional: !!paradoxResult?.is_exceptional,
+                                conditionType: paradoxConditionType,
+                                conditionName: paradoxConditionName,
                             });
                             toast.info(`Contain: ${cancelled} cancelled, ${remaining} remaining${cancelled > 0 ? `, ${cancelled} Bashing dealt` : ""}.`);
                             rollSpell(0, { appendToSummary: true, summaryKey: "spell", summaryLabel: "Spell" });
@@ -1100,25 +1142,52 @@ export const SpellcastingPopup = ({
                                     </div>
                                 </div>
                                 {combinedSpellCount > 0 && (
-                                    <div className="space-y-2 pt-2 border-t border-zinc-700/50">
+                                    <div className="space-y-3 pt-2 border-t border-zinc-700/50">
+                                        <p className="text-[10px] text-zinc-400">One shared set of spell factors applies to all constituent spells.</p>
                                         {Array.from({ length: combinedSpellCount }).map((_, index) => {
-                                            const selectedArcanaName = selectedCombinedArcana[index] || arcanum;
-                                            const selectedDots = getArcanaDotsForCombinedSpell(selectedArcanaName);
-                                            return (
-                                                <div key={`combined-spell-${index}`} className="flex items-center gap-2">
-                                                    <span className="w-20 text-[10px] uppercase tracking-wider text-zinc-500">Spell {index + 2}</span>
-                                                    <Select value={selectedArcanaName} onValueChange={(value) => setCombinedSpellArcana((prev) => { const next = [...prev]; next[index] = value; return next; })}>
-                                                        <SelectTrigger className="flex-1 h-8 text-xs bg-zinc-900/50 border-zinc-700" data-testid={`combined-spell-arcana-${index + 1}`}><SelectValue /></SelectTrigger>
-                                                        <SelectContent className="bg-zinc-900 border-zinc-700 z-[200]">
-                                                            {availableCombinedArcana.map((arcanaData) => <SelectItem key={arcanaData.name} value={arcanaData.name} className="text-xs text-zinc-200">{arcanaData.name} {arcanaData.dots}</SelectItem>)}
-                                                        </SelectContent>
-                                                    </Select>
-                                                    <span className="w-12 text-right text-xs font-mono text-violet-300">{selectedDots} dot{selectedDots === 1 ? "" : "s"}</span>
+                                            const part = combinedSpellDetails[index] || { name: "", arcanum, practice: "", reach: 0, praxisId: "" };
+                                            const partDots = getArcanaDotsForCombinedSpell(part.arcanum);
+                                            const setPart = (update) => setCombinedSpellDetails((prev) => {
+                                                const next = [...prev];
+                                                next[index] = { ...part, ...update };
+                                                return next;
+                                            });
+                                            return <div key={index} className="space-y-1 rounded border border-zinc-700 p-2" data-testid={`combined-spell-${index + 2}`}>
+                                                <p className="text-[11px] font-semibold text-violet-200">Spell {index + 2}</p>
+                                                {effectiveSpellType === "praxis" ? (
+                                                    <label className="block text-[10px] text-zinc-400">Learned Praxis
+                                                        <Select value={part.praxisId || undefined} onValueChange={(id) => {
+                                                            const praxis = knownPraxes.find((p) => String(p.id || p.spell) === id);
+                                                            if (praxis) setPart({ praxisId: id, name: praxis.spell, arcanum: praxis.arcanum, practice: praxis.practice });
+                                                        }}>
+                                                            <SelectTrigger className="mt-1 h-7 border-zinc-700 bg-zinc-900 text-xs" data-testid={`combined-praxis-${index}`}><SelectValue placeholder="Choose a learned Praxis" /></SelectTrigger>
+                                                            <SelectContent className="bg-zinc-900 border-zinc-700">
+                                                                {knownPraxes.filter((p) => (p?.spell || '').trim() && PRACTICE_DOTS[p.practice] <= getArcanaDotsForCombinedSpell(p.arcanum)).map((p) => <SelectItem key={p.id || p.spell} value={String(p.id || p.spell)}>{p.spell} ({p.arcanum} / {p.practice})</SelectItem>)}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    </label>
+                                                ) : (
+                                                    <>
+                                                        <Input value={part.name || ''} onChange={(e) => setPart({ name: e.target.value })} placeholder={`Spell ${index + 2} name`} className="h-7 bg-zinc-900 text-xs" data-testid={`combined-name-${index}`} />
+                                                        <div className="grid grid-cols-2 gap-1">
+                                                            <Select value={part.arcanum || undefined} onValueChange={(value) => setPart({ arcanum: value, practice: '' })}><SelectTrigger className="h-7 border-zinc-700 bg-zinc-900 text-xs" data-testid={`combined-arcanum-${index}`}><SelectValue placeholder="Arcanum" /></SelectTrigger><SelectContent className="bg-zinc-900 border-zinc-700">{availableCombinedArcana.map(({ name, dots }) => <SelectItem key={name} value={name}>{name} {dots}</SelectItem>)}</SelectContent></Select>
+                                                            <Select value={part.practice || undefined} onValueChange={(value) => setPart({ practice: value })}><SelectTrigger className="h-7 border-zinc-700 bg-zinc-900 text-xs" data-testid={`combined-practice-${index}`}><SelectValue placeholder="Practice" /></SelectTrigger><SelectContent className="bg-zinc-900 border-zinc-700">{ALL_PRACTICES.map(({ name, dots }) => <SelectItem key={name} value={name} disabled={dots > partDots}>{name} ({dots})</SelectItem>)}</SelectContent></Select>
+                                                        </div>
+                                                    </>
+                                                )}
+                                                <div className="flex items-center justify-between text-[10px] text-zinc-400">
+                                                    <span>Additional Reach for spell {index + 2}</span>
+                                                    <div className="flex items-center gap-1">
+                                                        <Button type="button" size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => setPart({ reach: Math.max(0, (Number(part.reach) || 0) - 1) })}><Minus className="h-3 w-3" /></Button>
+                                                        <span className="w-4 text-center font-mono text-amber-300" data-testid={`combined-reach-${index}`}>{part.reach || 0}</span>
+                                                        <Button type="button" size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => setPart({ reach: Math.min(20, (Number(part.reach) || 0) + 1) })}><Plus className="h-3 w-3" /></Button>
+                                                    </div>
                                                 </div>
-                                            );
+                                            </div>;
                                         })}
                                         <div className="flex justify-between text-xs"><span className="text-zinc-500">Combined penalty</span><span className="font-mono text-red-400">{combinedSpellPenalty} dice</span></div>
                                         <div className="flex justify-between text-xs"><span className="text-zinc-500">Lowest Arcanum used</span><span className="font-mono text-violet-300">{combinedLowestArcanumDots}</span></div>
+                                        {!combinedPartsValid && <p className="text-[10px] text-amber-400">Complete the name, Arcanum, Practice and any required learned Praxis selection for each spell.</p>}
                                     </div>
                                 )}
                             </div>
@@ -1218,6 +1287,13 @@ export const SpellcastingPopup = ({
                         maxManaMitigation={maxManaMitigation}
                         manaMitigation={manaMitigation}
                         setManaMitigation={setManaMitigation}
+                        paradoxPreparationTurns={paradoxPreparationTurns}
+                        setParadoxPreparationTurns={setParadoxPreparationTurns}
+                        previousParadoxSkipNextRoll={previousParadoxSkipNextRoll}
+                        paradoxConditionType={paradoxConditionType}
+                        setParadoxConditionType={setParadoxConditionType}
+                        paradoxConditionName={paradoxConditionName}
+                        setParadoxConditionName={setParadoxConditionName}
                         actualManaMitigation={actualManaMitigation}
                         paradoxIsChanceDie={paradoxIsChanceDie}
                         finalParadoxPool={finalParadoxPool}

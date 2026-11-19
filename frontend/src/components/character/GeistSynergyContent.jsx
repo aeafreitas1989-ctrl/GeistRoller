@@ -13,7 +13,7 @@ export const GeistSynergyContent = ({
             {/* Original Geist content */}
             <div>
                 <label className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1 block">Synergy</label>
-                <SynergyTrack value={getValue("synergy") || 7} maxValue={getValue("synergy_max") || 10} onChangeValue={(v) => handleChange("synergy", v)} onChangeMax={(v) => handleChange("synergy_max", v)} />
+                <SynergyTrack value={getValue("synergy") ?? 1} maxValue={getValue("synergy_max") || 10} onChangeValue={(v) => handleChange("synergy", v)} onChangeMax={(v) => handleChange("synergy_max", v)} />
             </div>
 
             <div className="grid grid-cols-2 gap-2 text-[10px]">

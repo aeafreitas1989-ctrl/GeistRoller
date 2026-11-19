@@ -35,6 +35,13 @@ export const ParadoxSection = ({
     paradoxRollQuality,
     paradoxMode,
     setParadoxMode,
+    paradoxPreparationTurns = 1,
+    setParadoxPreparationTurns,
+    previousParadoxSkipNextRoll = false,
+    paradoxConditionType = "pending",
+    setParadoxConditionType,
+    paradoxConditionName = "",
+    setParadoxConditionName,
 }) => {
     if (!selectedPractice) return null;
 
@@ -64,6 +71,7 @@ export const ParadoxSection = ({
             </div>
 
             {paradoxTriggered && (
+
                 <>
                     <div className="space-y-1.5">
                         <p className="text-[10px] text-zinc-500 uppercase">Modifiers</p>
@@ -218,6 +226,25 @@ export const ParadoxSection = ({
                         )}
                     </div>
 
+                    <div className="p-2 bg-zinc-900/50 rounded space-y-2">
+                        <label className="flex items-center justify-between gap-2 text-xs text-zinc-300">Paradox mitigation preparation turns
+                            <input type="number" min="1" max="10" value={paradoxPreparationTurns} onChange={(event) => setParadoxPreparationTurns?.(Math.max(1, Math.min(10, Number(event.target.value) || 1)))} className="h-7 w-14 rounded border border-zinc-700 bg-zinc-950 px-1 text-center" data-testid="paradox-preparation-turns" />
+                        </label>
+                        <p className="text-[10px] text-zinc-500">Mana-per-turn limit applies separately each turn. Advance extra preparation turns in the scene/combat tracker before casting.</p>
+                        {previousParadoxSkipNextRoll && <p className="text-[10px] text-teal-300">A prior Paradox Dramatic Failure waives the cumulative scene modifier for this roll only.</p>}
+                    </div>
+                    <div className="p-2 bg-zinc-900/50 rounded space-y-2">
+                        <p className="text-[10px] text-zinc-400">Condition from residual / exceptional Paradox (selected by Storyteller)</p>
+                        <Select value={paradoxConditionType} onValueChange={setParadoxConditionType}>
+                            <SelectTrigger className="h-7 border-zinc-700 bg-zinc-950 text-xs" data-testid="paradox-condition-type"><SelectValue /></SelectTrigger>
+                            <SelectContent className="bg-zinc-900 border-zinc-700">
+                                <SelectItem value="pending">Pending Storyteller decision</SelectItem>
+                                <SelectItem value="taint">Paradox Taint</SelectItem>
+                                <SelectItem value="custom">Other Condition (ST-selected)</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        {paradoxConditionType === "custom" && <input type="text" value={paradoxConditionName} onChange={(e) => setParadoxConditionName(e.target.value)} className="h-7 w-full rounded border border-zinc-700 bg-zinc-950 px-2 text-xs" placeholder="Condition name supplied by ST" data-testid="paradox-condition-name" />}
+                    </div>
                     <div className="p-2 bg-zinc-900/50 rounded space-y-2" data-testid="paradox-mode-section">
                         <p className="text-xs text-zinc-300 font-medium">Resolve Paradox before the spell roll</p>
 

@@ -76,6 +76,7 @@ export const InlineDiceRoller = ({
     onDiceRollResult,
     onAddRecentRoll,
     onRollComplete = null,
+    onOpenHauntRoll = null,
     onRollPressed = null,
     geistRank = 1,
     woundPenalty = 0,
@@ -508,6 +509,19 @@ export const InlineDiceRoller = ({
     };
     
     const rollDice = async () => {
+        if (rollType === "haunt") {
+            if (!onOpenHauntRoll) {
+                toast.error("Use the dedicated Haunt activation roller.");
+                return;
+            }
+            if (hauntRating < 1) {
+                toast.error("You have not learned this Haunt.");
+                return;
+            }
+            onRollComplete?.();
+            onOpenHauntRoll(haunt);
+            return;
+        }
         if (rollType === "spellcasting") {
             if (!spellArcanum) {
                 toast.error("Choose an Arcanum first");
@@ -743,7 +757,12 @@ export const InlineDiceRoller = ({
                 <div className="p-3 border-t border-zinc-800 space-y-3">
                     <div className="space-y-2">
                         <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Roll Type</label>
-                        <Select value={rollType} onValueChange={setRollType}>
+                        <Select value={rollType} onValueChange={(value) => {
+                            if (value === "haunt" && onOpenHauntRoll) {
+                                onRollComplete?.();
+                                onOpenHauntRoll(haunt);
+                            } else setRollType(value);
+                        }}>
                             <SelectTrigger className="h-7 bg-zinc-900/50 border-zinc-700 text-xs" data-testid="dice-roll-type-select">
                                 <SelectValue />
                             </SelectTrigger>

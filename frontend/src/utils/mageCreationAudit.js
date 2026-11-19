@@ -1,4 +1,5 @@
 import { normalizeSkillSpecialty } from "./skillSpecialties";
+import { ARCANA_PRACTICES, SKILL_LIST } from "../data/character-data";
 
 export const MAGE_ATTRIBUTE_CATEGORIES = {
     mental: ["intelligence", "wits", "resolve"],
@@ -343,6 +344,19 @@ export const validateMageCreation = (character = {}) => {
     if (praxes.length !== gnosis) {
         errors.push(`Starting Praxes: ${praxes.length}; expected ${gnosis}, one per Gnosis dot.`);
     }
+    const practiceRating = (name) => {
+        const found = Object.entries(ARCANA_PRACTICES).find(([, entries]) => entries.includes(name));
+        return found ? Number(found[0]) : 0;
+    };
+    [...rotes.map((entry) => ({...entry, kind: 'Rote'})), ...praxes.map((entry) => ({...entry, kind: 'Praxis'}))].forEach((entry) => {
+        const label = `${entry.kind} ${entry.spell || '(unnamed)'}`;
+        if (!String(entry.spell || '').trim()) errors.push(`${label}: name required.`);
+        const dots = practiceRating(entry.practice);
+        if (!dots) errors.push(`${label}: select a valid Practice.`);
+        if (dots > Number(arcana[entry.arcanum] || 0)) errors.push(`${label}: requires ${entry.arcanum} ${dots}.`);
+        if (!['potency','duration'].includes(entry.primary_factor)) errors.push(`${label}: select Primary Factor.`);
+        if (entry.kind === 'Rote' && !SKILL_LIST.includes(entry.skill)) errors.push(`${label}: select a valid Rote Skill.`);
+    });
 
     const expectedObsessions = getMageObsessionCount(gnosis);
     if (obsessions.length !== expectedObsessions) {
