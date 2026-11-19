@@ -1,4 +1,5 @@
 import { MERIT_RULE_CORRECTIONS } from "./merit-rule-corrections";
+import { MERIT_DESCRIPTION_REVISIONS } from "./merit-description-audit";
 
 // Geist: The Sin-Eaters - Character Data Constants
 
@@ -1104,7 +1105,11 @@ const MERIT_LIST_BASE = [
     { name: "Virtuous", maxDots: 2, description: "Your character is a light of good in the Chronicles of Darkness. She has two Virtues. The limitations of how many times she may refresh Willpower using a Virtue remain the same, but it’s up to you which Virtue she uses each time." }
 ];
 
-export const MERIT_LIST = MERIT_LIST_BASE.map((merit) => ({ ...merit, ...(MERIT_RULE_CORRECTIONS[merit.name] || {}) }));
+export const MERIT_LIST = MERIT_LIST_BASE.map((merit) => ({
+    ...merit,
+    ...(MERIT_RULE_CORRECTIONS[merit.name] || {}),
+    description: MERIT_DESCRIPTION_REVISIONS[merit.name] || merit.description,
+}));
 
 export const MERIT_CATEGORY_BY_NAME = {
     // Mental

@@ -1,4 +1,5 @@
 import { CONDITION_RULE_OVERRIDES } from "./condition-rule-overrides";
+import { CONDITION_DESCRIPTION_REVISIONS } from "./condition-description-audit";
 
 // Consolidated Chronicles of Darkness 2e Conditions and Tilts.
 // Filters are used by the Conditions picker.
@@ -2354,9 +2355,17 @@ export const CONDITION_FILTER_OPTIONS = [
 ];
 
 export const CONDITION_DEFINITIONS = Object.fromEntries(
-    Object.entries({ ...CONDITION_CATALOGUE, ...TILT_DEFINITIONS }).map(([key, entry]) => [
-        key, { ...entry, ...(CONDITION_RULE_OVERRIDES[key] || {}) },
-    ])
+    Object.entries({ ...CONDITION_CATALOGUE, ...TILT_DEFINITIONS }).map(([key, entry]) => {
+        const override = CONDITION_RULE_OVERRIDES[key] || {};
+        const fullEffect = CONDITION_DESCRIPTION_REVISIONS[key] || override.effect || entry.effect || entry.description || "";
+        return [key, {
+            ...entry,
+            ...override,
+            // The picker and active-condition cards both expose what the rule actually does.
+            description: fullEffect,
+            effect: fullEffect,
+        }];
+    })
 );
 
 export const getConditionDefinition = (key) =>
