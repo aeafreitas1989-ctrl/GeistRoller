@@ -12,6 +12,7 @@ import { PrimaryFactorOverride } from "./spellcasting/PrimaryFactorOverride";
 import { FactorRow } from "./spellcasting/FactorRow";
 import { ParadoxSection } from "./spellcasting/ParadoxSection";
 import { toast } from "sonner";
+import { isReleasedParadoxSpellDramatic } from "../utils/paradoxResolution";
 
 // Spellcasting-specific corrections are kept local so this rules pass does not
 // require replacing the shared character-data catalogue.
@@ -917,8 +918,17 @@ export const SpellcastingPopup = ({
                 spellExceptionalManaSpent: totalManaCost,
                 spellPrimaryFactor: effectivePrimaryFactor,
                 spellPrimaryFactorLabel: getPrimaryFactorLabel(effectivePrimaryFactor),
-                onResult: (rollResult, exceptionalChoice = null) => {
+                onResult: async (rollResult, exceptionalChoice = null) => {
                     const spellSucceeded = (rollResult?.successes || 0) >= 1;
+                    if (isReleasedParadoxSpellDramatic({
+                        paradoxMode, paradoxSuccesses: -poolModifier, spellResult: rollResult,
+                    })) {
+                        await onResolveParadoxContainment?.({
+                            mode: "release", cancelled: 0, remaining: -poolModifier,
+                            paradoxExceptional: false, spellDramaticFailure: true,
+                            conditionType: paradoxConditionType, conditionName: paradoxConditionName,
+                        });
+                    }
                     if (rollResult?.is_exceptional && onAwardSpellcastingExceptionalSuccess) {
                         onAwardSpellcastingExceptionalSuccess({ manaSpent: totalManaCost, choiceId: exceptionalChoice?.id || null });
                     }
@@ -935,6 +945,7 @@ export const SpellcastingPopup = ({
         };
 
         const paradoxConfig = paradoxTriggered ? {
+            paradoxMode,
             pool: paradoxIsChanceDie ? 1 : finalParadoxPool,
             chance: paradoxIsChanceDie,
             again: paradoxRollQuality.again,

@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/dialog";
 import axios from "axios";
 import { toast } from "sonner";
+import { isContainedParadoxOutcome } from "../utils/paradoxResolution";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -196,7 +197,7 @@ export const DiceRoller = forwardRef(({
                 typeof options.onResult === "function" &&
                 !(response.data?.is_exceptional && options.summaryConfig?.requiresSpellExceptionalChoice && options.summaryConfig?.summaryKey === "spell")
             ) {
-                options.onResult(response.data);
+                await options.onResult(response.data);
             }
         } catch (error) {
             toast.error("Failed to roll dice");
@@ -502,6 +503,18 @@ export const DiceRoller = forwardRef(({
         const paradoxDice = paradoxConfig.chance ? "Chance Die" : `${paradoxConfig.pool || 1} dice`;
         const wisdomDice = wisdomConfig.chance ? "Chance Die" : wisdomConfig.pool || 1;
 
+        if (!wisdomResult) {
+            return [
+                "-Contained Paradox-",
+                ...(paradoxConfig.paradoxSummary ? [paradoxConfig.paradoxSummary] : []),
+                `Rolled Paradox (${paradoxDice})`,
+                paradoxSuccesses === 0
+                    ? "No Paradox successes; Wisdom roll not required."
+                    : "Wisdom roll pending; containment has not yet been resolved.",
+                `Remaining Paradox: ${paradoxSuccesses}; ${paradoxSuccesses > 0 ? "Containment pending" : "No Paradox Condition"}`,
+            ].join("\n");
+        }
+
         return [
             "-Contained Paradox-",
             ...(paradoxConfig.paradoxSummary ? [paradoxConfig.paradoxSummary] : []),
@@ -700,7 +713,7 @@ export const DiceRoller = forwardRef(({
 
             const blocks = [];
 
-            if (paradoxEntry && wisdomEntry) {
+            if (paradoxEntry && (wisdomEntry || isContainedParadoxOutcome(paradoxEntry.config))) {
                 blocks.push(
                     buildContainmentTranscript(
                         paradoxEntry.result,
@@ -851,7 +864,7 @@ export const DiceRoller = forwardRef(({
             const paradoxEntry = rollSequence.find((entry) => entry.key === "paradox");
             const wisdomEntry = rollSequence.find((entry) => entry.key === "wisdom");
 
-            if (paradoxEntry && wisdomEntry) {
+            if (paradoxEntry && (wisdomEntry || isContainedParadoxOutcome(paradoxEntry.config))) {
                 transcript = [
                     buildContainmentTranscript(
                         paradoxEntry.result,

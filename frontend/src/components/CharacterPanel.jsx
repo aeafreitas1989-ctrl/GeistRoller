@@ -12,6 +12,7 @@ import { isEffectExpired, startTimedEffect } from "../utils/effectDuration";
 import { applyPlasmTransaction, reconcileManualPlasm } from "../utils/sceneLifecycle";
 import { getDoomedKeySources } from "../utils/geistKeys";
 import { getChannelManaPatch } from "../utils/mageManaActions";
+import { shouldRecordParadoxCondition } from "../utils/paradoxResolution";
 import {
     Select,
     SelectContent,
@@ -2277,7 +2278,7 @@ export const CharacterPanel = ({
         const willpower = Number(getValue("willpower")) || 0;
         await commitCharacterUpdate({ willpower: Math.min(calculateWillpowerMax(), willpower + 1) });
     };
-    const resolveParadoxContainment = async ({ cancelled, remaining, paradoxExceptional = false, mode = "contain", conditionType = "pending", conditionName = "" }) => {
+    const resolveParadoxContainment = async ({ cancelled, remaining, paradoxExceptional = false, spellDramaticFailure = false, mode = "contain", conditionType = "pending", conditionName = "" }) => {
         const safeCancelled = Math.max(0, cancelled || 0);
         const safeRemaining = Math.max(0, remaining || 0);
     
@@ -2293,9 +2294,12 @@ export const CharacterPanel = ({
         const currentConditions = getValue("conditions") || [];
         const currentWisdom = Number(getValue("wisdom")) || 0;
         const paradoxTaintDuration = getParadoxTaintDuration(currentWisdom);
-        const shouldRecord = mode === "release" ? paradoxExceptional : safeRemaining > 0;
+        const shouldRecord = shouldRecordParadoxCondition({
+            mode, remaining: safeRemaining, paradoxExceptional, spellDramaticFailure,
+        });
         const chosenName = conditionType === "taint" ? "Paradox Taint"
             : conditionType === "custom" && String(conditionName).trim() ? String(conditionName).trim()
+            : spellDramaticFailure ? "Paradox Condition (Dramatic Spellcasting Failure)"
             : "Paradox Condition (Pending ST)";
         const nextConditions = shouldRecord
             ? [...currentConditions, {
@@ -2303,7 +2307,9 @@ export const CharacterPanel = ({
                 name: chosenName, type: "condition", origin: "Spellcasting",
                 description: conditionType === "taint"
                     ? (paradoxExceptional ? "Paradox Taint (exceptional Paradox); Open to Abyssal entities." : "Paradox Taint; Resonant to Abyssal entities.")
-                    : "Storyteller assigns the Abyssal Condition and its effects. Do not automatically create anomalies.",
+                    : spellDramaticFailure
+                        ? "A released Paradox was incurred, then spellcasting ended in a dramatic failure. The Storyteller assigns this Paradox Condition."
+                        : "Storyteller assigns the Abyssal Condition and its effects. Do not automatically create anomalies.",
                 resolution: conditionType === "taint" ? `ST-defined resolution or expiry after ${paradoxTaintDuration}.` : "As determined by the Storyteller.",
                 beat_type: "arcane", paradox_successes: safeRemaining,
             }] : currentConditions;
