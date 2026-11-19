@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { CharacterPanel } from "@/components/CharacterPanel";
 import { GameCardsPanel } from "@/components/GameCardsPanel";
 import { DiceRoller } from "@/components/DiceRoller";
+import { QuickDiceRoller } from "@/components/QuickDiceRoller";
 import axios from "axios";
 import { toast } from "sonner";
 import { normalizeHealthBoxes, getHealthCounts, buildHealthBoxes } from "@/components/character/StatComponents";
@@ -645,6 +646,7 @@ export const CharacterSheetPage = () => {
 
     return (
         <div className="app-container" data-testid="character-sheet-page">
+            <QuickDiceRoller onRollRecorded={addRecentRoll} />
             {/* Main Content - Character and Cards always visible */}
             <div className="main-content overflow-y-auto">
                 <div

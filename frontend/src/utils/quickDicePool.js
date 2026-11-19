@@ -16,3 +16,19 @@ export const makeQuickDiceRequest = (value, again = 10) => {
     const pool = normalizeQuickDicePool(value);
     return { pool, again: normalizeQuickDiceAgain(again), rote: false, chance: pool === 0, exceptional_target: 5 };
 };
+
+/** Convert one manual roll to the normal Last Rolls entry format. */
+export const makeQuickDiceHistoryEntry = (result, poolValue, againValue = 10) => {
+    if (!result || !Array.isArray(result.dice)) {
+        throw new Error('A successful dice roll must provide its dice faces');
+    }
+    const pool = normalizeQuickDicePool(poolValue);
+    const again = normalizeQuickDiceAgain(againValue);
+    const poolLabel = pool === 0 ? 'Chance die' : `${pool}d10 · ${again}!`;
+    const outcome = String(result.description || `${Number(result.successes) || 0} successes`);
+    return {
+        title: `Quick Roll — ${poolLabel}`,
+        transcript: `Dice: ${result.dice.join(', ')}\nResult: ${outcome}`,
+        outcome,
+    };
+};

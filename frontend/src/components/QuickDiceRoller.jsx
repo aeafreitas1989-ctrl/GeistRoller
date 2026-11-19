@@ -1,17 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import { Dices, Minus, Plus, X } from 'lucide-react';
-import { makeQuickDiceRequest, normalizeQuickDicePool } from '../utils/quickDicePool';
+import { makeQuickDiceRequest, normalizeQuickDicePool, makeQuickDiceHistoryEntry } from '../utils/quickDicePool';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 /** A standalone, manually configured CofD roll. It never changes character state. */
-export const QuickDiceRoller = () => {
+export const QuickDiceRoller = ({ onRollRecorded }) => {
     const [open, setOpen] = useState(false);
     const [pool, setPool] = useState(1);
     const [again, setAgain] = useState(10);
     const [busy, setBusy] = useState(false);
-    const [result, setResult] = useState(null);
     const [error, setError] = useState('');
     const rootRef = useRef(null);
 
@@ -33,13 +32,11 @@ export const QuickDiceRoller = () => {
 
     const changePool = (value) => {
         setPool(normalizeQuickDicePool(value));
-        setResult(null);
         setError('');
     };
 
     const changeAgain = (value) => {
         setAgain(Number(value));
-        setResult(null);
         setError('');
     };
 
@@ -48,13 +45,16 @@ export const QuickDiceRoller = () => {
         if (busy) return;
         setBusy(true);
         setError('');
-        setResult(null);
         try {
             const response = await axios.post(`${API}/dice/roll`, makeQuickDiceRequest(pool, again));
             if (!response.data || !Array.isArray(response.data.dice)) {
                 throw new Error('Unexpected dice roll response');
             }
-            setResult({ ...response.data, rolledPool: pool, rolledAgain: again });
+            if (typeof onRollRecorded !== 'function') {
+                throw new Error('Last Rolls is not available');
+            }
+            onRollRecorded(makeQuickDiceHistoryEntry(response.data, pool, again));
+            setOpen(false);
         } catch (_) {
             setError('Could not roll dice. Check the app connection.');
         } finally {
@@ -96,19 +96,6 @@ export const QuickDiceRoller = () => {
                         <button type="submit" disabled={busy} className="mt-3 h-9 w-full rounded bg-teal-800 text-xs font-semibold text-white hover:bg-teal-700 disabled:opacity-50" data-testid="quick-dice-roll-button">{busy ? 'Rolling…' : 'Roll'}</button>
                     </form>
                     {error && <p className="mt-2 text-xs text-red-300" role="alert">{error}</p>}
-                    {result && (
-                        <div className="mt-3 border-t border-zinc-800 pt-2" aria-live="polite" data-testid="quick-dice-result">
-                            <div className="flex items-baseline justify-between gap-2">
-                                <strong className="text-sm text-teal-200">{result.description || `${result.successes} successes`}</strong>
-                                <span className="text-[10px] text-zinc-500">{result.rolledPool === 0 ? 'Chance die' : `${result.rolledPool}d10 · ${result.rolledAgain}!`}</span>
-                            </div>
-                            <div className="mt-2 flex max-h-28 flex-wrap gap-1 overflow-y-auto" aria-label="Rolled dice">
-                                {result.dice.map((face, index) => (
-                                    <span key={index} className={`flex h-7 w-7 items-center justify-center rounded border text-xs tabular-nums ${face >= (result.rolledPool === 0 ? 10 : 8) ? 'border-teal-500/60 bg-teal-900/30 text-teal-100' : 'border-zinc-700 bg-zinc-900 text-zinc-400'}`} title={face >= (result.rolledPool === 0 ? 10 : 8) ? 'Success' : 'No success'}>{face}</span>
-                                ))}
-                            </div>
-                        </div>
-                    )}
                 </section>
             )}
             <button

@@ -2,7 +2,6 @@ import "@/App.css";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import { CharacterSheetPage } from "@/pages/CharacterSheetPage";
-import { QuickDiceRoller } from "@/components/QuickDiceRoller";
 
 function App() {
     return (
@@ -12,7 +11,6 @@ function App() {
                     <Route path="/" element={<CharacterSheetPage />} />
                 </Routes>
             </BrowserRouter>
-            <QuickDiceRoller />
             <Toaster 
                 position="top-right" 
                 toastOptions={{
