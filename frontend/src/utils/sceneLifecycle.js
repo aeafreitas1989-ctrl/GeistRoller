@@ -63,6 +63,7 @@ export const getEndScenePatch = (character) => {
         const surplus = Math.min(current, nonNegativeInt(character.temporary_plasm));
         patch.plasm = current - surplus;
         patch.temporary_plasm = 0;
+        patch.remembrance_activation = null;
     }
     return patch;
 };

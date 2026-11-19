@@ -8,6 +8,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { applyScrutinySuccesses } from '../../utils/mageSightFlow';
 import { ARCANA, PATH_ARCANA } from "../../data/character-data";
 
 const MAGE_SIGHT_DESCRIPTIONS = {
@@ -57,6 +58,8 @@ const MageSightCard = ({
     const [scrutinyActive, setScrutinyActive] = useState(false);
     const [extendingMageSight, setExtendingMageSight] = useState(false);
     const extendPendingRef = useRef(false);
+    const scrutinyRollPendingRef = useRef(false);
+    const scrutinyManaPendingRef = useRef(false);
     const [scrutinyLayers, setScrutinyLayers] = useState([]);
     // Each layer: { successes: number, target: number, complete: boolean }
 
@@ -202,85 +205,26 @@ const MageSightCard = ({
         persistScrutinyState();
     }, [scrutinyActive, scrutinyLayers, opacity, target, selectedArcanum, obsessionApplies]);
 
-    const applyScrutinySuccesses = (rolled, layers, startingOpacity, carryRemainder = false) => {
-        const updatedLayers = layers.map((layer) => ({
-            successes: Math.max(0, Number(layer.successes) || 0),
-            target: Math.max(0, Number(layer.target) || 0),
-            complete: !!layer.complete,
-        }));
-
-        let remaining = Math.max(0, Number(rolled) || 0);
-
-        while (remaining > 0) {
-            let currentLayer = updatedLayers.find((layer) => !layer.complete);
-
-            if (!currentLayer) {
-                const nextTarget = updatedLayers.length === 0
-                    ? startingOpacity
-                    : updatedLayers[updatedLayers.length - 1].target - 1;
-
-                if (nextTarget <= 0) break;
-
-                currentLayer = {
-                    successes: 0,
-                    target: nextTarget,
-                    complete: false,
-                };
-
-                updatedLayers.push(currentLayer);
-            }
-
-            const needed = Math.max(0, currentLayer.target - currentLayer.successes);
-
-            if (needed <= 0) {
-                currentLayer.complete = true;
-                continue;
-            }
-
-            const used = Math.min(remaining, needed);
-            currentLayer.successes += used;
-            remaining -= used;
-
-            if (currentLayer.successes >= currentLayer.target) {
-                currentLayer.successes = currentLayer.target;
-                currentLayer.complete = true;
-
-                const nextTarget = currentLayer.target - 1;
-                const hasOpenLayer = updatedLayers.some((layer) => !layer.complete);
-
-                if (nextTarget > 0 && !hasOpenLayer) {
-                    updatedLayers.push({
-                        successes: 0,
-                        target: nextTarget,
-                        complete: false,
-                    });
-                }
-
-                if (carryRemainder) {
-                    continue;
-                }
-            }
-
-            break;
-        }
-
-        return updatedLayers;
-    };
-
     const countCompletedLayers = (layers) => layers.filter(l => l.complete).length;
 
     const rollMageSight = async (mode) => {
+        if (mode === 'Scrutiny' && scrutinyRollPendingRef.current) return;
+        if (mode === 'Scrutiny') scrutinyRollPendingRef.current = true;
         const gnosis = activeCharacter?.gnosis || 1;
         const arcanumDots = activeCharacter?.arcana?.[selectedArcanum] || 0;
         const opacityValue = Number.parseInt(opacity || "0", 10) || 0;
         const obsessionBonus = mode === "Scrutiny" && obsessionApplies ? 1 : 0;
 
-        if (mode === "Scrutiny" && !scrutinyActive && currentWillpower < 1) return;
+        if (mode === "Scrutiny" && !scrutinyActive && currentWillpower < 1) {
+            scrutinyRollPendingRef.current = false;
+            return;
+        }
 
         if (mode === "Scrutiny" && !scrutinyActive) {
-            await onUpdateCharacter?.({
+            const saved = await onUpdateCharacter?.({
                 willpower: Math.max(0, currentWillpower - 1),
             });
+            if (saved !== true) { scrutinyRollPendingRef.current = false; return; }
             setScrutinyActive(true);
             setScrutinyLayers([{ successes: 0, target: opacityValue, complete: false }]);
         }
@@ -304,6 +248,7 @@ const MageSightCard = ({
             ? [{ successes: 0, target: opacityValue, complete: false }]
             : [];
 
+        scrutinyRollPendingRef.current = false;
         onTriggerDiceRoll?.({
             pool,
             chance,
@@ -349,8 +294,12 @@ const MageSightCard = ({
     };
 
     const addScrutinyManaSuccess = async () => {
-        if (currentMana < 1) return;
-        await onUpdateCharacter?.({ mana: Math.max(0, currentMana - 1) });
+        if (currentMana < 1 || scrutinyManaPendingRef.current) return;
+        scrutinyManaPendingRef.current = true;
+        let saved = false;
+        try { saved = await onUpdateCharacter?.({ mana: Math.max(0, currentMana - 1) }); }
+        finally { scrutinyManaPendingRef.current = false; }
+        if (saved !== true) return;
         const prevCompleted = countCompletedLayers(scrutinyLayers);
         const startingOpacity = scrutinyLayers.length > 0 ? scrutinyLayers[0].target : (Number.parseInt(opacity || "0", 10) || 0);
         const newLayers = applyScrutinySuccesses(1, scrutinyLayers, startingOpacity);

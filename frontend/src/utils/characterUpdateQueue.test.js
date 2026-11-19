@@ -10,3 +10,12 @@ test('later patch to same resource wins', () => {
 test('stale SSE updates are detected by timestamps', () => {
  expect(isStaleCharacterSnapshot({updated_at:'2026-11-19T10:00:02Z'},{updated_at:'2026-11-19T10:00:01Z'})).toBe(true);
 });
+
+import {resolveCharacterUpdate} from "./characterUpdateQueue";
+test("multiple queued condition appends see the latest optimistic state",()=>{
+ let c={conditions:[]};
+ const add=name=>s=>({conditions:[...(s.conditions||[]),{name}]});
+ c={...c,...resolveCharacterUpdate(c,add("Doomed"))};
+ c={...c,...resolveCharacterUpdate(c,add("Boneyard"))};
+ expect(c.conditions.map(x=>x.name)).toEqual(["Doomed","Boneyard"]);
+});

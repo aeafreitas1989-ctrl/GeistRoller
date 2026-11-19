@@ -8,3 +8,5 @@ export const isStaleCharacterSnapshot = (newer, candidate) => {
     const candidateDate = Date.parse(candidate.updated_at);
     return Number.isFinite(newerDate) && Number.isFinite(candidateDate) && candidateDate < newerDate;
 };
+
+export const resolveCharacterUpdate = (latest, update) => typeof update === "function" ? update(latest) : update;

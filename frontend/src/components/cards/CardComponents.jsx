@@ -1564,7 +1564,8 @@ export const CombatTrackerCard = ({
         attackSpecialtyBonus +
         attackWillpowerBonus +
         modifierValue +
-        attackConditionPenalty -
+        attackConditionPenalty +
+        Math.min(0, Number(woundPenalty) || 0) -
         defensePenalty
     );
 
@@ -1915,6 +1916,7 @@ export const CombatTrackerCard = ({
                                     : []),
                                 `+ Modifier ${modifierValue}`,
                                 ...attackConditionBreakdown.map((entry) => `+ ${entry}`),
+                                ...(woundPenalty < 0 ? [`+ Wound Penalty ${woundPenalty}`] : []),
                                 `- Target Defense ${defensePenalty}`,
                             ].join(" ");
 

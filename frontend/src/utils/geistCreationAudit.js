@@ -31,5 +31,14 @@ export const validateGeistCreation = (character = {}) => {
     if ([...attributes].sort((a,b)=>a-b).join(',') !== '3,4,5') errors.push('Allocate Attribute categories as 5/4/3 dots above the starting 1-dot minimum.');
     const skills = SKILL_GROUPS.map((group) => sum(group.map((name) => character.skills?.[name])));
     if ([...skills].sort((a,b)=>a-b).join(',') !== '4,7,11') errors.push('Allocate Skill categories as 11/7/4 dots.');
+    if (Array.isArray(character.health_boxes) && character.health_boxes.some((box) => box !== 'empty'))
+        warnings.push('Starting Health should have no wounds; check whether this is an established character.');
+    const wpMax = Math.max(0, (Number(character.attributes?.resolve) || 1) + (Number(character.attributes?.composure) || 1) + (Number(character.willpower_max_modifier) || 0));
+    if (Number(character.willpower ?? wpMax) > wpMax) errors.push('Current Willpower exceeds Resolve + Composure.');
+    const startCapacity = { 1:10, 2:11, 3:12 }[synergy];
+    if (startCapacity && Number(character.plasm ?? startCapacity) !== startCapacity) warnings.push('Starting Plasm is not full at current Synergy; check spent Plasm or the creation stage.');
+    const countTouchstones = (character.touchstones || []).filter((entry) => String(entry || '').trim()).length;
+    const requiredTouchstones = synergy >= 3 ? 2 : 1;
+    if (countTouchstones < requiredTouchstones) warnings.push('Starting Touchstones may be incomplete.');
     return { valid: errors.length === 0, errors, warnings, reports: { synergy, geistRank, hauntTotal, spentMerits, availableMerits: expectedMerits, attributes, skills } };
 };

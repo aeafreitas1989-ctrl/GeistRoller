@@ -1,9 +1,11 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { X, Minus, Plus, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { GNOSIS_TABLE as BASE_GNOSIS_TABLE } from "@/data/character-data";
+import { GNOSIS_TABLE as BASE_GNOSIS_TABLE, PATH_ARCANA } from "@/data/character-data";
+import { requiredPaymentTurns } from '../utils/actionPreparation';
+import { requiresImprovisedMana } from '../utils/mageCombinedMana';
 import { YantrasGrid } from "./spellcasting/YantrasGrid";
 import { LEGACY_YANTRA_VARIANTS, getLegacyYantraRating, isLegacyYantraTool } from "../utils/legacyYantra";
 import { PrimaryFactorOverride } from "./spellcasting/PrimaryFactorOverride";
@@ -221,10 +223,16 @@ export const SpellcastingPopup = ({
     gnosis,
     isRuling,
     isInferior,
+    path = '',
+    legacyRulingArcanum = '',
     currentMana,
     currentWisdom = 7,
     initialPractice,
     onSpendMana,
+    onRecordPreparationTurn,
+    onAbandonPreparation,
+    onFinishPreparation,
+    pendingActivation = null,
     onRollDice,
     onCreateActiveSpell,
     onAwardSpellcastingExceptionalSuccess,
@@ -289,6 +297,7 @@ export const SpellcastingPopup = ({
     const [combinedSpellDetails, setCombinedSpellDetails] = useState([]);
 
     const effectiveSpellType = spellType || "improvised";
+    const castingSaveRef = useRef(false);
     const [paradoxPreparationTurns, setParadoxPreparationTurns] = useState(1);
     const [paradoxConditionType, setParadoxConditionType] = useState("pending");
     const [paradoxConditionName, setParadoxConditionName] = useState("");
@@ -416,6 +425,29 @@ export const SpellcastingPopup = ({
         ));
     }, [combinedSpellCount, arcanum]);
 
+    useEffect(() => {
+        if (!isOpen || pendingActivation?.kind !== 'spell') return;
+        try {
+            const cfg = JSON.parse(pendingActivation.signature);
+            if (cfg.arcanum !== arcanum) return;
+            setSpellName(cfg.spellName || ''); setSelectedPractice(cfg.selectedPractice || '');
+            setCombinedSpellDetails(cfg.combined || []); setCombinedSpellCount((cfg.combined || []).length);
+            if (cfg.factors) setFactors(cfg.factors);
+            if (cfg.selectedYantras) setSelectedYantras(cfg.selectedYantras);
+            if (cfg.selectedInventoryYantras) setSelectedInventoryYantras(cfg.selectedInventoryYantras);
+            setAdditionalMana(Number(cfg.additionalMana) || 0);
+            setManaMitigation(Number(cfg.manaMitigation) || 0);
+            setParadoxMode(cfg.paradoxMode || ''); setLastingDuration(!!cfg.lastingDuration);
+            setParadoxPreparationTurns(Math.max(1,Number(cfg.paradoxPreparationTurns) || 1));
+            setPrimaryFactor(cfg.primaryFactor || null); setOverridePrimaryFactor(!!cfg.overridePrimaryFactor);
+            setSpellReach(Number(cfg.spellReach) || 0); setFateDurationBonus(Number(cfg.fateDurationBonus) || 0);
+            setMatterDurationMana(!!cfg.matterDurationMana); setSpecialRangeMode(cfg.specialRangeMode || 'none');
+            setRemoteRange(!!cfg.remoteRange); setRitualCastingBonus(Number(cfg.ritualCastingBonus) || 0);
+            setSleeperWitnesses(cfg.sleeperWitnesses || 'none'); setParadoxInured(!!cfg.paradoxInured);
+            setScaleMode(cfg.scaleMode || 'targets');
+        } catch (_) { /* ST can abandon a damaged legacy preparation record. */ }
+    }, [isOpen, arcanum, pendingActivation?.signature]);
+
     const selectedCombinedDetails = combinedSpellDetails.slice(0, combinedSpellCount);
     const selectedCombinedArcana = selectedCombinedDetails.map((part) => part.arcanum || arcanum);
     const selectedCombinedPractices = selectedCombinedDetails.map((part) => part.practice || "");
@@ -542,9 +574,10 @@ export const SpellcastingPopup = ({
     const finalDicePool = Math.max(0, rawSpellcastingPool);
     const spellIsImpossible = rawSpellcastingPool <= -6;
 
+    const combinedArcanaRuling = !requiresImprovisedMana(effectiveSpellType,[arcanum,...selectedCombinedArcana],PATH_ARCANA[path]?.ruling || [],legacyRulingArcanum);
     const getManaCost = () => {
         let cost = 0;
-        if (effectiveSpellType === "improvised" && !isRuling) cost += 1;
+        if (effectiveSpellType === "improvised" && !combinedArcanaRuling) cost += 1;
         if (!lastingDuration && factors.duration.advanced && factors.duration.level === 6) cost += 1;
         if (!lastingDuration && fateDurationBonus > 0) cost += 1;
         if (!lastingDuration && matterDurationMana && arcanum === "Matter" && factors.duration.advanced) cost += 1;
@@ -562,9 +595,10 @@ export const SpellcastingPopup = ({
     paradoxModifiers += previousParadoxSkipNextRoll ? 0 : scenePreviousParadoxRolls;
     const paradoxAfterModifiers = baseParadoxDice + paradoxModifiers;
     const committedSpellManaCost = manaCost + additionalMana;
+    const prepaidMana = pendingActivation?.kind === 'spell' ? Math.max(0,Number(pendingActivation.paid) || 0) : 0;
     const maxManaMitigation = Math.max(0, Math.min(
-        manaPerTurn * paradoxPreparationTurns - committedSpellManaCost,
-        currentMana - committedSpellManaCost,
+        manaPerTurn * Math.max(paradoxPreparationTurns, Math.ceil(committedSpellManaCost / Math.max(1,manaPerTurn)), 1 + nonHsTurns + (hasHighSpeechYantra ? 1 : 0)) - committedSpellManaCost,
+        currentMana + prepaidMana - committedSpellManaCost,
         Math.max(0, paradoxAfterModifiers)
     ));
 
@@ -583,6 +617,21 @@ export const SpellcastingPopup = ({
     };
     const paradoxRollQuality = getParadoxRollQuality();
     const totalManaCost = committedSpellManaCost + actualManaMitigation;
+    const manaPaymentTurns = requiredPaymentTurns(totalManaCost,manaPerTurn);
+    const baseInstantCastingTurns = 1 + nonHsTurns + (hasHighSpeechYantra ? 1 : 0);
+    const requiredInstantTurns = Math.max(baseInstantCastingTurns,manaPaymentTurns,paradoxPreparationTurns);
+    const spellPreparationSignature = JSON.stringify({arcanum,effectiveSpellType,spellName,selectedPractice,
+        combined:selectedCombinedDetails,factors,selectedYantras,selectedInventoryYantras,
+        additionalMana,manaMitigation,paradoxMode,lastingDuration,paradoxPreparationTurns,
+        primaryFactor,overridePrimaryFactor,spellReach,fateDurationBonus,matterDurationMana,
+        specialRangeMode,remoteRange,ritualCastingBonus,sleeperWitnesses,paradoxInured,scaleMode});
+    const matchingSpellPreparation = pendingActivation?.kind === 'spell' &&
+        pendingActivation.signature === spellPreparationSignature && pendingActivation.total === totalManaCost;
+    const otherPreparationExists = !!pendingActivation && !matchingSpellPreparation;
+    const spellNeedsCombatPreparation = combatActive && factors.casting.advanced && requiredInstantTurns > 1;
+    const spellPreparationComplete = !spellNeedsCombatPreparation ||
+        (matchingSpellPreparation && pendingActivation.paid >= totalManaCost && pendingActivation.turns >= requiredInstantTurns);
+    const spellManaStillDue = Math.max(0,totalManaCost - (matchingSpellPreparation ? prepaidMana : 0));
 
     const manualWithstandValue = !withstandTrait ? 0 : Math.max(0, Number(withstandValue) || 0);
     const sympatheticWithstandValue = specialRangeMode !== "none" ? Math.max(0, Number(sympatheticWithstand) || 0) : 0;
@@ -640,7 +689,7 @@ export const SpellcastingPopup = ({
         const isAdvanced = advancedOverride ?? factor.advanced;
         if (factorName === "casting") {
             if (isAdvanced) {
-                const totalTurns = 1 + nonHsTurns + (hasHighSpeechYantra ? 1 : 0);
+                const totalTurns = requiredInstantTurns;
                 const turnsLabel = `Instant (${totalTurns} turn${totalTurns === 1 ? "" : "s"})`;
                 return hasRunesYantra ? `${turnsLabel} + ${gnosisData.ritualInterval}` : turnsLabel;
             }
@@ -725,7 +774,14 @@ export const SpellcastingPopup = ({
         onClose();
     };
 
-    const handleCastSpell = () => {
+    const handleCastSpell = async () => {
+        if (castingSaveRef.current) return;
+        castingSaveRef.current = true;
+        try {
+        if (otherPreparationExists || !spellPreparationComplete) {
+            toast.error('Finish or abandon this combat preparation before casting.');
+            return;
+        }
         if (!selectedPracticeIsLegal || !combinedPartsValid || combinedSpellCount > maxCombinedSpellCount) {
             toast.error("Each constituent spell must be known at the selected Arcanum and Practice; Rotes cannot be combined.");
             return;
@@ -742,9 +798,20 @@ export const SpellcastingPopup = ({
             toast.error("Select a Primary Spell Factor before casting.");
             return;
         }
-        if (totalManaCost > 0 && currentMana < totalManaCost) return;
+        if (spellManaStillDue > currentMana) { toast.error('Insufficient Mana.'); return; }
         if (!lastingDuration && factors.duration.advanced && !spellName.trim()) return;
         if (paradoxTriggered && !paradoxMode) return;
+
+        if (spellManaStillDue > 0 && !channelManaRequest) {
+            if (await onSpendMana?.(spellManaStillDue) !== true) {
+                toast.error('Mana payment failed. Spell was not rolled.');
+                return;
+            }
+        }
+        if (matchingSpellPreparation && await onFinishPreparation?.('spell') !== true) {
+            toast.error('Could not save completion of spell preparation. Previously paid Mana remains spent.');
+            return;
+        }
 
         const selectedSacramentName = selectedYantraNames.find((name) => getSacramentRatingFromYantraName(name));
         const selectedSacramentRating = selectedSacramentName ? getSacramentRatingFromYantraName(selectedSacramentName) : null;
@@ -752,8 +819,6 @@ export const SpellcastingPopup = ({
             const chosenSacrament = getChosenInventoryYantra(selectedSacramentName);
             if (chosenSacrament && Number.isInteger(chosenSacrament.index)) onConsumeInventoryYantra(chosenSacrament.index);
         }
-
-        if (totalManaCost > 0 && !channelManaRequest) onSpendMana(totalManaCost);
 
         const activeSpellData = !channelManaRequest && !lastingDuration && (factors.duration.advanced || combatActive) && onCreateActiveSpell
             ? {
@@ -781,10 +846,10 @@ export const SpellcastingPopup = ({
         const combinedSpellSummary = combinedSpellCount > 0
             ? `Combined Spells: ${[{ name: spellName.trim(), arcanum, practice: selectedPractice, reach: spellReach }, ...selectedCombinedDetails].map((part, index) => `${index + 1}. ${part.name || '(unnamed)'} [${part.arcanum} / ${part.practice}; +${part.reach || 0} Reach]`).join('; ')}; shared factors; lowest Arcanum ${combinedLowestArcanumDots}; ${combinedSpellPenalty} dice`
             : "";
-        const arcanaManaSurchargeSummary = effectiveSpellType === "improvised" && !isRuling
-            ? (isInferior ? "Inferior Arcanum" : "Common Arcanum") : "";
-        const preparationSummary = paradoxPreparationTurns > 1 && actualManaMitigation > 0
-            ? `Paradox mitigation prepared over ${paradoxPreparationTurns} turns (advance scene/combat turns before casting).` : "";
+        const arcanaManaSurchargeSummary = effectiveSpellType === "improvised" && !combinedArcanaRuling
+            ? "At least one participating Common or Inferior Arcanum" : "";
+        const preparationSummary = factors.casting.advanced && requiredInstantTurns > 1
+            ? `Instant casting takes ${requiredInstantTurns} turns (including Mana and Yantra preparation)` : "";
         const spentSpellManaSummary = committedSpellManaCost > 0
             ? `Spent Mana: ${committedSpellManaCost}${arcanaManaSurchargeSummary ? ` (${arcanaManaSurchargeSummary})` : ""}` : "";
         const reachCategories = [];
@@ -862,7 +927,7 @@ export const SpellcastingPopup = ({
                         void onChannelManaResult({
                             ...channelManaRequest, succeeded: spellSucceeded,
                             spellPotency: Math.max(0, Number(effectivePotency) || 0),
-                            manaPerTurn, manaCost: totalManaCost,
+                            manaPerTurn, manaCost: spellManaStillDue,
                         });
                     }
                 },
@@ -953,6 +1018,7 @@ export const SpellcastingPopup = ({
             });
             onClose();
         }
+        } finally { castingSaveRef.current = false; }
     };
 
     if (!isOpen) return null;
@@ -1302,6 +1368,22 @@ export const SpellcastingPopup = ({
                         setParadoxMode={setParadoxMode}
                     />
 
+                    {factors.casting.advanced && requiredInstantTurns > 1 && (
+                        <div className="rounded border border-violet-700/50 p-3 space-y-2" data-testid="mage-hybrid-preparation">
+                            <p className="text-xs text-violet-200">Instant ({requiredInstantTurns} turns) · Total Mana {totalManaCost} · Limit {manaPerTurn}/turn</p>
+                            {combatActive ? (
+                                <>
+                                    <p className="text-[10px] text-zinc-400">Combat: {matchingSpellPreparation ? pendingActivation.turns : 0}/{requiredInstantTurns} Actions, {matchingSpellPreparation ? pendingActivation.paid : 0}/{totalManaCost} Mana paid. Each recorded turn consumes this character's Action. Abandoned Mana is lost.</p>
+                                    {otherPreparationExists && <p className="text-xs text-rose-300">Another preparation is active. Abandon it before casting a different spell.</p>}
+                                    <Button type="button" size="sm" className="w-full" disabled={otherPreparationExists || spellPreparationComplete || spellManaStillDue > currentMana} onClick={async () => {
+                                        const paid = await onRecordPreparationTurn?.({kind:'spell',signature:spellPreparationSignature,total:totalManaCost,perTurn:manaPerTurn,resource:'mana',requiredTurns:requiredInstantTurns});
+                                        if (paid !== true) toast.error('Could not save this turn or its Mana expenditure.');
+                                    }} data-testid="mage-record-preparation-turn">{spellPreparationComplete ? 'Ready to cast' : `Record next turn and spend ${Math.min(spellManaStillDue,manaPerTurn)} Mana`}</Button>
+                                </>
+                            ) : <p className="text-xs text-zinc-400">Outside combat, all {requiredInstantTurns} turns are accounted for in the spell result; no turn-by-turn payment is required.</p>}
+                        </div>
+                    )}
+                    {pendingActivation?.kind === 'spell' && <Button type="button" size="sm" variant="outline" className="border-rose-800 text-rose-300" onClick={() => onAbandonPreparation?.('spell')} data-testid="mage-abandon-preparation">Abandon Spell — paid Mana is lost</Button>}
                     <div className="p-3 bg-zinc-800/50 rounded space-y-1.5">
                         <div className="flex justify-between text-sm"><span className="text-zinc-400">Final Dice Pool:</span><span className="font-mono text-teal-400 font-bold" data-testid="final-dice-pool">{finalDicePool} dice</span></div>
                         <div className="flex justify-between text-sm"><span className="text-zinc-400">Reach Used / Free:</span><span className={`font-mono ${reachRemaining >= 0 ? "text-teal-400" : "text-red-400"}`}>{totalReachUsed} / {freeReach}</span></div>
@@ -1312,7 +1394,7 @@ export const SpellcastingPopup = ({
                         {ritualBonus > 0 && <div className="flex justify-between text-sm"><span className="text-zinc-400">Ritual bonus:</span><span className="font-mono text-teal-400">+{ritualBonus} dice</span></div>}
                         {combinedSpellCount > 0 && <div className="flex justify-between text-sm"><span className="text-zinc-400">Combined Spell:</span><span className="font-mono text-red-400">{combinedSpellPenalty} dice</span></div>}
                         {actualManaMitigation > 0 && <div className="flex justify-between text-sm"><span className="text-zinc-400">Paradox Mitigation Mana:</span><span className="font-mono text-violet-400">{actualManaMitigation}</span></div>}
-                        <div className="flex justify-between text-sm border-t border-zinc-700/50 pt-1"><span className="text-zinc-400">Total Mana Cost:</span><span className={`font-mono font-bold ${totalManaCost > currentMana ? "text-red-400" : "text-violet-400"}`}>{totalManaCost} <span className="text-zinc-500 font-normal">(have {currentMana})</span></span></div>
+                        <div className="flex justify-between text-sm border-t border-zinc-700/50 pt-1"><span className="text-zinc-400">Total Mana Cost:</span><span className={`font-mono font-bold ${spellManaStillDue > currentMana ? "text-red-400" : "text-violet-400"}`}>{totalManaCost} <span className="text-zinc-500 font-normal">(have {currentMana})</span></span></div>
                         {paradoxTriggered && <div className="flex justify-between text-sm"><span className="text-zinc-400">Paradox:</span><span className={`font-mono ${paradoxIsChanceDie ? "text-amber-400" : "text-red-400"}`}>{paradoxIsChanceDie ? "Chance Die" : `${finalParadoxPool} dice`}</span></div>}
                     </div>
                 </div>
@@ -1321,7 +1403,7 @@ export const SpellcastingPopup = ({
                     <Button variant="outline" onClick={onClose} className="border-zinc-700 text-zinc-300" data-testid="spell-cancel-btn">Cancel</Button>
                     <Button
                         onClick={handleCastSpell}
-                        disabled={!selectedPractice || !effectivePrimaryFactor || totalManaCost > currentMana || (!lastingDuration && factors.duration.advanced && !spellName.trim()) || (paradoxTriggered && !paradoxMode)}
+                        disabled={!selectedPractice || !effectivePrimaryFactor || spellManaStillDue > currentMana || !spellPreparationComplete || otherPreparationExists || (!lastingDuration && factors.duration.advanced && !spellName.trim()) || (paradoxTriggered && !paradoxMode)}
                         className="bg-violet-600 hover:bg-violet-500 text-white"
                         data-testid="cast-spell-btn"
                     >

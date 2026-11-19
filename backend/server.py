@@ -171,9 +171,14 @@ async def create_character(input: CharacterCreate):
         character_type=input.character_type or "geist",
     )
 
+    character.health = 0
+    character.health_boxes = []
+    character.willpower = character.attributes.get("resolve", 1) + character.attributes.get("composure", 1)
+
     if character.character_type == "geist":
         character.synergy = 1
         character.geist_rank = 3
+        character.plasm = 10
 
     if character.character_type == "mage":
         character.creation_mode = "creation"
@@ -306,10 +311,6 @@ def build_xp_history_entry(previous, updates, reason=""):
 async def update_character(character_id: str, input: CharacterUpdate):
     update_data = input.model_dump(exclude_unset=True)
     allow_override = bool(update_data.pop("allow_rules_override", False))
-    try:
-        validate_rule_bounded_fields(update_data, allow_override)
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
     reason = (update_data.pop("xp_reason", "") or "").strip()
 
     previous = await db.characters.find_one(
@@ -322,6 +323,11 @@ async def update_character(character_id: str, input: CharacterUpdate):
             status_code=404,
             detail="Character not found",
         )
+
+    try:
+        validate_rule_bounded_fields(update_data, allow_override, previous)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     if update_data:
         # Preserve saved history when importing a character.

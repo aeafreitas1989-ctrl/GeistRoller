@@ -1,14 +1,20 @@
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { effectiveGeistRank } from '../../utils/remembranceRules';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { KEYS, MERIT_LIST, SKILL_LIST } from "../../data/character-data";
 import { formatLabel } from "./StatComponents";
 
 export const GeistRemembranceContent = ({
     getValue, handleChange,
-    geistRank, currentSynergy, synergyData,
+    geistRank, currentSynergy, synergyData, onCompleteRemembrance, onActivateRemembrance, currentPlasm,
 }) => {
+    const [selectedDots,setSelectedDots] = useState(1);
+    const rankLimit = effectiveGeistRank({ synergy: currentSynergy, geist_rank: geistRank });
+    const active = getValue('remembrance_activation');
     return (
         <>
             <div>
@@ -87,26 +93,7 @@ export const GeistRemembranceContent = ({
                 <div className="flex items-center gap-2">
                     <Checkbox
                         checked={!!getValue("remembrance_1_complete")}
-                        onCheckedChange={(checked) => {
-                            handleChange("remembrance_1_complete", !!checked);
-                            const was = !!getValue("remembrance_1_complete");
-                            if (checked && !was) {
-                                handleChange("synergy", Math.min((getValue("synergy") || 7) + 1, 10));
-                            } else if (!checked && was) {
-                                if (getValue("remembrance_2_complete")) {
-                                    handleChange("remembrance_2_complete", false);
-                                    if (getValue("remembrance_3_complete")) {
-                                        handleChange("remembrance_3_complete", false);
-                                        handleChange("synergy", Math.max((getValue("synergy") || 7) - 3, 1));
-                                        handleChange("geist_rank", Math.max((parseInt(getValue("geist_rank"), 10) || 1) - 1, 1));
-                                    } else {
-                                        handleChange("synergy", Math.max((getValue("synergy") || 7) - 2, 1));
-                                    }
-                                } else {
-                                    handleChange("synergy", Math.max((getValue("synergy") || 7) - 1, 1));
-                                }
-                            }
-                        }}
+                        onCheckedChange={(checked) => checked && onCompleteRemembrance?.(1)}
                         className="border-cyan-500/50 data-[state=checked]:bg-cyan-600 data-[state=checked]:border-cyan-600"
                         data-testid="remembrance-1-check"
                     />
@@ -116,22 +103,8 @@ export const GeistRemembranceContent = ({
                     <div className="flex items-center gap-2">
                         <Checkbox
                             checked={!!getValue("remembrance_2_complete")}
-                            onCheckedChange={(checked) => {
-                                handleChange("remembrance_2_complete", !!checked);
-                                const was = !!getValue("remembrance_2_complete");
-                                if (checked && !was) {
-                                    handleChange("synergy", Math.min((getValue("synergy") || 7) + 1, 10));
-                                } else if (!checked && was) {
-                                    if (getValue("remembrance_3_complete")) {
-                                        handleChange("remembrance_3_complete", false);
-                                        handleChange("synergy", Math.max((getValue("synergy") || 7) - 2, 1));
-                                        handleChange("geist_rank", Math.max((parseInt(getValue("geist_rank"), 10) || 1) - 1, 1));
-                                    } else {
-                                        handleChange("synergy", Math.max((getValue("synergy") || 7) - 1, 1));
-                                    }
-                                }
-                            }}
-                            className="border-cyan-500/50 data-[state=checked]:bg-cyan-600 data-[state=checked]:border-cyan-600"
+                            onCheckedChange={(checked) => checked && onCompleteRemembrance?.(2)}
+                        className="border-cyan-500/50 data-[state=checked]:bg-cyan-600 data-[state=checked]:border-cyan-600"
                             data-testid="remembrance-2-check"
                         />
                         <Input value={getValue("remembrance_2") || ""} onChange={(e) => handleChange("remembrance_2", e.target.value)} className="input-geist h-8 text-sm flex-1" placeholder="Second Remembrance..." data-testid="remembrance-2-input" />
@@ -141,24 +114,27 @@ export const GeistRemembranceContent = ({
                     <div className="flex items-center gap-2">
                         <Checkbox
                             checked={!!getValue("remembrance_3_complete")}
-                            onCheckedChange={(checked) => {
-                                handleChange("remembrance_3_complete", !!checked);
-                                const was = !!getValue("remembrance_3_complete");
-                                if (checked && !was) {
-                                    handleChange("synergy", Math.min((getValue("synergy") || 7) + 1, 10));
-                                    handleChange("geist_rank", (parseInt(getValue("geist_rank"), 10) || 1) + 1);
-                                } else if (!checked && was) {
-                                    handleChange("synergy", Math.max((getValue("synergy") || 7) - 1, 1));
-                                    handleChange("geist_rank", Math.max((parseInt(getValue("geist_rank"), 10) || 1) - 1, 1));
-                                }
-                            }}
-                            className="border-cyan-500/50 data-[state=checked]:bg-cyan-600 data-[state=checked]:border-cyan-600"
+                            onCheckedChange={(checked) => checked && onCompleteRemembrance?.(3)}
+                        className="border-cyan-500/50 data-[state=checked]:bg-cyan-600 data-[state=checked]:border-cyan-600"
                             data-testid="remembrance-3-check"
                         />
                         <Input value={getValue("remembrance_3") || ""} onChange={(e) => handleChange("remembrance_3", e.target.value)} className="input-geist h-8 text-sm flex-1" placeholder="Third Remembrance..." data-testid="remembrance-3-input" />
                     </div>
                 )}
-                <p className="text-[9px] text-zinc-600">Check to complete a Remembrance. Each raises Synergy by 1. The third also raises Geist Rank.</p>
+                <p className="text-[9px] text-zinc-600">Complete in sequence. Completed milestones are irreversible here; Storyteller corrections use the character editor.</p>
+                <div className="rounded border border-cyan-800/40 p-2 space-y-2" data-testid="remembrance-activation">
+                    <p className="text-[10px] text-cyan-300">Remembrance Trait (effective Rank {rankLimit})</p>
+                    {active?.status === 'active' ? (
+                        <p className="text-xs text-teal-300">Active until End Scene: +{active.dots} {active.trait_type === 'skill' ? 'Skill' : 'Merit'} dot(s) to {active.trait}.</p>
+                    ) : (
+                        <>
+                            <select className="w-full bg-zinc-950 p-1 text-xs" value={selectedDots} onChange={(event) => setSelectedDots(Number(event.target.value))} data-testid="remembrance-activation-dots">
+                                {Array.from({length:rankLimit},(_,i)=>i+1).map((v)=><option key={v} value={v}>{v} dot(s) · {v} Plasm</option>)}
+                            </select>
+                            <Button size="sm" type="button" className="h-7 w-full" disabled={!getValue('remembrance_trait') || !getValue('remembrance_trait_type') || currentPlasm < selectedDots} onClick={() => onActivateRemembrance?.(selectedDots)} data-testid="activate-remembrance-btn">Spend Plasm · Activate for scene</Button>
+                        </>
+                    )}
+                </div>
             </div>
             <div className="p-2 bg-teal-900/10 border border-teal-500/20 rounded-sm">
                 <div className="flex items-center justify-between">

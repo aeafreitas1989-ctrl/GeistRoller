@@ -74,6 +74,8 @@ import { MageGnosisContent } from "./character/MageGnosisContent";
 import { GeistSynergyContent } from "./character/GeistSynergyContent";
 import { GeistCreationAuditPanel } from "./character/GeistCreationAuditPanel";
 import { GeistHauntsContent } from "./character/GeistHauntsContent";
+import { nextCombatPayment, abandonPreparation } from "@/utils/actionPreparation";
+import { activateRemembrance, effectiveGeistRank, completeRemembranceMilestone } from "@/utils/remembranceRules";
 import { GeistRemembranceContent } from "./character/GeistRemembranceContent";
 import { MeritsContent } from "./character/MeritsContent";
 import { FamiliarContent } from "./character/FamiliarContent";
@@ -115,6 +117,7 @@ export const CharacterPanel = ({
     onAddRecentRoll,
     onImportCharacter,
     onAdvanceTime,
+    onEndTurn,
 }) => {
     const [activeSection, setActiveSection] = useState("header");
     const sheetScrollRef = useRef(null);
@@ -923,12 +926,13 @@ export const CharacterPanel = ({
     };
 
     const commitCharacterUpdate = async (updates) => {
-        if (!updates || Object.keys(updates).length === 0) return;
+        if (!updates || Object.keys(updates).length === 0) return false;
 
         setPendingChanges((prev) => ({ ...prev, ...updates }));
 
         if (onUpdateCharacter) {
-            await onUpdateCharacter(updates);
+            const saved = await onUpdateCharacter(updates);
+            if (saved !== true) return false;
             setPendingChanges((prev) => {
                 const next = { ...prev };
                 Object.keys(updates).forEach((key) => {
@@ -936,7 +940,9 @@ export const CharacterPanel = ({
                 });
                 return next;
             });
+            return true;
         }
+        return false;
     };
 
     const applyPurchasePatch = (purchase) => {
@@ -1778,7 +1784,8 @@ export const CharacterPanel = ({
         const currentWillpower = getValue("willpower") || 0;
         if (currentWillpower <= 0) return false;
         const updated = currentWillpower - 1;
-        await onUpdateCharacter({ willpower: updated });
+        const saved = await onUpdateCharacter({ willpower: updated });
+        if (saved !== true) return false;
         setPendingChanges((prev) => {
             const next = { ...prev };
             delete next.willpower;
@@ -1980,7 +1987,8 @@ export const CharacterPanel = ({
             getValue("plasm"), getValue("temporary_plasm"), amount
         );
         if (!transaction) return false;
-        await onUpdateCharacter(transaction);
+        const saved = await onUpdateCharacter(transaction);
+        if (saved !== true) return false;
         setPendingChanges((prev) => {
             const next = { ...prev };
             delete next.plasm;
@@ -1990,11 +1998,60 @@ export const CharacterPanel = ({
         return true;
     };
 
-    const addConditionFromDiceRoller = async (condition) => {
-        const currentConditions = activeCharacter?.conditions || [];
-        const updated = [...currentConditions, { ...condition, id: Date.now().toString() }];
-        await onUpdateCharacter({ conditions: updated });
+    const recordPreparationTurn = async ({ kind, signature, total, perTurn, resource, requiredTurns = 1 }) => {
+        if (!['haunt','spell'].includes(kind) || !['plasm','mana'].includes(resource)) return false;
+        const saved = await onUpdateCharacter((latest) => nextCombatPayment(latest,kind,signature,total,perTurn,resource,requiredTurns));
+        if (saved !== true) return false;
+        if (onEndTurn && await onEndTurn() !== true) {
+            toast.error('Payment was saved, but turn-effect advancement failed. Review the tracker before another Action.');
+        }
+        return true;
     };
+    const abandonActivePreparation = async (kind) => {
+        return onUpdateCharacter((latest) => abandonPreparation(latest,kind));
+    };
+    const finishActivePreparation = async (kind) => onUpdateCharacter((latest) => {
+        if (latest.pending_activation?.kind !== kind) return null;
+        return { pending_activation: null };
+    });
+    const payHauntActivationCosts = async ({ willpower = 0, plasm = 0 }) => {
+        if (!Number(willpower) && !Number(plasm)) return true;
+        return onUpdateCharacter((latest) => {
+        const wp = Math.max(0,Math.floor(Number(willpower) || 0));
+        const cost = Number(plasm) || 0;
+        if (!Number.isInteger(cost) || (Number(latest.willpower) || 0) < wp) return null;
+        const transaction = applyPlasmTransaction(latest.plasm,latest.temporary_plasm,cost);
+        if (!transaction) return null;
+        return { ...transaction, willpower: (Number(latest.willpower) || 0) - wp };
+        });
+    };
+    const spendManaForSpell = (amount) => onUpdateCharacter((latest) => {
+        const cost = Math.max(0, Math.floor(Number(amount) || 0));
+        if ((Number(latest.mana) || 0) < cost) return null;
+        return { mana: (Number(latest.mana) || 0) - cost };
+    });
+    const activateGeistRemembrance = async (dots) => {
+        const saved = await onUpdateCharacter((latest) => activateRemembrance(latest,dots));
+        if (saved) toast.success('Remembrance activated until End Scene.');
+        else toast.error('Remembrance could not be paid or activated.');
+        return saved;
+    };
+    const completeGeistRemembrance = async (number) => {
+        const index = Math.floor(Number(number));
+        if (index < 1 || index > 3) return false;
+        const saved = await onUpdateCharacter((latest) => completeRemembranceMilestone(latest,index));
+        if (!saved) toast.error('Remembrance could not be completed. Check rank, sequence or Storyteller limits.');
+        return saved;
+    };
+    const addConditionsFromDiceRoller = async (items) => {
+        if (!Array.isArray(items) || !items.length) return true;
+        return onUpdateCharacter((latest) => {
+            const existing = latest.conditions || [];
+            const additions = items.map((condition,index) => ({ ...condition, id: condition.id || ('roll-' + Date.now() + '-' + index) }));
+            return { conditions: [...existing, ...additions] };
+        });
+    };
+    const addConditionFromDiceRoller = async (condition) => addConditionsFromDiceRoller([condition]);
 
     // Handle Mage Path selection - auto-set Ruling Arcana to 1 dot
     const handlePathChange = (newPath) => {
@@ -2859,6 +2916,7 @@ export const CharacterPanel = ({
                             onAddCondition={addConditionFromDiceRoller}
                             onDiceRollResult={onDiceRollResult}
                             geistRank={geistRank}
+                            remembranceActivation={getValue("remembrance_activation")}
                             woundPenalty={woundPenalty}
                             currentPlasm={getValue("plasm") || 0}
                         />
@@ -3017,6 +3075,9 @@ export const CharacterPanel = ({
                             <GeistRemembranceContent
                                 getValue={getValue} handleChange={handleChange}
                                 geistRank={geistRank} currentSynergy={currentSynergy} synergyData={synergyData}
+                                currentPlasm={getValue('plasm') || 0}
+                                onCompleteRemembrance={completeGeistRemembrance}
+                                onActivateRemembrance={activateGeistRemembrance}
                             />
                             <div className="space-y-1">
                                 <label className="text-[10px] uppercase tracking-wider text-zinc-500">
@@ -3922,6 +3983,8 @@ export const CharacterPanel = ({
                     synergy: getValue("synergy") ?? 1,
                     willpower: getValue("willpower") || 0,
                     plasm: getValue("plasm") || 0,
+                    combat_active: !!getValue('combat_active'),
+                    pending_activation: getValue('pending_activation'),
                     geist_rank: getValue("geist_rank") ?? 3,
                 }}
                 availableKeys={allAvailableKeys}
@@ -3930,6 +3993,11 @@ export const CharacterPanel = ({
                 onSpendWillpower={spendWillpower}
                 onSpendPlasm={spendPlasm}
                 onAddCondition={addConditionFromDiceRoller}
+                onAddConditions={addConditionsFromDiceRoller}
+                onRecordPreparationTurn={recordPreparationTurn}
+                onPayActivationCosts={payHauntActivationCosts}
+                onAbandonPreparation={abandonActivePreparation}
+                onFinishPreparation={finishActivePreparation}
                 onAwardBeat={awardBeat}
                 onDiceRollResult={onDiceRollResult}
                 onAddRecentRoll={onAddRecentRoll}
@@ -3959,6 +4027,7 @@ export const CharacterPanel = ({
                         onRollPressed={() => setSelectedRollTraits([])}
                         onRollComplete={() => setGenericDicePopupOpen(false)}
                         geistRank={getValue("geist_rank") || 1}
+                        remembranceActivation={getValue("remembrance_activation")}
                         woundPenalty={getValue("wound_penalty") || 0}
                         currentPlasm={getValue("plasm") || 0}
                         preset={dicePopupPreset}
@@ -4121,6 +4190,17 @@ export const CharacterPanel = ({
                 </DialogContent>
             </Dialog>
 
+            {isMage && getValue('pending_activation')?.kind === 'spell' && !spellcastingOpen && (
+                <div className="rounded border border-violet-800/50 bg-violet-950/30 p-2 text-xs" data-testid="resume-mage-preparation">
+                    <p className="text-violet-200">Unfinished spell preparation — already paid Mana is committed.</p>
+                    <Button type="button" size="sm" className="mt-1" onClick={() => {
+                        try {
+                            const cfg=JSON.parse(getValue('pending_activation').signature);
+                            openSpellcastingPopup(cfg.arcanum,cfg.selectedPractice,cfg.effectiveSpellType);
+                        } catch (_) { toast.error('Cannot resume this preparation. Abandon it from the Storyteller editor.'); }
+                    }}>Resume spell preparation</Button>
+                </div>
+            )}
             {/* Spellcasting Popup for Mages */}
             {isMage && spellcastingArcanum && (
                 <SpellcastingPopup
@@ -4130,6 +4210,8 @@ export const CharacterPanel = ({
                     arcanumDots={getNestedValue("arcana", spellcastingArcanum) || 0}
                     allArcana={getValue("arcana") || {}}
                     gnosis={getValue("gnosis") || 1}
+                    path={getValue('path') || ''}
+                    legacyRulingArcanum={getValue('legacy_ruling_arcanum') || ''}
                     isRuling={isMageRulingArcanum({
                         path: getValue("path") || "",
                         legacy_ruling_arcanum: getValue("legacy_ruling_arcanum") || "",
@@ -4158,7 +4240,11 @@ export const CharacterPanel = ({
                     defaultWithstandType={spellcastingWithstandType}
                     roteSkillDots={spellcastingRoteSkill ? (getNestedValue("skills", spellcastingRoteSkill) || 0) : 0}
                     isRoteOrderSkill={spellcastingRoteSkill && getValue("order") && (ORDER_ROTE_SKILLS[getValue("order")] || []).includes(spellcastingRoteSkill)}
-                    onSpendMana={(amount) => handleChange("mana", Math.max(0, (getValue("mana") || 0) - amount))}
+                    onSpendMana={spendManaForSpell}
+                    pendingActivation={getValue('pending_activation')}
+                    onRecordPreparationTurn={recordPreparationTurn}
+                    onAbandonPreparation={abandonActivePreparation}
+                    onFinishPreparation={finishActivePreparation}
                     onRollDice={(spellData) => {
                         if (onTriggerDiceRoll) {
                             onTriggerDiceRoll(spellData);

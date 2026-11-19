@@ -169,8 +169,11 @@ class Character(BaseModel):
     synergy: int = 1
     synergy_max: int = 10
     touchstones: List[str] = Field(default_factory=list)
-    plasm: int = 5
+    plasm: int = 10
     temporary_plasm: int = 0  # Key surplus remaining until explicit End Scene
+    pending_activation: Optional[Dict[str, Any]] = None
+    remembrance_activation: Optional[Dict[str, Any]] = None
+    remembrance_history: List[Dict[str, Any]] = Field(default_factory=list)
     scene_paradox_rolls: int = 0  # Mage Paradox rolls in the current scene
     skip_previous_paradox_modifier_next_roll: bool = False
     haunts: Dict[str, int] = Field(default_factory=dict)
@@ -182,7 +185,7 @@ class Character(BaseModel):
     scoured_attributes: Dict[str, int] = Field(default_factory=dict)
     places_people: List[Dict[str, Any]] = Field(default_factory=list)
     size: int = 5
-    health: int = 7
+    health: int = 0
     health_boxes: List[str] = Field(default_factory=list)
     pattern_scouring: List[Dict[str, Any]] = Field(default_factory=list)
     oblation_hallow: List[Dict[str, Any]] = Field(default_factory=list)
@@ -192,7 +195,7 @@ class Character(BaseModel):
     combat_active: bool = False
     resistant_wounds: List[bool] = Field(default_factory=list)
     natural_healing: Dict[str, Any] = Field(default_factory=dict)
-    willpower: int = 5
+    willpower: int = 2
     willpower_max_modifier: int = 0
     armor: int = 0
     beats: int = 0
@@ -298,6 +301,9 @@ class CharacterUpdate(BaseModel):
     touchstones: Optional[List[str]] = None
     plasm: Optional[int] = None
     temporary_plasm: Optional[int] = None
+    pending_activation: Optional[Dict[str, Any]] = None
+    remembrance_activation: Optional[Dict[str, Any]] = None
+    remembrance_history: Optional[List[Dict[str, Any]]] = None
     scene_paradox_rolls: Optional[int] = None
     skip_previous_paradox_modifier_next_roll: Optional[bool] = None
     haunts: Optional[Dict[str, int]] = None

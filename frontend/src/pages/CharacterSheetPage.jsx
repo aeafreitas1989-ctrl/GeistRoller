@@ -7,12 +7,13 @@ import { toast } from "sonner";
 import { normalizeHealthBoxes, getHealthCounts, buildHealthBoxes } from "@/components/character/StatComponents";
 import { advanceSceneTime, sleepUntilMorning } from "@/utils/timeUtils";
 import { expireTimedEffects, startTimedEffect, getGameTimestamp, advanceTurnEffects, expireCombatEffects } from "@/utils/effectDuration";
+import { resolveArmoredDamage } from "@/utils/combatRules";
 import { advanceNaturalHealing, restartNaturalHealing } from "@/utils/naturalHealing";
 import { restoreScouredAttributes } from "@/utils/mageRecovery";
 import { addWoundDamage, healWound, hasHealableWound, normalizeResistance, toggleResistance } from "@/utils/resistantWounds";
 import { useCharacterSync } from "@/hooks/useCharacterSync";
 import { getEndScenePatch } from "@/utils/sceneLifecycle";
-import { applyPendingCharacterPatches, isStaleCharacterSnapshot } from "@/utils/characterUpdateQueue";
+import { applyPendingCharacterPatches, isStaleCharacterSnapshot, resolveCharacterUpdate } from "@/utils/characterUpdateQueue";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -83,55 +84,15 @@ export const CharacterSheetPage = () => {
         const equippedArmor = inventoryItems.find((it) => it?.type === "armor" && !!it?.equipped) || null;
         const equippedArmorGeneral = equippedArmor?.armor?.general ?? 0;
         const equippedArmorBallistic = equippedArmor?.armor?.ballistic ?? 0;
-
-        const activeMageArmorName = activeCharacter?.character_type === "mage"
-            ? (activeCharacter?.active_mage_armor || null)
-            : null;
-        const activeMageArmorDots = activeMageArmorName
-            ? (activeCharacter?.arcana?.[activeMageArmorName] || 0)
-            : 0;
-
-        const mageArmorGeneralBonus = (() => {
-            if (!activeMageArmorName) return 0;
-            if (["Forces", "Matter"].includes(activeMageArmorName)) return activeMageArmorDots;
-            if (activeMageArmorName === "Life") return Math.ceil(activeMageArmorDots / 2);
-            return 0;
-        })();
-
-        let finalType = damageType;
-        let remaining = amount;
-
-        if (activeMageArmorName === "Death" && finalType === "lethal" && ["general", "ballistic"].includes(sourceProfile)) {
-            finalType = "bashing";
-        }
-
-        if (activeMageArmorName === "Spirit" && finalType === "lethal" && ["general", "ballistic", "spirit"].includes(sourceProfile)) {
-            finalType = "bashing";
-        }
-
-        if (activeMageArmorName === "Prime" && sourceProfile === "supernatural") {
-            remaining = Math.max(0, remaining - activeMageArmorDots);
-        }
-
-        if (finalType !== "aggravated") {
-            let armorValue = 0;
-
-            if (sourceProfile === "ballistic") {
-                armorValue = equippedArmorBallistic;
-            } else if (sourceProfile === "general") {
-                armorValue =
-                    equippedArmorGeneral +
-                    (["Matter", "Life"].includes(activeMageArmorName) ? mageArmorGeneralBonus : 0);
-            } else if (sourceProfile === "energy") {
-                armorValue =
-                    activeMageArmorName === "Forces" ? mageArmorGeneralBonus : 0;
-            }
-
-            remaining = Math.max(0, remaining - armorValue);
-        }
-
+        const damage = resolveArmoredDamage({
+            amount, damageType, sourceProfile, equippedGeneral: equippedArmorGeneral,
+            equippedBallistic: equippedArmorBallistic,
+            mageArmor: activeCharacter?.character_type === 'mage' ? activeCharacter?.active_mage_armor : null,
+            mageArmorDots: activeCharacter?.arcana?.[activeCharacter?.active_mage_armor] || 0,
+        });
+        const remaining = damage.aggravated + damage.lethal + damage.bashing;
         if (remaining <= 0) {
-            toast.info("Incoming damage was fully absorbed.");
+            toast.info('Incoming damage was fully absorbed.');
             return;
         }
 
@@ -140,7 +101,10 @@ export const CharacterSheetPage = () => {
             maxHealth,
             activeCharacter?.health || 0
         );
-        const damaged = addWoundDamage(startingBoxes, activeCharacter?.resistant_wounds, finalType, remaining, false);
+        let damaged = { boxes: startingBoxes, resistant_wounds: activeCharacter?.resistant_wounds || [] };
+        for (const kind of ['aggravated','lethal','bashing']) {
+            if (damage[kind] > 0) damaged = addWoundDamage(damaged.boxes, damaged.resistant_wounds, kind, damage[kind], false);
+        }
         const updatedBoxes = damaged.boxes;
         const filled = updatedBoxes.filter((state) => state !== "empty").length;
         await updateCharacter({
@@ -150,7 +114,7 @@ export const CharacterSheetPage = () => {
             natural_healing: restartNaturalHealing(updatedBoxes, activeCharacter?.scene_tracker),
         });
 
-        toast.info(`${remaining} ${finalType} damage applied.`);
+        toast.info(`${damage.aggravated} aggravated, ${damage.lethal} lethal, ${damage.bashing} bashing damage applied.`);
     };
 
     const meritsList = activeCharacter?.merits_list || [];
@@ -239,19 +203,21 @@ export const CharacterSheetPage = () => {
         })();
 
     const handleCombatEndTurn = async () => {
-        if (!activeCharacter || !activeCharacter.combat_active) return;
-        const effects = activeCharacter.active_spells || [];
+        const currentCharacter = latestCharacterRef.current || activeCharacter;
+        if (!currentCharacter || !currentCharacter.combat_active) return false;
+        const effects = currentCharacter.active_spells || [];
         const ticked = advanceTurnEffects(effects);
-        const conditionsBefore = activeCharacter.conditions || [];
+        const conditionsBefore = currentCharacter.conditions || [];
         const tickedConditions = advanceTurnEffects(conditionsBefore);
         if (ticked !== effects || tickedConditions !== conditionsBefore) {
-            await updateCharacter({
+            const saved = await updateCharacter({
                 ...(ticked !== effects ? { active_spells: ticked } : {}),
                 ...(tickedConditions !== conditionsBefore ? { conditions: tickedConditions } : {}),
             });
+            if (saved !== true) return false;
         }
 
-        const conditions = (activeCharacter.conditions || []).filter((entry) => entry?.status !== "expired");
+        const conditions = (currentCharacter.conditions || []).filter((entry) => entry?.status !== "expired");
         const hasModeratePoison = conditions.some(
             (condition) => (condition?.name || "") === "Poisoned (Moderate)"
         );
@@ -274,8 +240,10 @@ export const CharacterSheetPage = () => {
                 sourceProfile: "poison",
             });
         }
+        return true;
     };
 
+    // A spent installment consumes one Action. All turn effects have been advanced.
     const handleCombatSleep = async () => {
         if (!activeCharacter) return;
 
@@ -436,17 +404,15 @@ export const CharacterSheetPage = () => {
     };
 
     const addActiveSpell = async (spell) => {
-        const currentActiveSpells = activeCharacter?.active_spells || [];
-        await updateCharacter({
-            active_spells: [...currentActiveSpells, startTimedEffect(spell, activeCharacter?.scene_tracker)],
-        });
+        await updateCharacter((latest) => ({
+            active_spells: [...(latest.active_spells || []), startTimedEffect(spell, latest.scene_tracker)],
+        }));
     };
 
     const dispelActiveSpell = async (spellId) => {
-        const currentActiveSpells = activeCharacter?.active_spells || [];
-        await updateCharacter({
-            active_spells: currentActiveSpells.filter((spell) => spell.id !== spellId),
-        });
+        await updateCharacter((latest) => ({
+            active_spells: (latest.active_spells || []).filter((spell) => spell.id !== spellId),
+        }));
     };
 
     const relinquishActiveSpell = async (spellId) => {
@@ -480,7 +446,9 @@ export const CharacterSheetPage = () => {
         const current = latestCharacterRef.current || activeCharacter;
         if (!current?.id) return false;
         const characterId = current.id;
-        const patch = { ...updates };
+        const computed = resolveCharacterUpdate(current,updates);
+        if (!computed || typeof computed !== 'object' || Object.keys(computed).length === 0) return false;
+        const patch = { ...computed };
         const token = Symbol('character-update');
         const pending = pendingCharacterPatchesRef.current.get(characterId) || [];
         pendingCharacterPatchesRef.current.set(characterId, [...pending, { token, updates: patch }]);
@@ -560,7 +528,7 @@ export const CharacterSheetPage = () => {
     // Condition management
     const addCondition = async (condition) => {
         if (!activeCharacter) return;
-        const currentConditions = activeCharacter.conditions || [];
+        const currentConditions = latestCharacterRef.current?.conditions || [];
         
         if (currentConditions.some(c => c.name === condition.name && c.status !== "expired")) {
             toast.error("Condition already active");
@@ -568,8 +536,7 @@ export const CharacterSheetPage = () => {
         }
         
         const startCondition = startTimedEffect(condition, activeCharacter.scene_tracker);
-        const newConditions = [...currentConditions, startCondition];
-        await updateCharacter({ conditions: newConditions });
+        await updateCharacter((latest) => ({ conditions: [...(latest.conditions || []), startCondition] }));
         toast.success(`Added: ${condition.name}`);
     };
 
@@ -703,6 +670,7 @@ export const CharacterSheetPage = () => {
                                     onAddRecentRoll={addRecentRoll}
                                     onCreateActiveSpell={addActiveSpell}
                                     onImportCharacter={importCharacter}
+                                    onEndTurn={handleCombatEndTurn}
                                     onAdvanceTime={handleAdvanceTime}
                                 />
                             </div>

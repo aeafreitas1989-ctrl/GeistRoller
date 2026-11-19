@@ -79,6 +79,7 @@ export const InlineDiceRoller = ({
     onOpenHauntRoll = null,
     onRollPressed = null,
     geistRank = 1,
+    remembranceActivation = null,
     woundPenalty = 0,
     currentPlasm = 0,
     preset = null,
@@ -334,7 +335,11 @@ export const InlineDiceRoller = ({
     const secondaryAttrValue = attributeValue(secondaryAttr);
     const selectedSkillValue = skillValue(skill);
     const untrainedSkillPenalty = getUntrainedSkillPenalty(skill, selectedSkillValue);
-    const remembranceBonus = !isMage && useRemembrance ? geistRank : 0;
+    const activeRemembrance = !isMage && remembranceActivation?.status === 'active'
+        && remembranceActivation.trait_type === 'skill'
+        && remembranceActivation.trait === skill && rollType === 'attr-skill';
+    const remembranceBonus = activeRemembrance && useRemembrance
+        ? Math.max(0, Number(remembranceActivation.dots) || 0) : 0;
     const brokenConditionActive = hasCondition("Broken");
     const isWitsComposureRoll =
         rollType === "attr-attr" &&
@@ -853,11 +858,11 @@ export const InlineDiceRoller = ({
                                 <>
                                     <div className="flex items-center justify-between text-[10px] text-zinc-500">
                                         <span>Remembrance</span>
-                                        <Switch checked={useRemembrance} onCheckedChange={setUseRemembrance} data-testid="dice-remembrance-toggle" />
+                                        <Switch checked={useRemembrance && activeRemembrance} onCheckedChange={setUseRemembrance} disabled={!activeRemembrance} data-testid="dice-remembrance-toggle" />
                                     </div>
                                     {useRemembrance && (
                                         <p className="text-[10px] text-teal-400" data-testid="dice-remembrance-bonus">
-                                            Remembrance bonus +{geistRank} (Geist Rank)
+                                            Remembrance +{remembranceBonus} ({remembranceActivation?.trait || 'Trait'}; Plasm already spent)
                                         </p>
                                     )}
                                     {(getValue("remembrance_trait") || getValue("remembrance_trait_type")) && (

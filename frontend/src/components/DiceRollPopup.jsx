@@ -180,7 +180,12 @@ export const DiceRollPopup = ({
     doomedKeySources = {},
     onSpendWillpower,
     onSpendPlasm,
+    onPayActivationCosts,
     onAddCondition,
+    onAddConditions,
+    onRecordPreparationTurn,
+    onAbandonPreparation,
+    onFinishPreparation,
     onAwardBeat,
     onDiceRollResult,
     onAddRecentRoll,
@@ -213,6 +218,18 @@ export const DiceRollPopup = ({
         setEnhancementCosts({});
         setKeyResonant(false);
     }, [haunt]);
+
+    useEffect(() => {
+        if (!isOpen || character?.pending_activation?.kind !== 'haunt') return;
+        try {
+            const config = JSON.parse(character.pending_activation.signature);
+            if (!config || !HAUNTS.includes(config.haunt)) return;
+            setHaunt(config.haunt); setKey(config.key || '__none__');
+            setKeyResonant(!!config.keyResonant); setPlasmSpent(Number(config.plasmSpent) || 1);
+            setSelectedEnhancements(config.enhancements || []); setEnhancementCosts(config.enhancementCosts || {});
+            setAvoidDoom(!!config.avoidDoom); setSpendWillpower(!!config.spendWillpower);
+        } catch (_) { /* Old or invalid manual record: allow explicit abandon. */ }
+    }, [isOpen, character?.pending_activation?.signature]);
 
     const hauntRating = character?.haunts?.[haunt] || 0;
     const synergy = character?.synergy || 0;
@@ -267,6 +284,23 @@ export const DiceRollPopup = ({
     const plasmCountingTowardLimit = Math.max(0, netPlasmChange);
     const turnsToResolve = Math.ceil(plasmCountingTowardLimit / plasmPerTurn);
     const exceedsPerTurnLimit = plasmCountingTowardLimit > plasmPerTurn;
+    const inCombat = !!character?.combat_active;
+    const preparationSignature = JSON.stringify({haunt,key,keyResonant,plasmSpent,enhancements:[...selectedEnhancements].sort(),enhancementCosts,avoidDoom,spendWillpower});
+    const ongoingPreparation = character?.pending_activation || null;
+    const matchingPreparation = ongoingPreparation?.kind === 'haunt' && ongoingPreparation.signature === preparationSignature && ongoingPreparation.total === plasmCountingTowardLimit;
+    const requiresPreparation = inCombat && exceedsPerTurnLimit;
+    const preparationReady = !requiresPreparation || (matchingPreparation && ongoingPreparation.paid >= ongoingPreparation.total && ongoingPreparation.turns >= ongoingPreparation.requiredTurns);
+    const blockedByOtherPreparation = !!ongoingPreparation && !matchingPreparation;
+    const paidPlasm = matchingPreparation ? ongoingPreparation.paid : 0;
+    const remainingPlasm = Math.max(0,plasmCountingTowardLimit-paidPlasm);
+    const recordPreparationTurn = async () => {
+        if (!requiresPreparation || blockedByOtherPreparation || isRolling || preparationReady) return;
+        setIsRolling(true);
+        try {
+            const saved = await onRecordPreparationTurn?.({kind:'haunt',signature:preparationSignature,total:plasmCountingTowardLimit,perTurn:plasmPerTurn,resource:'plasm',requiredTurns:Math.max(1,turnsToResolve)});
+            if (saved !== true) toast.error('Could not record this turn. No further payment should be made until the save is verified.');
+        } finally { setIsRolling(false); }
+    };
 
     // Willpower constraints - can only spend 1 per action
     const willpowerUseOption = spendWillpower ? "bonus" : (key !== "__none__" && !avoidDoom ? "doom" : "none");
@@ -314,6 +348,10 @@ export const DiceRollPopup = ({
     };
 
     const rollDice = async () => {
+        if (blockedByOtherPreparation || !preparationReady) {
+            toast.error('Complete or abandon the current combat preparation before rolling.');
+            return;
+        }
         // Only 1 Willpower can be spent per action
         const willpowerNeeded = spendWillpower ? 1 : (key !== "__none__" && avoidDoom ? 1 : 0);
 
@@ -322,7 +360,7 @@ export const DiceRollPopup = ({
             return;
         }
 
-        if (netPlasmChange > 0 && currentPlasm < netPlasmChange) {
+        if (netPlasmChange > 0 && !matchingPreparation && currentPlasm < netPlasmChange) {
             toast.error(`Not enough Plasm (need ${netPlasmChange}, have ${currentPlasm})`);
             return;
         }
@@ -330,14 +368,11 @@ export const DiceRollPopup = ({
         setIsRolling(true);
 
         try {
-            // Spend Willpower (only 1 per action)
-            if (willpowerNeeded > 0) {
-                await onSpendWillpower();
-            }
-
-            // Apply net Plasm change (can be negative to GAIN Plasm from Key)
-            if (netPlasmChange !== 0) {
-                await onSpendPlasm(netPlasmChange);
+            // One persisted payment: Willpower and remaining Plasm cannot partially succeed.
+            const paid = await onPayActivationCosts?.({willpower:willpowerNeeded,plasm:matchingPreparation ? 0 : netPlasmChange});
+            if (paid !== true) {
+                toast.error('Haunt payment could not be saved; no dice were rolled.');
+                return;
             }
 
             // Roll dice
@@ -361,9 +396,13 @@ export const DiceRollPopup = ({
                 is_exceptional: base.is_exceptional || resonantExceptional,
             };
 
+            if (matchingPreparation && await onFinishPreparation?.('haunt') !== true) {
+                toast.error('Haunt rolled, but preparation completion was not saved. Check your character before rolling again.');
+            }
             setResult(patchedResult);
+            const generatedConditions = [];
             if (key !== "__none__" && !avoidDoom && !spendWillpower && !patchedResult.is_exceptional) {
-                await onAddCondition?.({
+                generatedConditions.push({
                     name: "Doomed", type: "geist", origin: doomOrigin, key_name: actualKey, key_source_id: key,
                     description: "The Key's Doom is active until resolved.",
                 });
@@ -373,7 +412,7 @@ export const DiceRollPopup = ({
             // On a successful Haunt activation, add the appropriate Haunt Condition.
             // For charge-based Haunts, store charges to enable charge counters in the Cards → Haunts section.
             const successesForCondition = patchedResult.successes;
-            if (rollType === "haunt" && patchedResult.successes > 0 && onAddCondition) {
+            if (rollType === "haunt" && patchedResult.successes > 0 && (onAddConditions || onAddCondition)) {
                 const meta = HAUNT_CONDITION_BY_HAUNT[haunt];
                 if (meta?.name) {
                     const existing = (character?.conditions || []).some((c) => (c?.name || "") === meta.name);
@@ -384,7 +423,7 @@ export const DiceRollPopup = ({
                             meta.usesCharges
                                 ? `${meta.name} is active with ${plasmSpent} charge${plasmSpent === 1 ? "" : "s"}.`
                                 : `${meta.name} is active. ${basePurpose ? `${basePurpose}: ${baseSelectLabel}.` : ""}`;
-                        await onAddCondition({
+                        generatedConditions.push({
                             name: meta.name,
                             type: "geist",
                             origin: haunt,
@@ -393,6 +432,12 @@ export const DiceRollPopup = ({
                         });
                     }
                 }
+            }
+
+            if (generatedConditions.length) {
+                const saved = onAddConditions ? await onAddConditions(generatedConditions) :
+                    await Promise.all(generatedConditions.map((condition) => onAddCondition?.(condition)));
+                if (saved === false) toast.error('Roll complete, but one or more Conditions did not save.');
             }
 
             // Build chat message
@@ -452,6 +497,7 @@ export const DiceRollPopup = ({
                     : []),
                 ...(key !== "__none__" && !avoidDoom && !spendWillpower ? [`Condition: Doomed (${doomOrigin})`] : []),
                 plasmLine.replace(/\*/g, ""),
+                ...(turnsToResolve > 1 ? [`Activation time: ${turnsToResolve} turns${inCombat ? ' (Actions recorded)' : ' (outside combat)'}`] : []),
                 formatOutcomeLine(patchedResult),
                 patchedResult.dice.join(" "),
             ].join("\n");
@@ -693,7 +739,7 @@ export const DiceRollPopup = ({
                                 <p className="text-xs text-amber-300">Exceeds per-turn Plasm limit</p>
                                 <p className="text-[10px] text-zinc-400">
                                     Spending {plasmCountingTowardLimit}P but limit is {plasmPerTurn}P/turn (Synergy {synergy}).
-                                    This will take <span className="text-amber-300 font-mono">{turnsToResolve} turns</span> to spend.
+                                    This will take <span className="text-amber-300 font-mono">{turnsToResolve} turns</span> to spend. {inCombat ? 'Use the Action tracker below.' : 'Outside combat, the complete duration is recorded with the roll.'}
                                 </p>
                             </div>
                         </div>
@@ -776,11 +822,20 @@ export const DiceRollPopup = ({
                         </div>
                     )}
 
+                    {requiresPreparation && (
+                        <div className="rounded border border-amber-700/50 p-2 space-y-2" data-testid="haunt-combat-preparation">
+                            <p className="text-xs text-amber-300">Combat preparation: {paidPlasm}/{plasmCountingTowardLimit} Plasm paid; {matchingPreparation ? ongoingPreparation.turns : 0}/{Math.max(1,turnsToResolve)} Actions.</p>
+                            <p className="text-[10px] text-zinc-400">Each payment consumes this character's Action and ends their turn. Already spent Plasm is lost if abandoned.</p>
+                            {blockedByOtherPreparation && <p className="text-xs text-rose-300">A different preparation is underway. Abandon it before changing this activation.</p>}
+                            <Button type="button" size="sm" className="w-full" disabled={isRolling || preparationReady || blockedByOtherPreparation || remainingPlasm > currentPlasm} onClick={recordPreparationTurn} data-testid="haunt-record-next-turn">{preparationReady ? 'Preparation complete' : `Record next turn and spend ${Math.min(remainingPlasm,plasmPerTurn)} Plasm`}</Button>
+                        </div>
+                    )}
+                    {ongoingPreparation?.kind === 'haunt' && <Button type="button" variant="outline" className="w-full border-rose-800 text-rose-300" disabled={isRolling} onClick={() => onAbandonPreparation?.('haunt')} data-testid="haunt-abandon-preparation">Abandon Haunt — spent Plasm is lost</Button>}
                     {/* Roll Button */}
                     <Button
                         className="w-full btn-primary"
                         onClick={rollDice}
-                        disabled={isRolling || hauntRating === 0}
+                        disabled={isRolling || hauntRating === 0 || !!result || blockedByOtherPreparation || !preparationReady}
                     >
                         {isRolling ? (
                             <span className="flex items-center gap-2">
