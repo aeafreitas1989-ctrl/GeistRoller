@@ -201,7 +201,12 @@ export const DiceRoller = forwardRef(({
                 await options.onResult(response.data);
             }
         } catch (error) {
-            toast.error("Failed to roll dice");
+            console.error("[CofDRoller] Dice roll / Paradox resolution failed", error, {
+                rollType: options.summaryConfig?.summaryKey || "manual",
+            });
+            toast.error("Dice roll or its follow-up failed", {
+                description: error instanceof Error ? error.message : "Check the browser Console for details.",
+            });
         } finally {
             setIsRolling(false);
         }

@@ -779,6 +779,10 @@ export const SpellcastingPopup = ({
         if (castingSaveRef.current) return;
         castingSaveRef.current = true;
         try {
+        if (typeof onRollDice !== "function") {
+            toast.error("Dice roller is unavailable. Spellcasting was not started and no Mana was spent.");
+            return;
+        }
         if (otherPreparationExists || !spellPreparationComplete) {
             toast.error('Finish or abandon this combat preparation before casting.');
             return;
@@ -1029,6 +1033,16 @@ export const SpellcastingPopup = ({
             });
             onClose();
         }
+        } catch (error) {
+            console.error("[CofDRoller] Cast Spell failed", error, {
+                arcanum, practice: selectedPractice, paradoxMode,
+                advancedCasting: !!factors.casting.advanced,
+                advancedDuration: !!factors.duration.advanced,
+                yantras: selectedYantraNames,
+            });
+            toast.error("Spellcasting failed", {
+                description: error instanceof Error ? error.message : "Check the browser Console for details.",
+            });
         } finally { castingSaveRef.current = false; }
     };
 

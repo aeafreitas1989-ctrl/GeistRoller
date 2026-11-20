@@ -2,15 +2,18 @@ import "@/App.css";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
 import { CharacterSheetPage } from "@/pages/CharacterSheetPage";
+import { AppErrorBoundary } from "@/components/AppErrorBoundary";
 
 function App() {
     return (
         <div className="App">
-            <BrowserRouter>
-                <Routes>
-                    <Route path="/" element={<CharacterSheetPage />} />
-                </Routes>
-            </BrowserRouter>
+            <AppErrorBoundary>
+                <BrowserRouter>
+                    <Routes>
+                        <Route path="/" element={<CharacterSheetPage />} />
+                    </Routes>
+                </BrowserRouter>
+            </AppErrorBoundary>
             <Toaster 
                 position="top-right" 
                 toastOptions={{
