@@ -16,3 +16,11 @@ export const shouldRecordParadoxCondition = ({
 
 export const isContainedParadoxOutcome = (config = {}) =>
     config?.paradoxMode === 'contain';
+// Passes both live and saved Last Rolls through the same safe input path.
+// With zero Paradox successes, the Wisdom roll is intentionally absent.
+export const getContainmentTranscriptArgs = (paradoxEntry, wisdomEntry) => [
+    paradoxEntry?.result ?? null,
+    wisdomEntry?.result ?? null,
+    paradoxEntry?.config || {},
+    wisdomEntry?.config || {},
+];

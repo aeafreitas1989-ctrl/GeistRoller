@@ -2,6 +2,7 @@ import {
     isReleasedParadoxSpellDramatic,
     shouldRecordParadoxCondition,
     isContainedParadoxOutcome,
+    getContainmentTranscriptArgs,
 } from './paradoxResolution';
 
 test('released Paradox: a dramatic spellcasting failure creates a Condition', () => {
@@ -28,4 +29,27 @@ test('contained Paradox only creates a Condition when successes remain after Wis
 test('contained zero-success Paradox remains marked Contained when Wisdom roll is skipped', () => {
     expect(isContainedParadoxOutcome({ paradoxMode: 'contain' })).toBe(true);
     expect(isContainedParadoxOutcome({ paradoxMode: 'release' })).toBe(false);
+});
+test('contained zero-success Paradox has no Wisdom result; live/history access is safe', () => {
+    const paradoxEntry = { result: { successes: 0, dice: [3] }, config: { paradoxMode: 'contain', chance: true } };
+    expect(getContainmentTranscriptArgs(paradoxEntry, undefined)).toEqual([
+        paradoxEntry.result, null, paradoxEntry.config, {},
+    ]);
+});
+
+test('contained Paradox with a Wisdom roll preserves both results and configurations', () => {
+    const paradoxEntry = { result: { successes: 3 }, config: { paradoxMode: 'contain', pool: 4 } };
+    const wisdomEntry = { result: { successes: 2 }, config: { pool: 6 } };
+    expect(getContainmentTranscriptArgs(paradoxEntry, wisdomEntry)).toEqual([
+        paradoxEntry.result, wisdomEntry.result, paradoxEntry.config, wisdomEntry.config,
+    ]);
+});
+
+test('both live summary and saved Last Rolls call the safe containment helper', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const source = fs.readFileSync(path.join(__dirname, '../components/DiceRoller.jsx'), 'utf8');
+    const calls = source.match(/buildContainmentTranscript\(\.\.\.getContainmentTranscriptArgs\(paradoxEntry, wisdomEntry\)\)/g) || [];
+    expect(calls).toHaveLength(2);
+    expect(source).not.toMatch(/\bwisdomEntry\.(?:result|config)\b/);
 });

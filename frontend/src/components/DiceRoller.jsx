@@ -20,7 +20,7 @@ import {
 import axios from "axios";
 import { toast } from "sonner";
 import { convertToVoluntaryDramaticFailure, formatVoluntaryDramaticFailure } from "../utils/voluntaryDramaticFailure";
-import { isContainedParadoxOutcome } from "../utils/paradoxResolution";
+import { isContainedParadoxOutcome, getContainmentTranscriptArgs } from "../utils/paradoxResolution";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -724,12 +724,7 @@ export const DiceRoller = forwardRef(({
 
             if (paradoxEntry && (wisdomEntry || isContainedParadoxOutcome(paradoxEntry.config))) {
                 blocks.push(
-                    buildContainmentTranscript(
-                        paradoxEntry.result,
-                        wisdomEntry.result,
-                        paradoxEntry.config || {},
-                        wisdomEntry.config || {}
-                    )
+                    buildContainmentTranscript(...getContainmentTranscriptArgs(paradoxEntry, wisdomEntry))
                 );
             } else if (paradoxEntry && spellEntry) {
                 blocks.push(buildReleaseTranscript(paradoxEntry.result, paradoxEntry.config || {}));
@@ -871,12 +866,7 @@ export const DiceRoller = forwardRef(({
 
             if (paradoxEntry && (wisdomEntry || isContainedParadoxOutcome(paradoxEntry.config))) {
                 transcript = [
-                    buildContainmentTranscript(
-                        paradoxEntry.result,
-                        wisdomEntry.result,
-                        paradoxEntry.config || {},
-                        wisdomEntry.config || {}
-                    ),
+                    buildContainmentTranscript(...getContainmentTranscriptArgs(paradoxEntry, wisdomEntry)),
                     formatTranscriptFromConfig(completedResult, completedConfig || {}),
                 ].join("\n\n");
             } else if (paradoxEntry) {
