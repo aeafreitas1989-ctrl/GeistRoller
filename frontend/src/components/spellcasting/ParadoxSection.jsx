@@ -237,7 +237,7 @@ export const ParadoxSection = ({
                         <p className="text-[10px] text-zinc-400">Condition from residual / exceptional Paradox (selected by Storyteller)</p>
                         <Select value={paradoxConditionType} onValueChange={setParadoxConditionType}>
                             <SelectTrigger className="h-7 border-zinc-700 bg-zinc-950 text-xs" data-testid="paradox-condition-type"><SelectValue /></SelectTrigger>
-                            <SelectContent className="bg-zinc-900 border-zinc-700">
+                            <SelectContent className="bg-zinc-900 border-zinc-700 z-[200]">
                                 <SelectItem value="pending">Pending Storyteller decision</SelectItem>
                                 <SelectItem value="taint">Paradox Taint</SelectItem>
                                 <SelectItem value="custom">Other Condition (ST-selected)</SelectItem>
