@@ -307,6 +307,17 @@ export const PREMADE_ARMOR = [
 
 export const PREMADE_EQUIPMENT = [
   {
+    name: "Cold Weather Gear",
+    category: "Physical",
+    availability: 0,
+    bonus: 0,
+    durability: 1,
+    size: 2,
+    structure: 3,
+    protection: "cold_weather",
+    effect: "Insulated cold-weather clothing. When worn, this marks the character as using Cold Weather Gear. The Storyteller decides whether it is adequate for the conditions. No automatic dice bonus.",
+  },
+  {
     name: "Automotive Tools (Basic Kit)",
     availability: 1,
     bonus: 1,

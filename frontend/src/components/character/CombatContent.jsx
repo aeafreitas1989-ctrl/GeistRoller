@@ -354,6 +354,7 @@ const PREMADE_EQUIPMENT_ICON_RULES = [
     [/^battering ram/i, "hammer"],
     [/^bear trap/i, "lock-keyhole"],
     [/^caltrops/i, "construction"],
+    [/^cold weather gear/i, "shirt"],
     [/^camouflage clothing/i, "shirt"],
     [/^climbing gear/i, "lasso"],
     [/^crowbar/i, "wrench"],
@@ -829,6 +830,7 @@ export const CombatContent = ({
                                                     availability: p.availability ?? 0,
                                                     equipment: {
                                                         icon: getDefaultEquipmentIconId(p.name),
+                                                         protection: p.protection ?? "",
                                                         bonus: p.bonus ?? 0,
                                                         durability: p.durability ?? 0,
                                                         size: p.size ?? 1,
@@ -1376,7 +1378,7 @@ export const CombatContent = ({
                                                     ? getYantraDisplayType(it)
                                                     : it.type === "weapon"
                                                         ? `${it.weapon?.kind === "ranged" ? "Ranged" : "Melee"} Weapon`
-                                                        : it.type === "armor" ? "Armor" : it.type === "equipment" ? "Equipment" : it.type === "consumable" ? "Consumable" : "Item"}
+                                                        : it.type === "armor" ? "Armor" : it.type === "equipment" ? (it.equipment?.protection === "cold_weather" ? "Cold Weather Gear" : "Equipment") : it.type === "consumable" ? "Consumable" : "Item"}
                                                 <span className="px-1 text-zinc-600">·</span>
                                                 Availability {AVAILABILITY_OPTIONS.find((a) => a.value === (it.availability ?? 0))?.label ?? "—"}
                                             </div>
