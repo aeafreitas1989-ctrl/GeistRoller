@@ -54,6 +54,7 @@ const PHYSICAL_SKILLS = new Set([
 
 import { formatLabel } from "./StatComponents";
 import { getConditionRollModifiers, getPostRollConditionChoices, applyPostRollCondition, applyInspiredCondition } from "../../utils/condition-roll-rules";
+import { getConditionRollPresentation } from "../../utils/conditionRollPresentation";
 import { normalizeSkillSpecialty } from "../../utils/skillSpecialties";
 import { getEnvironmentalRollModifiers, activeEnvironmentalTiltNames } from "../../utils/environmentalTilts";
 
@@ -624,10 +625,18 @@ export const InlineDiceRoller = ({
 
             await new Promise(resolve => setTimeout(resolve, 300));
 
+            // Preserve the actual dice outcome before expending a Condition.
+            // Last Rolls must distinguish the original result from the final result.
+            const originalConditionResult = { ...response.data };
+            let conditionUsed = null;
+            let chanceDieReplaced = false;
             let inspiredUsed = false;
             if (inspiredRelevant && hasCondition("Inspired") && typeof onUseRollCondition === "function") {
                 inspiredUsed = await onUseRollCondition("Inspired", { restoreWillpower: 1 });
-                if (inspiredUsed) response.data = applyInspiredCondition(response.data);
+                if (inspiredUsed) {
+                    conditionUsed = "Inspired";
+                    response.data = applyInspiredCondition(response.data);
+                }
             }
             const postRollChoices = !inspiredUsed && typeof onUseRollCondition === "function"
                 ? getPostRollConditionChoices({
@@ -639,7 +648,9 @@ export const InlineDiceRoller = ({
                     resolve, options: postRollChoices, successes: response.data.successes,
                 }));
                 if (selected && await onUseRollCondition(selected)) {
+                    conditionUsed = selected;
                     if (selected === "Steadfast" && isComputedChanceDie) {
+                        chanceDieReplaced = true;
                         // Steadfast replaces a chance die with one REGULAR die;
                         // it does not automatically award one success.
                         const oneRegularDie = await axios.post(API + '/dice/roll', {
@@ -674,7 +685,10 @@ export const InlineDiceRoller = ({
                 }
             }
             
-            setResult(response.data);
+            const conditionPresentation = getConditionRollPresentation(
+                conditionUsed, originalConditionResult, response.data, { chanceDieReplaced }
+            );
+            setResult({ ...response.data, condition_presentation: conditionPresentation });
             if (response.data.is_dramatic_failure && (usesPhysicalAttribute || usesPhysicalSkill) &&
                 activeEnvironmentalTiltNames({ conditions: getValue('conditions') || [],
                     scene_tracker: getValue('scene_tracker') || [] }).has('Ice')) {
@@ -740,7 +754,10 @@ export const InlineDiceRoller = ({
             const chatMessage = `${resultEmoji} **Dice Roll:** ${rollDescription}\n*Pool:* ${poolTotal} dice → [${diceStr}]\n*Result:* ${resultType}`;
 
             if (onDiceRollResult) {
-                onDiceRollResult(chatMessage);
+                onDiceRollResult(conditionPresentation
+                    ? chatMessage + "\n*Condition used:* " + conditionPresentation.name +
+                        " (" + conditionPresentation.before + " → " + conditionPresentation.after + ")"
+                    : chatMessage);
             }
 
             const cleanRollDescription = rollDescription.replace(/\*\*/g, "");
@@ -751,8 +768,13 @@ export const InlineDiceRoller = ({
             const transcriptOutcome = formatOutcomeLine(response.data, isContestedRoll);
             const transcript = [
                 `Rolled ${rollBreakdown || cleanRollDescription} = ${poolLabel} [${isComputedChanceDie ? "Chance" : `${displayedAgainRule}!`}]`,
-                transcriptOutcome,
-                response.data.dice.join(" "),
+                ...(conditionPresentation ? [
+                    `Before Condition: ${conditionPresentation.before}`,
+                    ...(conditionPresentation.originalDice ? [`Original chance die: ${conditionPresentation.originalDice.join(" ")}`] : []),
+                    `Condition used: ${conditionPresentation.name}. ${conditionPresentation.note}`,
+                    `Final outcome: ${conditionPresentation.after}`,
+                ] : [transcriptOutcome]),
+                ...(conditionPresentation ? [`Final dice: ${response.data.dice.join(" ")}`] : [response.data.dice.join(" ")]),
             ].join("\n");
 
             onAddRecentRoll?.({
@@ -782,25 +804,57 @@ export const InlineDiceRoller = ({
         }
     };
 
+    // Closing the modal with Escape or its X is equivalent to keeping the
+    // original roll; otherwise the suspended roll Promise never resolves.
+    const resolveConditionChoice = (name) => {
+        if (!pendingConditionChoice) return;
+        const resolve = pendingConditionChoice.resolve;
+        setPendingConditionChoice(null);
+        resolve(name);
+    };
+
     return (
         <div className="bg-zinc-900/50 border border-zinc-800 rounded-sm" data-testid="inline-dice-roller">
             
-            <Dialog open={!!pendingConditionChoice}>
-                <DialogContent className="bg-zinc-950 border-zinc-800 text-zinc-100">
-                    <DialogHeader><DialogTitle>Use a Condition?</DialogTitle>
-                        <DialogDescription>Base result: {pendingConditionChoice?.successes || 0} successes. Choose whether to resolve a Condition for its benefit.</DialogDescription>
+            <Dialog open={!!pendingConditionChoice} onOpenChange={(open) => { if (!open) resolveConditionChoice(null); }}>
+                <DialogContent className="w-[calc(100vw-2rem)] max-w-md min-w-0 max-h-[calc(100dvh-2rem)] overflow-y-auto border-zinc-700 bg-zinc-950 p-5 text-zinc-100 sm:p-6" data-testid="condition-choice-dialog">
+                    <DialogHeader className="min-w-0 space-y-2 text-left">
+                        <DialogTitle className="pr-8 text-left text-lg leading-6">Use a Condition?</DialogTitle>
+                        <DialogDescription className="pr-2 text-left text-sm leading-6 text-zinc-400 whitespace-normal break-words">
+                            Original result: <span className="font-semibold text-zinc-200">{pendingConditionChoice?.successes || 0} {(pendingConditionChoice?.successes || 0) === 1 ? 'success' : 'successes'}</span>.
+                            <span className="block">Choose whether to expend a Condition to change this roll.</span>
+                        </DialogDescription>
                     </DialogHeader>
-                    <div className="space-y-2">
-                        {(pendingConditionChoice?.options || []).map(name => (
-                            <Button key={name} type="button" className="w-full btn-secondary" onClick={() => {
-                                const resolve = pendingConditionChoice.resolve;
-                                setPendingConditionChoice(null); resolve(name);
-                            }}>{name === "Informed" ? "Informed: failure → success, or success → exceptional" : "Steadfast: failure → 1 success (chance die: reroll one regular die)"}</Button>
+                    <div className="min-w-0 space-y-2" data-testid="condition-choice-options">
+                        {(pendingConditionChoice?.options || []).map((name) => (
+                            <Button
+                                key={name}
+                                type="button"
+                                className="h-auto min-h-16 w-full min-w-0 justify-start whitespace-normal rounded-md border border-teal-700/60 bg-teal-900/40 px-4 py-3 text-left text-zinc-100 hover:bg-teal-900/65 focus-visible:ring-teal-500"
+                                data-testid={"condition-choice-option-" + name.toLowerCase()}
+                                onClick={() => resolveConditionChoice(name)}
+                            >
+                                <span className="flex min-w-0 flex-col gap-1 text-left">
+                                    <span className="text-sm font-semibold leading-5">{name}</span>
+                                    <span className="break-words text-xs font-normal leading-5 text-teal-100/85">
+                                        {name === "Informed"
+                                            ? "Upgrade a failure to success, or a success to exceptional success."
+                                            : isComputedChanceDie
+                                                ? "Replace the failed chance die with one regular die; its result is not guaranteed."
+                                                : "Turn an ordinary failure into one success."}
+                                    </span>
+                                </span>
+                            </Button>
                         ))}
-                        <Button type="button" variant="outline" className="w-full" onClick={() => {
-                            const resolve = pendingConditionChoice.resolve;
-                            setPendingConditionChoice(null); resolve(null);
-                        }}>Keep original roll</Button>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            className="h-auto min-h-10 w-full min-w-0 whitespace-normal border-zinc-700 bg-transparent px-4 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white"
+                            onClick={() => resolveConditionChoice(null)}
+                            data-testid="condition-choice-keep-roll"
+                        >
+                            Keep original roll
+                        </Button>
                     </div>
                 </DialogContent>
             </Dialog>
@@ -1353,6 +1407,12 @@ export const InlineDiceRoller = ({
                             <p className="text-[10px] text-zinc-500 text-center mt-1" data-testid="inline-dice-description">
                                 {result.description}
                             </p>
+                            {result.condition_presentation && (
+                                <div className="mt-2 rounded-sm border border-teal-700/40 bg-teal-950/25 p-2 text-left text-[11px] text-teal-200" data-testid="inline-dice-condition-effect">
+                                    <p className="font-semibold">Condition used: {result.condition_presentation.name}</p>
+                                    <p className="mt-1 break-words">{result.condition_presentation.before} → {result.condition_presentation.after}</p>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
