@@ -16,19 +16,40 @@ export const temperatureHazard = (tracker = {}) => {
     return null;
 };
 
+const WEATHER_SHELTER_TILTS = new Set(['Blizzard', 'Heavy Rain', 'Heavy Winds']);
+const PERSONAL_TEMPERATURE_NAMES = new Set(['Extreme Cold', 'Extreme Heat']);
+const activePersonalTemperatureTilt = (character = {}) =>
+    (character?.conditions || []).find((condition) =>
+        PERSONAL_TEMPERATURE_NAMES.has(condition?.name) && condition?.type === 'tilt' &&
+        condition?.status !== 'expired' && !condition?.weather_auto &&
+        condition?.group !== 'tilt-environmental');
+
+// Shelter protects against rain, wind and blowing snow. For an extreme
+// temperature, the shelter must also provide adequate insulation or cooling.
+// The independent temperature_protected override covers other protections.
+// Neither shelter nor clothing suppresses a manually applied Personal Tilt.
+export const shelterMitigatesTilt = (character = {}, tracker = character?.scene_tracker || {}, name = '') => {
+    if (PERSONAL_TEMPERATURE_NAMES.has(name)) {
+        if (activePersonalTemperatureTilt(character)?.name === name) return false;
+        return tracker?.temperature_protected === true ||
+            (tracker?.sheltered === true && tracker?.shelter_temperature_adequate !== false) ||
+            (name === 'Extreme Cold' && tracker?.cold_gear_adequate !== false &&
+                coldWeatherGearEquipped(character?.inventory_items));
+    }
+    return WEATHER_SHELTER_TILTS.has(name) && tracker?.sheltered === true;
+};
+
 export const temperatureExposure = (character = {}, tracker = character?.scene_tracker || {}) => {
-    const sceneHazard = temperatureHazard(tracker);
-    const manual = (character?.conditions || []).find((c) =>
-        ['Extreme Cold', 'Extreme Heat'].includes(c?.name) && c?.type === 'tilt' &&
-        c?.status !== 'expired' && !c?.weather_auto);
-    // A manually applied Personal Tilt (hypothermia, fever, magic) survives
-    // weather protection; the Storyteller must end that Tilt separately.
-    if (manual) return manual.name;
-    if (!sceneHazard) return null;
-    if (sceneHazard === 'Extreme Cold' && coldWeatherGearEquipped(character?.inventory_items) &&
-        tracker?.cold_gear_adequate !== false) return null;
-    if (tracker?.temperature_protected === true) return null;
-    return sceneHazard;
+    const personal = activePersonalTemperatureTilt(character);
+    if (personal) return personal.name;
+    // Scene-level manual Tilts remain valid without the ambient temperature
+    // trigger, but can be mitigated by adequate scene shelter.
+    const manualScene = (character?.conditions || []).find((condition) =>
+        PERSONAL_TEMPERATURE_NAMES.has(condition?.name) && condition?.type === 'tilt' &&
+        condition?.group === 'tilt-environmental' && condition?.status !== 'expired' &&
+        !condition?.weather_auto);
+    const kind = manualScene?.name || temperatureHazard(tracker);
+    return kind && !shelterMitigatesTilt(character, tracker, kind) ? kind : null;
 };
 
 export const activeEnvironmentalTiltNames = (character = {}, tracker = character?.scene_tracker || {}) => {
@@ -59,8 +80,7 @@ export const exposurePenalty = (character = {}, tracker = character?.scene_track
 
 const affected = (name, tracker, character) => {
     if (['Extreme Cold', 'Extreme Heat'].includes(name)) return temperatureExposure(character, tracker) === name;
-    if (tracker?.sheltered && ['Blizzard', 'Heavy Rain', 'Heavy Winds'].includes(name)) return false;
-    return true;
+    return !shelterMitigatesTilt(character, tracker, name);
 };
 
 export const getEnvironmentalRollModifiers = ({
@@ -118,9 +138,7 @@ export const makeWeatherConditions = (tracker = {}) => {
         description, effect: description, origin: 'Weather', target_type: 'scene', target_id: 'scene',
         target_name: String(tracker?.location_name || '').trim() || 'Current Location', weather_auto: true,
         shelter_mitigates: ['Extreme Cold', 'Extreme Heat', 'Blizzard', 'Heavy Rain', 'Heavy Winds'].includes(name),
-        mitigated_by_shelter: ['Extreme Cold', 'Extreme Heat'].includes(name) ?
-            tracker?.temperature_protected === true :
-            !!tracker?.sheltered && ['Blizzard', 'Heavy Rain', 'Heavy Winds'].includes(name),
+        mitigated_by_shelter: shelterMitigatesTilt({}, tracker, name),
     });
     const name = temperatureHazard(tracker);
     if (name) add(name, 'Extreme temperature exposure; see Tilt rules and exposure tracker.');

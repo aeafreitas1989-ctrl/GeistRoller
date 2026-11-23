@@ -17,7 +17,7 @@ import {
 
 import { ConditionCard } from "../cards/CardComponents";
 import { getDisplayedConditionRules } from "../../utils/condition-display";
-import { temperatureExposure } from "../../utils/environmentalTilts";
+import { shelterMitigatesTilt } from "../../utils/environmentalTilts";
 import { getEffectTimer, isEffectExpired } from "../../utils/effectDuration";
 
 import {
@@ -422,19 +422,8 @@ export const ConditionsSection = ({
                     ? getSceneTarget()
                     : getSelectedTarget();
 
-            const sceneSheltered =
-                Boolean(
-                    activeCharacter
-                        ?.scene_tracker
-                        ?.sheltered
-                );
-
-            const mitigatedByShelter =
-                isEnvironmentalTilt &&
-                sceneSheltered &&
-                SHELTER_MITIGATED_TILTS.has(
-                    displayName
-                );
+            const mitigatedByShelter = isEnvironmentalTilt &&
+                shelterMitigatesTilt(activeCharacter, activeCharacter?.scene_tracker || {}, displayName);
 
             const effect =
                 condition.effect ||
@@ -1029,9 +1018,8 @@ export const ConditionsSection = ({
                                             condition.group ||
                                             ""
                                         }
-                                        mitigatedByShelter={Boolean(condition.mitigated_by_shelter ||
-                                            (condition.weather_auto && ['Extreme Cold','Extreme Heat'].includes(condition.name) &&
-                                             temperatureExposure(activeCharacter, activeCharacter?.scene_tracker) === null))}
+                                        mitigatedByShelter={condition.group === 'tilt-environmental' &&
+                                            shelterMitigatesTilt(activeCharacter, activeCharacter?.scene_tracker || {}, condition.name)}
                                         splat={
                                             condition.splat ||
                                             ""

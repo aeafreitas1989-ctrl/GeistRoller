@@ -401,10 +401,11 @@ export const SceneTrackerCard = ({
               ['icy_ground','Icy / slippery ground'],
               ['earthquake_active','Earthquake underway'],
               ['temperature_protected','Protected from extreme temperature'],
+              ['shelter_temperature_adequate','Shelter protects from extreme temperature'],
               ['cold_gear_adequate','Equipped cold gear is adequate'],
             ].map(([field,label]) => (
               <label key={field} className="flex items-center gap-1.5">
-                <Checkbox checked={field==='cold_gear_adequate'?sceneTracker[field]!==false:sceneTracker[field]===true}
+                <Checkbox checked={['cold_gear_adequate','shelter_temperature_adequate'].includes(field)?sceneTracker[field]!==false:sceneTracker[field]===true}
                   onCheckedChange={(checked) => updateSceneTracker({[field]:checked===true})}
                   data-testid={'scene-'+field} />{label}
               </label>
@@ -420,7 +421,8 @@ export const SceneTrackerCard = ({
           {turnHazards.map((hazard) => <p key={hazard.name} className="text-xs text-rose-300 mt-1">
             {hazard.name}: {hazard.damage} {hazard.type} / turn. {hazard.avoid}. End Turn prompts the relevant roll.
           </p>)}
-          <p className="text-[10px] text-zinc-500 mt-2">Flooding and ice require explicit scene conditions. Wind and earthquake severity are never inferred.</p>
+          <p className="text-[10px] text-zinc-500 mt-2">Shelter mitigates rain, wind and blizzard exposure. It also mitigates extreme temperature when "Shelter protects from extreme temperature" is checked. Flooding, ice and earthquakes remain separate hazards; wind still affects driving.</p>
+          <p className="text-[10px] text-zinc-500 mt-1">Flooding and ice require explicit scene conditions. Wind and earthquake severity are never inferred.</p>
         </details>
     </div>
 );

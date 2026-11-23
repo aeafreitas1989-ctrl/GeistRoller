@@ -65,6 +65,7 @@ const DEFAULT_SCENE_TRACKER = {
     location_name: "",
     location_type: "exterior",
     sheltered: false,
+    shelter_temperature_adequate: true,
     date: "",
     time: "",
     temperature: "15",
