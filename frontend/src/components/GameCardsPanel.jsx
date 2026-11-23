@@ -217,6 +217,8 @@ export const GameCardsPanel = ({
     const [sceneTracker, setSceneTracker] = useState(DEFAULT_SCENE_TRACKER);
     const [endSceneOpen, setEndSceneOpen] = useState(false);
     const [endingScene, setEndingScene] = useState(false);
+    const [pendingHeaderAction, setPendingHeaderAction] = useState(null);
+    const [defenseResetToken, setDefenseResetToken] = useState(0);
 
     useEffect(() => {
         setCaseFileDraft(activeCharacter?.case_truth || "");
@@ -518,6 +520,24 @@ export const GameCardsPanel = ({
     }, {});
 
 
+    // Header actions retain the Combat Tracker callbacks and reset the temporary
+    // (per-turn) Defense value, just as the original buttons did.
+    const runHeaderAction = async (kind) => {
+        const handler = kind === 'turn' ? onEndTurn : onSleep;
+        if (!activeCharacter || typeof handler !== 'function' || pendingHeaderAction || endingScene) return;
+        if (kind === 'turn' && !activeCharacter.combat_active) return;
+        setPendingHeaderAction(kind);
+        setDefenseResetToken((previous) => previous + 1);
+        try {
+            await handler();
+        } catch (error) {
+            console.error('Cards header action failed:', error);
+            toast.error(kind === 'turn' ? 'Could not end the turn.' : 'Could not process sleep.');
+        } finally {
+            setPendingHeaderAction(null);
+        }
+    };
+
     const confirmEndScene = async () => {
         if (!onEndScene || !activeCharacter || endingScene) return;
         setEndingScene(true);
@@ -557,17 +577,39 @@ export const GameCardsPanel = ({
         <div className="h-full min-h-0 flex flex-col" data-testid="game-cards-panel">
             <div className="px-4 py-3 border-b border-zinc-800/50 shrink-0 flex items-center justify-between gap-3">
                 <h2 className="font-heading text-lg text-zinc-200">Cards</h2>
-                <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="h-8 border-zinc-700 bg-zinc-900/40 text-zinc-200 hover:text-white"
-                    onClick={() => setEndSceneOpen(true)}
-                    disabled={!activeCharacter || !onEndScene}
-                    data-testid="cards-end-scene-btn"
-                >
-                    End Scene
-                </Button>
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                    <Button
+                        type="button"
+                        size="sm"
+                        className="h-8 btn-secondary text-xs"
+                        onClick={() => runHeaderAction('turn')}
+                        disabled={!activeCharacter?.combat_active || !onEndTurn || !!pendingHeaderAction || endingScene}
+                        data-testid="combat-card-end-turn-btn"
+                    >
+                        End Turn
+                    </Button>
+                    <Button
+                        type="button"
+                        size="sm"
+                        className="h-8 btn-secondary text-xs"
+                        onClick={() => runHeaderAction('sleep')}
+                        disabled={!activeCharacter || !onSleep || !!pendingHeaderAction || endingScene}
+                        data-testid="combat-card-sleep-btn"
+                    >
+                        Sleep
+                    </Button>
+                    <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-8 border-zinc-700 bg-zinc-900/40 text-zinc-200 hover:text-white"
+                        onClick={() => setEndSceneOpen(true)}
+                        disabled={!activeCharacter || !onEndScene || !!pendingHeaderAction}
+                        data-testid="cards-end-scene-btn"
+                    >
+                        End Scene
+                    </Button>
+                </div>
                 <Dialog open={endSceneOpen} onOpenChange={(open) => { if (!endingScene) setEndSceneOpen(open); }}>
                     <DialogContent className="bg-zinc-950 border-zinc-700 text-zinc-100 max-w-md" data-testid="end-scene-dialog">
                         <DialogHeader>
@@ -706,8 +748,7 @@ export const GameCardsPanel = ({
                                     onPatternRestoration={onPatternRestoration}
                                     patternRestorationDisabled={patternRestorationDisabled}
                                     isMage={isMage}
-                                    onEndTurn={onEndTurn}
-                                    onSleep={onSleep}
+                                    defenseResetToken={defenseResetToken}
                                 />
                             </CollapsibleContent>
                         </Collapsible>

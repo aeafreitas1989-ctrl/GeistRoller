@@ -1268,10 +1268,14 @@ export const CombatTrackerCard = ({
     onPatternRestoration,
     patternRestorationDisabled,
     isMage,
-    onEndTurn,
-    onSleep,
+    defenseResetToken = 0,
 }) => {
     const [currentDefense, setCurrentDefense] = useState(normalDefense);
+    // End Turn and Sleep live in the Cards header; reset the local Defense counter
+    // when either action is invoked, including when Combat is collapsed.
+    useEffect(() => {
+        setCurrentDefense(normalDefense);
+    }, [defenseResetToken, normalDefense]);
     const [initiativeRoll, setInitiativeRoll] = useState(null);
     const [selectedWeaponKey, setSelectedWeaponKey] = useState("__unarmed__");
     const [attackMode, setAttackMode] = useState("unarmed");
@@ -2125,36 +2129,7 @@ export const CombatTrackerCard = ({
             </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 pt-1">
-                <Button
-                    size="sm"
-                    className="w-full btn-secondary text-xs h-7"
-                    onClick={async () => {
-                        setCurrentDefense(normalDefense);
-                        if (typeof onEndTurn === "function") {
-                            await onEndTurn();
-                        }
-                    }}
-                    disabled={!activeCharacter?.combat_active}
-                    data-testid="combat-card-end-turn-btn"
-                >
-                    End Turn
-                </Button>
 
-                <Button
-                    size="sm"
-                    className="w-full btn-secondary text-xs h-7"
-                    onClick={async () => {
-                        setCurrentDefense(normalDefense);
-                        if (typeof onSleep === "function") {
-                            await onSleep();
-                        }
-                    }}
-                    data-testid="combat-card-sleep-btn"
-                >
-                    Sleep
-                </Button>
-            </div>
         </div>
     );
 };
