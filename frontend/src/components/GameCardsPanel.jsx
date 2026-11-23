@@ -55,6 +55,8 @@ import { isSceneDurationEffect } from "../utils/sceneLifecycle";
 import { getDoomedKeySources } from "../utils/geistKeys";
 import { expireTimedEffects, isEffectExpired } from "../utils/effectDuration";
 import { advanceNaturalHealing } from "../utils/naturalHealing";
+import { makeWeatherConditions, exposurePenalty, temperatureExposure, environmentalTurnHazards, getEnvironmentalStats } from "../utils/environmentalTilts";
+import { advanceEnvironmentalExposure } from "../utils/environmentalExposure";
 import { restoreScouredAttributes } from "../utils/mageRecovery";
 import { ConditionsSection } from "./game-cards/ConditionsSection";
 import { ActiveSpellsSection } from "./game-cards/ActiveSpellsSection";
@@ -70,6 +72,15 @@ const DEFAULT_SCENE_TRACKER = {
     precipitation: "dry",
     intensity: "none",
     wind: "calm",
+    wind_grade: 0,
+    flood_depth_feet: 0,
+    snow_depth_inches: 0,
+    icy_ground: false,
+    earthquake_active: false,
+    earthquake_severity: 0,
+    earthquake_damage: 0,
+    cold_gear_adequate: true,
+    temperature_protected: false,
 };
 
 const getTemperatureValue = (value) => {
@@ -131,181 +142,7 @@ const getTemperatureIconClass = (temp) => {
     return "text-red-300";
 };
 
-const WEATHER_CONDITION_ORIGIN = "Weather";
-
-const SHELTER_MITIGATED_TILTS = new Set([
-    "Extreme Cold",
-    "Extreme Heat",
-    "Heavy Rain",
-    "Heavy Winds",
-    "Blizzard",
-]);
-
-const buildWeatherConditions = (tracker) => {
-    const temp =
-        getTemperatureValue(
-            tracker.temperature
-        );
-
-    const precipitation =
-        tracker.precipitation ||
-        "dry";
-
-    const intensity =
-        tracker.intensity ||
-        "none";
-
-    const wind =
-        tracker.wind ||
-        "calm";
-
-    const locationName =
-        tracker.location_name?.trim() ||
-        "Current Location";
-
-    const sheltered =
-        Boolean(
-            tracker.sheltered
-        );
-
-    const conditions = [];
-
-    const addEnvironmentalTilt = ({
-        name,
-        description,
-        resolution,
-    }) => {
-        conditions.push({
-            name,
-            type: "tilt",
-            group: "tilt-environmental",
-
-            description,
-            effect: description,
-            resolution,
-
-            origin:
-                WEATHER_CONDITION_ORIGIN,
-
-            target_type: "scene",
-            target_id: "scene",
-            target_name:
-                locationName,
-
-            weather_auto: true,
-
-            shelter_mitigates:
-                SHELTER_MITIGATED_TILTS.has(
-                    name
-                ),
-
-            mitigated_by_shelter:
-                sheltered &&
-                SHELTER_MITIGATED_TILTS.has(
-                    name
-                ),
-        });
-    };
-
-    if (temp < 0) {
-        addEnvironmentalTilt({
-            name: "Extreme Cold",
-
-            description:
-                "Sub-zero weather exposure.",
-
-            resolution:
-                "Leave the weather, gain shelter, or wait for conditions to improve.",
-        });
-    }
-
-    if (temp > 40) {
-        addEnvironmentalTilt({
-            name: "Extreme Heat",
-
-            description:
-                "Dangerous heat exposure.",
-
-            resolution:
-                "Leave the weather, gain shelter, cool down, or wait for conditions to improve.",
-        });
-    }
-
-    if (
-        precipitation === "rain" &&
-        intensity === "heavy"
-    ) {
-        addEnvironmentalTilt({
-            name: "Heavy Rain",
-
-            description:
-                "Visibility and movement are impaired by heavy rainfall.",
-
-            resolution:
-                "Leave the weather, gain shelter, or wait for conditions to improve.",
-        });
-    }
-
-    if (
-        precipitation === "rain" &&
-        intensity === "violent"
-    ) {
-        addEnvironmentalTilt({
-            name: "Heavy Rain",
-
-            description:
-                "Visibility and movement are impaired by violent rainfall.",
-
-            resolution:
-                "Leave the weather, gain shelter, or wait for conditions to improve.",
-        });
-
-        addEnvironmentalTilt({
-            name: "Flooded",
-
-            description:
-                "Water has begun to flood the area and interfere with movement.",
-
-            resolution:
-                "Leave the flooded area or wait for the water to recede.",
-        });
-    }
-
-    if (
-        precipitation === "snow" &&
-        (
-            intensity === "heavy" ||
-            intensity === "violent"
-        )
-    ) {
-        addEnvironmentalTilt({
-            name: "Blizzard",
-
-            description:
-                "Snow and wind severely reduce visibility and mobility.",
-
-            resolution:
-                "Leave the weather, gain shelter, or wait for conditions to improve.",
-        });
-    }
-
-    if (
-        wind === "strong" ||
-        wind === "gale"
-    ) {
-        addEnvironmentalTilt({
-            name: "Heavy Winds",
-
-            description:
-                "Strong winds interfere with movement, perception, and exposed actions.",
-
-            resolution:
-                "Leave the weather, gain shelter, or wait for conditions to improve.",
-        });
-    }
-
-    return conditions;
-};
+// All automatically generated weather hazards use the shared rules module.
 
 const MERIT_CARD_DEFINITIONS = Object.fromEntries(
     MERIT_LIST.map((merit) => [
@@ -498,11 +335,13 @@ export const GameCardsPanel = ({
     const armorGeneral = (equippedArmor?.armor?.general ?? 0) + mageArmorGeneralBonus;
     const armorBallistic = equippedArmor?.armor?.ballistic ?? 0;
     const baseDefense = Math.min(dexterity, wits) + athletics + mageArmorDefenseBonus;
-    const normalDefense = hasCondition("Blinded") ? Math.max(0, Math.floor(baseDefense / 2)) : baseDefense;
+    const environmentStats = getEnvironmentalStats(activeCharacter, sceneTracker);
+    const normalDefense = Math.max(0, (hasCondition('Blinded') ? Math.floor(baseDefense / 2) : baseDefense) + environmentStats.defensePenalty);
 
     const initiativeModifier = dexterity + composure;
     const baseSpeed = strength + dexterity + 5;
-    const speed = hasCondition("Leg Wrack") ? Math.max(1, Math.floor(baseSpeed / 2)) : baseSpeed;
+    const speedBeforeIce = hasCondition('Leg Wrack') ? Math.max(1, Math.floor(baseSpeed / 2)) : baseSpeed;
+    const speed = Math.max(0, Math.floor(speedBeforeIce * environmentStats.speedMultiplier));
 
     // Get character's merits with dots > 0
     const characterMerits = useMemo(() => {
@@ -620,30 +459,25 @@ export const GameCardsPanel = ({
     };
 
     const updateSceneTracker = async (updates) => {
-        const nextTracker = { ...sceneTracker, ...updates };
-        if (nextTracker.precipitation === "dry") nextTracker.intensity = "none";
+        const requestedTracker = { ...sceneTracker, ...updates };
+        if (requestedTracker.precipitation === 'dry') requestedTracker.intensity = 'none';
+        const current = activeCharacter || {};
+        const exposure = advanceEnvironmentalExposure(current, requestedTracker, healthBoxes, current.resistant_wounds);
+        const nextTracker = exposure.tracker;
         setSceneTracker(nextTracker);
-        if (!activeCharacter?.id || !onUpdateCharacter) return;
-
-        const currentConditions = activeCharacter?.conditions || [];
-        const preservedConditions = currentConditions.filter((condition) => !condition?.weather_auto);
-        const weatherConditions = buildWeatherConditions(nextTracker);
-        const expiredConditions = expireTimedEffects([...preservedConditions, ...weatherConditions], nextTracker);
-        const spells = activeCharacter?.active_spells || [];
+        if (!current.id || !onUpdateCharacter) return;
+        const preserved = (current.conditions || []).filter((condition) => !condition?.weather_auto);
+        const generated = makeWeatherConditions(nextTracker).filter((auto) =>
+            !preserved.some((manual) => manual.name === auto.name && manual.status !== 'expired'));
+        const conditions = expireTimedEffects([...preserved, ...generated], nextTracker);
+        const spells = current.active_spells || [];
         const expiredSpells = expireTimedEffects(spells, nextTracker);
-        const healing = advanceNaturalHealing(healthBoxes, activeCharacter?.natural_healing, activeCharacter?.scene_tracker || {}, nextTracker, activeCharacter?.resistant_wounds);
-        const restoredAttributes = restoreScouredAttributes(activeCharacter, nextTracker);
-
+        const restoredAttributes = restoreScouredAttributes(current, nextTracker);
         await onUpdateCharacter({
-            scene_tracker: nextTracker,
-            ...restoredAttributes,
-            conditions: expiredConditions,
-            natural_healing: healing.recovery,
-            ...(healing.healed > 0 ? {
-                health_boxes: healing.boxes,
-                resistant_wounds: healing.resistant_wounds,
-                health: healing.boxes.filter((state) => state !== "empty").length,
-            } : {}),
+            scene_tracker: nextTracker, ...restoredAttributes, conditions,
+            natural_healing: exposure.recovery,
+            health_boxes: exposure.boxes, resistant_wounds: exposure.resistant_wounds,
+            health: exposure.boxes.filter((state) => state !== 'empty').length,
             ...(expiredSpells !== spells ? { active_spells: expiredSpells } : {}),
         });
     };
@@ -769,6 +603,9 @@ export const GameCardsPanel = ({
                 <SceneTrackerCard
                     sceneTracker={sceneTracker}
                     updateSceneTracker={updateSceneTracker}
+                    turnHazards={environmentalTurnHazards(activeCharacter, sceneTracker)}
+                    exposureStatus={temperatureExposure(activeCharacter, sceneTracker) ?
+                        temperatureExposure(activeCharacter, sceneTracker) + ': ' + exposurePenalty(activeCharacter, sceneTracker) + ' dice to all rolls' : ''}
                     placeOptions={scenePlaceOptions}
                     characterId={activeCharacter?.id}
                     characterName={activeCharacter?.name || "PC"}

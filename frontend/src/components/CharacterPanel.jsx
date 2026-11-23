@@ -4266,6 +4266,7 @@ export const CharacterPanel = ({
                     athleticsDots={getNestedValue("skills", "athletics") || 0}
                     firearmsDots={getNestedValue("skills", "firearms") || 0}
                     inventoryItems={getValue("inventory_items") || []}
+                    sceneTracker={getValue("scene_tracker") || {}}
                     meritsList={meritsList}
                     onConsumeInventoryYantra={(index) => removeInventoryItem(index)}
                     initialPractice={spellcastingPractice}

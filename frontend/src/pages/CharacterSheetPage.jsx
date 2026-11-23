@@ -10,6 +10,8 @@ import { advanceSceneTime, sleepUntilMorning } from "@/utils/timeUtils";
 import { expireTimedEffects, startTimedEffect, getGameTimestamp, advanceTurnEffects, expireCombatEffects } from "@/utils/effectDuration";
 import { resolveArmoredDamage } from "@/utils/combatRules";
 import { advanceNaturalHealing, restartNaturalHealing } from "@/utils/naturalHealing";
+import { advanceEnvironmentalExposure } from "@/utils/environmentalExposure";
+import { environmentalTurnHazards, exposurePenalty, temperatureExposure, getEnvironmentalRollModifiers, activeEnvironmentalTiltNames } from "@/utils/environmentalTilts";
 import { restoreScouredAttributes } from "@/utils/mageRecovery";
 import { addWoundDamage, healWound, hasHealableWound, normalizeResistance, toggleResistance } from "@/utils/resistantWounds";
 import { useCharacterSync } from "@/hooks/useCharacterSync";
@@ -49,7 +51,41 @@ export const CharacterSheetPage = () => {
 
     const triggerDiceRoll = (config) => {
         setRollColumnCollapsed(false);
-        diceRollerRef.current?.rollWithConfig(config);
+        // Spellcasting factors already contain the temperature penalty; Paradox and
+        // Wisdom resistance are distinct mechanical pools.
+        const excluded = ['spell', 'paradox', 'wisdom'].includes(config?.summaryKey);
+        const character = latestCharacterRef.current || activeCharacter || {};
+        const contexts = !excluded && !config?.chance && config?.environmentContext;
+        const environmental = contexts
+            ? getEnvironmentalRollModifiers({ character, ...config.environmentContext })
+            : { modifier: !excluded && !config?.chance ? exposurePenalty(character) : 0, breakdown: [] };
+        const penalty = environmental.modifier;
+        const raw = (Number(config?.pool) || 0) + penalty;
+        const detail = environmental.breakdown.length
+            ? environmental.breakdown.map(item => item.name + ' ' + item.amount).join(', ')
+            : 'Extreme Temperature ' + penalty;
+        const rollConfig = penalty < 0 ? {
+            ...config, pool: Math.max(1, raw), chance: raw <= 0,
+            dicePoolBreakdown: (config?.dicePoolBreakdown || String(config?.pool || 0) + ' dice') +
+                ' + ' + detail,
+        } : config;
+        // Combat Tracker and resistance rolls report contextual Physical actions.
+        // If one fails dramatically on Ice, add Knocked Down once, after the
+        // user has accepted or converted the failure. Preserve other callbacks.
+        const physicalRoll = !!config?.environmentContext?.physical && !excluded;
+        const recorded = physicalRoll ? { ...rollConfig, onResult: async (result) => {
+            if (result?.is_dramatic_failure && activeEnvironmentalTiltNames(latestCharacterRef.current || activeCharacter).has('Ice')) {
+                await updateCharacter((latest) => {
+                    if ((latest.conditions || []).some((entry) => entry?.name === 'Knocked Down' && entry?.status !== 'expired')) return null;
+                    return { conditions: [...(latest.conditions || []), { name: 'Knocked Down', type: 'tilt',
+                        group: 'tilt-personal', origin: 'Ice',
+                        description: 'Fell because of a dramatic failure on ice.',
+                        resolution: 'Stand up or otherwise regain footing.' }] };
+                });
+            }
+            if (typeof config.onResult === 'function') return config.onResult(result);
+        } } : rollConfig;
+        diceRollerRef.current?.rollWithConfig(recorded);
     };
 
     const addRecentRoll = (entry) => {
@@ -203,6 +239,41 @@ export const CharacterSheetPage = () => {
             );
         })();
 
+    const resolveEnvironmentalTurnHazards = (hazards, index = 0) => {
+        if (index >= hazards.length) return;
+        const hazard = hazards[index];
+        const current = latestCharacterRef.current || activeCharacter || {};
+        const attributes = current.attributes || {}, skills = current.skills || {};
+        const attr = hazard.name === 'Earthquake' ? 'stamina' : 'dexterity';
+        const pool = (Number(attributes[attr]) || 0) + (Number(skills.athletics) || 0);
+        triggerDiceRoll({
+            pool: Math.max(1,pool), chance: pool <= 0,
+            label: hazard.name + ': resist ' + hazard.damage + ' ' + hazard.type + ' damage',
+            dicePoolBreakdown: attr + ' ' + (attributes[attr]||0) + ' + Athletics ' + (skills.athletics||0),
+            summaryKey: 'environment',
+            environmentContext: { physical: true, dexterity: attr === 'dexterity' },
+            onResult: async (result) => {
+                const successes = Number(result?.successes) || 0;
+                const isQuake = hazard.name === 'Earthquake';
+                const avoided = isQuake ? !!result?.is_exceptional : successes > 0;
+                const kind = isQuake && !avoided && successes > 0 ? 'bashing' : hazard.type;
+                if (!avoided) {
+                    await updateCharacter((latest) => {
+                        const giant = (latest.merits_list || []).some(m=>m.name==='Giant');
+                        const small = (latest.merits_list || []).some(m=>m.name==='Small-Framed');
+                        const max = (Number(latest.attributes?.stamina)||0) + 5 + (giant?1:0)-(small?1:0);
+                        const boxes = normalizeHealthBoxes(latest.health_boxes, max, latest.health || 0);
+                        const damaged = addWoundDamage(boxes, latest.resistant_wounds || [], kind, hazard.damage, false);
+                        return { health_boxes: damaged.boxes, resistant_wounds: damaged.resistant_wounds,
+                            health: damaged.boxes.filter(x=>x!=='empty').length,
+                            natural_healing: restartNaturalHealing(damaged.boxes, latest.scene_tracker) };
+                    });
+                }
+                resolveEnvironmentalTurnHazards(hazards, index + 1);
+            },
+        });
+    };
+
     const handleCombatEndTurn = async () => {
         const currentCharacter = latestCharacterRef.current || activeCharacter;
         if (!currentCharacter || !currentCharacter.combat_active) return false;
@@ -241,6 +312,8 @@ export const CharacterSheetPage = () => {
                 sourceProfile: "poison",
             });
         }
+        const hazards = environmentalTurnHazards(currentCharacter);
+        if (hazards.length) resolveEnvironmentalTurnHazards(hazards);
         return true;
     };
 
@@ -255,7 +328,7 @@ export const CharacterSheetPage = () => {
         }
         const nextTime = sleepUntilMorning(currentTracker);
         const nextTracker = { ...currentTracker, date: nextTime.date, time: nextTime.time };
-        const healing = advanceNaturalHealing(combatHealthBoxes, activeCharacter?.natural_healing, currentTracker, nextTracker, combatResistantWounds);
+        const healing = advanceEnvironmentalExposure(activeCharacter, nextTracker, combatHealthBoxes, combatResistantWounds);
         const updatedBoxes = healing.boxes;
         const filled = updatedBoxes.filter((state) => state !== "empty").length;
 
@@ -278,7 +351,7 @@ export const CharacterSheetPage = () => {
             natural_healing: healing.recovery,
             willpower: Math.min(maxWillpower, currentWillpower + 1),
             combat_active: false,
-            scene_tracker: nextTracker,
+            scene_tracker: healing.tracker,
             ...(expiredSpells !== spells ? { active_spells: expiredSpells } : {}),
             ...(expiredConditions !== beforeConditions ? { conditions: expiredConditions } : {}),
         });
@@ -293,18 +366,18 @@ export const CharacterSheetPage = () => {
         }
         const next = advanceSceneTime(currentTracker, hours, minutes);
         const nextTracker = { ...currentTracker, date: next.date, time: next.time };
-        const healing = advanceNaturalHealing(combatHealthBoxes, activeCharacter?.natural_healing, currentTracker, nextTracker, combatResistantWounds);
+        const healing = advanceEnvironmentalExposure(activeCharacter, nextTracker, combatHealthBoxes, combatResistantWounds);
         const restoredAttributes = restoreScouredAttributes(activeCharacter, nextTracker);
         const spells = activeCharacter?.active_spells || [];
         const expiredSpells = expireTimedEffects(spells, nextTracker);
         const previousConditions = activeCharacter?.conditions || [];
         const expiredConditions = expireTimedEffects(previousConditions, nextTracker);
         await updateCharacter({
-            scene_tracker: nextTracker,
+            scene_tracker: healing.tracker,
             ...restoredAttributes,
             ...extraUpdates,
             natural_healing: healing.recovery,
-            ...(healing.healed > 0 ? {
+            ...(healing.healed > 0 || healing.bashing > 0 || healing.lethal > 0 ? {
                 health_boxes: healing.boxes,
                 resistant_wounds: healing.resistant_wounds,
                 health: healing.boxes.filter((state) => state !== "empty").length,
@@ -450,6 +523,18 @@ export const CharacterSheetPage = () => {
         const computed = resolveCharacterUpdate(current,updates);
         if (!computed || typeof computed !== 'object' || Object.keys(computed).length === 0) return false;
         const patch = { ...computed };
+        // An equipment change can begin or end exposure without advancing the
+        // clock. Never let an old temperature cursor leak across an equip toggle.
+        const beforeTemperature = temperatureExposure(current, current.scene_tracker || {});
+        const projected = { ...current, ...patch };
+        const nextTemperature = temperatureExposure(projected, projected.scene_tracker || {});
+        if (beforeTemperature !== nextTemperature &&
+            !(patch.scene_tracker && Object.prototype.hasOwnProperty.call(patch.scene_tracker, 'environmental_exposure'))) {
+            const stamp = getGameTimestamp(projected.scene_tracker || {});
+            const since = stamp === null ? null : new Date(stamp).toISOString();
+            patch.scene_tracker = { ...(projected.scene_tracker || {}), environmental_exposure:
+                nextTemperature && since ? { kind: nextTemperature, since, last_tick_at: since } : {} };
+        }
         const token = Symbol('character-update');
         const pending = pendingCharacterPatchesRef.current.get(characterId) || [];
         pendingCharacterPatchesRef.current.set(characterId, [...pending, { token, updates: patch }]);
@@ -554,6 +639,12 @@ export const CharacterSheetPage = () => {
 
 
     const resolveCondition = async (conditionIndex) => {
+        const target = (activeCharacter?.conditions || [])[conditionIndex];
+        if (target?.type === 'tilt' || String(target?.group || '').startsWith('tilt-')) {
+            await updateCharacter((latest) => ({ conditions: (latest.conditions || []).filter((_, i) => i !== conditionIndex) }));
+            toast.info('Tilt ended: ' + target.name + ' (no Beat)');
+            return;
+        }
         if (!activeCharacter) return;
 
         const conditions = activeCharacter.conditions || [];

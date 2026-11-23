@@ -27,6 +27,7 @@ import { useEffect, useState } from "react";
 import { isNonEdibleTass } from "../../utils/inventoryResources";
 import { HealthTrack, getHealthCounts, buildHealthBoxes, formatLabel } from "./StatComponents";
 import { getNaturalHealingLabel } from "../../utils/naturalHealing";
+import { getEnvironmentalStats } from "../../utils/environmentalTilts";
 import { hasHealableWound, healWound } from "../../utils/resistantWounds";
 // Game-icons.net illustrations are distributed via react-icons/gi (CC BY 3.0).
 const GAME_ICON_NAMES = Object.keys(GameIcons).filter((id) => /^Gi[A-Z]/.test(id));
@@ -505,6 +506,10 @@ export const CombatContent = ({
     showMageArmor = true,
     showInventory = true,
 }) => {
+    const environmentStats = getEnvironmentalStats({
+        conditions: getValue('conditions') || [], scene_tracker: getValue('scene_tracker') || {},
+        inventory_items: getValue('inventory_items') || [],
+    });
     const [collapsedInventoryGroups, setCollapsedInventoryGroups] = useState(["armor", "consumable", "equipment", "weapon", "yantra", "other"]);
 
     const sortedInventoryItems = (inventoryItems || [])
@@ -642,7 +647,7 @@ export const CombatContent = ({
                 </div>
                 <div className="flex justify-between items-center p-2 bg-zinc-900/30 rounded-sm">
                     <span className="text-zinc-500">Defense</span>
-                    <span className="font-mono text-teal-400">{calculateDefense() + mageArmorDefenseBonus}</span>
+                    <span className="font-mono text-teal-400">{Math.max(0, calculateDefense() + mageArmorDefenseBonus + environmentStats.defensePenalty)}</span>
                 </div>
                 <div className="flex justify-between items-center p-2 bg-zinc-900/30 rounded-sm">
                     <span className="text-zinc-500">Initiative</span>
@@ -650,7 +655,7 @@ export const CombatContent = ({
                 </div>
                 <div className="flex justify-between items-center p-2 bg-zinc-900/30 rounded-sm">
                     <span className="text-zinc-500">Speed</span>
-                    <span className="font-mono text-teal-400">{calculateSpeed()}</span>
+                    <span className="font-mono text-teal-400">{Math.max(0, Math.floor(calculateSpeed() * environmentStats.speedMultiplier))}</span>
                 </div>
                 <div className="col-span-2 flex justify-between items-center p-2 bg-zinc-900/30 rounded-sm">
                     <span className="text-zinc-500">Armor</span>

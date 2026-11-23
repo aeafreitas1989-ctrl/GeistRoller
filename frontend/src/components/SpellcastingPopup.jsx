@@ -13,6 +13,7 @@ import { FactorRow } from "./spellcasting/FactorRow";
 import { ParadoxSection } from "./spellcasting/ParadoxSection";
 import { toast } from "sonner";
 import { isReleasedParadoxSpellDramatic } from "../utils/paradoxResolution";
+import { exposurePenalty } from "../utils/environmentalTilts";
 
 // Spellcasting-specific corrections are kept local so this rules pass does not
 // require replacing the shared character-data catalogue.
@@ -258,6 +259,7 @@ export const SpellcastingPopup = ({
     athleticsDots = 0,
     firearmsDots = 0,
     inventoryItems = [],
+    sceneTracker = {},
     meritsList = [],
     onConsumeInventoryYantra,
     previousParadoxRolls = 0,
@@ -570,8 +572,9 @@ export const SpellcastingPopup = ({
     const nonHsTurns = Math.max(0, nonHsYantraCount - 1);
 
     const ritualBonus = factors.casting.advanced ? 0 : ritualCastingBonus;
+    const environmentPenalty = exposurePenalty({ scene_tracker: sceneTracker, inventory_items: inventoryItems }, sceneTracker);
     const baseDicePool = gnosis + baseArcanumDots;
-    const rawSpellcastingPool = baseDicePool + dicePenalty + yantraBonus + ritualBonus + combinedSpellPenalty;
+    const rawSpellcastingPool = baseDicePool + dicePenalty + yantraBonus + ritualBonus + combinedSpellPenalty + environmentPenalty;
     const finalDicePool = Math.max(0, rawSpellcastingPool);
     const spellIsImpossible = rawSpellcastingPool <= -6;
 
@@ -905,6 +908,7 @@ export const SpellcastingPopup = ({
                 ...(ritualBonus > 0 ? [`Ritual +${ritualBonus}`] : []),
                 ...(combinedSpellPenalty !== 0 ? [`Combined Spell ${combinedSpellPenalty}`] : []),
                 ...(dicePenalty !== 0 ? [`Factors ${dicePenalty}`] : []),
+                ...(environmentPenalty < 0 ? [`Extreme Temperature ${environmentPenalty}`] : []),
                 ...(poolModifier < 0 ? [`Release Penalty ${poolModifier}`] : []),
             ];
             return {

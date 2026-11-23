@@ -17,6 +17,7 @@ import {
 
 import { ConditionCard } from "../cards/CardComponents";
 import { getDisplayedConditionRules } from "../../utils/condition-display";
+import { temperatureExposure } from "../../utils/environmentalTilts";
 import { getEffectTimer, isEffectExpired } from "../../utils/effectDuration";
 
 import {
@@ -1028,11 +1029,9 @@ export const ConditionsSection = ({
                                             condition.group ||
                                             ""
                                         }
-                                        mitigatedByShelter={
-                                            Boolean(
-                                                condition.mitigated_by_shelter
-                                            )
-                                        }
+                                        mitigatedByShelter={Boolean(condition.mitigated_by_shelter ||
+                                            (condition.weather_auto && ['Extreme Cold','Extreme Heat'].includes(condition.name) &&
+                                             temperatureExposure(activeCharacter, activeCharacter?.scene_tracker) === null))}
                                         splat={
                                             condition.splat ||
                                             ""
@@ -1048,12 +1047,8 @@ export const ConditionsSection = ({
                                             activeCharacter?.name ||
                                             "Character"
                                         }
-                                        onRemove={
-                                            onRemoveCondition
-                                        }
-                                        onResolve={
-                                            onResolveCondition
-                                        }
+                                        onRemove={condition.weather_auto ? undefined : onRemoveCondition}
+                                        onResolve={condition.weather_auto ? undefined : onResolveCondition}
                                     />
                                 )
                             )}

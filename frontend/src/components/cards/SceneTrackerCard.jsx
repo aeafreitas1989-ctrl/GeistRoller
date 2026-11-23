@@ -50,6 +50,8 @@ const LOCATION_TYPE_OPTIONS = [
 export const SceneTrackerCard = ({
     sceneTracker,
     updateSceneTracker,
+    exposureStatus = "",
+    turnHazards = [],
     placeOptions = [],
     characterId,
     characterName,
@@ -375,5 +377,50 @@ export const SceneTrackerCard = ({
                 </Select>
             </div>
         </div>
+
+        <details className="rounded-sm border border-zinc-800 bg-zinc-950/35 p-2" data-testid="scene-environment-checks">
+          <summary className="cursor-pointer text-xs text-zinc-300">Environmental Tilt checks / Storyteller settings</summary>
+          <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2">
+            {[
+              ['wind_grade','Wind grade (1-5)',5],
+              ['flood_depth_feet','Flood depth (feet)',30],
+              ['snow_depth_inches','Snow depth (inches)',240],
+              ['earthquake_severity','Quake severity (1-5)',5],
+              ['earthquake_damage','Quake Lethal / turn (1-3)',3],
+            ].map(([field,label,max]) => (
+              <label key={field} className="text-[10px] text-zinc-400">
+                {label}
+                <Input type="number" min={0} max={max} value={sceneTracker[field] ?? 0}
+                  onChange={(event) => updateSceneTracker({ [field]: Math.max(0,Math.min(max,Number(event.target.value)||0)) })}
+                  className="h-8 mt-1 bg-zinc-900 text-xs" data-testid={'scene-'+field} />
+              </label>
+            ))}
+          </div>
+          <div className="flex flex-wrap gap-4 mt-3 text-xs text-zinc-300">
+            {[
+              ['icy_ground','Icy / slippery ground'],
+              ['earthquake_active','Earthquake underway'],
+              ['temperature_protected','Protected from extreme temperature'],
+              ['cold_gear_adequate','Equipped cold gear is adequate'],
+            ].map(([field,label]) => (
+              <label key={field} className="flex items-center gap-1.5">
+                <Checkbox checked={field==='cold_gear_adequate'?sceneTracker[field]!==false:sceneTracker[field]===true}
+                  onCheckedChange={(checked) => updateSceneTracker({[field]:checked===true})}
+                  data-testid={'scene-'+field} />{label}
+              </label>
+            ))}
+          </div>
+          {sceneTracker.earthquake_active === true && !(Number(sceneTracker.earthquake_severity) > 0) &&
+            <p className="text-xs text-amber-300 mt-2" data-testid="missing-earthquake-severity">Set earthquake severity (1–5); no penalty is inferred.</p>}
+          {sceneTracker.earthquake_active === true && !(Number(sceneTracker.earthquake_damage) > 0) &&
+            <p className="text-xs text-amber-300 mt-1" data-testid="missing-earthquake-damage">Set earthquake damage (1–3 Lethal per turn); no damage is inferred.</p>}
+          {['strong','gale'].includes(sceneTracker.wind) && !(Number(sceneTracker.wind_grade) > 0) &&
+            <p className="text-xs text-amber-300 mt-1" data-testid="missing-wind-grade">Set wind grade (1–5) to apply Physical penalties and debris damage.</p>}
+          {exposureStatus && <p className="text-xs text-amber-300 mt-2" data-testid="environment-exposure-status">{exposureStatus}</p>}
+          {turnHazards.map((hazard) => <p key={hazard.name} className="text-xs text-rose-300 mt-1">
+            {hazard.name}: {hazard.damage} {hazard.type} / turn. {hazard.avoid}. End Turn prompts the relevant roll.
+          </p>)}
+          <p className="text-[10px] text-zinc-500 mt-2">Flooding and ice require explicit scene conditions. Wind and earthquake severity are never inferred.</p>
+        </details>
     </div>
 );

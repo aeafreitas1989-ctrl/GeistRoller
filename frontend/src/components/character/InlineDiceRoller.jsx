@@ -55,6 +55,7 @@ const PHYSICAL_SKILLS = new Set([
 import { formatLabel } from "./StatComponents";
 import { getConditionRollModifiers, getPostRollConditionChoices, applyPostRollCondition, applyInspiredCondition } from "../../utils/condition-roll-rules";
 import { normalizeSkillSpecialty } from "../../utils/skillSpecialties";
+import { getEnvironmentalRollModifiers, activeEnvironmentalTiltNames } from "../../utils/environmentalTilts";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -90,6 +91,10 @@ export const InlineDiceRoller = ({
     onOpenSpellcasting,
 }) => {
     const [rollType, setRollType] = useState("attr-attr");
+    const [environmentSense, setEnvironmentSense] = useState('none');
+    const [environmentRange, setEnvironmentRange] = useState(0);
+    const [environmentRanged, setEnvironmentRanged] = useState(false);
+    const [environmentFullSpeed, setEnvironmentFullSpeed] = useState(false);
     const [primaryAttr, setPrimaryAttr] = useState("wits");
     const [secondaryAttr, setSecondaryAttr] = useState("composure");
     const [skill, setSkill] = useState("investigation");
@@ -373,7 +378,18 @@ export const InlineDiceRoller = ({
         trainedObserverApplies
     ) ? -2 : 0;
     const exhaustedPenalty = hasCondition("Exhausted") && (usesPhysicalAttribute || usesPhysicalSkill) ? -2 : 0;
-    const conditionModifier = sickPenalty + distractedPenalty + exhaustedPenalty + conditionalRules.modifier;
+    const environmentRules = getEnvironmentalRollModifiers({
+        character: { scene_tracker: getValue('scene_tracker') || {}, conditions: getValue('conditions') || [],
+            inventory_items: getValue('inventory_items') || [] },
+        physical: usesPhysicalAttribute || usesPhysicalSkill,
+        dexterity: [primaryAttr,secondaryAttr].includes('dexterity'),
+        perception: environmentSense,
+        ranged: environmentRanged || (rollType === 'attr-skill' && skill === 'firearms'),
+        driving: rollType === 'attr-skill' && skill === 'drive',
+        fullSpeed: environmentFullSpeed,
+        distanceYards: environmentRange,
+    });
+    const conditionModifier = sickPenalty + distractedPenalty + exhaustedPenalty + conditionalRules.modifier + environmentRules.modifier;
     const willpowerBonus = spendWillpower ? 3 : 0;
     const manualMod =
         (rollType === "attr-attr" || rollType === "attr-skill")
@@ -506,6 +522,7 @@ export const InlineDiceRoller = ({
         parts.push(formatPoolPart("Wound", woundPenalty));
         parts.push(formatPoolPart("Sick", sickPenalty));
         conditionalRules.breakdown.forEach((item) => parts.push(formatPoolPart(item.name, item.amount)));
+        environmentRules.breakdown.forEach((item) => parts.push(formatPoolPart(item.name, item.amount)));
         parts.push(formatPoolPart("Distracted", distractedPenalty));
         parts.push(formatPoolPart("Exhausted", exhaustedPenalty));
 
@@ -658,6 +675,15 @@ export const InlineDiceRoller = ({
             }
             
             setResult(response.data);
+            if (response.data.is_dramatic_failure && (usesPhysicalAttribute || usesPhysicalSkill) &&
+                activeEnvironmentalTiltNames({ conditions: getValue('conditions') || [],
+                    scene_tracker: getValue('scene_tracker') || [] }).has('Ice')) {
+                if (!(getValue('conditions') || []).some((entry) => entry?.name === 'Knocked Down' && entry?.status !== 'expired')) {
+                    await onAddCondition?.({ name: 'Knocked Down', type: 'tilt', group: 'tilt-personal',
+                        description: 'Fell because of a dramatic failure on ice.',
+                        resolution: 'Stand up or otherwise regain footing.', origin: 'Ice' });
+                }
+            }
             if (rollType === "haunt" && key !== "__none__" && !avoidDoom && !spendWillpower && !response.data.is_exceptional) {
                 await onAddCondition?.({
                     name: "Doomed", type: "geist", origin: key,
@@ -847,6 +873,37 @@ export const InlineDiceRoller = ({
                         </Select>
                     </div>
 
+                    {(rollType === 'attr-attr' || rollType === 'attr-skill') && (
+                      <details className="rounded border border-zinc-800 bg-zinc-950/40 p-2" data-testid="roll-environment-context">
+                        <summary className="text-xs text-zinc-400 cursor-pointer">Environmental roll checks</summary>
+                        <div className="grid grid-cols-2 gap-2 mt-2">
+                          <label className="text-[10px] text-zinc-400">Perception sense
+                            <Select value={environmentSense} onValueChange={setEnvironmentSense}>
+                              <SelectTrigger className="h-7 bg-zinc-900 text-xs"><SelectValue /></SelectTrigger>
+                              <SelectContent className="bg-zinc-900 border-zinc-700 z-[200]">
+                                <SelectItem value="none">Not Perception</SelectItem>
+                                <SelectItem value="visual">Visual</SelectItem>
+                                <SelectItem value="auditory">Auditory</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </label>
+                          <label className="text-[10px] text-zinc-400">Distance (yards)
+                            <Input type="number" min={0} max={1000} value={environmentRange}
+                              onChange={(event) => setEnvironmentRange(Math.max(0,Number(event.target.value)||0))}
+                              className="h-7 bg-zinc-900 text-xs" />
+                          </label>
+                        </div>
+                        <label className="flex items-center gap-2 mt-2 text-[10px] text-zinc-400">
+                          <Checkbox checked={environmentRanged} onCheckedChange={(v)=>setEnvironmentRanged(v===true)} />Ranged attack
+                        </label>
+                        <label className="flex items-center gap-2 mt-1 text-[10px] text-zinc-400">
+                          <Checkbox checked={environmentFullSpeed} onCheckedChange={(v)=>setEnvironmentFullSpeed(v===true)} />Moving at full Speed on Ice
+                        </label>
+                        {environmentRules.breakdown.length>0 && <p className="text-xs text-amber-300 mt-2">
+                          Environment: {environmentRules.modifier} dice ({environmentRules.breakdown.map(x=>x.name+' '+x.amount).join(', ')})
+                        </p>}
+                      </details>
+                    )}
                     {rollType === "attr-attr" && (
                         <div className="grid grid-cols-2 gap-2">
                             <div>

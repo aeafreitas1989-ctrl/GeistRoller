@@ -830,7 +830,7 @@ export const ConditionCard = ({
                             {name}
                         </h4>
 
-                        <span
+                        {type !== "tilt" && <span
                             className={`text-[9px] px-1.5 py-0.5 rounded font-mono uppercase tracking-wider border ${
                                 isArcaneBeat
                                     ? "border-violet-500/40 bg-violet-900/40 text-violet-200"
@@ -839,7 +839,7 @@ export const ConditionCard = ({
                             data-testid={`condition-beat-${safeName.toLowerCase().replace(/\s+/g, "-")}`}
                         >
                             {isArcaneBeat ? "Arcane Beat" : "Regular Beat"}
-                        </span>
+                        </span>}
 
                         {persistent && (
                             <span className="text-[9px] px-1.5 py-0.5 rounded border border-amber-600/40 bg-amber-950/30 text-amber-300 font-mono uppercase tracking-wider">
@@ -867,7 +867,7 @@ export const ConditionCard = ({
                                 .toLowerCase()
                                 .replace(/\s+/g, "-")}`}
                         >
-                            Sheltered — environmental effects currently suppressed.
+                            Protected — environmental effects currently suppressed.
                         </div>
                     )}
                     {timer?.kind && timer.kind !== "untimed" && (
@@ -911,11 +911,11 @@ export const ConditionCard = ({
                                 .replace(/\s+/g, "-")}`}
                         >
                             <Star className="w-3 h-3 mr-1" />
-                            Resolve
+                            {type === "tilt" ? "End Tilt" : "Resolve"}
                         </Button>
                     )}
 
-                    <Button
+{onRemove &&                     <Button
                         variant="ghost"
                         size="icon"
                         onClick={() =>
@@ -929,7 +929,7 @@ export const ConditionCard = ({
                             .replace(/\s+/g, "-")}`}
                     >
                         <X className="w-3 h-3" />
-                    </Button>
+                    </Button>}
                 </div>
             </div>
         </div>
@@ -1277,6 +1277,7 @@ export const CombatTrackerCard = ({
     const [attackMode, setAttackMode] = useState("unarmed");
     const [targetDefense, setTargetDefense] = useState("0");
     const [attackModifier, setAttackModifier] = useState("0");
+    const [attackRangeYards, setAttackRangeYards] = useState("0");
     const [useAttackSpecialty, setUseAttackSpecialty] = useState(false);
     const [useAttackWillpower, setUseAttackWillpower] = useState(false);
     const [incomingDamage, setIncomingDamage] = useState("1");
@@ -1440,6 +1441,7 @@ export const CombatTrackerCard = ({
         setAttackMode("unarmed");
         setTargetDefense("0");
         setAttackModifier("0");
+        setAttackRangeYards("0");
         setUseAttackSpecialty(false);
         setUseAttackWillpower(false);
         setIncomingDamage("1");
@@ -1628,6 +1630,7 @@ export const CombatTrackerCard = ({
                             if (!onTriggerDiceRoll || currentDefense <= 0) return;
                             onTriggerDiceRoll({
                                 pool: currentDefense * 2,
+                                environmentContext: { physical: true, defenseBased: true },
                                 label: `Dodge (${currentDefense} Defense × 2)`,
                                 dicePoolBreakdown: `Dodge ${currentDefense} × 2`,
                                 exceptional_target: 5,
@@ -1831,6 +1834,13 @@ export const CombatTrackerCard = ({
                             />
                         </div>
                     </div>
+                    {(attackProfile.skill === 'firearms' || attackProfile.unequipAfterAttack) && (
+                         <label className="block text-[10px] text-zinc-500 mt-2">Attack distance (yards) — for Blizzard visibility
+                             <Input type="number" min={0} max={1000} value={attackRangeYards}
+                                 onChange={(event) => setAttackRangeYards(String(Math.max(0, Math.min(1000, Number(event.target.value)||0))))}
+                                 className="input-geist h-7 text-xs mt-1" data-testid="combat-card-attack-range" />
+                         </label>
+                     )}
 
                     <div className="grid grid-cols-2 gap-2">
                         <Button
@@ -1931,6 +1941,9 @@ export const CombatTrackerCard = ({
                                 label: `${formatLabel(attackProfile.attribute)} + ${formatLabel(attackProfile.skill)} Attack`,
                                 dicePoolBreakdown: breakdown,
                                 isAttack: true,
+                                environmentContext: { physical: true, dexterity: attackProfile.attribute === 'dexterity',
+                                    ranged: attackProfile.skill === 'firearms' || attackProfile.unequipAfterAttack,
+                                    distanceYards: Math.max(0, Number(attackRangeYards) || 0) },
                                 weaponDamage: Math.max(0, Number(selectedWeaponDamage) || 0),
                                 weaponDamageType: selectedWeaponOption
                                     ? (selectedWeapon?.damage_type || "lethal")
