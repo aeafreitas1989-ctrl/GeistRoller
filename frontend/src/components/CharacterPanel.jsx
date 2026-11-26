@@ -1,3 +1,4 @@
+import { lazyPanel } from "./LazyPanel";
 import { requestDiceRoll } from '../services/diceService';
 import { useState, useMemo, useEffect, useRef, useImperativeHandle } from "react";
 import { parseCeremonyDicePool } from '../utils/ceremonyRoll';
@@ -50,7 +51,7 @@ import {
 } from "@/components/ui/tooltip";
 import axios from "axios";
 import { toast } from "sonner";
-import { DiceRollPopup } from "./DiceRollPopup";
+
 
 // Extracted data
 import {
@@ -60,7 +61,7 @@ import {
     MAGE_PATHS, MAGE_ORDERS,
     ARCANA, PATH_ARCANA, ORDER_ROTE_SKILLS, GNOSIS_TABLE,
 } from "../data/character-data";
-import { SpellcastingPopup } from "./SpellcastingPopup";
+
 
 // Extracted sub-components
 import {
@@ -68,23 +69,23 @@ import {
     normalizeHealthBoxes, getHealthCounts, buildHealthBoxes,
     StatDots, StatRow, HealthTrack, ResourceTrack, SynergyTrack,
 } from "./character/StatComponents";
-import { InlineDiceRoller } from "./character/InlineDiceRoller";
+
 import { normalizeSkillSpecialty, formatSkillSpecialty } from "../utils/skillSpecialties";
 import { restartNaturalHealing } from "../utils/naturalHealing";
 import { addWoundDamage, adjustWoundClick, healWound, normalizeResistance, reconcileResistance, toggleResistance } from "../utils/resistantWounds";
-import { MageArcanaContent } from "./character/MageArcanaContent";
-import { MageGnosisContent } from "./character/MageGnosisContent";
-import { GeistSynergyContent } from "./character/GeistSynergyContent";
-import { GeistCreationAuditPanel } from "./character/GeistCreationAuditPanel";
-import { GeistHauntsContent } from "./character/GeistHauntsContent";
+
+
+
+
+
 import { nextCombatPayment, abandonPreparation } from "@/utils/actionPreparation";
 import { activateRemembrance, effectiveGeistRank, completeRemembranceMilestone } from "@/utils/remembranceRules";
-import { GeistRemembranceContent } from "./character/GeistRemembranceContent";
-import { MeritsContent } from "./character/MeritsContent";
-import { FamiliarContent } from "./character/FamiliarContent";
-import { CombatContent } from "./character/CombatContent";
-import { CharacterCreationAuditPanel } from "./character/CharacterCreationAuditPanel";
-import { CharacterGoalsContent } from "./character/CharacterGoalsContent";
+
+
+
+
+
+
 import {
     PROFESSIONAL_TRAINING_RULES,
     calculateMagePurchaseCost,
@@ -98,6 +99,22 @@ import {
     makeSanctityOfMeritsEntry,
     validateMageCreation,
 } from "@/utils/mageCreationAudit";
+
+const DiceRollPopup = lazyPanel(() => import("./DiceRollPopup"), "DiceRollPopup", "Haunt roll", "isOpen");
+const SpellcastingPopup = lazyPanel(() => import("./SpellcastingPopup"), "SpellcastingPopup", "spellcasting");
+const InlineDiceRoller = lazyPanel(() => import("./character/InlineDiceRoller"), "InlineDiceRoller", "dice roller");
+const MageArcanaContent = lazyPanel(() => import("./character/MageArcanaContent"), "MageArcanaContent", "Arcana and Attainments");
+const MageGnosisContent = lazyPanel(() => import("./character/MageGnosisContent"), "MageGnosisContent", "Gnosis and resources");
+const GeistSynergyContent = lazyPanel(() => import("./character/GeistSynergyContent"), "GeistSynergyContent", "Synergy and resources");
+const GeistCreationAuditPanel = lazyPanel(() => import("./character/GeistCreationAuditPanel"), "GeistCreationAuditPanel", "creation audit");
+const GeistHauntsContent = lazyPanel(() => import("./character/GeistHauntsContent"), "GeistHauntsContent", "Haunts and Keys");
+const GeistRemembranceContent = lazyPanel(() => import("./character/GeistRemembranceContent"), "GeistRemembranceContent", "Remembrance");
+const MeritsContent = lazyPanel(() => import("./character/MeritsContent"), "MeritsContent", "Merits and Ceremonies");
+const FamiliarContent = lazyPanel(() => import("./character/FamiliarContent"), "FamiliarContent", "Familiar");
+const CombatContent = lazyPanel(() => import("./character/CombatContent"), "CombatContent", "inventory");
+const CharacterCreationAuditPanel = lazyPanel(() => import("./character/CharacterCreationAuditPanel"), "CharacterCreationAuditPanel", "creation audit");
+const CharacterGoalsContent = lazyPanel(() => import("./character/CharacterGoalsContent"), "CharacterGoalsContent", "character goals");
+
 
 
 const LIVE_STATE_AUTO_SAVE_FIELDS = new Set([
@@ -133,7 +150,7 @@ export const CharacterPanel = ({
     const [draftCharacterId, setDraftCharacterId] = useState(
         activeCharacter?.id
     );
-    
+
     // Prevent one character's unsaved edits appearing on another character.
     if (draftCharacterId !== activeCharacter?.id) {
         setDraftCharacterId(activeCharacter?.id);
@@ -149,7 +166,7 @@ export const CharacterPanel = ({
     const [showSpecialtyForm, setShowSpecialtyForm] = useState(false);
     const [inventoryAddOpen, setInventoryAddOpen] = useState(false);
     const importFileInputRef = useRef(null);
-    
+
     // Inventory add-item form state
     const [invType, setInvType] = useState("equipment");
     const [invPremade, setInvPremade] = useState("__none__");
@@ -430,7 +447,7 @@ export const CharacterPanel = ({
         setDicePopupHaunt(hauntName);
         setDicePopupOpen(true);
     };
-    
+
     const openChannelManaSpell = (request) => {
         if ((Number((getValue("arcana") || {}).Prime) || 0) < 3) {
             toast.error("Channel Mana requires Prime 3.");
@@ -1035,7 +1052,7 @@ export const CharacterPanel = ({
                     (Number(pendingPurchase.from) || 0)
                 )
                 : 0;
-        
+
         const updates = {
             ...purchasePatch,
             experience: Math.max(0, (activeCharacter?.experience || 0) - ledgerEntry.cost.experience),
@@ -1373,38 +1390,38 @@ export const CharacterPanel = ({
         const recordManualXPTransaction = async () => {
             const amount = Number(manualXPAmount);
             const reason = manualXPReason.trim();
-    
+
             if (!Number.isInteger(amount) || amount === 0) {
                 toast.error("Enter a non-zero whole number.");
                 return;
             }
-    
+
             if (!reason) {
                 toast.error("Enter a reason for the transaction.");
                 return;
             }
-    
+
             const xpResource = activeCharacter?.character_type === "mage"
                 ? manualXPType
                 : "experience";
             const currentBalance = Number(getValue(xpResource)) || 0;
             const nextBalance = currentBalance + amount;
-    
+
             if (nextBalance < 0) {
                 toast.error("Insufficient XP for this transaction.");
                 return;
             }
-    
+
             if (recordingManualXP) return;
-    
+
             setRecordingManualXP(true);
-    
+
             try {
                 await commitCharacterUpdate({
                     [xpResource]: nextBalance,
                     xp_reason: reason,
                 });
-    
+
                 setManualXPAmount("");
                 setManualXPReason("");
                 toast.success("XP transaction recorded.");
@@ -1822,7 +1839,7 @@ export const CharacterPanel = ({
         const currentBeats = getValue("beats") || 0;
         const currentXP = getValue("experience") || 0;
         const newBeats = currentBeats + 1;
-        
+
         // 5 Beats = 1 Experience
         if (newBeats >= 5) {
             await onUpdateCharacter({ beats: newBeats - 5, experience: currentXP + 1, xp_reason: reason, });
@@ -1830,7 +1847,7 @@ export const CharacterPanel = ({
         } else {
             await onUpdateCharacter({ beats: newBeats, xp_reason: reason, });
         }
-        
+
         setPendingChanges((prev) => {
             const next = { ...prev };
             delete next.beats;
@@ -1925,26 +1942,26 @@ export const CharacterPanel = ({
         handleChange("obsessions", next);
         if (index === 0) handleChange("obsession", "");
     };
-    
+
     // Resolve condition and award beat
     const resolveCondition = async (conditionIndex) => {
         const conditions = getValue("conditions") || [];
         const condition = conditions[conditionIndex];
         if (!condition) return;
-        
+
         // Remove the condition
         const updatedConditions = conditions.filter((_, i) => i !== conditionIndex);
-        
+
         // Award beat
         const currentBeats = getValue("beats") || 0;
         const currentXP = getValue("experience") || 0;
         const newBeats = currentBeats + 1;
-        
+
         const updates = {
             conditions: updatedConditions,
             xp_reason: `Condition resolved: ${condition.name || "Unnamed condition"}`,
         };
-        
+
         // 5 Beats = 1 Experience
         if (newBeats >= 5) {
             updates.beats = newBeats - 5;
@@ -1954,7 +1971,7 @@ export const CharacterPanel = ({
             updates.beats = newBeats;
             toast.success(`Condition "${condition.name}" resolved! Beat gained!`);
         }
-        
+
         await onUpdateCharacter(updates);
         setPendingChanges((prev) => {
             const next = { ...prev };
@@ -2065,19 +2082,19 @@ export const CharacterPanel = ({
         }
 
         handleChange("path", newPath);
-        
+
         if (newPath && PATH_ARCANA[newPath]) {
             const pathData = PATH_ARCANA[newPath];
             const currentArcana = getValue("arcana") || {};
             const newArcana = { ...currentArcana };
-            
+
             // Set ruling arcana to at least 1 dot
             pathData.ruling.forEach(arcanum => {
                 if (!newArcana[arcanum] || newArcana[arcanum] < 1) {
                     newArcana[arcanum] = 1;
                 }
             });
-            
+
             handleChange("arcana", newArcana);
             toast.success(`Path set to ${newPath}. Ruling Arcana (${pathData.ruling.join(" & ")}) set to 1 dot.`);
         }
@@ -2264,13 +2281,13 @@ export const CharacterPanel = ({
     const resolveParadoxContainment = async ({ cancelled, remaining, paradoxExceptional = false, spellDramaticFailure = false, mode = "contain", conditionType = "pending", conditionName = "" }) => {
         const safeCancelled = Math.max(0, cancelled || 0);
         const safeRemaining = Math.max(0, remaining || 0);
-    
+
         const currentBoxes = normalizeHealthBoxes(
             getValue("health_boxes"),
             maxHealth,
             getValue("health") || 0
         );
-    
+
         const backlash = addWoundDamage(currentBoxes, getValue("resistant_wounds"), "bashing", mode === "contain" ? safeCancelled : 0, true);
         const nextHealthBoxes = backlash.boxes;
 
@@ -2296,7 +2313,7 @@ export const CharacterPanel = ({
                 resolution: conditionType === "taint" ? `ST-defined resolution or expiry after ${paradoxTaintDuration}.` : "As determined by the Storyteller.",
                 beat_type: "arcane", paradox_successes: safeRemaining,
             }] : currentConditions;
-    
+
         await onUpdateCharacter({
             health_boxes: nextHealthBoxes,
             resistant_wounds: backlash.resistant_wounds,
@@ -2472,7 +2489,7 @@ export const CharacterPanel = ({
 
             const newMerits = withProfessionalTrainingFreeContacts([...base, meritToAdd])
                 .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
-            
+
             handleChange("merits_list", newMerits);
             setNewMeritName("");
             setNewMeritDots(1);
@@ -2649,7 +2666,7 @@ export const CharacterPanel = ({
             }
         )
     );
-    
+
     if (!activeCharacter) {
         return (
             <div className="p-6" data-testid="character-panel">
@@ -2667,7 +2684,7 @@ export const CharacterPanel = ({
                                 <DialogDescription className="text-zinc-400">Select the type of character you want to create</DialogDescription>
                             </DialogHeader>
                             <div className="grid grid-cols-2 gap-4 py-4">
-                                <Button 
+                                <Button
                                     onClick={() => { onCreateCharacter("geist"); setShowCharacterTypeDialog(false); }}
                                     className="h-24 flex flex-col gap-2 bg-teal-900/30 border border-teal-500/50 hover:bg-teal-800/50"
                                     data-testid="create-geist-btn"
@@ -2675,7 +2692,7 @@ export const CharacterPanel = ({
                                     <span className="text-lg font-heading text-teal-300">Sin-Eater</span>
                                     <span className="text-xs text-zinc-400">Geist: The Sin-Eaters</span>
                                 </Button>
-                                <Button 
+                                <Button
                                     onClick={() => { onCreateCharacter("mage"); setShowCharacterTypeDialog(false); }}
                                     className="h-24 flex flex-col gap-2 bg-violet-900/30 border border-violet-500/50 hover:bg-violet-800/50"
                                     data-testid="create-mage-btn"
@@ -2764,13 +2781,13 @@ export const CharacterPanel = ({
                         </Button>
                     )}
                 </div>
-                
+
                 <div className="flex min-w-0 flex-nowrap items-center gap-1.5">
                     {/* Character Type Badge */}
                     <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded border ${isMage ? "border-violet-500/30 bg-violet-900/50 text-violet-300" : "border-teal-500/30 bg-teal-900/50 text-teal-300"}`} data-testid="character-type-badge" title={isMage ? "Mage" : "Sin-Eater"} aria-label={isMage ? "Mage" : "Sin-Eater"}>
                         {isMage ? (<svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2 L17.88 20.09 L2.49 8.91 H21.51 L6.12 20.09 Z" /></svg>) : (<svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3a5 5 0 0 1 2.5 9.33L16 21H8l1.5-8.67A5 5 0 0 1 12 3Z"/></svg>)}
                     </span>
-                    
+
                     <Select value={activeCharacter.id} onValueChange={(id) => {
                         const char = characters.find(c => c.id === id);
                         if (char) onSelectCharacter(char);
@@ -2824,7 +2841,7 @@ export const CharacterPanel = ({
                     >
                         <Upload className="w-3 h-3 mr-1" /> Import
                     </Button>
-                    
+
                     {/* Add Character Dialog */}
                     <Dialog open={showAddCharacterDialog} onOpenChange={setShowAddCharacterDialog}>
                         <DialogTrigger asChild>
@@ -2836,7 +2853,7 @@ export const CharacterPanel = ({
                                 <DialogDescription className="text-zinc-400">Select the type of character you want to create</DialogDescription>
                             </DialogHeader>
                             <div className="grid grid-cols-2 gap-4 py-4">
-                                <Button 
+                                <Button
                                     onClick={() => { onCreateCharacter("geist"); setShowAddCharacterDialog(false); }}
                                     className="h-24 flex flex-col gap-2 bg-teal-900/30 border border-teal-500/50 hover:bg-teal-800/50"
                                     data-testid="create-geist-btn-dialog"
@@ -2844,7 +2861,7 @@ export const CharacterPanel = ({
                                     <span className="text-lg font-heading text-teal-300">Sin-Eater</span>
                                     <span className="text-xs text-zinc-400">Geist: The Sin-Eaters</span>
                                 </Button>
-                                <Button 
+                                <Button
                                     onClick={() => { onCreateCharacter("mage"); setShowAddCharacterDialog(false); }}
                                     className="h-24 flex flex-col gap-2 bg-violet-900/30 border border-violet-500/50 hover:bg-violet-800/50"
                                     data-testid="create-mage-btn-dialog"
@@ -2855,7 +2872,7 @@ export const CharacterPanel = ({
                             </div>
                         </DialogContent>
                     </Dialog>
-                    
+
                     <AlertDialog>
                         <AlertDialogTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 text-zinc-400 hover:text-red-400" data-testid="delete-character-button"><Trash2 className="w-4 h-4" /></Button>
@@ -2944,7 +2961,7 @@ export const CharacterPanel = ({
                             woundPenalty={woundPenalty}
                             currentPlasm={getValue("plasm") || 0}
                         />
-                    )}    
+                    )}
 
                     {/* Character Header Info */}
                     <Collapsible open={expandedSections.header}>
@@ -3554,7 +3571,7 @@ export const CharacterPanel = ({
                                 />
                             </CollapsibleContent>
                         </Collapsible>
-                    )}                    
+                    )}
 
                     {/* Notes / XP Expenditure */}
                     <Collapsible
@@ -3592,7 +3609,7 @@ export const CharacterPanel = ({
                                         <div className="text-xs font-semibold text-zinc-300">
                                             Record XP Transaction
                                         </div>
-                                    
+
                                         <div className="grid grid-cols-2 gap-2">
                                             <select
                                                 value={manualXPType}
@@ -3602,7 +3619,7 @@ export const CharacterPanel = ({
                                                 <option value="experience">XP</option>
                                                 <option value="arcane_experience">Arcane XP</option>
                                             </select>
-                                    
+
                                             <Input
                                                 type="number"
                                                 step="1"
@@ -3612,14 +3629,14 @@ export const CharacterPanel = ({
                                                 className="h-8 input-geist text-xs"
                                             />
                                         </div>
-                                    
+
                                         <Input
                                             value={manualXPReason}
                                             onChange={(e) => setManualXPReason(e.target.value)}
                                             placeholder="Reason for XP gain or expenditure"
                                             className="h-8 input-geist text-xs"
                                         />
-                                    
+
                                         <Button
                                             size="sm"
                                             className="w-full bg-emerald-800 hover:bg-emerald-700 text-white"
@@ -3633,12 +3650,12 @@ export const CharacterPanel = ({
                                         >
                                             {recordingManualXP ? "Recording..." : "Record Transaction"}
                                         </Button>
-                                    
+
                                         <div className="text-[10px] text-zinc-500">
                                             Use positive numbers to gain XP and negative numbers to spend XP.
                                         </div>
                                     </div>
-                                    
+
                                     {getXPTrackerEntries().length === 0 ? (
                                         <div className="p-3 bg-zinc-950/40 border border-zinc-800 rounded-sm text-xs text-zinc-500">
                                             No XP transactions recorded yet.
@@ -3661,7 +3678,7 @@ export const CharacterPanel = ({
                                                                 {entry.historical && " · Historical advancement"}
                                                             </div>
                                                         </div>
-                                                    
+
                                                         <div className="flex items-center gap-1 shrink-0">
                                                             <Button
                                                                 type="button"
@@ -3685,7 +3702,7 @@ export const CharacterPanel = ({
                                                             >
                                                                 <Pencil className="w-3.5 h-3.5" />
                                                             </Button>
-                                                    
+
                                                             <Button
                                                                 type="button"
                                                                 variant="ghost"
@@ -3704,7 +3721,7 @@ export const CharacterPanel = ({
                                                             </Button>
                                                         </div>
                                                     </div>
-                                    
+
                                                     <div className="flex flex-wrap gap-2 mt-2">
                                                         {(entry.movements || [])
                                                             .filter(m => Number(m.amount) !== 0)
@@ -3720,7 +3737,7 @@ export const CharacterPanel = ({
                                                                     {formatXPTrackerMovement(movement)}
                                                                 </span>
                                                             ))}
-                                    
+
                                                         {(entry.movements || []).every(
                                                             m => Number(m.amount) === 0
                                                         ) && (
@@ -3729,7 +3746,7 @@ export const CharacterPanel = ({
                                                             </span>
                                                         )}
                                                     </div>
-                                    
+
                                                     {entry.balances && (
                                                         <div className="mt-2 text-[10px] text-zinc-500">
                                                             Balance: {entry.balances.experience} XP
@@ -3741,7 +3758,7 @@ export const CharacterPanel = ({
                                                             {entry.balances.arcane_beats} Arcane Beats
                                                         </div>
                                                     )}
-                                    
+
                                                     {entry.note && (
                                                         <div className="mt-2 pt-2 border-t border-zinc-800 text-xs text-zinc-400 whitespace-pre-wrap">
                                                             {entry.note}
@@ -4161,7 +4178,7 @@ export const CharacterPanel = ({
                             {ceremonyPopupData?.name}
                         </DialogTitle>
                         <DialogDescription className="text-zinc-400">
-                            Roll {ceremonyPopupData?.dicePoolText} 
+                            Roll {ceremonyPopupData?.dicePoolText}
                             (computed pool: {ceremonyPopupData?.computedPool})
                         </DialogDescription>
                     </DialogHeader>
@@ -4205,7 +4222,7 @@ export const CharacterPanel = ({
                             </div>
                         )}
 
-                        <Button 
+                        <Button
                             className="w-full btn-secondary"
                             onClick={() => setCeremonyPopupOpen(false)}
                         >

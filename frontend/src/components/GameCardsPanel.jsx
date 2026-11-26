@@ -1,3 +1,4 @@
+import { lazyPanel } from "./LazyPanel";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { Pencil, Plus, Info, Flame, Skull, Droplets, Wind, Bug, Mountain, Sparkles, Ghost, Zap, ChevronDown, ChevronRight, ChevronUp, ChevronLeft, Star, BookOpen, CalendarDays, Clock3, Cloud, Thermometer, Leaf, Gauge } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -44,12 +45,13 @@ import {
     PATH_ARCANA,
 } from "../data/character-data";
 
-import {
-    PlacePersonCard, ConditionCard, HauntCard, KeyCard, ActiveSpellCard, CombatTrackerCard,
-} from "./cards/CardComponents";
+
+
+
+
 import { MeritCard } from './cards/MeritCard';
 import { CeremonyCard } from './cards/CeremonyCard';
-import { MageSightCard } from "./cards/MageSightCard";
+
 import { SceneTrackerCard } from "./cards/SceneTrackerCard";
 import { isSceneDurationEffect } from "../utils/sceneLifecycle";
 import { getDoomedKeySources } from "../utils/geistKeys";
@@ -58,8 +60,16 @@ import { advanceNaturalHealing } from "../utils/naturalHealing";
 import { makeWeatherConditions, exposurePenalty, temperatureExposure, environmentalTurnHazards, getEnvironmentalStats } from "../utils/environmentalTilts";
 import { advanceEnvironmentalExposure } from "../utils/environmentalExposure";
 import { restoreScouredAttributes } from "../utils/mageRecovery";
-import { ConditionsSection } from "./game-cards/ConditionsSection";
-import { ActiveSpellsSection } from "./game-cards/ActiveSpellsSection";
+
+const PlacePersonCard = lazyPanel(() => import("./cards/PlacePersonCard"), "PlacePersonCard", "place or NPC");
+const HauntCard = lazyPanel(() => import("./cards/HauntCard"), "HauntCard", "Haunt");
+const KeyCard = lazyPanel(() => import("./cards/KeyCard"), "KeyCard", "Key");
+const CombatTrackerCard = lazyPanel(() => import("./cards/CombatTrackerCard"), "CombatTrackerCard", "combat tracker");
+const ConditionsSection = lazyPanel(() => import("./game-cards/ConditionsSection"), "ConditionsSection", "Conditions", "open");
+const ActiveSpellsSection = lazyPanel(() => import("./game-cards/ActiveSpellsSection"), "ActiveSpellsSection", "active effects", "open");
+
+
+
 
 const DEFAULT_SCENE_TRACKER = {
     location_name: "",
@@ -145,9 +155,9 @@ const getTemperatureIconClass = (temp) => {
 
 // All automatically generated weather hazards use the shared rules module.
 
-export const GameCardsPanel = ({ 
+export const GameCardsPanel = ({
     activeCharacter,
-    activeConditions = [], 
+    activeConditions = [],
     haunts = {},
     keys = [],
     onAddCondition,
@@ -245,7 +255,8 @@ export const GameCardsPanel = ({
     const characterType = activeCharacter?.character_type || "geist";
     const isMage = characterType === "mage";
     const gameClock = activeCharacter?.scene_tracker || {};
-    const activeSpells = [...(activeCharacter?.active_spells || [])].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+    const activeSpells = useMemo(() => [...(activeCharacter?.active_spells || [])]
+        .sort((a, b) => (a.name || "").localeCompare(b.name || "")), [activeCharacter?.active_spells]);
     const activeEffectsCount = activeSpells.filter((effect) => !isEffectExpired(effect, gameClock)).length;
     const sceneEffectsToExpire = activeSpells.filter((effect) =>
         !isEffectExpired(effect, gameClock) && isSceneDurationEffect(effect)
@@ -780,7 +791,7 @@ export const GameCardsPanel = ({
                                 <CollapsibleContent className="px-3 pt-3 pb-3">
                                     <div className="space-y-2" data-testid="keys-list">
                                         <div className="text-[11px] text-zinc-500 mb-2">
-                                            Keys are unlocked from character creation, Geist, Mementos, and manual selection. 
+                                            Keys are unlocked from character creation, Geist, Mementos, and manual selection.
                                             Doomed Keys are hidden here and unavailable in dice pools unless the doom effect says otherwise.
                                         </div>
                                         {Object.entries(KEY_DEFINITIONS)

@@ -1,9 +1,9 @@
 import { ChevronDown } from 'lucide-react';
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { CardTypeColors, MERIT_CATEGORY_COLORS } from '../../data/cards-data';
 import { getMeritCardRules } from '../../utils/meritCardRules';
 
-export const MeritCard = ({merit}) => {
+export const MeritCard = memo(function MeritCard({merit}) {
     const [expanded, setExpanded] = useState(false);
     const {definition, category, maxDots, locked} = getMeritCardRules(merit);
     const dots = Math.max(0, Math.trunc(Number(merit.dots) || 0));
@@ -30,4 +30,4 @@ export const MeritCard = ({merit}) => {
             {!description && !requirements && !source && <p className="text-zinc-500">No rule information recorded.</p>}
         </div>}
     </div>;
-};
+});

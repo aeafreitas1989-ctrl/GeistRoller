@@ -1,9 +1,9 @@
 import { ChevronDown, Sparkles } from 'lucide-react';
-import { useState } from 'react';
+import { memo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { CardTypeColors } from '../../data/cards-data';
 import { CEREMONY_DEFINITIONS } from '../../data/character-data';
-export const CeremonyCard = ({ceremony, onActivate}) => {
+export const CeremonyCard = memo(function CeremonyCard({ceremony, onActivate}) {
     const [expanded,setExpanded] = useState(false);
     const name = ceremony.name || 'Unnamed Ceremony';
     const rule = CEREMONY_DEFINITIONS[name];
@@ -29,4 +29,4 @@ export const CeremonyCard = ({ceremony, onActivate}) => {
             <Button type="button" size="sm" className="w-full btn-secondary text-xs h-7" onClick={()=>onActivate?.(name)} disabled={!onActivate} data-testid={'ceremony-roll-'+key}><Sparkles className="w-3 h-3 mr-1"/>Roll Ceremony</Button>
         </div>}
     </div>;
-};
+});

@@ -5,7 +5,7 @@ import {
     CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 
-import { ActiveSpellCard } from "../cards/CardComponents";
+import { ActiveSpellCard } from "../cards/ActiveSpellCard";
 import { MageSightCard } from "../cards/MageSightCard";
 import { TrackedEffectsToolbar } from "./TrackedEffectsToolbar";
 import { expireTimedEffects, isEffectExpired, startTimedEffect } from "../../utils/effectDuration";

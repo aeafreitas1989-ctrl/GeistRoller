@@ -15,7 +15,7 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog";
 
-import { ConditionCard } from "../cards/CardComponents";
+import { ConditionCard } from "../cards/ConditionCard";
 import { getDisplayedConditionRules } from "../../utils/condition-display";
 import { shelterMitigatesTilt } from "../../utils/environmentalTilts";
 import { getEffectTimer, isEffectExpired } from "../../utils/effectDuration";
@@ -317,7 +317,7 @@ export const ConditionsSection = ({
                     "Current Location",
             };
         };
-        
+
         const getSelectedTarget = () => {
         if (
             conditionTarget === "familiar" &&
