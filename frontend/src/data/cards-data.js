@@ -350,39 +350,8 @@ export const MERIT_CATEGORY_COLORS = {
     "Other": "bg-zinc-800/60 border-zinc-600/50 text-zinc-300",
 };
 
-// Ceremony definitions
-export const CEREMONY_DEFINITIONS = {
-    "Death Watch": {
-        dots: 1,
-        dicePool: "Stamina + Medicine",
-        duration: "While maintaining contact",
-        description: "Time ceases to pass for the subject's body. They do not bleed out, age, get hungry, or suffer ongoing damage. However, they also do not heal."
-    },
-    "Ishtar's Perfume": {
-        dots: 1,
-        dicePool: "Presence + Occult",
-        duration: "Instant",
-        description: "The Sin-Eater sees the last minute of a corpse's life through its eyes."
-    },
-    "Lovers' Telephone": {
-        dots: 1,
-        dicePool: "Manipulation + Computers",
-        duration: "One phone call",
-        description: "Your call connects to the nearest phone to the subject, even if disconnected. Ghosts can answer even if the phone isn't in Twilight."
-    },
-    "Speaker for the Dead": {
-        dots: 3,
-        dicePool: "Stamina + Composure",
-        duration: "One scene",
-        description: "A target ghost can speak through your mouth. Your voice becomes recognizably that of the ghost."
-    },
-    "Pass On": {
-        dots: 5,
-        dicePool: "Manipulation + Empathy",
-        duration: "Permanent",
-        description: "Help a ghost that has resolved all Anchors pass on. All Sin-Eaters present regain all spent Plasm."
-    },
-};
+// Re-export the shared ceremony catalogue.
+export { CEREMONY_DEFINITIONS } from "./character-data";
 
 export const CardTypeColors = {
     tilt: { bg: "bg-orange-950/30", border: "border-orange-500/40", text: "text-orange-300", badge: "bg-orange-900/50" },

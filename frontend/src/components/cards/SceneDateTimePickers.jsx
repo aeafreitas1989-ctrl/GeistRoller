@@ -1,12 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { CalendarDays, Clock3, Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
-    parseSceneDate, parseSceneTime, toSceneDisplayDate,
-    toSceneISODate, toSceneTime, maskSceneDateInput, maskSceneTimeInput,
+    parseSceneDate, parseSceneTime,
+    toSceneISODate, toSceneTime, maskSceneTimeInput,
+    splitSceneDateDraft, replaceSceneDateSegment, parseSceneDateDraft, parseSceneDatePaste, toSceneCalendarDate,
 } from "@/utils/sceneDateTimeValues";
 
 const monthStart = (date) => {
@@ -19,12 +20,14 @@ const monthStart = (date) => {
 export const SceneDateField = ({ value = "", onChange }) => {
     const selected = parseSceneDate(value);
     const [open, setOpen] = useState(false);
-    const [draft, setDraft] = useState(toSceneDisplayDate(selected));
+    const [draft, setDraft] = useState(toSceneCalendarDate(selected));
+    const dateSegments = useRef([]);
+    const parts = splitSceneDateDraft(draft);
     const [displayMonth, setDisplayMonth] = useState(monthStart(selected || new Date()));
     const [yearDraft, setYearDraft] = useState(String(displayMonth.getFullYear()));
 
     useEffect(() => {
-        setDraft(toSceneDisplayDate(parseSceneDate(value)));
+        setDraft(toSceneCalendarDate(parseSceneDate(value)));
     }, [value]);
 
     useEffect(() => {
@@ -32,14 +35,14 @@ export const SceneDateField = ({ value = "", onChange }) => {
     }, [displayMonth]);
 
     const commitDraft = () => {
-        const parsed = parseSceneDate(draft);
+        const parsed = parseSceneDateDraft(draft);
         if (!draft.trim()) {
             if (value) onChange?.("");
         } else if (parsed) {
             const nextDate = toSceneISODate(parsed);
             if (nextDate !== value) onChange?.(nextDate);
         }
-        setDraft(toSceneDisplayDate(parsed || parseSceneDate(value)));
+        setDraft(toSceneCalendarDate(parsed || parseSceneDate(value)));
     };
 
     const jumpToYear = () => {
@@ -74,29 +77,43 @@ export const SceneDateField = ({ value = "", onChange }) => {
                         Date
                     </button>
                 </PopoverTrigger>
-                <Input
-                    type="text"
-                    inputMode="numeric"
-                    placeholder="DD/MM/YYYY"
-                    maxLength={10}
-                    value={draft}
-                    onChange={(event) => setDraft(maskSceneDateInput(event.target.value))}
-                    onBlur={commitDraft}
-                    onKeyDown={(event) => {
-                        if (event.key === "Backspace" && event.currentTarget.selectionStart === draft.length &&
-                            event.currentTarget.selectionEnd === draft.length && draft.endsWith("/")) {
-                            event.preventDefault();
-                            setDraft(maskSceneDateInput(draft.replace(/\D/g, "").slice(0, -1)));
-                        }
-                        if (event.key === "Enter") {
-                            commitDraft();
-                            event.currentTarget.blur();
-                        }
-                    }}
-                    className="input-geist h-8 w-full min-w-0 px-3 text-sm tabular-nums"
-                    aria-label="In-game date, day/month/year"
-                    data-testid="scene-date-input"
-                />
+                <div role="group" aria-label="In-game date, year/month/day" data-testid="scene-date-input"
+                    className="input-geist h-8 w-full min-w-0 px-2 sm:px-3 text-sm tabular-nums flex items-center focus-within:ring-1 focus-within:ring-violet-400"
+                    onBlur={(event)=>{if(!event.currentTarget.contains(event.relatedTarget))commitDraft();}}>
+                    {['Year','Month','Day'].map((label,index)=>{
+                        const limit=index===0?4:2;
+                        const focusNext=()=>dateSegments.current[index+1]?.focus();
+                        return <div key={label} className="flex items-center min-w-0">
+                            {index>0 && <span aria-hidden="true" className="shrink-0">/</span>}
+                            <input ref={node=>{dateSegments.current[index]=node;}} type="text" inputMode="numeric" autoComplete="off"
+                                value={parts[index]} maxLength={limit} placeholder={['YYYY','MM','DD'][index]}
+                                aria-label={'In-game '+label.toLowerCase()} data-testid={'scene-date-'+label.toLowerCase()}
+                                className={'min-w-0 bg-transparent border-0 p-0 outline-none text-center font-inherit tabular-nums selection:bg-violet-700 '+(index===0?'w-[4.2ch]':'w-[2.2ch]')}
+                                onFocus={event=>event.currentTarget.select()} onDoubleClick={event=>event.currentTarget.select()}
+                                onChange={event=>{
+                                    const digits=event.target.value.replace(/\D/g,'').slice(0,limit);
+                                    setDraft(previous=>replaceSceneDateSegment(previous,index,digits));
+                                    if(digits.length===limit && index<2)focusNext();
+                                }}
+                                onPaste={event=>{
+                                    const text=event.clipboardData.getData('text').trim();
+                                    const full=parseSceneDatePaste(text);
+                                    if(full){event.preventDefault();setDraft(full);return;}
+                                    if(/^\d+$/.test(text) && text.length<=limit){
+                                        event.preventDefault();setDraft(previous=>replaceSceneDateSegment(previous,index,text));
+                                        if(text.length===limit && index<2)focusNext();
+                                    }else{event.preventDefault();}
+                                }}
+                                onKeyDown={event=>{
+                                    const input=event.currentTarget;
+                                    if(event.key==='Enter'){event.preventDefault();input.blur();}
+                                    else if(event.key==='/' && index<2){event.preventDefault();focusNext();}
+                                    else if(event.key==='ArrowLeft' && input.selectionStart===0 && input.selectionEnd===0 && index>0){event.preventDefault();dateSegments.current[index-1]?.focus();}
+                                    else if(event.key==='ArrowRight' && input.selectionStart===input.value.length && input.selectionEnd===input.value.length && index<2){event.preventDefault();focusNext();}
+                                }}/>
+                        </div>;
+                    })}
+                </div>
                 <PopoverContent
                     align="start"
                     side="bottom"
@@ -158,7 +175,7 @@ export const SceneDateField = ({ value = "", onChange }) => {
                             if (!date) return;
                             const nextDate = toSceneISODate(date);
                             if (nextDate !== value) onChange?.(nextDate);
-                            setDraft(toSceneDisplayDate(date));
+                            setDraft(toSceneCalendarDate(date));
                             setOpen(false);
                         }}
                         className="p-1"

@@ -34,7 +34,7 @@ import {
 
 import {
     CONDITION_DEFINITIONS, HAUNT_DEFINITIONS, KEY_DEFINITIONS, KEY_NAMES,
-    CEREMONY_DEFINITIONS, CardTypeColors,
+    CardTypeColors,
     PERSON_TYPE_OPTIONS, PERSON_SUBTYPE_OPTIONS,
     PLACE_STATUS_OPTIONS, PERSON_STATUS_OPTIONS, PERSON_RELATIONSHIP_OPTIONS,
 } from "../data/cards-data";
@@ -42,13 +42,13 @@ import {
 import {
     ARCANA,
     PATH_ARCANA,
-    MERIT_LIST,
-    getMeritCategory,
 } from "../data/character-data";
 
 import {
-    MeritCard, CeremonyCard, PlacePersonCard, ConditionCard, HauntCard, KeyCard, ActiveSpellCard, CombatTrackerCard,
+    PlacePersonCard, ConditionCard, HauntCard, KeyCard, ActiveSpellCard, CombatTrackerCard,
 } from "./cards/CardComponents";
+import { MeritCard } from './cards/MeritCard';
+import { CeremonyCard } from './cards/CeremonyCard';
 import { MageSightCard } from "./cards/MageSightCard";
 import { SceneTrackerCard } from "./cards/SceneTrackerCard";
 import { isSceneDurationEffect } from "../utils/sceneLifecycle";
@@ -145,16 +145,6 @@ const getTemperatureIconClass = (temp) => {
 
 // All automatically generated weather hazards use the shared rules module.
 
-const MERIT_CARD_DEFINITIONS = Object.fromEntries(
-    MERIT_LIST.map((merit) => [
-        merit.name,
-        {
-            ...merit,
-            category: getMeritCategory(merit.name),
-        },
-    ])
-);
-
 export const GameCardsPanel = ({ 
     activeCharacter,
     activeConditions = [], 
@@ -187,6 +177,7 @@ export const GameCardsPanel = ({
     onEndTurn,
     onSleep,
     onEndScene,
+    onRollCeremony,
 }) => {
     const cardsScrollAreaRef = useRef(null);
     const [showAddPlacePerson, setShowAddPlacePerson] = useState(false);
@@ -210,10 +201,6 @@ export const GameCardsPanel = ({
         places: false,
         combat: false,
     });
-    const [showCeremonyRollDialog, setShowCeremonyRollDialog] = useState(false);
-    const [selectedCeremony, setSelectedCeremony] = useState(null);
-    const [ceremonyRollResult, setCeremonyRollResult] = useState(null);
-    const [rollingCeremony, setRollingCeremony] = useState(false);
     const [caseFileDraft, setCaseFileDraft] = useState("");
     const [sceneTracker, setSceneTracker] = useState(DEFAULT_SCENE_TRACKER);
     const [endSceneOpen, setEndSceneOpen] = useState(false);
@@ -231,35 +218,6 @@ export const GameCardsPanel = ({
             ...(activeCharacter?.scene_tracker || {}),
         });
     }, [activeCharacter?.id, activeCharacter?.scene_tracker]);
-
-    const handleCeremonyActivate = async (name, ceremony) => {
-    setSelectedCeremony({ name, ...ceremony });
-    setCeremonyRollResult(null);
-    setShowCeremonyRollDialog(true);
-
-    try {
-        setRollingCeremony(true);
-
-        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/roll-dice`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                dice_pool: ceremony.dicePool,
-                title: name,
-            }),
-        });
-
-        const data = await response.json();
-        setCeremonyRollResult(data);
-
-    } catch (error) {
-        console.error("Ceremony roll failed:", error);
-    } finally {
-        setRollingCeremony(false);
-    }
-};
 
     const placesPeople =
         activeCharacter?.places_people || [];
@@ -345,6 +303,8 @@ export const GameCardsPanel = ({
     const baseSpeed = strength + dexterity + 5;
     const speedBeforeIce = hasCondition('Leg Wrack') ? Math.max(1, Math.floor(baseSpeed / 2)) : baseSpeed;
     const speed = Math.max(0, Math.floor(speedBeforeIce * environmentStats.speedMultiplier));
+
+    const learnedCeremonies = useMemo(() => [...(activeCharacter?.ceremonies_list || [])].filter(c => c?.name).sort((a,b)=>(Number(a.dots)||1)-(Number(b.dots)||1) || a.name.localeCompare(b.name)), [activeCharacter?.ceremonies_list]);
 
     // Get character's merits with dots > 0
     const characterMerits = useMemo(() => {
@@ -865,7 +825,7 @@ export const GameCardsPanel = ({
                                 <CollapsibleTrigger className="!hidden w-full flex items-center justify-between p-3" data-testid="cards-section-ceremonies-toggle">
                                     <div className="flex items-center gap-2">
                                         <span className="text-xs font-mono uppercase tracking-wider text-zinc-400">Ceremonies</span>
-                                        <span className="text-[10px] text-zinc-500">{Object.keys(CEREMONY_DEFINITIONS).length}</span>
+                                        <span className="text-[10px] text-zinc-500">{learnedCeremonies.length}</span>
                                     </div>
                                     {openSections.ceremonies ? (
                                         <ChevronDown className="w-4 h-4 text-zinc-500" />
@@ -875,13 +835,8 @@ export const GameCardsPanel = ({
                                 </CollapsibleTrigger>
                                 <CollapsibleContent className="px-3 pt-3 pb-3">
                                     <div className="space-y-2" data-testid="ceremonies-list">
-                                        {Object.entries(CEREMONY_DEFINITIONS).map(([name, ceremony]) => (
-                                            <CeremonyCard
-                                                key={name}
-                                                name={name}
-                                                ceremony={ceremony}
-                                                onActivate={handleCeremonyActivate}
-                                            />
+                                        {learnedCeremonies.length === 0 ? <p className="text-xs text-zinc-500 text-center py-4">No ceremonies learned</p> : learnedCeremonies.map((ceremony,index) => (
+                                            <CeremonyCard key={ceremony.id || ceremony.name+'-'+index} ceremony={ceremony} onActivate={onRollCeremony}/>
                                         ))}
                                     </div>
                                 </CollapsibleContent>
@@ -939,16 +894,6 @@ export const GameCardsPanel = ({
                                                 `${merit.name}-${merit.specialty || "default"}-${index}`
                                             }
                                             merit={merit}
-                                            definition={
-                                                MERIT_CARD_DEFINITIONS[merit.name] || {
-                                                    category: "Other",
-                                                    maxDots: Math.max(
-                                                        5,
-                                                        Number(merit.dots) || 0
-                                                    ),
-                                                    description: merit.description || "",
-                                                }
-                                            }
                                         />
                                     ))}
                                 </div>
@@ -1461,48 +1406,6 @@ export const GameCardsPanel = ({
                     </Collapsible>
                 </div>
             </ScrollArea>
-
-            {/* Ceremony Roll Dialog */}
-            <Dialog open={showCeremonyRollDialog} onOpenChange={setShowCeremonyRollDialog}>
-                <DialogContent className="bg-zinc-900 border-zinc-800 max-w-md">
-                    <DialogHeader>
-                        <DialogTitle className="font-heading text-fuchsia-300">
-                            {selectedCeremony?.name}
-                        </DialogTitle>
-                        <DialogDescription className="text-zinc-400">
-                            Roll {selectedCeremony?.dicePool}
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                        <div className="text-sm text-zinc-300">
-                            <p><span className="text-zinc-500">Duration:</span> {selectedCeremony?.duration}</p>
-                            <p className="mt-2 text-zinc-400">{selectedCeremony?.description}</p>
-                        </div>
-                        <div className="bg-zinc-800/50 rounded p-3 text-center">
-                            <p className="text-xs text-zinc-500 mb-2">Dice Pool</p>
-                            <p className="text-lg text-fuchsia-300 font-mono">{selectedCeremony?.dicePool}</p>
-                            {rollingCeremony && (
-                                <p className="text-xs text-zinc-400 mt-3">Rolling...</p>
-                            )}
-
-                            {ceremonyRollResult && (
-                                <div className="mt-3 text-sm text-zinc-300">
-                                    <p className="text-xs text-zinc-500">Result</p>
-                                    <pre className="text-fuchsia-300 font-mono text-xs mt-1">
-                                        {JSON.stringify(ceremonyRollResult, null, 2)}
-                                    </pre>
-                                </div>
-                            )}
-                        </div>
-                        <Button 
-                            className="w-full btn-secondary"
-                            onClick={() => setShowCeremonyRollDialog(false)}
-                        >
-                            Close
-                        </Button>
-                    </div>
-                </DialogContent>
-            </Dialog>
         </div>
     );
 };

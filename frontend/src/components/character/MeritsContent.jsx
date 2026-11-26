@@ -5,7 +5,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { MERIT_LIST, CEREMONY_LIST, getMeritCategory } from "../../data/character-data";
 import { StatDots } from "./StatComponents";
-import { MeritCard, CeremonyCard } from "./CardComponents";
+import { MeritSheetEntry } from './MeritSheetEntry';
+import { CeremonySheetEntry } from './CeremonySheetEntry';
 
 export const MeritsContent = ({
     isMage,
@@ -134,7 +135,7 @@ export const MeritsContent = ({
                         <p className="text-[10px] text-zinc-600 italic">No merits added</p>
                     ) : (
                         sortedMeritsList.map((merit, index) => (
-                            <MeritCard
+                            <MeritSheetEntry
                                 key={merit.id || index}
                                 merit={merit}
                                 index={index}
@@ -206,11 +207,11 @@ export const MeritsContent = ({
                         <p className="text-[10px] text-zinc-600 italic">No ceremonies learned</p>
                     ) : (
                         sortedCeremoniesList.map((ceremony, index) => (
-                            <CeremonyCard
+                            <CeremonySheetEntry
                                 key={index}
                                 ceremony={ceremony}
                                 index={index}
-                                onDelete={() => deleteCeremony(index)}
+                                onDelete={() => deleteCeremony(ceremoniesList.indexOf(ceremony))}
                                 onRoll={() => rollCeremonyFromCharacter(ceremony.name)}
                             />
                         ))

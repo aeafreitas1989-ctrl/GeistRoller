@@ -60,3 +60,28 @@ export const toSceneTime = (hours, minutes) => {
     if (!Number.isInteger(hour) || !Number.isInteger(minute) || hour < 0 || hour > 23 || minute < 0 || minute > 59) return "";
     return `${pad2(hour)}:${pad2(minute)}`;
 };
+
+export const splitSceneDateDraft = (value) => {
+    const parts = String(value || '').split('/');
+    return [parts[0] || '',parts[1] || '',parts[2] || ''];
+};
+export const replaceSceneDateSegment = (value, index, replacement) => {
+    const parts = splitSceneDateDraft(value);
+    if (![0,1,2].includes(index)) return value;
+    parts[index] = String(replacement ?? '').replace(/\D/g,'').slice(0,index === 0 ? 4 : 2);
+    return parts.some(Boolean) ? parts.join('/') : '';
+};
+export const parseSceneDateDraft = (value) => {
+    const [year,month,day] = splitSceneDateDraft(value);
+    if (!/^\d{1,2}$/.test(day) || !/^\d{1,2}$/.test(month) || !/^\d{4}$/.test(year)) return null;
+    return parseSceneDate(day+'/'+month+'/'+year);
+};
+export const toSceneCalendarDate = date => toSceneISODate(date).replace(/-/g, '/');
+export const parseSceneDatePaste = (value) => {
+    const text = String(value || '').trim();
+    if (/^\d{8}$/.test(text)) return toSceneCalendarDate(parseSceneDateDraft(text.slice(0,4)+'/'+text.slice(4,6)+'/'+text.slice(6))) || null;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return toSceneCalendarDate(parseSceneDate(text)) || null;
+    if (/^\d{4}\/\d{1,2}\/\d{1,2}$/.test(text)) return toSceneCalendarDate(parseSceneDateDraft(text)) || null;
+    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(text)) return toSceneCalendarDate(parseSceneDate(text)) || null;
+    return null;
+};

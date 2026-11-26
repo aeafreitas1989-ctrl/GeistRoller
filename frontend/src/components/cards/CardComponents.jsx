@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
-    CardTypeColors, MERIT_CATEGORY_COLORS,
+    CardTypeColors,
     PERSON_TYPE_OPTIONS, PERSON_SUBTYPE_OPTIONS,
     PERSON_TYPE_STYLES, PERSON_SUBTYPE_STYLES, SUPERNATURAL_SUBTYPE_STYLES, EPHEMERAL_SUBTYPE_STYLES,
     PLACE_STATUS_OPTIONS, PLACE_STATUS_STYLES, PERSON_STATUS_OPTIONS, PERSON_STATUS_STYLES,
@@ -18,95 +18,6 @@ import { getNaturalHealingLabel } from "../../utils/naturalHealing";
 import { hasHealableWound } from "../../utils/resistantWounds";
 import { normalizeSkillSpecialty } from "../../utils/skillSpecialties";
 import { getEffectTimer, isEffectExpired, getGameTimestamp, expireCombatEffects } from "../../utils/effectDuration";
-
-export const MeritCard = ({ merit, definition }) => {
-    const [expanded, setExpanded] = useState(false);
-    const categoryColor = MERIT_CATEGORY_COLORS[definition?.category] || MERIT_CATEGORY_COLORS["Social"];
-    const dots = merit.dots || 0;
-    
-    return (
-        <div 
-            className={`rounded-sm border p-2 transition-all cursor-pointer ${CardTypeColors.merit.bg} ${CardTypeColors.merit.border}`}
-            onClick={() => setExpanded(!expanded)}
-            data-testid={`merit-card-${merit.name?.toLowerCase().replace(/\s+/g, '-')}`}
-        >
-            <div className="flex items-start justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                        <h4 className={`text-sm font-medium ${CardTypeColors.merit.text}`}>{merit.name}</h4>
-                        <span className="text-amber-400 text-xs tracking-tight">
-                            {"●".repeat(dots)}{"○".repeat((definition?.maxDots || 5) - dots)}
-                        </span>
-                    </div>
-                    {definition?.category && (
-                        <span className={`inline-block mt-1 px-1.5 py-0.5 text-[9px] uppercase tracking-wider rounded border ${categoryColor}`}>
-                            {definition.category}
-                        </span>
-                    )}
-                </div>
-                <ChevronDown className={`w-4 h-4 text-zinc-500 flex-shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`} />
-            </div>
-            
-            {expanded && definition?.description && (
-                <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
-                    {definition.description}
-                </p>
-            )}
-        </div>
-    );
-};
-
-// Ceremony Card component
-export const CeremonyCard = ({ name, ceremony, onActivate }) => {
-    const [expanded, setExpanded] = useState(false);
-    
-    return (
-        <div 
-            className={`rounded-sm border p-2 transition-all ${CardTypeColors.ceremony.bg} ${CardTypeColors.ceremony.border}`}
-            data-testid={`ceremony-card-${name?.toLowerCase().replace(/\s+/g, '-')}`}
-        >
-            <div 
-                className="flex items-start justify-between gap-2 cursor-pointer"
-                onClick={() => setExpanded(!expanded)}
-            >
-                <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                        <h4 className={`text-sm font-medium ${CardTypeColors.ceremony.text}`}>{name}</h4>
-                        <span className="text-fuchsia-400 text-xs tracking-tight">
-                            {"●".repeat(ceremony.dots)}
-                        </span>
-                    </div>
-                    <div className="text-[10px] text-zinc-500 mt-1">
-                        {ceremony.dicePool}
-                    </div>
-                </div>
-                <ChevronDown className={`w-4 h-4 text-zinc-500 flex-shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`} />
-            </div>
-            
-            {expanded && (
-                <div className="mt-2 space-y-2">
-                    <div className="text-[10px] text-zinc-400">
-                        <span className="text-zinc-500">Duration:</span> {ceremony.duration}
-                    </div>
-                    <p className="text-xs text-zinc-400 leading-relaxed">
-                        {ceremony.description}
-                    </p>
-                    <Button 
-                        size="sm" 
-                        className="w-full btn-secondary text-xs h-7"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onActivate(name, ceremony);
-                        }}
-                        data-testid={`ceremony-roll-${name?.toLowerCase().replace(/\s+/g, '-')}`}
-                    >
-                        <Sparkles className="w-3 h-3 mr-1" /> Roll Ceremony
-                    </Button>
-                </div>
-            )}
-        </div>
-    );
-};
 
 export const PlacePersonCard = ({
     entry,

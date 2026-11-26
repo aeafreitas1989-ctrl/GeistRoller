@@ -2139,14 +2139,11 @@ export const SKILL_LIST = [
     "animal_ken", "empathy", "expression", "intimidation", "persuasion", "socialize", "streetwise", "subterfuge"
 ];
 
-// Ceremony definitions (used for click-to-roll on Character page)
-export const CEREMONY_DEFINITIONS = {
-    "Death Watch": { dicePool: "Stamina + Medicine" },
-    "Ishtar's Perfume": { dicePool: "Presence + Occult" },
-    "Lovers' Telephone": { dicePool: "Manipulation + Computers" },
-    "Speaker for the Dead": { dicePool: "Stamina + Composure" },
-    "Pass On": { dicePool: "Manipulation + Empathy" },
-};
+// The learned-ceremony picker, reference cards and activation share this catalogue.
+export const CEREMONY_DEFINITIONS = Object.fromEntries(CEREMONY_LIST.map(ceremony => [ceremony.name, {
+    ...ceremony,
+    description: ceremony.description || ceremony.success || '',
+}]));
 
 // Map ceremony dice-pool skill labels to your internal SKILL_LIST keys
 export const CEREMONY_SKILL_KEY_MAP = {

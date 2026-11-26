@@ -30,6 +30,7 @@ export const CharacterSheetPage = () => {
     const [timeSummaries, setTimeSummaries] = useState([]);
 
     const diceRollerRef = useRef(null);
+    const ceremonyRollRef = useRef(null);
     const latestCharacterRef = useRef(null);
     const characterWriteQueuesRef = useRef(new Map());
     const pendingCharacterPatchesRef = useRef(new Map());
@@ -775,6 +776,7 @@ export const CharacterSheetPage = () => {
                                     onImportCharacter={importCharacter}
                                     onEndTurn={handleCombatEndTurn}
                                     onAdvanceTime={handleAdvanceTime}
+                                    ceremonyRollRef={ceremonyRollRef}
                                 />
                             </div>
                         </section>
@@ -782,6 +784,7 @@ export const CharacterSheetPage = () => {
                         <section className="min-h-0">
                             <div className="h-full overflow-hidden">
                                 <GameCardsPanel
+                                    onRollCeremony={name => ceremonyRollRef.current?.(name)}
                                     activeCharacter={activeCharacter}
                                     activeConditions={activeCharacter?.conditions || []}
                                     haunts={activeCharacter?.haunts || {}}

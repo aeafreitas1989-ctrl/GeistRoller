@@ -1,5 +1,7 @@
 import { requestDiceRoll } from '../services/diceService';
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useImperativeHandle } from "react";
+import { parseCeremonyDicePool } from '../utils/ceremonyRoll';
+import { formatDiceOutcome } from '../utils/diceOutcome';
 import { Plus, Minus, Trash2, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Save, X, Info, Dices, Zap, Star, Pencil, Sparkles, Download, Upload } from "lucide-react";import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -55,7 +57,6 @@ import {
     HAUNT_ENHANCEMENTS, KEYS, BURDENS,
     SYNERGY_TABLE, MERIT_LIST, CEREMONY_LIST,
     ATTRIBUTE_LIST, SKILL_LIST, CEREMONY_DEFINITIONS,
-    CEREMONY_SKILL_KEY_MAP,
     MAGE_PATHS, MAGE_ORDERS,
     ARCANA, PATH_ARCANA, ORDER_ROTE_SKILLS, GNOSIS_TABLE,
 } from "../data/character-data";
@@ -119,6 +120,7 @@ export const CharacterPanel = ({
     onImportCharacter,
     onAdvanceTime,
     onEndTurn,
+    ceremonyRollRef,
 }) => {
     const [activeSection, setActiveSection] = useState("header");
     const sheetScrollRef = useRef(null);
@@ -348,33 +350,12 @@ export const CharacterPanel = ({
     const [ceremonyPopupOpen, setCeremonyPopupOpen] = useState(false);
     const [ceremonyPopupData, setCeremonyPopupData] = useState(null);
 
-    const parseCeremonyDicePool = (dicePoolText) => {
-        // Expected format: "Stamina + Medicine"
-        // Attributes are in ATTRIBUTE_LIST (lowercase).
-        // Skills are in SKILL_LIST (lowercase, underscores).
-        if (!dicePoolText || typeof dicePoolText !== "string") return null;
-
-        const parts = dicePoolText.split("+").map(p => p.trim());
-        if (parts.length !== 2) return null;
-
-        const left = parts[0].toLowerCase();      // attribute name
-        const rightRaw = parts[1];                // skill label (may be plural)
-
-        const attrKey = left; // e.g., "stamina", "presence", "manipulation"
-        if (!ATTRIBUTE_LIST.includes(attrKey)) return null;
-
-        // Skill label normalization (e.g., "Computers" -> "computer")
-        const rightLabel = rightRaw.replace(/\s+/g, " ").trim();
-        const skillKey = CEREMONY_SKILL_KEY_MAP[rightLabel] || rightLabel.toLowerCase().replace(/\s+/g, "_");
-
-        // Special case: some ceremonies use an Attribute on the right (e.g. "Stamina + Composure" where composure is an Attribute)
-        const isRightAttribute = ATTRIBUTE_LIST.includes(skillKey);
-
-        return { attrKey, skillKey, isRightAttribute };
-    };
-
+    const ceremonyRollingRef = useRef(false);
     const rollCeremonyFromCharacter = async (ceremonyName) => {
-        const def = CEREMONY_DEFINITIONS[ceremonyName];
+        if (ceremonyRollingRef.current) return;
+        const learned = (getValue('ceremonies_list') || []).find(c => c.name === ceremonyName);
+        if (!learned) { toast.error('This Ceremony has not been learned.'); return; }
+        const def = CEREMONY_DEFINITIONS[ceremonyName] || learned;
         if (!def?.dicePool) {
             toast.error(`No dice pool defined for: ${ceremonyName}`);
             return;
@@ -382,7 +363,7 @@ export const CharacterPanel = ({
 
         const parsed = parseCeremonyDicePool(def.dicePool);
         if (!parsed) {
-            toast.error(`Cannot parse dice pool: ${def.dicePool}`);
+            toast.error(`Manual contested or modified roll required: ${def.dicePool}`);
             return;
         }
 
@@ -391,9 +372,10 @@ export const CharacterPanel = ({
             ? (getNestedValue("attributes", parsed.skillKey) || 0)
             : (getNestedValue("skills", parsed.skillKey) || 0);
 
-        const computedPool = left + right;
+        const computedPool = (Number(left) || 0) + (Number(right) || 0);
         const isChance = computedPool <= 0;
 
+        ceremonyRollingRef.current = true;
         try {
             // Backend endpoint expects { pool: int, chance: bool, again, rote }
             const res = await requestDiceRoll({
@@ -411,8 +393,10 @@ export const CharacterPanel = ({
                 result: res.data,
             });
             setCeremonyPopupOpen(true);
+            const outcome = formatDiceOutcome(res.data);
+            onAddRecentRoll?.({title: ceremonyName, transcript: 'Rolled '+def.dicePool+' = '+(isChance?'Chance die':computedPool+' dice')+'\n'+outcome+'\n'+(res.data.dice || []).join('  '), outcome});
 
-            // If you already use this elsewhere, keep it consistent
+            // Keep the existing optional transcript callback for other hosts.
             if (onDiceRollResult) {
                 const r = res.data;
                 const diceStr = (r.dice || []).join(", ");
@@ -438,8 +422,9 @@ export const CharacterPanel = ({
         } catch (e) {
             console.error(e);
             toast.error("Ceremony roll failed (backend call).");
-        }
+        } finally { ceremonyRollingRef.current = false; }
     };
+    useImperativeHandle(ceremonyRollRef, () => rollCeremonyFromCharacter);
 
     const openHauntRollPopup = (hauntName) => {
         setDicePopupHaunt(hauntName);
@@ -2574,6 +2559,7 @@ export const CharacterPanel = ({
         }
     };
     const deleteCeremony = (index) => {
+        if (index < 0 || index >= ceremoniesList.length) return;
         const newCeremonies = ceremoniesList.filter((_, i) => i !== index);
         handleChange("ceremonies_list", newCeremonies);
     };
