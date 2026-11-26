@@ -1,7 +1,7 @@
 from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from active_spell_retention import retain_active_spells
+from time_effect_retention import retain_unexpired_effects as retain_active_spells
 
 
 def test_retention_only_removes_expired_effects():

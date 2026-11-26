@@ -7,11 +7,19 @@ COPY frontend/package.json frontend/yarn.lock ./
 
 RUN corepack enable && yarn install --frozen-lockfile
 
+COPY frontend/scripts/generate-game-icons.cjs ./scripts/generate-game-icons.cjs
+RUN node scripts/generate-game-icons.cjs
+
 COPY frontend/ ./
 
 # In production the API is served from the same origin.
 ENV REACT_APP_BACKEND_URL=""
+ENV GENERATE_SOURCEMAP=false
 RUN yarn build
+
+# Regression target; not part of the production runtime image.
+FROM frontend-build AS frontend-test
+RUN CI=true yarn test --watchAll=false --runInBand
 
 
 # ---- Stage 2: FastAPI backend + static frontend ----

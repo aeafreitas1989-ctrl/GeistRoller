@@ -25,3 +25,5 @@ yarn-error.log*
 # Generated from the pinned react-icons dependency
 /public/game-icons/
 /src/generated/game-icons.json
+
+/src/generated/game-icons.stamp

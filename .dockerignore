@@ -6,3 +6,7 @@ frontend/build
 backend/__pycache__
 **/__pycache__
 **/*.pyc
+
+frontend/public/game-icons
+frontend/src/generated/game-icons.json
+frontend/src/generated/game-icons.stamp

@@ -28,6 +28,13 @@ module.exports = {
           '**/coverage/**',
         ],
       };
+      if (webpackConfig.mode === 'production') {
+        for (const minimizer of webpackConfig.optimization?.minimizer || []) {
+          if (['TerserPlugin', 'CssMinimizerPlugin'].includes(minimizer?.constructor?.name)) {
+            minimizer.options.parallel = 1;
+          }
+        }
+      }
       return webpackConfig;
     },
   },

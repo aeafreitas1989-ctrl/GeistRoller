@@ -11,6 +11,7 @@ services:
 
   mongo:
     image: mongo:7
+    command: ["mongod", "--wiredTigerCacheSizeGB", "0.25"]
     volumes:
       - mongo_data:/data/db
     restart: unless-stopped

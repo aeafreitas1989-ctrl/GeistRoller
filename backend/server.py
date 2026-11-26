@@ -16,7 +16,6 @@ from fastapi.staticfiles import StaticFiles
 from database import client, db
 from dice_engine import resolve_dice_roll
 from time_effect_retention import retain_unexpired_effects
-from active_spell_retention import retain_active_spells
 from rules_validation import validate_rule_bounded_fields
 from models import (
     Campaign,
@@ -472,23 +471,14 @@ app.add_middleware(
 
 @app.on_event("startup")
 async def remove_retired_character_data():
-    # Idempotent startup migration. Conditions and all XP/advancement records are untouched.
     await db.characters.update_many({"exploration_map": {"$exists": True}}, {"$unset": {"exploration_map": ""}})
-    await db.characters.update_many({"active_spells.status": "expired"}, {"$pull": {"active_spells": {"status": "expired"}}})
-    async for record in db.characters.find({"active_spells.0": {"$exists": True}}, {"active_spells": 1, "scene_tracker": 1}):
-        source = record.get("active_spells", [])
-        retained = retain_active_spells(source, record.get("scene_tracker"))
-        if retained != source:
-            await db.characters.update_one({"_id": record["_id"], "active_spells": source}, {"$set": {"active_spells": retained}})
-
-
-@app.on_event("startup")
-async def remove_expired_time_effects():
-    # Idempotent; only expired entries, never unresolved active Conditions or XP.
-    async for record in db.characters.find({"$or": [{"active_spells.0": {"$exists": True}}, {"conditions.0": {"$exists": True}}]}, {"active_spells": 1, "conditions": 1, "scene_tracker": 1}):
-        for field in ('active_spells', 'conditions'):
+    async for record in db.characters.find(
+        {"$or": [{"active_spells.0": {"$exists": True}}, {"conditions.0": {"$exists": True}}]},
+        {"active_spells": 1, "conditions": 1, "scene_tracker": 1},
+    ):
+        for field in ("active_spells", "conditions"):
             source = record.get(field, [])
-            retained = retain_unexpired_effects(source, record.get('scene_tracker'))
+            retained = retain_unexpired_effects(source, record.get("scene_tracker"))
             if retained != source:
                 await db.characters.update_one({"_id": record["_id"], field: source}, {"$set": {field: retained}})
 
