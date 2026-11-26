@@ -80,6 +80,7 @@ export const advanceNaturalHealing = (boxes, recovery, oldTracker, newTracker, r
 
     let available = progress + (newNow - start);
     let healed = 0;
+    const healedByType = { bashing: 0, lethal: 0, aggravated: 0 };
     let wound = currentType;
     while (wound && available >= INTERVAL_MS[wound]) {
         // Actual rightmost damaged Health box is the one that heals.
@@ -88,6 +89,7 @@ export const advanceNaturalHealing = (boxes, recovery, oldTracker, newTracker, r
         nextMarks[index] = false;
         available -= INTERVAL_MS[wound];
         healed += 1;
+        healedByType[wound] += 1;
         wound = rightmostWound(nextBoxes);
         if (naturalHealingBlocked(nextBoxes)) {
             available = 0;
@@ -97,7 +99,7 @@ export const advanceNaturalHealing = (boxes, recovery, oldTracker, newTracker, r
 
     return {
         boxes: nextBoxes, resistant_wounds: nextMarks,
-        healed,
+        healed, healedByType,
         recovery: {
             last_at: iso(newNow),
             progress_ms: wound ? available : 0,
@@ -124,4 +126,35 @@ export const getNaturalHealingLabel = (boxes, recovery, tracker) => {
     const minutes = remainingMinutes % 60;
     const part = days ? `${days}d ${hours}h` : hours ? `${hours}h ${minutes}m` : `${minutes}m`;
     return `Natural healing: ${part} until next ${wound} wound heals`;
+};
+
+// Estimated time until the last wound of each severity heals, in actual track
+// order, assuming no further damage or treatment. Uses the same intervals as recovery.
+export const getRemainingWoundGroups = (boxes, recovery, tracker) => {
+    if (!Array.isArray(boxes)) return [];
+    const counts = { bashing: 0, lethal: 0, aggravated: 0 };
+    const deadlines = {};
+    const type = rightmostWound(boxes);
+    const now = getGameTimestamp(tracker);
+    const checkpoint = validCheckpoint(recovery);
+    // A clock rewind must not undo existing progress or advance healing twice.
+    const delay = now !== null && checkpoint !== null ? Math.max(0, checkpoint - now) : 0;
+    const accrued = recovery?.wound_type === type && checkpoint !== null && now !== null
+        ? Math.max(0, Number(recovery.progress_ms) || 0) + Math.max(0, now - checkpoint) : 0;
+    let remaining = delay, progress = accrued;
+    for (let i = boxes.length - 1; i >= 0; i -= 1) {
+        const kind = boxes[i];
+        if (!Object.prototype.hasOwnProperty.call(INTERVAL_MS, kind)) continue;
+        counts[kind] += 1;
+        const interval = INTERVAL_MS[kind];
+        remaining += Math.max(0, interval - progress);
+        progress = Math.max(0, progress - interval);
+        deadlines[kind] = remaining;
+    }
+    const blocked = naturalHealingBlocked(boxes);
+    return Object.keys(counts).filter(kind => counts[kind] > 0).map(kind => ({
+        kind, count: counts[kind],
+        remainingMs: blocked || now === null ? null : deadlines[kind],
+        reason: blocked ? (boxes.every(box => box === 'aggravated') ? 'No natural recovery' : 'Medical treatment required') : now === null ? 'Clock unset' : null,
+    }));
 };

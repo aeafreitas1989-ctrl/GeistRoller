@@ -1,3 +1,5 @@
+import { TimeElapsedDialog } from "@/components/TimeElapsedDialog";
+import { prepareTimeTransition } from "@/utils/timeTransitionSummary";
 import { retainActiveSpells } from "@/utils/activeSpellRetention";
 import { useState, useEffect, useRef } from "react";
 import { CharacterPanel } from "@/components/CharacterPanel";
@@ -25,6 +27,7 @@ export const CharacterSheetPage = () => {
     const [characters, setCharacters] = useState([]);
     const [activeCharacter, setActiveCharacter] = useState(null);
     const [rollColumnCollapsed, setRollColumnCollapsed] = useState(false);
+    const [timeSummaries, setTimeSummaries] = useState([]);
 
     const diceRollerRef = useRef(null);
     const latestCharacterRef = useRef(null);
@@ -286,7 +289,7 @@ export const CharacterSheetPage = () => {
             const saved = await updateCharacter({
                 ...(ticked !== effects ? { active_spells: ticked } : {}),
                 ...(tickedConditions !== conditionsBefore ? { conditions: tickedConditions } : {}),
-            });
+            }, { kind: "turn" });
             if (saved !== true) return false;
         }
 
@@ -355,7 +358,7 @@ export const CharacterSheetPage = () => {
             scene_tracker: healing.tracker,
             ...(expiredSpells !== spells ? { active_spells: expiredSpells } : {}),
             ...(expiredConditions !== beforeConditions ? { conditions: expiredConditions } : {}),
-        });
+        }, { kind: "sleep", healing });
     };
 
     const handleAdvanceTime = async (hours = 0, minutes = 0, extraUpdates = {}) => {
@@ -385,7 +388,7 @@ export const CharacterSheetPage = () => {
             } : {}),
             ...(expiredSpells !== spells ? { active_spells: expiredSpells } : {}),
             ...(expiredConditions !== previousConditions ? { conditions: expiredConditions } : {}),
-        });
+        }, { kind: "clock", healing });
     };
 
     // Fetch characters on mount
@@ -519,7 +522,7 @@ export const CharacterSheetPage = () => {
         });
     };
 
-    const updateCharacter = async (updates) => {
+    const updateCharacter = async (updates, summaryOptions = {}) => {
         const current = latestCharacterRef.current || activeCharacter;
         if (!current?.id) return false;
         const characterId = current.id;
@@ -538,11 +541,8 @@ export const CharacterSheetPage = () => {
             patch.scene_tracker = { ...(projected.scene_tracker || {}), environmental_exposure:
                 nextTemperature && since ? { kind: nextTemperature, since, last_tick_at: since } : {} };
         }
-        const spellSource = patch.active_spells ?? current.active_spells ?? [];
-        const retainedSpells = retainActiveSpells(spellSource, patch.scene_tracker ?? current.scene_tracker);
-        if (retainedSpells !== spellSource || Object.prototype.hasOwnProperty.call(patch, 'active_spells')) {
-            patch.active_spells = retainedSpells;
-        }
+        const {cleaned, summary} = prepareTimeTransition(current, patch, summaryOptions);
+        Object.assign(patch, cleaned);
         const token = Symbol('character-update');
         const pending = pendingCharacterPatchesRef.current.get(characterId) || [];
         pendingCharacterPatchesRef.current.set(characterId, [...pending, { token, updates: patch }]);
@@ -561,6 +561,7 @@ export const CharacterSheetPage = () => {
                 if (latestCharacterRef.current?.id === characterId) latestCharacterRef.current = next;
                 setActiveCharacter((prev) => prev?.id === characterId ? next : prev);
                 setCharacters((list) => list.map((item) => item.id === characterId ? next : item));
+                if (summary) setTimeSummaries(queue => [...queue, summary]);
                 return true;
             } catch (error) {
                 const remaining = (pendingCharacterPatchesRef.current.get(characterId) || []).filter((entry) => entry.token !== token);
@@ -586,7 +587,7 @@ export const CharacterSheetPage = () => {
         if (!activeCharacter) return false;
         const changes = getEndScenePatch(activeCharacter);
         if (!changes) return false;
-        const saved = await updateCharacter(changes);
+        const saved = await updateCharacter(changes, { kind: "scene" });
         if (saved) toast.success("Scene ended. Scene-duration effects and resources updated.");
         return saved;
     };
@@ -745,6 +746,7 @@ export const CharacterSheetPage = () => {
 
     return (
         <div className="app-container" data-testid="character-sheet-page">
+            <TimeElapsedDialog summary={timeSummaries[0] || null} onClose={() => setTimeSummaries(queue => queue.slice(1))} />
             <QuickDiceRoller onRollRecorded={addRecentRoll} />
             {/* Main Content - Character and Cards always visible */}
             <div className="main-content overflow-y-auto">

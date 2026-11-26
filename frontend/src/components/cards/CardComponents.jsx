@@ -1609,7 +1609,7 @@ export const CombatTrackerCard = ({
                                 active_spells: expireCombatEffects(activeCharacter.active_spells || []),
                                 conditions: expireCombatEffects(activeCharacter.conditions || []),
                             } : {}),
-                        });
+                        }, starting ? {} : { kind: "combat" });
                     }}>
                     {activeCharacter?.combat_active ? "End Combat" : "Start Combat"}
                 </Button>

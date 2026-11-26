@@ -482,7 +482,7 @@ export const GameCardsPanel = ({
             health_boxes: exposure.boxes, resistant_wounds: exposure.resistant_wounds,
             health: exposure.boxes.filter((state) => state !== 'empty').length,
             ...(expiredSpells !== spells ? { active_spells: expiredSpells } : {}),
-        });
+        }, { kind: "clock", healing: exposure });
     };
 
     const hauntCount = Object.values(haunts).filter((v) => v > 0).length;

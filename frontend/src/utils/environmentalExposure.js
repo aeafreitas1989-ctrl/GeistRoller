@@ -33,6 +33,7 @@ export const advanceEnvironmentalExposure = (character = {}, nextTracker = {}, b
     let bashing = 0;
     let lethal = 0;
     let healedCount = 0;
+    const healedByType = { bashing: 0, lethal: 0, aggravated: 0 };
     let cursor = oldAt;
     const healTo = (at) => {
         const oldClock = trackedTime(cursor, oldTracker), newClock = trackedTime(at, oldTracker);
@@ -41,6 +42,7 @@ export const advanceEnvironmentalExposure = (character = {}, nextTracker = {}, b
         marks = healed.resistant_wounds;
         recovery = healed.recovery;
         healedCount += healed.healed;
+        for (const kind of Object.keys(healedByType)) healedByType[kind] += healed.healedByType?.[kind] || 0;
         cursor = at;
     };
     let endLastTick = latestTick;
@@ -85,5 +87,5 @@ export const advanceEnvironmentalExposure = (character = {}, nextTracker = {}, b
         }
     }
     return { tracker: { ...nextTracker, environmental_exposure: exposure },
-        boxes, resistant_wounds: marks, recovery, healed: healedCount, bashing, lethal };
+        boxes, resistant_wounds: marks, recovery, healed: healedCount, healedByType, bashing, lethal };
 };
