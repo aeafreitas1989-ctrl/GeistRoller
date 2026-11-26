@@ -1,3 +1,4 @@
+import { retainActiveSpells } from "@/utils/activeSpellRetention";
 import { useState, useEffect, useRef } from "react";
 import { CharacterPanel } from "@/components/CharacterPanel";
 import { GameCardsPanel } from "@/components/GameCardsPanel";
@@ -455,6 +456,8 @@ export const CharacterSheetPage = () => {
             const createdCharacter = createResponse.data;
             const { id, _id, created_at, updated_at, ...updates } = importedCharacter || {};
             const normalizedUpdates = { ...updates };
+            delete normalizedUpdates.exploration_map; // Ignore map data from legacy JSON exports.
+            if (Array.isArray(normalizedUpdates.active_spells)) normalizedUpdates.active_spells = retainActiveSpells(normalizedUpdates.active_spells, normalizedUpdates.scene_tracker);
 
             if (characterType === "mage" && normalizedUpdates.creation_locked === undefined) {
                 normalizedUpdates.creation_mode = "active";
@@ -534,6 +537,11 @@ export const CharacterSheetPage = () => {
             const since = stamp === null ? null : new Date(stamp).toISOString();
             patch.scene_tracker = { ...(projected.scene_tracker || {}), environmental_exposure:
                 nextTemperature && since ? { kind: nextTemperature, since, last_tick_at: since } : {} };
+        }
+        const spellSource = patch.active_spells ?? current.active_spells ?? [];
+        const retainedSpells = retainActiveSpells(spellSource, patch.scene_tracker ?? current.scene_tracker);
+        if (retainedSpells !== spellSource || Object.prototype.hasOwnProperty.call(patch, 'active_spells')) {
+            patch.active_spells = retainedSpells;
         }
         const token = Symbol('character-update');
         const pending = pendingCharacterPatchesRef.current.get(characterId) || [];

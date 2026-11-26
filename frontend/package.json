@@ -57,9 +57,9 @@
     "zod": "^3.24.4"
   },
   "scripts": {
-    "start": "craco start",
-    "build": "craco build",
-    "test": "craco test"
+    "start": "node scripts/generate-game-icons.cjs && craco start",
+    "build": "node scripts/generate-game-icons.cjs && craco build",
+    "test": "node scripts/generate-game-icons.cjs && craco test"
   },
   "browserslist": {
     "production": [

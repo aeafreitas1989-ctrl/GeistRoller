@@ -1,3 +1,5 @@
+import { formatDiceOutcome } from '../../utils/diceOutcome';
+import { requestDiceRoll } from '../../services/diceService';
 import { useState, useMemo, useEffect } from "react";
 import { Dices, ChevronDown, ChevronRight, Skull } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -58,7 +60,6 @@ import { getConditionRollPresentation } from "../../utils/conditionRollPresentat
 import { normalizeSkillSpecialty } from "../../utils/skillSpecialties";
 import { getEnvironmentalRollModifiers, activeEnvironmentalTiltNames } from "../../utils/environmentalTilts";
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const getUntrainedSkillPenalty = (skillKey, dots) => {
     if ((dots || 0) > 0) return 0;
@@ -448,28 +449,7 @@ export const InlineDiceRoller = ({
 
     const effectivePool = isComputedChanceDie ? 1 : poolTotal;
 
-    const formatOutcomeLine = (rollResult, countOnly = false) => {
-        const successes = rollResult?.successes || 0;
-        const successText = `${successes} Success${successes === 1 ? "" : "es"}`;
-
-        if (rollResult?.is_dramatic_failure) {
-            return `${successText} = Dramatic Failure...`;
-        }
-
-        if (rollResult?.is_exceptional) {
-            return `${successText} = Exceptional Success!`;
-        }
-
-        if (countOnly) {
-            return successText;
-        }
-
-        if (successes > 0) {
-            return `${successText} = Success`;
-        }
-
-        return "0 Successes = Failure";
-    };
+    const formatOutcomeLine = (rollResult, countOnly = false) => formatDiceOutcome(rollResult, {countOnly});
 
         const formatPoolPart = (label, value, forceSign = true) => {
         const numericValue = Number(value) || 0;
@@ -609,7 +589,7 @@ export const InlineDiceRoller = ({
         setResult(null);
 
         try {
-            const response = await axios.post(`${API}/dice/roll`, {
+            const response = await requestDiceRoll({
                 pool: effectivePool,
                 again: isComputedChanceDie
                     ? 10
@@ -653,7 +633,7 @@ export const InlineDiceRoller = ({
                         chanceDieReplaced = true;
                         // Steadfast replaces a chance die with one REGULAR die;
                         // it does not automatically award one success.
-                        const oneRegularDie = await axios.post(API + '/dice/roll', {
+                        const oneRegularDie = await requestDiceRoll({
                             pool: 1, again: 10, rote: false, chance: false,
                         });
                         response.data = { ...oneRegularDie.data,

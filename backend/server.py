@@ -15,6 +15,7 @@ from fastapi.staticfiles import StaticFiles
 
 from database import client, db
 from dice_engine import resolve_dice_roll
+from active_spell_retention import retain_active_spells
 from rules_validation import validate_rule_bounded_fields
 from models import (
     Campaign,
@@ -324,6 +325,13 @@ async def update_character(character_id: str, input: CharacterUpdate):
             detail="Character not found",
         )
 
+    if "active_spells" in update_data or "scene_tracker" in update_data:
+        source = update_data.get("active_spells", previous.get("active_spells", []))
+        if isinstance(source, list):
+            retained = retain_active_spells(source, update_data.get("scene_tracker", previous.get("scene_tracker")))
+            if retained != source or "active_spells" in update_data:
+                update_data["active_spells"] = retained
+
     try:
         validate_rule_bounded_fields(update_data, allow_override, previous)
     except ValueError as exc:
@@ -459,6 +467,18 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.on_event("startup")
+async def remove_retired_character_data():
+    # Idempotent startup migration. Conditions and all XP/advancement records are untouched.
+    await db.characters.update_many({"exploration_map": {"$exists": True}}, {"$unset": {"exploration_map": ""}})
+    await db.characters.update_many({"active_spells.status": "expired"}, {"$pull": {"active_spells": {"status": "expired"}}})
+    async for record in db.characters.find({"active_spells.0": {"$exists": True}}, {"active_spells": 1, "scene_tracker": 1}):
+        source = record.get("active_spells", [])
+        retained = retain_active_spells(source, record.get("scene_tracker"))
+        if retained != source:
+            await db.characters.update_one({"_id": record["_id"], "active_spells": source}, {"$set": {"active_spells": retained}})
 
 
 @app.on_event("shutdown")

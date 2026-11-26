@@ -53,7 +53,7 @@ describe("explicit scene boundaries", () => {
         const patch = getEndScenePatch(character);
         expect(patch.scene_paradox_rolls).toBe(0);
         expect(patch.conditions.map(e => e.status || "active")).toEqual(["expired", "active"]);
-        expect(patch.active_spells.map(e => e.status || "active")).toEqual(["expired", "active"]);
+        expect(patch.active_spells).toEqual([{ id: 2, duration: "1 day" }]);
         expect(patch).not.toHaveProperty("scene_tracker");
         expect(patch).not.toHaveProperty("combat_active");
     });

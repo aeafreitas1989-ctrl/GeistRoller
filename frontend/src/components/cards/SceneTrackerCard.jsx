@@ -1,11 +1,9 @@
-import { Clock3, Cloud, Thermometer, Leaf, Wind, Gauge, Droplets, MapPin, Map, Building2, ShieldCheck, } from "lucide-react";
+import { Clock3, Cloud, Thermometer, Leaf, Wind, Gauge, Droplets, MapPin, Building2, ShieldCheck, } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SceneDateField, SceneTimeField } from "./SceneDateTimePickers";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ExplorationMap } from "../character/ExplorationMap";
 
 const CLOUD_COVER_OPTIONS = [
     { value: "clear", label: "☀ Clear" },
@@ -53,10 +51,6 @@ export const SceneTrackerCard = ({
     exposureStatus = "",
     turnHazards = [],
     placeOptions = [],
-    characterId,
-    characterName,
-    explorationMap,
-    onExplorationMapChange,
     sceneTemperature,
     sceneSeason,
     getSeasonColorClass,
@@ -76,36 +70,6 @@ export const SceneTrackerCard = ({
                             <MapPin className="w-3 h-3" />
                             Location
                         </label>
-                        <Dialog>
-                            <DialogTrigger asChild>
-                                <Button
-                                    type="button"
-                                    size="icon"
-                                    variant="outline"
-                                    className="h-5 w-5 shrink-0 border-0 bg-transparent p-0 text-zinc-500 shadow-none hover:bg-transparent hover:text-teal-300 focus-visible:ring-1 focus-visible:ring-teal-400"
-                                    disabled={!onExplorationMapChange}
-                                    aria-label="Open exploration map"
-                                    title="Exploration Map"
-                                    data-testid="scene-location-map-button"
-                                >
-                                    <Map className="h-3 w-3" />
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent
-                                className="w-[95vw] max-w-5xl max-h-[90vh] overflow-y-auto bg-zinc-950 border-zinc-700 text-zinc-100"
-                                data-testid="scene-exploration-map-dialog"
-                            >
-                                <DialogHeader>
-                                    <DialogTitle>Exploration Map</DialogTitle>
-                                </DialogHeader>
-                                <ExplorationMap
-                                    key={characterId}
-                                    characterName={characterName || "PC"}
-                                    value={explorationMap || {}}
-                                    onChange={onExplorationMapChange}
-                                />
-                            </DialogContent>
-                        </Dialog>
                     </div>
 
                     <Input

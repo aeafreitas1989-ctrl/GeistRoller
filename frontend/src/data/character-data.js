@@ -1,5 +1,3 @@
-import { MERIT_RULE_CORRECTIONS } from "./merit-rule-corrections";
-import { MERIT_DESCRIPTION_REVISIONS } from "./merit-description-audit";
 
 // Geist: The Sin-Eaters - Character Data Constants
 
@@ -987,140 +985,834 @@ export const SYNERGY_TABLE = {
 };
 
 // Merits (alphabetical, from provided list)
-const MERIT_LIST_BASE = [
-    { name: "Adamant Hand", minDots: 2, maxDots: 2, hasSpecialty: true, specialtyPlaceholder: "Athletics, Brawl or Weaponry", description: "Choose Athletics, Brawl, or Weaponry when purchasing this Merit; the chosen Skill must be 3 dots or higher. The chosen combat style may be used as a reflexive Order tool Yantra for instant spells, adding dice on subsequent turns or to a reflexive spell cast in the same turn as the combat action. May be purchased multiple times for different styles." },
-    { name: "Advanced Library", minDots: 1, maxDots: 5, hasSpecialty: true, specialtyPlaceholder: "Topics", description: "Gain the Informed Condition about a highly secretive supernatural topic. Each Dot represents a distinct topic, and each topic can only be used once per story." },
-    { name: "Allies", maxDots: 5, description: "Allies help your character. They might be friends, employees, associates, or people your character has black-mailed. Each instance of this Merit represents one type of ally. This could be an organization, a society, a clique, or an individual. Examples include the police, a secret society, criminal organizations, unions, local politicians, or the academic community. Each purchase has its own rating. Your character might have Allies (Masons) ••, Allies (Carter Crime Family) •••, and Allies (Catholic Church) •." },
-    { name: "Alternate Identity", maxDots: 3, description: "Your character has established an alternate identity. The level of this Merit determines the amount of scrutiny it holds up to. At one dot, the identity is superficial and unofficial. For example, your character uses an alias with a simple costume and adopts an accent. She hasn’t established the necessary paperwork to even approach a bureaucratic back-ground check, let alone pass one. At two dots, she’s supported her identity with paperwork and identification. It’s not liable to stand up to extensive research, but it’ll turn away private investigators and internet hobbyists. At three dots, the identity can pass a thorough inspection. The identity has been deeply entrenched in relevant databases, with subtle flourishes and details to make it seem real, even to trained professionals." },
-    { name: "Ambidextrous", minDots: 3, maxDots: 3, description: "Your character does not suffer the -2 penalty for using his off hand in combat or other actions. Available only at character creation." },
-    { name: "Anonymity", maxDots: 5, description: "Your character lives off the grid. This means purchases must be made with cash or falsified credit cards. She eschews identification. She avoids any official authoritative influence in her affairs. Any attempts to find her by paper trail suffer a -1 penalty per dot purchased in this Merit." },
-    { name: "Architect", maxDots: 5, description: "Your character must create things that last. She’s particularly good at this; she pours her all into everything, every institution, every relationship she can. When taking an extended action to create something your character finds significant, you gain a number of additional dice equal to your Merit dots. You can divide these dice as you see fit across any number of rolls. Any roll benefiting from these dice gains the 8-again quality." },
-    { name: "Area of Expertise", minDots: 1, maxDots: 1, description: "Your character is uncommonly specialized in one area. Choose a Specialty to assign to this Merit. Forgo the +1-bonus afforded by a Specialty, in exchange for a +2." },
-    { name: "Armed Defense", maxDots: 5, description: "Prerequisites: Dexterity •••, Weaponry ••, Defensive Combat: Weaponry" },
-    { name: "Artifact", minDots: 3, maxDots: 10, hasSpecialty: true, specialtyPlaceholder: "Artifact", description: "A Supernal item with its own Mana store, effective Gnosis, and Arcana, capable of creating magical effects. Base cost is the highest Arcanum used, or 3, whichever is higher; additional effects add half the highest Arcanum used, rounded up, and Utility Attainments add 1 dot each. Stores Mana equal to twice its dots, has effective Gnosis equal to half its dots rounded up, and effective Arcana equal to the highest Arcanum used. Not limited to 5 dots." },
-    { name: "Astral Adept", minDots: 3, maxDots: 3, description: "Your character may enter the Astral Realms without a place of power by performing a chosen ceremony and spending a Willpower point, then meditating into the realms." },
-    { name: "Automotive Genius", minDots: 1, maxDots: 1, description: "Your character knows how to fine-tune a vehicle to utter extremes. When determining how many modifications she can add to a vehicle, triple her Crafts dots instead of doubling them. So, a character with Crafts •••• could support 12 combined modifications on a vehicle instead of eight. Additionally, any relevant Crafts Specialties add one more potential modification to the total." },
-    { name: "Barfly", maxDots: 2, description: "Your character is a natural in the bar environment and can procure an open invitation wherever he wishes. Whereas most characters would require rolls to blend into social functions they don’t belong in, he doesn’t; he belongs. Rolls to identify him as an outsider suffer his Socialize as a penalty." },
-    { name: "Between the Ticks", minDots: 2, maxDots: 2, description: "Once per scene, subtract 1 from Initiative for the turn to add 1 die to an action that turn, or subtract 1 die from an action to add 1 to Initiative." },
-    { name: "Cabal Theme", minDots: 1, maxDots: 1, description: "All cabal members with this Merit are treated as having one extra dot of Shadow Name for persona Yantras, even if they do not possess Shadow Name or if this would raise it above 3 dots." },
-    { name: "Cenote", maxDots: 5, description: "Your character has access to a haunted house, cemetery, or other place she can freely spend time and recharge Plasm. Every chapter, this Cenote generates Plasm equal to its dot rating." },
-    { name: "Cheap Shot", minDots: 2, maxDots: 2, description: "Your character is a master at the bait and switch. She can look off in an odd direction and prompt her oppo-nent to do the same, or she might step on his toes to distract him. She fights dirty. Make a Dexterity + Subterfuge roll as a reflexive action. The opponent’s player contests with Wits + Composure. If you score more successes, the opponent loses his Defense for the next turn. Each time a character uses this maneuver in a scene, it levies a cumulative -2 penalty to further uses since the opposition gets used to the tricks." },
-    { name: "Choke Hold", minDots: 2, maxDots: 2, description: "Prerequisites: Brawl •• If you can get your hands on someone, they’re putty in your hands. When grappling, your character can use the Choke move:" },
-    { name: "Close Quarters Combat", maxDots: 5, description: "Prerequisites: Wits •••, Athletics ••, Brawl •••" },
-    { name: "Closed Book", maxDots: 5, description: "Your character is particularly tough to crack. When a character uses Social Manoeuvring against her, add her dots in this Merit as additional Doors. In other Social actions to uncover her true feelings, motives, and position, add her Merit dots to any contested rolls for her." },
-    { name: "Common Sense", minDots: 3, maxDots: 3, description: "Your character has an exceptionally sound and rational mind. With a moment’s thought, she can weigh potential courses of action and outcomes. Once per chapter as an instant action, you may ask the Storyteller one of the following questions about a task at hand or course of action. Roll Wits + Composure. If you succeed, the Storyteller must answer to the best of her ability. If you fail, you get no answer. With an exceptional success, you can ask an additional question." },
-    { name: "Consilium/Order Status", minDots: 1, maxDots: 5, description: "Status in a local Consilium or Order Caucus, granting protections, influence, and access to magical requisitions such as Artifacts, Imbued Items, Grimoires, Libraries, Mentors, Hallows, Sanctums, and similar resources. Order Status also unlocks group-specific advantages and teachings." },
-    { name: "Contacts", maxDots: 5, hasSpecialty: true, specialtyPlaceholder: "Sphere or source", description: "Contacts provide your character with information. Each dot in this Merit represents a sphere or organization with which the character can garner information. For example, a character with Contacts ••• might have Bloggers, Drug Dealers, and Financial Speculators for connections. Contacts do not provide services, only information. This may be face-to-face, via email, by telephone, or even by séance in some strange instances." },
-    { name: "Crack Driver", maxDots: 3, description: "Your character’s an ace at the wheel, and nothing shakes his concentration. So long as he’s not taking any actions other than driving (and keeping the car safe), add his Composure to any rolls to Drive. Any rolls to disable his vehicle suffer a penalty equal to his Composure as well. With the three-dot version, once per turn he may take a Drive action reflexively." },
-    { name: "Danger Sense", minDots: 2, maxDots: 2, description: "You gain a +2 modifier on reflexive Wits + Composure rolls for your character to detect an impending ambush." },
-    { name: "Defensive Combat", minDots: 1, maxDots: 1, description: "Your character is trained in avoiding damage in combat. Use her Brawl or Weaponry to calculate Defense, rather than Athletics. Your character can learn both versions of this Merit, allowing you to use any of the three Skills to calculate Defense. However, you cannot use Weaponry to calculate Defense unless she actually has a weapon in her hand." },
-    { name: "Demolisher", maxDots: 3, description: "Your character has an innate feel for the weak points in objects. When damaging an object, she ignores one point of the object’s Durability per dot with this Merit." },
-    { name: "Destiny", minDots: 1, maxDots: 5, description: "Each chapter, gain a pool of Destiny equal to this Merit's dots. Spend a point to gain rote quality on one mundane roll before rolling, or reroll one mundane action after seeing the result. Willpower may be spent to apply Destiny to spellcasting rolls. Drawback: the character has a Doom that can shape her fate tragically." },
-    { name: "Direction Sense", minDots: 1, maxDots: 1, description: "Your character has an innate sense of direction and is always aware of her location in space. She always knows which direction she faces, and never suffers penalties to navigate or find her way." },
-    { name: "Double Jointed", minDots: 2, maxDots: 2, description: "Your character might have been a contortionist or spent time practicing yoga. She can dislodge joints when need be. She automatically escapes from any mundane bonds without a roll. When grappled, subtract her Dexterity from any rolls to overpower her, as long as she’s not taking any aggressive actions." },
-    { name: "Dread Geist", minDots: 3, maxDots: 3, description: "Your Geist is Rank 4." },
-    { name: "Dream", minDots: 1, maxDots: 5, description: "Once per chapter, after at least four hours of sleep or meditation, ask yes-or-no questions through prophetic dreams. The Storyteller must answer accurately, with 'maybe' if appropriate. Ask up to a number of questions equal to this Merit's dots." },
-    { name: "Egregore", minDots: 1, maxDots: 5, description: "Mysterium initiation into deeper Order secrets. Each dot grants an additional level of participation in the egregore, including teamwork ritual benefits, broader Status recognition, remote Library access and information benefits, improved magical tools, and sympathetic connection to Order members in an Order Sanctum." },
-    { name: "Eidetic Memory", minDots: 2, maxDots: 2, description: "Your character recalls events and details with pinpoint accuracy. You do not have to make rolls for your character to remember past experiences. When making Intelligence + Composure (or relevant Skill) rolls to recall minute facts from swaths of information, take a +2 bonus." },
-    { name: "Encyclopaedic Knowledge", minDots: 2, maxDots: 2, description: "Choose a Skill. Due to an immersion in academia, pop culture, or a hobby obsession, your character has collected limitless factoids about the topic, even if she has no dots in the Skill." },
-    { name: "Enhanced Item", minDots: 1, maxDots: 10, hasSpecialty: true, specialtyPlaceholder: "Enhanced Item", description: "An item permanently altered by indefinite Duration spells. Each purchased dot provides one dot worth of spells, though dots above 5 count as half-dots for spells. Dots may also improve the item directly by adding 1 tool bonus, 1 Structure, or 1 Durability per dot. Can be combined with Imbued Item but not Artifact." },
-    { name: "Eye for the Strange", minDots: 2, maxDots: 2, description: "While your character does not necessarily possess a breadth of knowledge about the supernatural, she knows the otherworldly when she sees it. By perusing evidence, she can determine whether something comes from natural or supernatural origins. Roll Intelligence + Composure. With a success, the Storyteller must tell you if the scene has a supernatural cause and provide one piece of found information that confirms the answer. With an exceptional success, she must give you a bit of supernatural folklore that suggests what type of creature caused the problem. If the problem was mundane, an exceptional success gives an ongoing +2 to all rolls to investigate the event, due to her redoubled certainty in its natural causation." },
-    { name: "Fame", maxDots: 3, description: "Your character is recognized within a certain sphere, for a certain skill, or because of some past action or stroke of luck. This can mean favours and attention; it can also mean negative attention and scrutiny. When choosing the Merit, define what your character is known for. As a rule of thumb, one dot means local recognition, or reputation within a confined subculture. Two dots mean regional recognition by a wide swath of people. Three dots mean worldwide recognition to anyone that might have been exposed to the source of the fame. Each dot adds a die to any Social rolls among those who are impressed by your character’s celebrity." },
-    { name: "Familiar", minDots: 2, maxDots: 4, description: "Bonded to an ephemeral Familiar such as a ghost, spirit, or Goetia. At 2 dots, the Familiar is Rank 1; at 4 dots, Rank 2. The Familiar may exist in Twilight or be Fettered to an item or animal." },
-    { name: "Fast Reflexes", maxDots: 3, description: "+1 Initiative per dot Your character’s reflexes impress and astound; she’s always fast to react." },
-    { name: "Fast Spells", minDots: 2, maxDots: 2, description: "Aimed spells move with bullet-like speed. Targets may not apply Defense against your Aimed Spell rolls unless they use a power that specifically allows Defense against firearms." },
-    { name: "Fast-Talking", maxDots: 5, description: "Prerequisites: Manipulation •••, Subterfuge ••" },
-    { name: "Fighting Finesse", minDots: 2, maxDots: 2, description: "Choose a Specialty in Weaponry or Brawl when you purchase this Merit. Your character’s extensive training in that particular weapon or style has allowed them to benefit more from their alacrity and agility than their strength. You may substitute your character’s Dexterity for her Strength when making rolls with that Specialty. This Merit may be purchased multiple times to gain its benefit with multiple Specialties." },
-    { name: "Firefight", maxDots: 3, description: "Your character is comfortable with a gun. She’s been trained in stressful situations, and knows how to keep herself from being shot, while still shooting at her opponents. This Style is about moving, strafing, and taking shots when you get them. It’s not a series of precision techniques; it’s for using a gun practically in a real-world situation." },
-    { name: "Fixer", minDots: 2, maxDots: 2, description: "Your character is people that knows people. She can not only get in touch with the right people to do a job, but she can get them at the best possible prices. When hiring a service, reduce the Availability score of the service by one dot." },
-    { name: "Fleet of Foot", maxDots: 3, description: "Your character is remarkably quick and runs far faster than his frame suggests. He gains +1 Speed per dot, and anyone pursuing him suffers a -1 per dot to any foot chase rolls." },
-    { name: "Giant", minDots: 3, maxDots: 3, description: "Your character is massive. She’s well over six feet tall, and crowds’ part when she approaches. She’s Size 6 and gains +1 Health. Available only at character creation." },
-    { name: "Good Time Management", minDots: 1, maxDots: 1, description: "Your character has vast experience managing complex tasks, keeping schedules, and meeting deadlines. When taking an extended action, halve the time required between rolls." },
-    { name: "Grappling", maxDots: 5, description: "Your character has trained in wrestling, or one of many grappling martial arts." },
-    { name: "Grave Goods", maxDots: 5, description: "Your character wants and wants and takes and takes. To her, the phrase “you can’t take it with you” just means you’re not trying hard enough. She has gathered a cache of ghostly objects, perhaps snatched from the Underworld or given to her by ghostly lovers or even buried in her own empty tomb." },
-    { name: "Greyhound", minDots: 1, maxDots: 1, description: "Your character works best when chasing or being chased; the hunt is in his blood. When in a chase, you receive the effects of an exceptional success on three successes instead of five." },
-    { name: "Grimoire", minDots: 1, maxDots: 5, description: "A Grimoire containing rotes. Each dot allows the Grimoire to contain two rotes of any Arcanum rating. A capable mage may learn those rotes or cast from the Grimoire to gain rote quality." },
-    { name: "Hallow", minDots: 1, maxDots: 5, description: "A Hallow that produces 1 Mana per dot per day. Unharvested Mana forms tass, and the Hallow can store up to three times its dots in tass before going dormant until harvested. May be shared within a cabal." },
-    { name: "Hardy", maxDots: 3, description: "Your character’s body goes further than it right-fully should. Add the dots in this Merit to any rolls to resist disease, poison, deprivation, unconsciousness, or suffocation." },
-    { name: "Heavy Weapons", maxDots: 5, description: "Your character is trained with heavy weapons which require strength, wide range, and follow through more than direct speed and accuracy. This Style may be used with a two-handed weapon such as a claymore, chainsaw, pike, or an uprooted street sign." },
-    { name: "High Speech", minDots: 1, maxDots: 1, description: "The character can use High Speech as a Yantra in spellcasting." },
-    { name: "Hobbyist Clique", minDots: 2, maxDots: 2, description: "Your character is part of a group of hobbyists that specialize in one area, represented by a Skill. It may be a book club, a coven, a political party, or any group brought together by a common interest. When the group’s support is available, you benefit from the 9-again quality on rolls involving the group’s chosen Skill. As well, the clique offers two additional dice on any extended actions involving that Skill." },
-    { name: "Holistic Awareness", minDots: 1, maxDots: 1, description: "Your character is skilled at non-traditional healing methods. While scientific minds might scoff, he can provide basic medical care with natural means. He knows what herbs can stem an infection, and what minerals will stave off a minor sickness. Unless your patient suffers wound penalties from lethal or aggravated wounds, you do not need traditional medical equipment to stabilize and treat injuries. With access to woodlands, a greenhouse, or other source of diverse flora, a Wits + Survival roll allows your character to gather all necessary supplies." },
-    { name: "Imbued Item", minDots: 1, maxDots: 10, hasSpecialty: true, specialtyPlaceholder: "Imbued Item", description: "An item storing a triggered spell and Mana to cast it. Each purchased dot reflects one dot worth of the stored spell, using the highest Arcanum if multiple Arcana are involved; Utility Attainments add 1 dot each. Extra dots beyond spell cost add 2 Mana each as battery capacity. Can be combined with Enhanced Item but not Artifact." },
-    { name: "Improvised Weaponry", maxDots: 3, description: "Prerequisites: Wits •••, Weaponry •" },
-    { name: "Indomitable", minDots: 2, maxDots: 2, description: "Prerequisite: Resolve •••" },
-    { name: "Infamous Mentor", minDots: 1, maxDots: 5, description: "Your Mentor is especially famous or notorious. As long as your character invokes that reputation, she gains access to social leverage and Status tied to the Mentor's standing, along with Social Merits equal to twice this Merit's dots." },
-    { name: "Inspiring", minDots: 3, maxDots: 3, description: "Your character’s passion inspires those around her to greatness. With a few words, she can redouble a group’s confidence or move them to action." },
-    { name: "Interdisciplinary Speciality", minDots: 1, maxDots: 1, description: "Choose a Specialty that your character possesses when you purchase this Merit. You can apply the +1 from that Specialty on any Skill with at least one dot, provided it’s justifiable within the scope of the fiction. For example, a doctor with a Medicine Specialty in Anatomy may be able to use it when targeting a specific body part with Weaponry but could not with a general strike." },
-    { name: "Investigative Aide", minDots: 1, maxDots: 1, description: "Your character has one particular knack that can contribute amazingly to an investigation. Choose a Skill when purchasing this Merit; when making rolls to Uncover Clues, she achieves exceptional success on three successes instead of five. As well, Clues that come from her use of that Skill start with one additional element." },
-    { name: "Investigative Prodigy", maxDots: 5, description: "Your character investigates instinctively and can intuit details and connections in a scene without much time. He’s a veritable Sherlock Holmes. Instead of simply uncovering Clues or not uncovering Clues when investigating, your character discovers multiple Clues in a single action. Your character can uncover Clues equal to his successes or his Merit dots as an instant action, whichever is lower." },
-    { name: "Iron Skin", maxDots: 4, description: "Prerequisites: Martial Arts •• or Street Fighting ••, Stamina •••" },
-    { name: "Iron Stamina", maxDots: 3, description: "Each dot eliminates a negative modifier (on a one-for-one basis) when resisting the effects of fatigue or injury. For example: A character with Iron Stamina •• is able to ignore up to a -2-modifier brought on by fatigue. The Merit also counteracts the effects of wound penalties. So, if all of your character’s Health boxes are filled (which normally imposes a -3 penalty to his actions) and he has Iron Stamina •, those penalties are reduced to -2. This Merit cannot be used to gain positive modifiers for actions, only to cancel out negative ones." },
-    { name: "Iron Will", minDots: 2, maxDots: 2, description: "Your character’s resolve is unwavering. When spending Willpower to contest or resist in a Social interaction, you may substitute your character’s Resolve for the usual Willpower bonus. If the roll is contested, roll with 8-again." },
-    { name: "Language", minDots: 1, maxDots: 1, hasSpecialty: true, specialtyPlaceholder: "Language", description: "Your character is skilled with an additional language, beyond her native tongue. Choose a language each time you buy this Merit. Your character can speak, read, and write in that language." },
-    { name: "Lex Magica", minDots: 2, maxDots: 2, description: "In an official Silver Ladder role, your character gains social protection from others' maneuvering, cannot be influenced by Willpower-boosted Social actions or magic, and may use Silver Ladder Status or Consilium Status as a Yantra for spells enforcing the Lex Magica, worth half the dots used rounded up." },
-    { name: "Library", maxDots: 3, specialtyPlaceholder: "Mental Skill", hasSpecialty: true, description: "Your character has access to a plethora of information about a given topic. When purchasing this Merit, choose a Mental Skill. The Library covers that purview. On any extended roll involving the Skill in question, add the dots in this Merit." },
-    { name: "Light Weapons", maxDots: 5, description: "Your character is trained with small hand-to-hand weapons which favor finesse over raw power. These maneuvers may only be used with one-handed weapons with a damage rating of two or less." },
-    { name: "Mana Sensitivity", minDots: 1, maxDots: 1, description: "Your character's mundane senses pick up on Mana. Hallows and stored Mana trigger Peripheral Mage Sight even without an active magical effect." },
-    { name: "Manic States", maxDots: 5, description: "Once per game session, reflexively spend a point of Willpower to bring about a manic state for the scene. Ignore the negative effects of the Persistent Condition for the scene. Additionally, take a pool of dice equal to your Merit dots, and divide them among any rolls during the scene as you see fit. Any roll where you used these dice gains 8-again." },
-    { name: "Marksmanship", maxDots: 3, description: "When prepared and aimed, a gun is an ideal killing machine. Your character has trained to take advantage of the greatest features of a gun, usually a rifle, but this Style can be used with any gun. Because of the discipline and patience required for Marksmanship, your character cannot use her Defense during any turn in which she uses one of these maneuvers. These maneuvers may only be used after aiming for at least one turn." },
-    { name: "Martial Arts", maxDots: 5, description: "Your character is trained in one or more formal martial arts styles. This may have come from a personal mentor, a dojo, or a self-defense class. It may have been for exercise, protection, show, or tradition. These maneuvers may only be used unarmed, or with weapons capable of using the Brawl Skill, such as a punch dagger, or a weapon using the Shiv Merit (see below)." },
-    { name: "Masque", minDots: 1, maxDots: 5, description: "A Guardian of the Veil persona with distinct traits and capabilities. Spending Willpower dons the Masque, granting different benefits by dot level: alternate Virtue and Vice, Specialties, Signature Nimbus, modified Acts of Hubris, and up to 5 dots of identity-appropriate Merits." },
-    { name: "Meditative Mind", maxDots: 4, description: "Your character’s meditation is far more fulfilling than for other characters. With the one-dot version of this Merit, the character does not suffer environmental penalties to meditation, even from wound penalties." },
-    { name: "Memento", minDots: 3, maxDots: 3, hasSpecialty: true, specialtyPlaceholder: "Memento", description: "Your character has a Memento." },
-    { name: "Mentor", maxDots: 5, description: "This Merit gives your character a teacher that provides advice and guidance. He acts on your character’s behalf, often in the background, and sometimes without your character’s knowledge. While Mentors can be highly competent, they almost always want something in return for their services. The dot rating determines the Mentor’s capabilities, and to what extent he’ll aid your character." },
-    { name: "Multilingual", minDots: 1, maxDots: 1, description: "Your character has a strong affinity for language acquisition. Each time you purchase this Merit, choose two languages. Your character can speak conversationally in those languages. With an Intelligence + Academics roll, he may also read enough of the language to understand context." },
-    { name: "Mystery Cult Influence", minDots: 3, maxDots: 5, description: "Influence over a Mystery Cult without being one of its subordinate members. Gain the same level of benefits as Mystery Cult Initiation while retaining independence from the cult." },
-    { name: "Mystery Cult Initiation", maxDots: 5, description: "Cults are far more common than people would like to admit.. “Mystery cult” is the catch-all term for a phenomenon ranging from secret societies couched in fraternity houses, to scholarly cabals studying the magic of classical symbolism, to mystical suicide cults to the God-Machine." },
-    { name: "Occultation", minDots: 1, maxDots: 3, description: "Mystically obscures the character. Subtract this Merit's dots from attempts to read her aura, scrutinize her Nimbus, or magically discern truths about her. Also raises Withstand for sympathetic targeting to at least this Merit's dots. May be lost if the character becomes publicly well known." },
-    { name: "Parkour", maxDots: 5, description: "Prerequisites: Dexterity •••, Athletics ••" },
-    { name: "Patient", minDots: 1, maxDots: 1, description: "Your character knows how to pace herself and take the time to do the job right the first time. When taking an extended action, you may make two additional rolls, above what your Attribute + Skill allows." },
-    { name: "Police Tactics", maxDots: 3, description: "Your character is trained in restraint techniques, often used by law enforcement officers. This may reflect formal training, or lessons from a skilled practitioner." },
-    { name: "Potent Nimbus", minDots: 1, maxDots: 2, description: "Your Nimbus has especially strong effects. Add 2 effective Gnosis for Nimbus Tilt at 1 dot or 4 effective Gnosis at 2 dots, and add this Merit's dots to rolls to flare your Nimbus." },
-    { name: "Potent Resonance", minDots: 2, maxDots: 2, description: "Whenever someone scrutinizes your Signature Nimbus with Mage Sight, they are also subjected to the effects of your Immediate Nimbus and its Tilt." },
-    { name: "Prelacy", minDots: 1, maxDots: 4, description: "A Seer casts in an Exarch's name. Benefits increase with each dot, including the Mystery Commands Condition, an Exarch-symbol Yantra worth half Prelacy dots rounded up, an Attainment tied to the Exarch's symbolism, and a soul-stone-based Demesne becoming a Verge tied to that Exarch." },
-    { name: "Professional Training", maxDots: 5, hasSpecialty: true, specialtyPlaceholder: "Profession", description: "Your character has extensive training in a particular profession, which offers distinct advantages in a handful of fields. When choosing this Merit, choose or create a Profession for your character (see the sidebar). Mark the two Asset Skills on your character sheet. The advantages of Professional Training relate directly to those Asset Skills." },
-    { name: "Pusher", minDots: 1, maxDots: 1, description: "Your character tempts and bribes as second nature. Any time a mark in a Social interaction accepts his soft leverage, open a Door as if you’d satisfied his Vice as well as moving the impression up on the chart." },
-    { name: "Quick Draw", minDots: 1, maxDots: 1, description: "Choose a Specialty in Weaponry or Firearms when you purchase this Merit. Your character has trained in that weapon or style enough that pulling the weapon is his first reflex. Drawing or holstering that weapon is considered a reflexive action and can be done any time his Defence applies." },
-    { name: "Reconciler", maxDots: 3, description: "Your character is an expert at bringing closure to issues and making amends. When undertaking a Social Maneuver to right a wrong or broker peace, remove a number of Doors equal to her dots in this Merit." },
-    { name: "Relentless", minDots: 1, maxDots: 1, description: "Your character will not stop running, whether away from a pursuer or toward prey. In any chase your opponents must achieve two additional successes against yours to catch her or elude her." },
-    { name: "Resources", maxDots: 5, description: "This Merit reflects your character’s disposable in-come. She might live in an upscale condo, but if her income is tied up in the mortgage and child support payments, she might have little money to throw around. Characters are assumed to have basic necessities without Resources." },
-    { name: "Retainer", maxDots: 5, description: "Your character has an assistant, sycophant, servant, or follower on whom she can rely. Establish who this companion is, and how he was acquired. It may be as simple as a paycheck. He might owe your character his life. However, it happened, your character has a hold on him." },
-    { name: "Retribution", maxDots: 5, description: "Your character isn’t necessarily a practiced, learned fighter, but when she sees injustice, she gets a mean strike like nothing else. To use these abilities, your character must suffer or witness harm to someone she cares about or feels responsibility toward. This doesn’t have to happen in the same scene, but she must be actively pursuing retribution or the effects end. With loved ones whose lives were in true danger, she does not need to directly witness the harm — she simply has to be made aware of it." },
-    { name: "Safe Place", maxDots: 5, description: "Your character has somewhere she can go where she can feel secure. While she may have enemies that could attack her there, she’s prepared and has the upper hand. The dot rating reflects the security of the place. The actual location, the luxury, and the size are represented by equipment. A one-dot Safe Place might be equipped with basic security systems or a booby trap at the windows and door. A five-dot could have a security crew, infrared scanners at every entrance, or trained dogs. Each place can be an apartment, a mansion, or a hidey-hole." },
-    { name: "Sanctum", minDots: 1, maxDots: 5, description: "A secure magical refuge tied to a Safe Place. Add Sanctum dots to Gnosis within it for determining spell control. For 3 additional dots beyond the normal rating, the Sanctum also includes a Demesne." },
-    { name: "Seizing the Edge", minDots: 2, maxDots: 2, description: "Your character is always ready for a chase. Whether to escape a threat or hunt down a rival, she’s always geared and ready to go. She always has the Edge in the first turn of a chase scene. Additionally, the opponent must make a successful Wits + Composure roll, as if being ambushed, or your character does not have to account for her Speed or Initiative when calculating needed successes in the first turn." },
-    { name: "Shadow Name", minDots: 1, maxDots: 3, description: "A strongly developed magical identity. Its symbolism may be used as a persona Yantra worth this Merit's dots, and it protects against identification, sympathetic targeting, and mundane efforts to connect the mage's mundane and magical identities." },
-    { name: "Shiv", maxDots: 2, description: "Your character carries small, concealable weapons for use in a tussle. Rolls to detect the concealed weapon suffer your character’s Weaponry score as a pen-alty. With the one-dot version, he can conceal a weapon with a zero damage rating. The two-dot version can conceal a one damage rating weapon. Your character may use the Brawl Skill to use this weapon." },
-    { name: "Sleight of Hand", minDots: 2, maxDots: 2, description: "Your character can pick locks and pockets without even thinking about it. She can take one Larceny-based instant action reflexively in a given turn. As well, her Larceny actions go unnoticed unless someone is trying specifically to catch her." },
-    { name: "Small Unit Tactics", minDots: 2, maxDots: 2, description: "Your character is a proficient leader in the field. She can organize efforts and bark orders to remarkable effect. Once per scene, when making a coordinated action that was planned in advance, spend a point of Willpower and an instant action. A number of characters equal to your character’s Presence can benefit from the +3-bonus gained from the Willpower expenditure." },
-    { name: "Small-Framed", minDots: 2, maxDots: 2, description: "Your character is diminutive. He’s not five feet, and it’s easy to walk into him without noticing. He’s Size 4, and thus has one fewer Health box. He gains +2 to any rolls to hide or go unnoticed, and this bonus might apply any time being smaller would be an advantage, such as crawling through smaller spaces. Available only at character creation." },
-    { name: "Spin Doctor", minDots: 1, maxDots: 1, description: "Your character can fast-talk and sell bullshit stories as if they were completely flawless. When suffering from Tainted Clues, your character does not ignore successes. Instead, apply a -1 penalty for each relevant Tainted Clue. Using a Tainted Clue only levies a total -2 penalty with this Merit, which includes the -1 taken in lieu of ignoring successes." },
-    { name: "Staff", maxDots: 5, description: "Your character has a crew of workers or assistants at his disposal. They may be housekeepers, designers, research assistants, animators, cheap thugs, or whatever else makes sense. For every dot in this Merit, choose one type of assistant, and one Skill. At any reasonable time, his staff can take actions using that Skill. These actions automatically garner a single success. While not useful in contested actions, this guarantees success on minor, mundane activities. Note that your character may have employees without requiring the Staff Merit; Staff simply adds a mechanical advantage for those groups." },
-    { name: "Status", maxDots: 5, hasSpecialty: true, specialtyPlaceholder: "Group", description: "Your character has standing, membership, authority, control over, or respect from a group or organization. This can reflect official standing, or merely informal respect. No matter the source, your character enjoys certain privileges within that structure." },
-    { name: "Street Fighting", maxDots: 5, description: "Your character learned to fight on the mean streets. She may have had some degree of formal training, but the methodology came from the real world, in dangerous circum-stances. Street Fighting isn’t about form and grace, it’s about staying alive. These maneuvers may only be used unarmed, or with weapons capable of using the Brawl Skill, such as punch daggers, or weapons concealed with the Shiv Merit (above)." },
-    { name: "Striking Looks", maxDots: 2, description: "Your character is stunning, alarming, commanding, repulsive, threatening, charming, or otherwise worthy of attention. Determine how your character looks and how people react to that. For one dot, your character gets a +1 bonus on any Social rolls that would be influenced by his looks. For two dots, the benefit increases to +2. Depending on the particulars, this might influence Expression, Intimidation, Persuasion, Subterfuge, or other rolls." },
-    { name: "Stunt Driver", maxDots: 4, description: "Your character is an expert behind the wheel and can push a vehicle beyond normal limits. Each dot of this Merit grants access to another driving technique." },
-    { name: "Supernatural Membership", maxDots: 5, description: "Your krewe has various living members with exceptional abilities. When defining living members of your krewe, you may create characters with Supernatural Merit dots equal to twice the krewe’s rating in Supernatural Membership. Such characters always roll their best dice pool to activate their Supernatural Merits. If a Supernatural Merit has a Willpower cost, they ignore it, but may only use the Merit once per chapter." },
-    { name: "Sympathetic", minDots: 2, maxDots: 2, description: "Your character is very good at letting others get close. This gives him an edge in getting what he wants. At the beginning of a Social manoeuvring attempt, you may choose to accept a Condition such as Leveraged, Swooned, or Vulnerable in order to immediately eliminate two of the subject’s Doors." },
-    { name: "Table Turner", minDots: 1, maxDots: 1, description: "Prerequisites: Composure •••, Manipulation •••, Wits •••" },
-    { name: "Takes One to Know One", minDots: 1, maxDots: 1, description: "Normally, when Uncovering a Clue, your character suffers a -2 penalty if the crime aligns with his Vice. However, it takes a criminal to know a criminal, and your character has a deep-seated understanding of his particular weakness. Instead, take a +2 and the 9-again quality on any investigation rolls when the crime aligns with your character’s particular Vice. The successful investigation is considered fulfilling his Vice." },
-    { name: "Taste", minDots: 1, maxDots: 1, description: "Your character has refined tastes, and can identify minor details in fashion, food, architecture, and other forms of artistry and craftsmanship. Not only does this give her an eye for detail, it makes her a centre of attention in critical circles. She can also appraise items within her area of expertise. With a Wits + Skill roll, depending on the creation in question (Expression for poetry, Crafts for architecture, for example), your character can pick out obscure details about the item that other, less discerning minds would not. For each success, ask one of the following questions, or take a +1 bonus to any Social rolls pertaining to groups interested in the art assessed for the remainder of the scene." },
-    { name: "Techné", minDots: 2, maxDots: 2, hasSpecialty: true, specialtyPlaceholder: "Focus or Field", description: "Choose a Free Council cultural, scientific, or artistic focus such as computer networking. That focus counts as an Order tool when included in spellcasting, and Sleepers engaged in that focus may also count as a separate Order tool for non-obvious spells. Teamwork spellcasting with the same focus grants 8-again to the leader's roll. May be purchased multiple times for different fields." },
-    { name: "Tolerance for Biology", minDots: 2, maxDots: 2, description: "Most people turn away at the sight of blood, other bodily fluids, or exotic biology. Your character has seen enough that nothing turns her stomach. When other characters must resist shock or physical repulsion from the disgusting and morbid, your character stands her ground. You do not need to make Composure, Stamina, or Resolve rolls to withstand the biologically strange. This doesn’t mean she’s immune to fear; she’s just used to nature in all its nasty forms." },
-    { name: "Trained Observer", maxDots: 3, description: "Your character has spent years in the field, catching tiny details and digging for secrets. She might not have a better chance of finding things, but she has a better chance of finding important things. Any time you make a Perception roll (usually Wits + Composure), you benefit from the 9-again quality. With the three-dot version, you get 8-again." },
-    { name: "True Friend", minDots: 3, maxDots: 3, description: "Your character has a True Friend. While that friend may have specific functions covered by other Merits (Allies, Contacts, Retainer, Mentor, et cetera), True Friend represents a deeper, truly trusting relationship that cannot be breached. Unless your character does something egregious to cause it, her True Friend will not betray her. Additionally, the Storyteller cannot kill her True Friend as part of a plot without your express permission. Any rolls to influence a True Friend against your character suffer a five-die penalty. In addition, once per story, your character can regain one spent Willpower by having a meaningful interaction with her True Friend." },
-    { name: "Unarmed Defense", maxDots: 5, description: "Prerequisites: Dexterity •••, Brawl ••, Defensive Combat: Brawl" },
-    { name: "Untouchable", minDots: 1, maxDots: 1, description: "Your character commits crimes and is always a step ahead of pursuers. Because of his methodical planning, any roll to investigate him suffers the Incomplete Clue tag unless it achieves exceptional success." },
-    { name: "Vice-Ridden", minDots: 2, maxDots: 2, description: "Your character is one of the worst examples of humanity in the Chronicles of Darkness. He has two Vices, although he may still only regain one Willpower per scene he indulges himself." },
-    { name: "Virtuous", maxDots: 2, description: "Your character is a light of good in the Chronicles of Darkness. She has two Virtues. The limitations of how many times she may refresh Willpower using a Virtue remain the same, but it’s up to you which Virtue she uses each time." }
+export const MERIT_LIST = [
+  {
+    "name": "Adamant Hand",
+    "minDots": 2,
+    "maxDots": 2,
+    "hasSpecialty": true,
+    "specialtyPlaceholder": "Athletics, Brawl or Weaponry",
+    "description": "Choose a qualifying Athletics, Brawl, or Weaponry fighting style. You can incorporate that style into instant spellcasting as a reflexive Order-tool Yantra, using its action and timing restrictions; the Skill and Order prerequisites still apply.",
+    "requirements": "Adamantine Arrow Status 1; chosen Athletics, Brawl or Weaponry Skill at 3+ dots.",
+    "source_citation": "Mage: The Awakening 2e, p. 100"
+  },
+  {
+    "name": "Advanced Library",
+    "minDots": 1,
+    "maxDots": 5,
+    "hasSpecialty": true,
+    "specialtyPlaceholder": "Topics",
+    "description": "Choose one restricted supernatural topic per dot. Consulting your library once per topic per story grants the Informed Condition for that topic; Informed upgrades a qualifying roll result rather than giving a standing bonus.",
+    "requirements": "Library 3; Safe Place rating at least equal to Advanced Library rating.",
+    "source_citation": "Mage: The Awakening 2e, p. 105"
+  },
+  {
+    "name": "Allies",
+    "maxDots": 5,
+    "description": "Choose a group or person with whom you have influence. Once per session you can ask for a favor within the Allies rating; greater favors require a Social roll and may create obligations. Buy separate instances for separate groups."
+  },
+  {
+    "name": "Alternate Identity",
+    "maxDots": 3,
+    "description": "Maintain a cover identity. At 1 dot it is an informal alias; at 2 dots it has credible supporting records; at 3 dots it can withstand thorough investigation. The Merit does not make you physically unrecognizable."
+  },
+  {
+    "name": "Ambidextrous",
+    "minDots": 3,
+    "maxDots": 3,
+    "description": "Ignore the usual off-hand penalty when using your non-dominant hand, including in combat. It does not grant an extra action or remove penalties from wielding two weapons simultaneously."
+  },
+  {
+    "name": "Anonymity",
+    "maxDots": 5,
+    "description": "Subtract Anonymity dots from attempts to identify or locate you through records or witnesses because you keep a minimal public footprint. This conflicts with Fame.",
+    "requirements": "Cannot be combined with Fame.",
+    "source_citation": "Chronicles of Darkness 2e, p. 50"
+  },
+  {
+    "name": "Architect",
+    "maxDots": 5,
+    "description": "During an extended action to build a lasting work or relationship important to you, distribute bonus dice equal to your Merit dots across its rolls. Rolls receiving these dice have 8-again."
+  },
+  {
+    "name": "Area of Expertise",
+    "minDots": 1,
+    "maxDots": 1,
+    "description": "Choose an existing Skill Specialty. Whenever it applies, its bonus increases from +1 die to +2 dice; it does not grant the whole Skill or apply outside that Specialty."
+  },
+  {
+    "name": "Armed Defense",
+    "maxDots": 5,
+    "description": "Defensive weapon style: at 1 dot lessen multi-attacker penalties when Dodging; at 2 disarm an attacker who misses against your Defense; at 3 spend Willpower to injure an attacker while Dodging; at 4 exchange weapon damage for Defense; at 5 spend Willpower to counterattack after successfully Dodging. Some maneuvers cannot be combined."
+  },
+  {
+    "name": "Artifact",
+    "minDots": 3,
+    "maxDots": 10,
+    "hasSpecialty": true,
+    "specialtyPlaceholder": "Artifact",
+    "description": "Own a Supernal item that casts its built-in effects using its own effective Gnosis, Arcana and Mana supply. Dot cost reflects the strongest Arcanum, additional effects and Attainments; an Artifact is not an unrestricted spell list."
+  },
+  {
+    "name": "Astral Adept",
+    "minDots": 3,
+    "maxDots": 3,
+    "description": "Enter the Astral Realms without visiting a dedicated place of power. Perform the personal ceremony, spend the required Willpower and meditate to begin astral travel."
+  },
+  {
+    "name": "Automotive Genius",
+    "minDots": 1,
+    "maxDots": 1,
+    "description": "When customizing a vehicle, calculate the number of allowed modifications using three times Crafts rather than twice Crafts, with additional capacity for relevant Crafts Specialties."
+  },
+  {
+    "name": "Barfly",
+    "maxDots": 2,
+    "description": "Move naturally through social venues, avoiding routine rolls to appear as though you belong. People trying to spot you as an outsider suffer a penalty equal to your Socialize rating.",
+    "minDots": 2,
+    "allowedDots": [
+      2
+    ],
+    "requirements": "Socialize 2.",
+    "source_citation": "Chronicles of Darkness 2e, p. 50"
+  },
+  {
+    "name": "Between the Ticks",
+    "minDots": 2,
+    "maxDots": 2,
+    "description": "Once per scene, exchange one point of Initiative for one die on an action that turn, or sacrifice one action die to increase Initiative by one. This is a trade, not a free bonus."
+  },
+  {
+    "name": "Cabal Theme",
+    "minDots": 1,
+    "maxDots": 1,
+    "description": "Cabal members sharing this Merit count as having one additional Shadow Name dot for persona-Yantra purposes, even if it exceeds the normal Shadow Name limit. It does not add a real Merit dot to each character."
+  },
+  {
+    "name": "Cenote",
+    "maxDots": 5,
+    "description": "Maintain access to a haunted locale that produces Plasm equal to Cenote dots per chapter. The location must be represented by an appropriate Safe Place; record where the Plasm is stored or obtained."
+  },
+  {
+    "name": "Cheap Shot",
+    "minDots": 2,
+    "maxDots": 2,
+    "description": "Reflexively distract a foe in combat: contest Dexterity + Subterfuge against Wits + Composure. If you win, they lose Defense on their next turn; repeated tricks in the scene incur a cumulative penalty."
+  },
+  {
+    "name": "Choke Hold",
+    "minDots": 2,
+    "maxDots": 2,
+    "description": "While grappling and holding someone, use the Choke maneuver. Accumulated successes beyond the target's threshold, based on Stamina, can render them unconscious for a period determined by their Stamina."
+  },
+  {
+    "name": "Close Quarters Combat",
+    "maxDots": 5,
+    "description": "Close-range fighting style: 1 dot lets you reposition into cover against gunfire; 2 lets you inflict lethal damage by smashing a grappled target into a surface; 3 exploits an armored foe's armor in a grapple; 4 improves close-combat ambushes; 5 upgrades disarm results."
+  },
+  {
+    "name": "Closed Book",
+    "maxDots": 5,
+    "description": "Increase the number of Doors required to influence you through Social Maneuvering by this Merit's dots. Add the same rating to contested Social rolls when someone tries to discover your actual feelings, motives or intentions.",
+    "requirements": "Manipulation 3 and Resolve 3.",
+    "source_citation": "Chronicles of Darkness 2e, p. 50"
+  },
+  {
+    "name": "Common Sense",
+    "minDots": 3,
+    "maxDots": 3,
+    "description": "Once per chapter, roll Wits + Composure to ask the Storyteller for a useful assessment of a proposed action. A success supplies a meaningful answer; an exceptional success allows another question."
+  },
+  {
+    "name": "Consilium/Order Status",
+    "minDots": 1,
+    "maxDots": 5,
+    "description": "Represent your influence and obligations within a local Consilium or Order Caucus. The rating determines access to political support, privileges, protected resources and requisitions under the relevant organization's rules."
+  },
+  {
+    "name": "Contacts",
+    "maxDots": 5,
+    "hasSpecialty": true,
+    "specialtyPlaceholder": "Sphere or source",
+    "description": "Choose one information network or sphere per dot. Contacts supply leads and information, not free services or material favors; those usually require Allies, Retainer or another Merit."
+  },
+  {
+    "name": "Crack Driver",
+    "maxDots": 3,
+    "description": "When you concentrate on driving, add Composure to Drive rolls and subtract it from attempts to disable your moving vehicle. At 3 dots, one Drive action each turn can be reflexive.",
+    "minDots": 2,
+    "allowedDots": [
+      2,
+      3
+    ],
+    "requirements": "Drive 3.",
+    "source_citation": "Chronicles of Darkness 2e, p. 47"
+  },
+  {
+    "name": "Danger Sense",
+    "minDots": 2,
+    "maxDots": 2,
+    "description": "Add +2 dice to reflexive Wits + Composure rolls to detect impending ambushes or comparable immediate danger before it occurs."
+  },
+  {
+    "name": "Defensive Combat",
+    "minDots": 1,
+    "maxDots": 1,
+    "description": "Choose Brawl or Weaponry. When equipped to use that Skill, substitute it for Athletics when calculating Defense. You may learn separate versions for both Skills."
+  },
+  {
+    "name": "Demolisher",
+    "maxDots": 3,
+    "description": "When damaging an object or structure, ignore one point of its Durability per dot of this Merit. This helps destroy objects, not people."
+  },
+  {
+    "name": "Destiny",
+    "minDots": 1,
+    "maxDots": 5,
+    "description": "Each chapter, receive Destiny points equal to the rating. Spend points for rote quality or a reroll on eligible mundane actions; applying Destiny to spellcasting has an additional cost. Record the linked Doom, which can complicate the character's fate."
+  },
+  {
+    "name": "Direction Sense",
+    "minDots": 1,
+    "maxDots": 1,
+    "description": "Always know your orientation and the direction you are facing, and ignore ordinary penalties to navigation that result from getting disoriented. It does not automatically reveal an unfamiliar destination."
+  },
+  {
+    "name": "Double Jointed",
+    "minDots": 2,
+    "maxDots": 2,
+    "description": "Escape mundane bindings without a roll. When defending against a grapple, subtract Dexterity from an opponent's attempts to overpower you while you refrain from aggressive action."
+  },
+  {
+    "name": "Dread Geist",
+    "minDots": 3,
+    "maxDots": 3,
+    "description": "Your accompanying Geist has Rank 4 rather than the usual lower Rank. Use the actual Rank 4 traits and limits when resolving its actions; this does not automatically increase the Sin-Eater's Synergy."
+  },
+  {
+    "name": "Dream",
+    "minDots": 1,
+    "maxDots": 5,
+    "description": "Once per chapter, after at least four hours of sleep or meditation, ask a number of prophetic yes-or-no questions up to the Merit rating. The Storyteller supplies accurate but sometimes qualified answers."
+  },
+  {
+    "name": "Egregore",
+    "minDots": 1,
+    "maxDots": 5,
+    "description": "Participate in the Mysterium's collective occult knowledge and rites. Increasing dots improve access to Order resources, shared study, magical ritual cooperation and the sympathetic or tool benefits specified for each rank.",
+    "requirements": "Mysterium Status 1.",
+    "source_citation": "Mage: The Awakening 2e, p. 101"
+  },
+  {
+    "name": "Eidetic Memory",
+    "minDots": 2,
+    "maxDots": 2,
+    "description": "Recall experiences accurately without a memory roll in ordinary situations. Gain +2 dice on appropriate rolls to retrieve a precise fact from complex information."
+  },
+  {
+    "name": "Encyclopaedic Knowledge",
+    "minDots": 2,
+    "maxDots": 2,
+    "description": "Choose an area of knowledge represented by a Skill. Recall obscure facts on a suitable Intelligence + Wits roll even when you lack formal Skill training; this supplies information, not practical competence in every related task."
+  },
+  {
+    "name": "Enhanced Item",
+    "minDots": 1,
+    "maxDots": 10,
+    "hasSpecialty": true,
+    "specialtyPlaceholder": "Enhanced Item",
+    "description": "Own an object permanently improved by one or more indefinite spells. Dot rating pays for spell effects or physical bonuses such as tool bonus, Structure or Durability; it does not cast new spells on demand."
+  },
+  {
+    "name": "Eye for the Strange",
+    "minDots": 2,
+    "maxDots": 2,
+    "description": "Examine evidence and roll Intelligence + Composure to tell whether a scene has a supernatural cause. Success reveals one confirming clue; exceptional success adds useful supernatural context or, for mundane causes, aids investigation.",
+    "requirements": "Resolve 2 and Occult 1.",
+    "source_citation": "Chronicles of Darkness 2e, p. 44"
+  },
+  {
+    "name": "Fame",
+    "maxDots": 3,
+    "description": "Define the field in which you are known. Gain one die per Fame dot on Social rolls involving people impressed by that reputation, but also attract recognition and scrutiny; it conflicts with Anonymity.",
+    "requirements": "Cannot be combined with Anonymity.",
+    "source_citation": "Chronicles of Darkness 2e, p. 50"
+  },
+  {
+    "name": "Familiar",
+    "minDots": 2,
+    "maxDots": 4,
+    "description": "Bond with a ghost, spirit or Goetia. At 2 dots it is Rank 1; at 4 it is Rank 2. Its abilities and limitations come from its own ephemeral traits, not from an automatic extra dice bonus.",
+    "allowedDots": [
+      2,
+      4
+    ],
+    "source_citation": "Mage: The Awakening 2e, p. 101"
+  },
+  {
+    "name": "Fast Reflexes",
+    "maxDots": 3,
+    "description": "Add one point of Initiative per Merit dot. The bonus improves turn order, not the number of actions you receive.",
+    "requirements": "Wits 3 or Dexterity 3.",
+    "source_citation": "Chronicles of Darkness 2e, p. 44"
+  },
+  {
+    "name": "Fast Spells",
+    "minDots": 2,
+    "maxDots": 2,
+    "description": "Your Aimed spells are defended against like firearm attacks, not ordinary melee attacks. A target cannot apply Defense unless a power specifically allows Defense against firearms.",
+    "requirements": "Firearms 2 and Time 1.",
+    "source_citation": "Mage: The Awakening 2e, p. 101"
+  },
+  {
+    "name": "Fast-Talking",
+    "maxDots": 5,
+    "description": "Social deception style: 1 dot reduces a target's Resolve/Composure protection; 2 applies a suitable external Specialty; 3 rerolls a Subterfuge failure once per scene; 4 spends Willpower to open an additional Door; 5 exploits a mark's Vice to open a Door."
+  },
+  {
+    "name": "Fighting Finesse",
+    "minDots": 2,
+    "maxDots": 2,
+    "description": "Choose a Brawl or Weaponry Specialty. You may substitute Dexterity for Strength on attacks using that Specialty; buy additional instances for additional Specialties."
+  },
+  {
+    "name": "Firefight",
+    "maxDots": 3,
+    "description": "Mobile firearm style: at 1 dot drawing a gun increases Initiative by Firearms; 2 improves covering fire with semi-automatic weapons and preserves Defense; 3 uses ricochets to bypass cover with a bashing attack."
+  },
+  {
+    "name": "Fixer",
+    "minDots": 2,
+    "maxDots": 2,
+    "description": "Use your network to secure a suitable service at one lower Availability than normal. The discount applies to obtaining services through contacts, not every purchase or item in the game.",
+    "requirements": "Contacts 2 and Wits 3.",
+    "source_citation": "Chronicles of Darkness 2e, p. 51"
+  },
+  {
+    "name": "Fleet of Foot",
+    "maxDots": 3,
+    "description": "Increase Speed by one per dot. On foot chases, those pursuing you suffer a penalty equal to your Merit rating."
+  },
+  {
+    "name": "Giant",
+    "minDots": 3,
+    "maxDots": 3,
+    "description": "Your character's Size is 6 rather than 5, giving one additional Health box. It may also affect fiction and access to constrained spaces."
+  },
+  {
+    "name": "Good Time Management",
+    "minDots": 1,
+    "maxDots": 1,
+    "description": "On an extended action, halve the time required between successive rolls. It accelerates completion but does not automatically add successes.",
+    "requirements": "Academics 2 or Science 2.",
+    "source_citation": "Chronicles of Darkness 2e, p. 44"
+  },
+  {
+    "name": "Grappling",
+    "maxDots": 5,
+    "description": "Wrestling style with cumulative maneuvers: early dots provide takedowns, joint manipulation and improved control; middle dots enable stronger locks and prone grappling; high dots can force submission or damage a locked limb. Use only maneuvers at or below your rating."
+  },
+  {
+    "name": "Grave Goods",
+    "maxDots": 5,
+    "description": "Keep a cache of ephemeral equipment for ghosts and Sin-Eaters. Produce objects whose combined Availability is constrained by your Merit dots; the objects can also serve as Essence or Plasm for appropriate consumers."
+  },
+  {
+    "name": "Greyhound",
+    "minDots": 1,
+    "maxDots": 1,
+    "description": "In a chase, reaching three successes rather than five counts as an exceptional success. The bonus applies to chasing or escaping, not unrelated Athletics rolls."
+  },
+  {
+    "name": "Grimoire",
+    "minDots": 1,
+    "maxDots": 5,
+    "description": "Own a collection of rote instructions, holding two rotes per dot. A qualified mage may study them or cast a contained rote from the book with rote quality; using the book does not automatically teach the rote permanently."
+  },
+  {
+    "name": "Hallow",
+    "minDots": 1,
+    "maxDots": 5,
+    "description": "Control a location producing one Mana per dot per day. Unharvested Mana accumulates as tass, up to the site's storage limit; harvest it through the relevant Oblation rules."
+  },
+  {
+    "name": "Hardy",
+    "maxDots": 3,
+    "description": "Add Hardy dots to rolls resisting disease, poison, deprivation, unconsciousness or suffocation. It helps resist physiological hazards rather than improving all Stamina rolls."
+  },
+  {
+    "name": "Heavy Weapons",
+    "maxDots": 5,
+    "description": "Two-handed weapon style: 1 dot trades attack dice for increased weapon damage; 2 threatens enemies entering reach; 3 sacrifices Defense to impair targets on hit; 4 spends Willpower to gain protective weapon stance; 5 spends Willpower for a devastating attack with extra aggravated damage."
+  },
+  {
+    "name": "High Speech",
+    "minDots": 1,
+    "maxDots": 1,
+    "description": "Use spoken High Speech as a Yantra when casting a spell, subject to its normal preparation and accessibility rules. It does not supply automatic fluency for ordinary conversations."
+  },
+  {
+    "name": "Hobbyist Clique",
+    "minDots": 2,
+    "maxDots": 2,
+    "description": "Draw on a group devoted to one chosen Skill. With the group's assistance, relevant rolls benefit from 9-again, and extended actions using that Skill receive two bonus dice.",
+    "requirements": "A related Skill at 2+ dots.",
+    "source_citation": "Chronicles of Darkness 2e, p. 51"
+  },
+  {
+    "name": "Holistic Awareness",
+    "minDots": 1,
+    "maxDots": 1,
+    "description": "Provide basic treatment and stabilization with natural or improvised supplies instead of conventional medical equipment, except when serious wounds require it. Gather useful ingredients with Wits + Survival where appropriate."
+  },
+  {
+    "name": "Imbued Item",
+    "minDots": 1,
+    "maxDots": 10,
+    "hasSpecialty": true,
+    "specialtyPlaceholder": "Imbued Item",
+    "description": "Own an object that activates an embedded spell by its specified trigger and can store Mana to power it. Merit's dots buy the spell and possible extra Mana capacity; effects remain limited to those actually imbued."
+  },
+  {
+    "name": "Improvised Weaponry",
+    "maxDots": 3,
+    "description": "Turn nearby objects into usable weapons: at 1 dot draw and ready a suitable improvised weapon reflexively without its usual penalty; at 2 use the object's Structure as protection; at 3 sacrifice its Structure for stronger all-out attacks."
+  },
+  {
+    "name": "Indomitable",
+    "minDots": 2,
+    "maxDots": 2,
+    "description": "Gain +2 dice when contesting supernatural influence that manipulates your thoughts or emotions. Where the power uses a resistance trait rather than a contested roll, increase the appropriate resistance by two if the rules allow.",
+    "requirements": "Resolve 3.",
+    "source_citation": "Chronicles of Darkness 2e, p. 45"
+  },
+  {
+    "name": "Infamous Mentor",
+    "minDots": 1,
+    "maxDots": 5,
+    "description": "Invoke a notorious or powerful Mentor's reputation to obtain temporary social leverage and access to their standing or Social Merits. The benefits depend on the Mentor and should not be treated as personal permanent Status."
+  },
+  {
+    "name": "Inspiring",
+    "minDots": 3,
+    "maxDots": 3,
+    "description": "Deliver a motivating speech and roll Presence + Expression. On an appropriate success, listeners receive the Inspired Condition; it must later be invoked on a relevant roll to lower the exceptional-success threshold.",
+    "allowedDots": [
+      3
+    ],
+    "requirements": "Presence 3.",
+    "source_citation": "Chronicles of Darkness 2e, p. 51"
+  },
+  {
+    "name": "Interdisciplinary Speciality",
+    "minDots": 1,
+    "maxDots": 1,
+    "description": "Choose one existing Specialty. Apply its +1 bonus to other Skills with at least one dot when the same specialized expertise genuinely applies; a medical Anatomy Specialty, for example, may assist a precise combat action."
+  },
+  {
+    "name": "Investigative Aide",
+    "minDots": 1,
+    "maxDots": 1,
+    "description": "Choose an investigative Skill. Rolls using it to Uncover Clues achieve exceptional success at three successes and produce Clues with one extra element."
+  },
+  {
+    "name": "Investigative Prodigy",
+    "maxDots": 5,
+    "description": "On a successful instant investigation, uncover more than one Clue: the number is limited by both the successes rolled and the Merit rating."
+  },
+  {
+    "name": "Iron Skin",
+    "maxDots": 4,
+    "description": "Gain one point of bashing Armor at 2 dots or two at 4 dots. Spend Willpower under the Merit rules to convert a limited amount of lethal damage you suffer to bashing.",
+    "minDots": 2,
+    "allowedDots": [
+      2,
+      4
+    ],
+    "requirements": "Martial Arts or Street Fighting 2, and Stamina 3.",
+    "source_citation": "Chronicles of Darkness 2e, p. 63"
+  },
+  {
+    "name": "Iron Stamina",
+    "maxDots": 3,
+    "description": "Ignore injury or fatigue penalties up to this Merit's rating, including wound penalties. It cancels negative modifiers but never creates a positive bonus."
+  },
+  {
+    "name": "Iron Will",
+    "minDots": 2,
+    "maxDots": 2,
+    "description": "When spending Willpower to resist Social manipulation, substitute Resolve for the ordinary Willpower dice bonus. When contesting the Social action, your dice gain 8-again.",
+    "requirements": "Resolve 4.",
+    "source_citation": "Chronicles of Darkness 2e, p. 51"
+  },
+  {
+    "name": "Language",
+    "minDots": 1,
+    "maxDots": 1,
+    "hasSpecialty": true,
+    "specialtyPlaceholder": "Language",
+    "description": "Speak, read and write one additional chosen language competently. Purchase separate instances for different languages."
+  },
+  {
+    "name": "Lex Magica",
+    "minDots": 2,
+    "maxDots": 2,
+    "description": "Your Silver Ladder office grants protection from some Social influence and lets you use appropriate Order or Consilium Status as a Yantra for spells enforcing magical law. Apply the status-based Yantra value only in qualifying situations.",
+    "requirements": "Silver Ladder Status 1.",
+    "source_citation": "Mage: The Awakening 2e, p. 102"
+  },
+  {
+    "name": "Library",
+    "maxDots": 3,
+    "specialtyPlaceholder": "Mental Skill",
+    "hasSpecialty": true,
+    "description": "Choose a field corresponding to a Mental Skill. Add Library dots on extended research or other extended rolls genuinely covered by that collection; it does not increase every roll with the Skill."
+  },
+  {
+    "name": "Light Weapons",
+    "maxDots": 5,
+    "description": "Small blade or light-weapon style: 1 dot trades weapon damage for Initiative; 2 sacrifices Defense to gain attack dice; 3 feints to improve the next strike; 4 punishes foes in reach; 5 sacrifices Defense for an attack inflicting extra aggravated damage."
+  },
+  {
+    "name": "Mana Sensitivity",
+    "minDots": 1,
+    "maxDots": 1,
+    "description": "Your Peripheral Mage Sight notices sources of Mana, including Hallows and stored tass, even without another overt spell. It identifies the presence of Mana, not automatically the full details of its owner.",
+    "requirements": "Wits 3 and Prime 1.",
+    "source_citation": "Mage: The Awakening 2e, p. 102"
+  },
+  {
+    "name": "Manic States",
+    "maxDots": 5,
+    "description": "Once per session, spend a Willpower point to enter a manic state for a scene, suppressing the negative effects of a chosen Persistent Condition. Divide bonus dice equal to Merit dots across rolls; those rolls get 8-again."
+  },
+  {
+    "name": "Marksmanship",
+    "maxDots": 3,
+    "description": "Deliberate shooting style requiring Aim and sacrificing Defense: 1 dot increases maximum Aim bonus; 2 trades weapon damage to reduce called-shot penalties; 3 prevents stray hits on missed shots; 4 makes your firing position hard to discover."
+  },
+  {
+    "name": "Martial Arts",
+    "maxDots": 5,
+    "description": "Formal Brawl style: the first dots improve precision and Defense, middle dots allow trapping and reactions against nearby foes, and advanced dots enable lethal barehanded strikes and powerful counters. Exact maneuvers depend on rating and the permitted fighting style."
+  },
+  {
+    "name": "Masque",
+    "minDots": 1,
+    "maxDots": 5,
+    "description": "Create a distinct Guardian of the Veil persona. Spending Willpower adopts it; increasing dots add persona-specific traits or benefits such as alternate Virtue/Vice, Specialties, Nimbus and identity-fitting Merits, subject to Order rules."
+  },
+  {
+    "name": "Meditative Mind",
+    "maxDots": 4,
+    "description": "At 1 dot ignore environmental and wound penalties when meditating; at 2 dots successful meditation helps Resolve + Composure rolls; at 4 dots the meditation action requires only a single success.",
+    "minDots": 1,
+    "allowedDots": [
+      1,
+      2,
+      4
+    ],
+    "source_citation": "Chronicles of Darkness 2e, p. 46"
+  },
+  {
+    "name": "Memento",
+    "minDots": 3,
+    "maxDots": 3,
+    "hasSpecialty": true,
+    "specialtyPlaceholder": "Memento",
+    "description": "Own a particular ghostly Memento. Its rating determines the type or power of the object; define that object's Key, manifestations and special abilities separately rather than assuming every Memento has the same power."
+  },
+  {
+    "name": "Mentor",
+    "maxDots": 5,
+    "description": "Choose an experienced adviser or patron. Their rating sets competence and the extent of instruction, information and favors they can provide; assistance may create demands or obligations."
+  },
+  {
+    "name": "Multilingual",
+    "minDots": 1,
+    "maxDots": 1,
+    "description": "Choose two languages: speak them conversationally, and attempt to read them well enough to grasp meaning using Intelligence + Academics. It does not provide the full literacy of the Language Merit."
+  },
+  {
+    "name": "Mystery Cult Influence",
+    "minDots": 3,
+    "maxDots": 5,
+    "description": "Lead or wield substantial influence over a Mystery Cult while remaining outside its ordinary initiation obligations. Receive cult benefits appropriate to the Merit rating and the group's defined hierarchy.",
+    "source_citation": "Mage: The Awakening 2e, p. 103"
+  },
+  {
+    "name": "Mystery Cult Initiation",
+    "maxDots": 5,
+    "description": "Belong to a defined Mystery Cult. Each dot increases rank and can grant a chosen Specialty, Skill dot or additional Merit at the listed tier; record the cult's doctrine, duties and benefits rather than treating it as an unconditional bonus."
+  },
+  {
+    "name": "Occultation",
+    "minDots": 1,
+    "maxDots": 3,
+    "description": "Penalize attempts to identify you through your Nimbus, magical traces or aura by Merit dots; sympathetic targeting against you also faces increased resistance as specified. Public fame can compromise this protection.",
+    "requirements": "Cannot be combined with Fame.",
+    "source_citation": "Mage: The Awakening 2e, p. 103"
+  },
+  {
+    "name": "Parkour",
+    "maxDots": 5,
+    "description": "Movement style: 1 dot improves foot chases and counters environmental Athletics penalties; 2 improves safe landings; 3 increases climb height with a running start; 4 allows a powerful rote-quality movement action at a cost; 5 permits reflexive Athletics movement after preparation."
+  },
+  {
+    "name": "Patient",
+    "minDots": 1,
+    "maxDots": 1,
+    "description": "Take up to two more rolls than your usual Attribute + Skill limit during an extended action. It improves persistence, not the dice rolled on each attempt."
+  },
+  {
+    "name": "Police Tactics",
+    "maxDots": 3,
+    "description": "Nonlethal restraint style: 1 dot improves Disarm or Immobilize maneuvers in a grapple; 2 makes opponents work harder to disarm or seize your weapon; 3 lets you restrain an immobilized target reflexively."
+  },
+  {
+    "name": "Potent Nimbus",
+    "minDots": 1,
+    "maxDots": 2,
+    "description": "Treat your Gnosis as higher when determining the strength of your Nimbus Tilt (by 2 effective Gnosis per dot), and add Merit dots when flaring your Nimbus. The extra Gnosis is not actual Gnosis for spellcasting."
+  },
+  {
+    "name": "Potent Resonance",
+    "minDots": 2,
+    "maxDots": 2,
+    "description": "When another mage scrutinizes your Signature Nimbus, that person is also subjected to your Immediate Nimbus and its Tilt. This is not a passive bonus on all your spells.",
+    "allowedDots": [
+      2
+    ],
+    "requirements": "Gnosis 3.",
+    "source_citation": "Mage: The Awakening 2e, p. 103"
+  },
+  {
+    "name": "Prelacy",
+    "minDots": 1,
+    "maxDots": 4,
+    "description": "As a Seer invested in an Exarch's authority, obtain benefits at specified Prelacy ranks: an Exarchal command, an appropriate symbolic Yantra, Exarch-related Attainment and stronger authority over a linked Verge or Demesne.",
+    "requirements": "Seers of the Throne Status 3.",
+    "source_citation": "Mage: The Awakening 2e, p. 103"
+  },
+  {
+    "name": "Professional Training",
+    "maxDots": 5,
+    "hasSpecialty": true,
+    "specialtyPlaceholder": "Profession",
+    "description": "Select a profession and its Asset Skills. At lower ranks gain professional Contacts and 9-again on Asset Skill rolls; higher ranks add Specialties, Skill advancement and a Willpower-funded rote-quality roll."
+  },
+  {
+    "name": "Pusher",
+    "minDots": 1,
+    "maxDots": 1,
+    "description": "In Social Maneuvering, when the target accepts your soft leverage, treat that as also satisfying their Vice to open another Door and improve the impression. It only applies to accepted leverage."
+  },
+  {
+    "name": "Quick Draw",
+    "minDots": 1,
+    "maxDots": 1,
+    "description": "Choose a Weaponry or Firearms Specialty. Draw or holster a matching weapon reflexively when Defense would normally apply; it does not grant a separate attack."
+  },
+  {
+    "name": "Reconciler",
+    "maxDots": 3,
+    "description": "When undertaking Social Maneuvering to make amends or broker a genuine reconciliation, remove a number of Doors equal to the Merit's rating."
+  },
+  {
+    "name": "Relentless",
+    "minDots": 1,
+    "maxDots": 1,
+    "description": "During a chase, opponents need two more successes than normal to catch you or escape you. This works when you are either pursuer or quarry."
+  },
+  {
+    "name": "Resources",
+    "maxDots": 5,
+    "description": "Your rating determines discretionary spending power. Once per session, obtain goods or services within your Resources rating; less costly items are easier to acquire, while buying above your rating can temporarily reduce Resources.",
+    "source_citation": "Chronicles of Darkness 2e, p. 53"
+  },
+  {
+    "name": "Retainer",
+    "maxDots": 5,
+    "description": "Choose a reliable servant, assistant or follower. The rating determines their competence and the service they can provide. Retainers take actions with their own traits rather than granting an automatic bonus to every roll you make."
+  },
+  {
+    "name": "Retribution",
+    "maxDots": 5,
+    "description": "When actively retaliating for harm to someone you protect, unlock rating-dependent bonuses such as tracking the wrongdoer, damage in all-out attacks, temporary protection and turning an inflicted Condition or Tilt against the aggressor. Benefits stop when the vendetta ends."
+  },
+  {
+    "name": "Safe Place",
+    "maxDots": 5,
+    "description": "Maintain a secured location. While inside, add Safe Place dots to Initiative and apply the rating as a penalty to intruders' attempts to break in; carefully prepared traps can add further protection."
+  },
+  {
+    "name": "Sanctum",
+    "minDots": 1,
+    "maxDots": 5,
+    "description": "Protect a magical refuge attached to Safe Place. Add Sanctum dots to effective Gnosis only for spell-control limits while within it; higher investment may establish a Demesne."
+  },
+  {
+    "name": "Seizing the Edge",
+    "minDots": 2,
+    "maxDots": 2,
+    "description": "Start a chase with the Edge automatically. Unless the opponent notices the start with Wits + Composure, you can ignore some normal first-turn Speed and Initiative requirements."
+  },
+  {
+    "name": "Shadow Name",
+    "minDots": 1,
+    "maxDots": 3,
+    "description": "Define a magical identity and its symbols. Use appropriate symbolism as a persona Yantra worth the Merit rating; the identity also helps withstand spells or investigations that connect your Shadow Name to your mundane self."
+  },
+  {
+    "name": "Shiv",
+    "maxDots": 2,
+    "description": "Conceal a small brawling weapon: at 1 dot a zero-damage weapon, at 2 dots a one-damage weapon. Attempts to find it suffer a penalty based on Weaponry, and you can fight with it using Brawl."
+  },
+  {
+    "name": "Sleight of Hand",
+    "minDots": 2,
+    "maxDots": 2,
+    "description": "Take one instant Larceny action reflexively per turn. Ordinary uses of that Larceny go unnoticed unless someone is actively watching for the trick."
+  },
+  {
+    "name": "Small Unit Tactics",
+    "minDots": 2,
+    "maxDots": 2,
+    "description": "Once per scene, spend Willpower and an instant action to direct a preplanned coordinated action. Allies up to your Presence rating can receive the Willpower-related dice bonus."
+  },
+  {
+    "name": "Small-Framed",
+    "minDots": 2,
+    "maxDots": 2,
+    "description": "Reduce Size to 4 and maximum Health by one, but gain +2 dice to hide or exploit your small stature. It also changes what spaces you can plausibly enter."
+  },
+  {
+    "name": "Spin Doctor",
+    "minDots": 1,
+    "maxDots": 1,
+    "description": "When your investigation uses Tainted Clues, suffer the listed dice penalty instead of losing successes outright. The rules cap the combined penalty from a Tainted Clue used this way."
+  },
+  {
+    "name": "Staff",
+    "maxDots": 5,
+    "description": "Choose one type of helper and associated Skill per dot. When reasonably available, the staff can achieve a single automatic success on uncomplicated tasks using their assigned Skills, without making them effective in contested actions."
+  },
+  {
+    "name": "Status",
+    "maxDots": 5,
+    "hasSpecialty": true,
+    "specialtyPlaceholder": "Group",
+    "description": "Choose an organization in which you hold standing. Apply Status as a bonus to eligible Social rolls, draw on that group's resources and block lower-rated organizational favors under the frequency limits of the Merit."
+  },
+  {
+    "name": "Street Fighting",
+    "maxDots": 5,
+    "description": "Pragmatic Brawl style: 1 dot trades an attack die for improved Defense calculation; 2 inflicts an extra debuff on barehanded hits; 3 punishes prone foes; 4 spends Willpower for additional bashing damage; 5 allows a desperate preemptive counterattack while injured."
+  },
+  {
+    "name": "Striking Looks",
+    "maxDots": 2,
+    "description": "Add one or two dice to Social actions where your distinctive appearance genuinely matters, based on rating. The same memorable appearance can make you easier for others to notice or identify."
+  },
+  {
+    "name": "Stunt Driver",
+    "maxDots": 4,
+    "description": "Advanced driving style: 1 dot penalizes attacks on your moving car; 2 improves acceleration; 3 allows safe high-speed turns; 4 reduces collision damage when ramming."
+  },
+  {
+    "name": "Supernatural Membership",
+    "maxDots": 5,
+    "description": "Your krewe includes living members with supernatural abilities. Represent those members with Supernatural Merits totaling twice your rating; their uses and frequency restrictions come from the krewe rules."
+  },
+  {
+    "name": "Sympathetic",
+    "minDots": 2,
+    "maxDots": 2,
+    "description": "At the outset of Social Maneuvering, willingly accept an appropriate social Condition such as Leveraged or Swooned to immediately open two of the subject's Doors."
+  },
+  {
+    "name": "Table Turner",
+    "minDots": 1,
+    "maxDots": 1,
+    "description": "When another character starts Social Maneuvering against you, spend Willpower to preempt their attempt with your own Social action, reversing the pressure rather than simply gaining passive resistance."
+  },
+  {
+    "name": "Takes One to Know One",
+    "minDots": 1,
+    "maxDots": 1,
+    "description": "When investigating an act aligned with your Vice, replace the ordinary penalty with +2 dice and 9-again; success also counts as indulging that Vice."
+  },
+  {
+    "name": "Taste",
+    "minDots": 1,
+    "maxDots": 1,
+    "description": "Choose a creative or artistic Specialty. Roll Wits + an appropriate Skill to analyze relevant works, uncover details and appraise them; successes can supply questions or support later Social interactions in that cultural scene."
+  },
+  {
+    "name": "Techné",
+    "minDots": 2,
+    "maxDots": 2,
+    "hasSpecialty": true,
+    "specialtyPlaceholder": "Focus or Field",
+    "description": "Choose a Free Council cultural or technical focus to use as an Order-tool Yantra. Appropriate Sleeper participation can provide a distinct tool, and qualifying teamwork casting gains 8-again."
+  },
+  {
+    "name": "Tolerance for Biology",
+    "minDots": 1,
+    "maxDots": 1,
+    "description": "Ignore resistance rolls required merely because a biological phenomenon is gruesome or repellent. It does not protect against toxins, disease or genuine supernatural fear.",
+    "allowedDots": [
+      1
+    ],
+    "requirements": "Resolve 3.",
+    "source_citation": "Chronicles of Darkness 2e, p. 46"
+  },
+  {
+    "name": "Trained Observer",
+    "maxDots": 3,
+    "description": "Perception rolls, normally Wits + Composure, gain 9-again at 1 dot and 8-again at 3 dots. This changes rerolls, not the base dice pool.",
+    "minDots": 1,
+    "allowedDots": [
+      1,
+      3
+    ],
+    "requirements": "Wits 3 or Composure 3.",
+    "source_citation": "Chronicles of Darkness 2e, p. 46"
+  },
+  {
+    "name": "True Friend",
+    "minDots": 3,
+    "maxDots": 3,
+    "description": "Choose one exceptionally loyal friend. Social attempts to turn them against you suffer a five-die penalty; they will not betray you casually. Once per story, a meaningful interaction restores one Willpower."
+  },
+  {
+    "name": "Unarmed Defense",
+    "maxDots": 5,
+    "description": "Unarmed defensive style: 1 dot adds a Brawl-based Defense bonus; 2 specializes against a selected opponent; 3 redirects a missed attack toward a new target; 4 counters with a limb-injuring strike; 5 can knock foes down when Dodging."
+  },
+  {
+    "name": "Untouchable",
+    "minDots": 1,
+    "maxDots": 1,
+    "description": "Investigations into crimes you have concealed return Incomplete Clues unless they reach exceptional success. This does not prevent witnesses or supernatural investigation from acting entirely."
+  },
+  {
+    "name": "Vice-Ridden",
+    "minDots": 2,
+    "maxDots": 2,
+    "description": "Choose two Vices. You may satisfy either one to regain Willpower but remain subject to the usual frequency limits on that recovery."
+  },
+  {
+    "name": "Virtuous",
+    "maxDots": 2,
+    "description": "Choose two Virtues. Either can justify the normal Willpower-restoring benefit, but the standard limits on Virtue-based recovery still apply.",
+    "minDots": 2,
+    "allowedDots": [
+      2
+    ],
+    "source_citation": "Chronicles of Darkness 2e, p. 46"
+  }
 ];
-
-export const MERIT_LIST = MERIT_LIST_BASE.map((merit) => ({
-    ...merit,
-    ...(MERIT_RULE_CORRECTIONS[merit.name] || {}),
-    description: MERIT_DESCRIPTION_REVISIONS[merit.name] || merit.description,
-}));
 
 export const MERIT_CATEGORY_BY_NAME = {
     // Mental

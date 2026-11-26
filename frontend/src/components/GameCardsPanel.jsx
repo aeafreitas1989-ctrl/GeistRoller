@@ -650,12 +650,6 @@ export const GameCardsPanel = ({
                     exposureStatus={temperatureExposure(activeCharacter, sceneTracker) ?
                         temperatureExposure(activeCharacter, sceneTracker) + ': ' + exposurePenalty(activeCharacter, sceneTracker) + ' dice to all rolls' : ''}
                     placeOptions={scenePlaceOptions}
-                    characterId={activeCharacter?.id}
-                    characterName={activeCharacter?.name || "PC"}
-                    explorationMap={activeCharacter?.exploration_map || {}}
-                    onExplorationMapChange={onUpdateCharacter && activeCharacter?.id
-                        ? (nextMap) => onUpdateCharacter({ exploration_map: nextMap })
-                        : undefined}
                     sceneTemperature={sceneTemperature}
                     sceneSeason={sceneSeason}
                     getSeasonColorClass={getSeasonColorClass}

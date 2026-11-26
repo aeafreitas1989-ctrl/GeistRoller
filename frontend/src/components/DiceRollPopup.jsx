@@ -1,3 +1,5 @@
+import { formatDiceOutcome as formatOutcomeLine } from '../utils/diceOutcome';
+import { requestDiceRoll } from '../services/diceService';
 import { useState, useEffect, useMemo } from "react";
 import { Dices, Sparkles, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,7 +21,6 @@ import {
 import axios from "axios";
 import { toast } from "sonner";
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const HAUNTS = [
     "The Boneyard", "The Caul", "The Curse", "The Dirge",
@@ -61,24 +62,6 @@ const formatLabel = (str) => {
         .join(" ");
 };
 
-const formatOutcomeLine = (rollResult) => {
-    const successes = rollResult?.successes || 0;
-    const successText = `${successes} Success${successes === 1 ? "" : "es"}`;
-
-    if (rollResult?.is_dramatic_failure) {
-        return `${successText} = Dramatic Failure...`;
-    }
-
-    if (rollResult?.is_exceptional) {
-        return `${successText} = Exceptional Success!`;
-    }
-
-    if (successes > 0) {
-        return `${successText} = Success`;
-    }
-
-    return "0 Successes = Failure";
-};
 
 const HAUNT_BASE_PLASM_LABELS = {
     "The Boneyard": { unit: "area", label: "Area" },
@@ -377,7 +360,7 @@ export const DiceRollPopup = ({
 
             // Roll dice
             const poolTotal = Math.max(1, dicePool + (spendWillpower ? 3 : 0));
-            const response = await axios.post(`${API}/dice/roll`, {
+            const response = await requestDiceRoll({
                 pool: poolTotal,
                 again: 10,
                 rote: false,

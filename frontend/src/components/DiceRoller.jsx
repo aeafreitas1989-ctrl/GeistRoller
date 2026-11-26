@@ -1,3 +1,5 @@
+import { formatDiceOutcome } from '../utils/diceOutcome';
+import { requestDiceRoll } from '../services/diceService';
 import { useState, forwardRef, useImperativeHandle, useRef, useEffect, useCallback, useMemo } from "react";
 import { Dices, X, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,10 +21,9 @@ import {
 } from "@/components/ui/dialog";
 import axios from "axios";
 import { toast } from "sonner";
-import { convertToVoluntaryDramaticFailure, formatVoluntaryDramaticFailure } from "../utils/voluntaryDramaticFailure";
+import { convertToVoluntaryDramaticFailure } from "../utils/voluntaryDramaticFailure";
 import { isContainedParadoxOutcome, getContainmentTranscriptArgs } from "../utils/paradoxResolution";
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const SPELL_EXCEPTIONAL_CHOICES = [
     {
@@ -93,7 +94,7 @@ export const DiceRoller = forwardRef(({
         setIsRolling(true);
         setResult(null);
         try {
-            const response = await axios.post(`${API}/dice/roll`, {
+            const response = await requestDiceRoll({
                 pool: rollChance ? 1 : rollPool,
                 again: parseInt(rollAgain),
                 rote: rollRote,
@@ -325,29 +326,7 @@ export const DiceRoller = forwardRef(({
         });
     };
 
-    const formatOutcomeLine = (rollResult, countOnlyResult = false, isSpellcasting = false) => {
-        const successes = rollResult?.successes || 0;
-        const successText = `${successes} Success${successes === 1 ? "" : "es"}`;
-
-        if (countOnlyResult) return successText;
-
-        const voluntaryLabel = formatVoluntaryDramaticFailure(rollResult, isSpellcasting);
-        if (voluntaryLabel) return voluntaryLabel;
-
-        if (rollResult?.is_dramatic_failure) {
-            return `${successText} = Dramatic Failure...`;
-        }
-
-        if (rollResult?.is_exceptional) {
-            return `${successText} = Exceptional Success!`;
-        }
-
-        if (successes > 0) {
-            return `${successText} = Success`;
-        }
-
-        return "0 Successes = Failure";
-    };
+    const formatOutcomeLine = (rollResult, countOnlyResult = false, isSpellcasting = false) => formatDiceOutcome(rollResult, {countOnly:countOnlyResult, countOnlyFirst:true, voluntary:true, isSpellcasting});
 
     const buildAttackDamageLine = (rollResult, config = {}) => {
         if (!config.isAttack) return "";

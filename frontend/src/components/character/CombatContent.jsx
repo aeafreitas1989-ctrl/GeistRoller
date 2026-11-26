@@ -9,7 +9,7 @@ import {
     BriefcaseMedical, Pill, Stethoscope, Backpack, Tent, Compass, Map, Glasses,
     Shirt, Biohazard, Wallet, BookMarked, ScrollText, Gem, Skull, FlaskRound,
 } from "lucide-react";
-import * as GameIcons from "react-icons/gi";
+import { GameIcon, GAME_ICON_NAMES, hasGameIcon } from "./GameIcon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,10 +30,9 @@ import { getNaturalHealingLabel } from "../../utils/naturalHealing";
 import { getEnvironmentalStats } from "../../utils/environmentalTilts";
 import { hasHealableWound, healWound } from "../../utils/resistantWounds";
 // Game-icons.net illustrations are distributed via react-icons/gi (CC BY 3.0).
-const GAME_ICON_NAMES = Object.keys(GameIcons).filter((id) => /^Gi[A-Z]/.test(id));
 const gameIconLabel = (id) => String(id || "").replace(/^Gi/, "").replace(/([a-z0-9])([A-Z])/g, "$1 $2");
 const GAME_ICON_LIST = GAME_ICON_NAMES.map((id) => ({
-    id, label: gameIconLabel(id), search: gameIconLabel(id).toLowerCase(),
+    id, label: gameIconLabel(id), search: gameIconLabel(id).toLowerCase(), normalized: gameIconLabel(id).toLowerCase().replace(/[^a-z0-9]/g, ""), lowerId: id.toLowerCase(),
 }));
 const GAME_ICON_FEATURES = [
     { title: "Investigation & Surveillance", words: ["Magnifying Glass", "Fingerprint", "Camera", "Cctv Camera", "Binoculars", "Spyglass", "Flashlight", "Microscope"] },
@@ -45,8 +44,8 @@ const GAME_ICON_FEATURES = [
 const findGameIconId = (term) => {
     if (!term) return "";
     const q = String(term).toLowerCase().replace(/[^a-z0-9]/g, "");
-    return GAME_ICON_LIST.find((icon) => icon.search.replace(/[^a-z0-9]/g, "") === q)?.id ||
-        GAME_ICON_LIST.find((icon) => icon.search.replace(/[^a-z0-9]/g, "").includes(q))?.id || "";
+    return GAME_ICON_LIST.find((icon) => icon.normalized === q)?.id ||
+        GAME_ICON_LIST.find((icon) => icon.normalized.includes(q))?.id || "";
 };
 // Prefer the nested equipment icon, the established inventory data field.
 // Legacy Lucide icon IDs continue to render without changing saved characters.
@@ -54,30 +53,32 @@ const findGameIconId = (term) => {
 const getEquipmentIconId = (item) => {
     if (item?.type !== "equipment") return "";
     const stored = item?.equipment?.icon;
-    if (stored && GameIcons[stored]) return stored;
-    if (item?.icon && GameIcons[item.icon]) return item.icon;
+    if (stored && hasGameIcon(stored)) return stored;
+    if (item?.icon && hasGameIcon(item.icon)) return item.icon;
     if (stored && EQUIPMENT_ICON_LOOKUP[stored]) return "";
     return findGameIconId(item?.name);
 };
+
+const FEATURED_GAME_ICONS = GAME_ICON_FEATURES.flatMap((group) => group.words.map((word) => {
+            const id = findGameIconId(word);
+            return id ? { id, label: word, search: word.toLowerCase() } : null;
+        }).filter(Boolean)).filter((icon, index, all) => all.findIndex((i) => i.id === icon.id) === index);
 
 const GameIconPicker = ({ value, onChange, itemName = "", testId }) => {
     const [query, setQuery] = useState("");
     const [expanded, setExpanded] = useState(false);
     const isLegacy = !!(value && EQUIPMENT_ICON_LOOKUP[value]);
-    const chosenId = value && GameIcons[value] ? value : isLegacy ? "" : findGameIconId(itemName);
-    const Chosen = isLegacy ? EQUIPMENT_ICON_LOOKUP[value].Icon : chosenId ? GameIcons[chosenId] : Package;
+    const chosenId = value && hasGameIcon(value) ? value : isLegacy ? "" : findGameIconId(itemName);
+    const Chosen = isLegacy ? EQUIPMENT_ICON_LOOKUP[value].Icon : Package;
     const label = isLegacy ? EQUIPMENT_ICON_LOOKUP[value].label : chosenId ? gameIconLabel(chosenId) : "Default icon";
     const normalized = query.trim().toLowerCase();
     const shown = normalized
-        ? GAME_ICON_LIST.filter((icon) => icon.search.includes(normalized) || icon.id.toLowerCase().includes(normalized)).slice(0, 60)
-        : GAME_ICON_FEATURES.flatMap((group) => group.words.map((word) => {
-            const id = findGameIconId(word);
-            return id ? { id, label: word, search: word.toLowerCase() } : null;
-        }).filter(Boolean)).filter((icon, index, all) => all.findIndex((i) => i.id === icon.id) === index);
+        ? GAME_ICON_LIST.filter((icon) => icon.search.includes(normalized) || icon.lowerId.includes(normalized)).slice(0, 60)
+        : FEATURED_GAME_ICONS;
     return (
         <div className="space-y-2" data-testid={testId || "game-icon-picker"}>
             <div className="flex items-center gap-2">
-                <Chosen className="h-5 w-5 text-amber-200/80" />
+                {chosenId && !isLegacy ? <GameIcon id={chosenId} className="h-5 w-5 text-amber-200/80" /> : <Chosen className="h-5 w-5 text-amber-200/80" />}
                 <span className="min-w-0 flex-1 truncate text-xs text-zinc-400">{label}{isLegacy ? " (existing icon)" : ""}</span>
                 <Button type="button" variant="outline" size="sm" className="h-7 text-xs" onClick={() => setExpanded((open) => !open)}>
                     {expanded ? "Close icons" : "Choose icon"}
@@ -90,12 +91,12 @@ const GameIconPicker = ({ value, onChange, itemName = "", testId }) => {
                     {!normalized && <p className="text-[10px] text-zinc-500">Suggestions by category: {GAME_ICON_FEATURES.map((g) => g.title).join(" / ")}. Search for more.</p>}
                     <div className="max-h-52 overflow-y-auto grid grid-cols-6 sm:grid-cols-8 gap-1">
                         {shown.map(({ id, label: iconLabel }) => {
-                            const Icon = GameIcons[id];
+
                             return (
                                 <button key={id} type="button" title={iconLabel} aria-label={iconLabel}
                                     className={`flex items-center justify-center rounded border p-2 hover:bg-zinc-800 ${chosenId === id ? "border-teal-400" : "border-zinc-800"}`}
                                     onClick={() => { onChange(id); setExpanded(false); }}>
-                                    <Icon className="h-5 w-5 text-amber-200/80" />
+                                    <GameIcon id={id} className="h-5 w-5 text-amber-200/80" />
                                 </button>
                             );
                         })}
@@ -386,8 +387,7 @@ const getLegacyEquipmentIconId = (item) => {
 const InventoryItemIcon = ({ item, FallbackIcon, order }) => {
     if (item?.type === "equipment") {
         const id = getEquipmentIconId(item);
-        const EquipmentIcon = id ? GameIcons[id] : null;
-        if (EquipmentIcon) return <EquipmentIcon className="h-5 w-5 text-amber-200/80" />;
+        if (id) return <GameIcon id={id} className="h-5 w-5 text-amber-200/80" />;
     }
     if (item?.type === "weapon" && item?.weapon?.kind === "ranged") {
         return <Crosshair className="h-5 w-5 text-amber-200/80" strokeWidth={1.6} />;

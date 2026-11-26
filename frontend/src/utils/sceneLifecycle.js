@@ -51,7 +51,7 @@ export const reconcileManualPlasm = (currentPlasm, temporaryPlasm, nextPlasm) =>
 export const getEndScenePatch = (character) => {
     if (!character || typeof character !== "object") return null;
     const patch = {
-        active_spells: expireSceneEffects(character.active_spells || []),
+        active_spells: expireSceneEffects(character.active_spells || []).filter(effect => effect?.status !== "expired"),
         conditions: expireSceneEffects(character.conditions || []),
     };
     if (character.character_type === "mage") {

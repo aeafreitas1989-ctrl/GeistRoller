@@ -32,9 +32,8 @@ export const ActiveSpellsSection = ({
     const gameClock = activeCharacter?.scene_tracker || {};
     const activeCount = activeSpells.filter((spell) => !isEffectExpired(spell, gameClock)).length;
     const nonSightSpells = activeSpells
-        .filter((spell) => spell.effect_key !== "mage-sight")
+        .filter((spell) => spell.effect_key !== "mage-sight" && !isEffectExpired(spell, gameClock))
         .sort((a, b) =>
-            Number(isEffectExpired(a, gameClock)) - Number(isEffectExpired(b, gameClock)) ||
             (a.name || "").localeCompare(b.name || "")
         );
 

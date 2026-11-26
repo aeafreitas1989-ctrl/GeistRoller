@@ -1,9 +1,9 @@
+import { requestDiceRoll } from '../services/diceService';
 import { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import { Dices, Minus, Plus, X } from 'lucide-react';
 import { makeQuickDiceRequest, normalizeQuickDicePool, makeQuickDiceHistoryEntry } from '../utils/quickDicePool';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 /** A standalone, manually configured CofD roll. It never changes character state. */
 export const QuickDiceRoller = ({ onRollRecorded }) => {
@@ -46,7 +46,7 @@ export const QuickDiceRoller = ({ onRollRecorded }) => {
         setBusy(true);
         setError('');
         try {
-            const response = await axios.post(`${API}/dice/roll`, makeQuickDiceRequest(pool, again));
+            const response = await requestDiceRoll(makeQuickDiceRequest(pool, again));
             if (!response.data || !Array.isArray(response.data.dice)) {
                 throw new Error('Unexpected dice roll response');
             }

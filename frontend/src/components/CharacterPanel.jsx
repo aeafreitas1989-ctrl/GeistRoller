@@ -1,3 +1,4 @@
+import { requestDiceRoll } from '../services/diceService';
 import { useState, useMemo, useEffect, useRef } from "react";
 import { Plus, Minus, Trash2, ChevronUp, ChevronDown, ChevronRight, ChevronLeft, Save, X, Info, Dices, Zap, Star, Pencil, Sparkles, Download, Upload } from "lucide-react";import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -97,7 +98,6 @@ import {
     validateMageCreation,
 } from "@/utils/mageCreationAudit";
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const LIVE_STATE_AUTO_SAVE_FIELDS = new Set([
     "mana",
@@ -396,9 +396,7 @@ export const CharacterPanel = ({
 
         try {
             // Backend endpoint expects { pool: int, chance: bool, again, rote }
-            const res = await axios.post(
-                `${process.env.REACT_APP_BACKEND_URL}/api/dice/roll`,
-                {
+            const res = await requestDiceRoll({
                     pool: isChance ? 1 : computedPool,
                     chance: isChance,
                     again: 10,
