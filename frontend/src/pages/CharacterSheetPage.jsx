@@ -1,3 +1,4 @@
+import { toCharacterSummary, updateCharacterSummary } from "@/utils/characterSummaries";
 import { TimeElapsedDialog } from "@/components/TimeElapsedDialog";
 import { prepareTimeTransition } from "@/utils/timeTransitionSummary";
 import { retainActiveSpells } from "@/utils/activeSpellRetention";
@@ -34,24 +35,57 @@ export const CharacterSheetPage = () => {
     const latestCharacterRef = useRef(null);
     const characterWriteQueuesRef = useRef(new Map());
     const pendingCharacterPatchesRef = useRef(new Map());
-    useEffect(() => { latestCharacterRef.current = activeCharacter; }, [activeCharacter?.id]);
+    const confirmedCharacterRef = useRef(null);
+    const selectionRequestRef = useRef(0);
+    const deletingCharactersRef = useRef(new Set());
 
-    const overlayPending = (snapshot) =>
-        applyPendingCharacterPatches(snapshot, pendingCharacterPatchesRef.current.get(snapshot.id) || []);
+    const overlayPending = (snapshot) => {
+        const pending = pendingCharacterPatchesRef.current.get(snapshot.id) || [];
+        return pending.length ? applyPendingCharacterPatches(snapshot, pending) : snapshot;
+    };
+    const refreshSummary = (snapshot) => setCharacters(list => updateCharacterSummary(list, snapshot));
+    const activateCharacter = (snapshot) => {
+        selectionRequestRef.current += 1;
+        confirmedCharacterRef.current = snapshot;
+        const next = snapshot ? overlayPending(snapshot) : null;
+        latestCharacterRef.current = next;
+        setActiveCharacter(next);
+    };
+    const acceptCharacterSnapshot = (snapshot) => {
+        if (!snapshot?.id) return;
+        if (latestCharacterRef.current?.id !== snapshot.id) {
+            refreshSummary(snapshot);
+            return;
+        }
+        const confirmed = confirmedCharacterRef.current;
+        if (confirmed?.id !== snapshot.id || !isStaleCharacterSnapshot(confirmed, snapshot)) {
+            confirmedCharacterRef.current = snapshot;
+        }
+        const next = overlayPending(confirmedCharacterRef.current);
+        latestCharacterRef.current = next;
+        setActiveCharacter(next);
+        refreshSummary(next);
+    };
+    const selectCharacter = async (summary) => {
+        const request = ++selectionRequestRef.current;
+        if (!summary?.id || deletingCharactersRef.current.has(summary.id)) return false;
+        if (latestCharacterRef.current?.id === summary.id) return true;
+        try {
+            await (characterWriteQueuesRef.current.get(summary.id) || Promise.resolve());
+            const response = await axios.get(`${API}/characters/${summary.id}`);
+            if (request !== selectionRequestRef.current || deletingCharactersRef.current.has(summary.id)) return false;
+            activateCharacter(response.data);
+            refreshSummary(response.data);
+            return true;
+        } catch (error) {
+            if (request === selectionRequestRef.current) toast.error('Failed to load character');
+            return false;
+        }
+    };
     const lastCharacterStorageKey = "geistroller-last-active-character-id";
 
     useCharacterSync(activeCharacter?.id, (updatedCharacter) => {
-        setActiveCharacter((current) => {
-            if (!current || current.id !== updatedCharacter.id) return current;
-            if (isStaleCharacterSnapshot(current, updatedCharacter)) return current;
-            const next = overlayPending(updatedCharacter);
-            latestCharacterRef.current = next;
-            return next;
-        });
-        setCharacters((currentCharacters) => currentCharacters.map((character) =>
-            character.id === updatedCharacter.id && !isStaleCharacterSnapshot(character, updatedCharacter)
-                ? overlayPending(updatedCharacter) : character
-        ));
+        if (latestCharacterRef.current?.id === updatedCharacter.id) acceptCharacterSnapshot(updatedCharacter);
     });
 
     const triggerDiceRoll = (config) => {
@@ -401,25 +435,20 @@ export const CharacterSheetPage = () => {
         if (activeCharacter?.id) {
             localStorage.setItem(lastCharacterStorageKey, activeCharacter.id);
         }
-    }, [activeCharacter, lastCharacterStorageKey]);
+    }, [activeCharacter?.id, lastCharacterStorageKey]);
 
     const fetchCharacters = async () => {
         try {
-            const response = await axios.get(`${API}/characters`);
-            const fetchedCharacters = response.data;
+            const request = selectionRequestRef.current;
+            const response = await axios.get(`${API}/character-summaries`);
+            if (request !== selectionRequestRef.current) return;
+            const fetchedCharacters = response.data.map(toCharacterSummary);
             setCharacters(fetchedCharacters);
-
-            if (fetchedCharacters.length > 0) {
+            if (fetchedCharacters.length) {
                 const savedCharacterId = localStorage.getItem(lastCharacterStorageKey);
-                const savedCharacter = fetchedCharacters.find((c) => c.id === savedCharacterId);
-
-                if (savedCharacter) {
-                    setActiveCharacter(savedCharacter);
-                } else {
-                    setActiveCharacter(fetchedCharacters[0]);
-                }
+                await selectCharacter(fetchedCharacters.find(c => c.id === savedCharacterId) || fetchedCharacters[0]);
             } else {
-                setActiveCharacter(null);
+                activateCharacter(null);
             }
         } catch (error) {
             console.error("Failed to fetch characters:", error);
@@ -428,15 +457,15 @@ export const CharacterSheetPage = () => {
 
     const createCharacter = async (characterType = "geist") => {
         try {
-            const defaultName = characterType === "mage" 
+            const defaultName = characterType === "mage"
                 ? `Mage ${characters.filter(c => c.character_type === "mage").length + 1}`
                 : `Sin-Eater ${characters.filter(c => c.character_type !== "mage").length + 1}`;
             const response = await axios.post(`${API}/characters`, {
                 name: defaultName,
                 character_type: characterType
             });
-            setCharacters([...characters, response.data]);
-            setActiveCharacter(response.data);
+            setCharacters(list => [...list, toCharacterSummary(response.data)]);
+            activateCharacter(response.data);
             toast.success(`New ${characterType === "mage" ? "Mage" : "Sin-Eater"} created`);
         } catch (error) {
             toast.error("Failed to create character");
@@ -475,8 +504,8 @@ export const CharacterSheetPage = () => {
             });
 
             const finalCharacter = updateResponse.data;
-            setCharacters((prev) => [...prev, finalCharacter]);
-            setActiveCharacter(finalCharacter);
+            setCharacters(prev => [...prev, toCharacterSummary(finalCharacter)]);
+            activateCharacter(finalCharacter);
             toast.success(`Imported character: ${finalCharacter.name}`);
         } catch (error) {
             console.error("Failed to import character:", error);
@@ -525,7 +554,7 @@ export const CharacterSheetPage = () => {
 
     const updateCharacter = async (updates, summaryOptions = {}) => {
         const current = latestCharacterRef.current || activeCharacter;
-        if (!current?.id) return false;
+        if (!current?.id || deletingCharactersRef.current.has(current.id)) return false;
         const characterId = current.id;
         const computed = resolveCharacterUpdate(current,updates);
         if (!computed || typeof computed !== 'object' || Object.keys(computed).length === 0) return false;
@@ -550,29 +579,25 @@ export const CharacterSheetPage = () => {
         const optimistic = { ...current, ...patch };
         latestCharacterRef.current = optimistic;
         setActiveCharacter((previous) => previous?.id === characterId ? { ...previous, ...patch } : previous);
-        setCharacters((list) => list.map((item) => item.id === characterId ? { ...item, ...patch } : item));
+        refreshSummary(optimistic);
 
         const previousWrite = characterWriteQueuesRef.current.get(characterId) || Promise.resolve();
         const task = previousWrite.catch(() => false).then(async () => {
             try {
                 const response = await axios.put(`${API}/characters/${characterId}`, patch);
                 const remaining = (pendingCharacterPatchesRef.current.get(characterId) || []).filter((entry) => entry.token !== token);
-                pendingCharacterPatchesRef.current.set(characterId, remaining);
-                const next = applyPendingCharacterPatches(response.data, remaining);
-                if (latestCharacterRef.current?.id === characterId) latestCharacterRef.current = next;
-                setActiveCharacter((prev) => prev?.id === characterId ? next : prev);
-                setCharacters((list) => list.map((item) => item.id === characterId ? next : item));
+                if (remaining.length) pendingCharacterPatchesRef.current.set(characterId, remaining);
+                else pendingCharacterPatchesRef.current.delete(characterId);
+                acceptCharacterSnapshot(response.data);
                 if (summary) setTimeSummaries(queue => [...queue, summary]);
                 return true;
             } catch (error) {
                 const remaining = (pendingCharacterPatchesRef.current.get(characterId) || []).filter((entry) => entry.token !== token);
-                pendingCharacterPatchesRef.current.set(characterId, remaining);
+                if (remaining.length) pendingCharacterPatchesRef.current.set(characterId, remaining);
+                else pendingCharacterPatchesRef.current.delete(characterId);
                 try {
                     const response = await axios.get(`${API}/characters/${characterId}`);
-                    const next = applyPendingCharacterPatches(response.data, remaining);
-                    if (latestCharacterRef.current?.id === characterId) latestCharacterRef.current = next;
-                    setActiveCharacter((prev) => prev?.id === characterId ? next : prev);
-                    setCharacters((list) => list.map((item) => item.id === characterId ? next : item));
+                    acceptCharacterSnapshot(response.data);
                 } catch (refreshError) {
                     toast.error('Character save failed; server refresh also failed. Reload before continuing.');
                 }
@@ -581,6 +606,8 @@ export const CharacterSheetPage = () => {
             }
         });
         characterWriteQueuesRef.current.set(characterId, task);
+        const clearQueue = () => { if (characterWriteQueuesRef.current.get(characterId) === task) characterWriteQueuesRef.current.delete(characterId); };
+        task.then(clearQueue, clearQueue);
         return task;
     };
 
@@ -620,17 +647,17 @@ export const CharacterSheetPage = () => {
                     : "Voluntary Dramatic Failure",
         });
     };
-    
+
     // Condition management
     const addCondition = async (condition) => {
         if (!activeCharacter) return;
         const currentConditions = latestCharacterRef.current?.conditions || [];
-        
+
         if (currentConditions.some(c => c.name === condition.name && c.status !== "expired")) {
             toast.error("Condition already active");
             return;
         }
-        
+
         const startCondition = startTimedEffect(condition, activeCharacter.scene_tracker);
         await updateCharacter((latest) => ({ conditions: [...(latest.conditions || []), startCondition] }));
         toast.success(`Added: ${condition.name}`);
@@ -733,15 +760,22 @@ export const CharacterSheetPage = () => {
     };
 
     const deleteCharacter = async (characterId) => {
+        if (deletingCharactersRef.current.has(characterId)) return;
+        deletingCharactersRef.current.add(characterId);
         try {
+            await (characterWriteQueuesRef.current.get(characterId) || Promise.resolve());
             await axios.delete(`${API}/characters/${characterId}`);
-            setCharacters(characters.filter(c => c.id !== characterId));
-            if (activeCharacter?.id === characterId) {
-                setActiveCharacter(characters.length > 1 ? characters.find(c => c.id !== characterId) : null);
+            setCharacters(list => list.filter(c => c.id !== characterId));
+            if (latestCharacterRef.current?.id === characterId) {
+                activateCharacter(null);
+                const replacement = characters.find(c => c.id !== characterId && !deletingCharactersRef.current.has(c.id));
+                if (replacement) await selectCharacter(replacement);
             }
             toast.success("Character deleted");
         } catch (error) {
             toast.error("Failed to delete character");
+        } finally {
+            deletingCharactersRef.current.delete(characterId);
         }
     };
 
@@ -766,7 +800,7 @@ export const CharacterSheetPage = () => {
                                 <CharacterPanel
                                     characters={characters}
                                     activeCharacter={activeCharacter}
-                                    onSelectCharacter={setActiveCharacter}
+                                    onSelectCharacter={selectCharacter}
                                     onCreateCharacter={createCharacter}
                                     onUpdateCharacter={updateCharacter}
                                     onDeleteCharacter={deleteCharacter}

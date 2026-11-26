@@ -7,6 +7,7 @@ import logging
 import os
 import uuid
 
+from pymongo import ReturnDocument
 from dotenv import load_dotenv
 from fastapi import APIRouter, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,6 +18,7 @@ from database import client, db
 from dice_engine import resolve_dice_roll
 from time_effect_retention import retain_unexpired_effects
 from rules_validation import validate_rule_bounded_fields
+from character_sync import CharacterSummary, CHARACTER_SUMMARY_PROJECTION
 from models import (
     Campaign,
     CampaignCreate,
@@ -47,7 +49,7 @@ _character_subscribers: Dict[str, Set[asyncio.Queue]] = {}
 
 
 def _subscribe_to_character(character_id: str) -> asyncio.Queue:
-    queue: asyncio.Queue = asyncio.Queue(maxsize=20)
+    queue: asyncio.Queue = asyncio.Queue(maxsize=1)
     _character_subscribers.setdefault(character_id, set()).add(queue)
     return queue
 
@@ -108,6 +110,11 @@ async def health():
 # CHARACTERS
 # ========================
 
+@api_router.get("/character-summaries", response_model=List[CharacterSummary])
+async def get_character_summaries():
+    return await db.characters.find({}, CHARACTER_SUMMARY_PROJECTION).to_list(1000)
+
+
 @api_router.get("/characters", response_model=List[Character])
 async def get_characters():
     return await db.characters.find({}, {"_id": 0}).to_list(1000)
@@ -123,30 +130,28 @@ async def get_character(character_id: str):
 
 @api_router.get("/characters/{character_id}/events")
 async def character_events(character_id: str):
-    character = await db.characters.find_one({"id": character_id}, {"_id": 0})
-    if not character:
-        raise HTTPException(status_code=404, detail="Character not found")
-
     queue = _subscribe_to_character(character_id)
+    try:
+        character = await db.characters.find_one({"id": character_id}, {"_id": 0})
+        if not character:
+            raise HTTPException(status_code=404, detail="Character not found")
+        initial_payload = json.dumps({"type": "character_updated", "character": character},
+                                     default=str, separators=(",", ":"))
+    except BaseException:
+        _unsubscribe_from_character(character_id, queue)
+        raise
 
-    async def event_stream():
+    async def event_stream(initial_payload):
         try:
-            initial_payload = json.dumps(
-                {
-                    "type": "character_updated",
-                    "character": character,
-                },
-                default=str,
-                separators=(",", ":"),
-            )
-
             yield "retry: 2000\n\n"
             yield f"event: character_updated\ndata: {initial_payload}\n\n"
+            del initial_payload
 
             while True:
                 try:
                     payload = await asyncio.wait_for(queue.get(), timeout=20)
                     yield f"event: character_updated\ndata: {payload}\n\n"
+                    del payload
                 except asyncio.TimeoutError:
                     yield ": keep-alive\n\n"
         except asyncio.CancelledError:
@@ -155,7 +160,7 @@ async def character_events(character_id: str):
             _unsubscribe_from_character(character_id, queue)
 
     return StreamingResponse(
-        event_stream(),
+        event_stream(initial_payload),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
@@ -362,15 +367,12 @@ async def update_character(character_id: str, input: CharacterUpdate):
                 "xp_history": transaction,
             }
 
-        await db.characters.update_one(
-            {"id": character_id},
-            operations,
+        character = await db.characters.find_one_and_update(
+            {"id": character_id}, operations,
+            projection={"_id": 0}, return_document=ReturnDocument.AFTER,
         )
-
-    character = await db.characters.find_one(
-        {"id": character_id},
-        {"_id": 0},
-    )
+    else:
+        character = previous
 
     if not character:
         raise HTTPException(
