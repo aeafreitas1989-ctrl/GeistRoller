@@ -70,6 +70,22 @@ export const addWoundDamage = (boxes, marks, kind, amount = 1, resistant = false
     return { ...pack(wounds, max), applied };
 };
 
+// Apply the damage that survives the existing armour calculation. Resistance
+// belongs to the resulting wounds, including downgraded or promoted wounds.
+export const applyResolvedDamage = (boxes, marks, damage, resistant = false) => {
+    let result = { boxes, resistant_wounds: normalizeResistance(boxes, marks) };
+    let applied = 0;
+    const appliedByType = { aggravated: 0, lethal: 0, bashing: 0 };
+    for (const kind of TYPES) {
+        if (Number(damage?.[kind]) > 0) {
+            result = addWoundDamage(result.boxes, result.resistant_wounds, kind, damage[kind], resistant === true);
+            applied += result.applied;
+            appliedByType[kind] = result.applied;
+        }
+    }
+    return { ...result, applied, appliedByType };
+};
+
 // Mirrors the existing clickable health-track cycle, while retaining the
 // Resistant flag on each wound when upgraded, shifted, or reordered.
 export const adjustWoundClick = (boxes, marks, index, state) => {

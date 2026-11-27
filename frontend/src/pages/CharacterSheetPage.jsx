@@ -22,7 +22,7 @@ import { advanceNaturalHealing, restartNaturalHealing } from "@/utils/naturalHea
 import { advanceEnvironmentalExposure } from "@/utils/environmentalExposure";
 import { environmentalTurnHazards, exposurePenalty, temperatureExposure, getEnvironmentalRollModifiers, activeEnvironmentalTiltNames } from "@/utils/environmentalTilts";
 import { restoreScouredAttributes } from "@/utils/mageRecovery";
-import { addWoundDamage, healWound, hasHealableWound, normalizeResistance, toggleResistance } from "@/utils/resistantWounds";
+import { addWoundDamage, applyResolvedDamage, healWound, hasHealableWound, normalizeResistance, toggleResistance } from "@/utils/resistantWounds";
 import { useCharacterSync } from "@/hooks/useCharacterSync";
 import { getEndScenePatch } from "@/utils/sceneLifecycle";
 import { applyPendingCharacterPatches, isStaleCharacterSnapshot, resolveCharacterUpdate } from "@/utils/characterUpdateQueue";
@@ -177,25 +177,26 @@ export const CharacterSheetPage = () => {
     };
 
 
-    const applyIncomingCombatDamage = async ({ amount, damageType, sourceProfile }) => {
-        if (!activeCharacter || !amount || amount <= 0) return;
+    const applyIncomingCombatDamage = async ({ amount, damageType, sourceProfile, resistant = false }) => {
+        const character = latestCharacterRef.current || activeCharacter;
+        if (!character || !amount || amount <= 0) return;
 
-        const meritsList = activeCharacter?.merits_list || [];
+        const meritsList = character?.merits_list || [];
         const hasGiant = meritsList.some((m) => (m?.name || "") === "Giant");
         const hasSmallFramed = meritsList.some((m) => (m?.name || "") === "Small-Framed");
         const size = 5 + (hasGiant ? 1 : 0) + (hasSmallFramed ? -1 : 0);
-        const stamina = getCharacterAttributeForDerivedTrait(activeCharacter, "stamina", 0);
+        const stamina = getCharacterAttributeForDerivedTrait(character, "stamina", 0);
         const maxHealth = stamina + size;
 
-        const inventoryItems = activeCharacter?.inventory_items || [];
+        const inventoryItems = character?.inventory_items || [];
         const equippedArmor = inventoryItems.find((it) => it?.type === "armor" && !!it?.equipped) || null;
         const equippedArmorGeneral = equippedArmor?.armor?.general ?? 0;
         const equippedArmorBallistic = equippedArmor?.armor?.ballistic ?? 0;
         const damage = resolveArmoredDamage({
             amount, damageType, sourceProfile, equippedGeneral: equippedArmorGeneral,
             equippedBallistic: equippedArmorBallistic,
-            mageArmor: activeCharacter?.character_type === 'mage' ? activeCharacter?.active_mage_armor : null,
-            mageArmorDots: activeCharacter?.arcana?.[activeCharacter?.active_mage_armor] || 0,
+            mageArmor: character?.character_type === 'mage' ? character?.active_mage_armor : null,
+            mageArmorDots: character?.arcana?.[character?.active_mage_armor] || 0,
         });
         const remaining = damage.aggravated + damage.lethal + damage.bashing;
         if (remaining <= 0) {
@@ -204,24 +205,25 @@ export const CharacterSheetPage = () => {
         }
 
         const startingBoxes = normalizeHealthBoxes(
-            activeCharacter?.health_boxes,
+            character?.health_boxes,
             maxHealth,
-            activeCharacter?.health || 0
+            character?.health || 0
         );
-        let damaged = { boxes: startingBoxes, resistant_wounds: activeCharacter?.resistant_wounds || [] };
-        for (const kind of ['aggravated','lethal','bashing']) {
-            if (damage[kind] > 0) damaged = addWoundDamage(damaged.boxes, damaged.resistant_wounds, kind, damage[kind], false);
-        }
+        const damaged = applyResolvedDamage(startingBoxes, character?.resistant_wounds || [], damage, resistant);
+        if (!damaged.applied) { toast.info('No further damage could be recorded on the Health track.'); return; }
         const updatedBoxes = damaged.boxes;
         const filled = updatedBoxes.filter((state) => state !== "empty").length;
-        await updateCharacter({
+        const saved = await updateCharacter({
             health_boxes: updatedBoxes,
             resistant_wounds: damaged.resistant_wounds,
             health: filled,
-            natural_healing: restartNaturalHealing(updatedBoxes, activeCharacter?.scene_tracker),
+            natural_healing: restartNaturalHealing(updatedBoxes, character?.scene_tracker),
         });
 
-        toast.info(`${damage.aggravated} aggravated, ${damage.lethal} lethal, ${damage.bashing} bashing damage applied.`);
+        if (saved) {
+            const applied = damaged.appliedByType;
+            toast.info(`${applied.aggravated} aggravated, ${applied.lethal} lethal, ${applied.bashing} bashing ${resistant === true ? 'resistant ' : ''}damage applied.`);
+        }
     };
 
     const meritsList = activeCharacter?.merits_list || [];
@@ -731,10 +733,22 @@ export const CharacterSheetPage = () => {
         const conditions = activeCharacter.conditions || [];
         const condition = conditions[conditionIndex];
         if (!condition || isEffectExpired(condition,activeCharacter?.scene_tracker)) return;
-        if (isAbyssalTaint(condition)) { toast.error("Abyssal Taint must be Scoured from the Pattern."); return; }
+        if (isAbyssalTaint(condition)) {
+            if (!window.confirm("Remove Abyssal Taint as a Storyteller correction? This is not Pattern Scouring: no damage, Mana, Beat or Scouring allowance is applied.")) return;
+            const characterId = activeCharacter.id;
+            const saved = await updateCharacter(latest => {
+                if (latest.id !== characterId) return null;
+                const list = latest.conditions || [];
+                const index = findAbyssalIndex(list, condition);
+                if (index < 0 || !isAbyssalTaint(list[index])) return null;
+                return {conditions:list.filter((_,i)=>i!==index)};
+            });
+            if (saved) toast.success("Abyssal Taint removed (ST correction).");
+            else toast.error("Correction could not be saved. Check the Condition and try again.");
+            return;
+        }
         const newConditions = conditions.filter((_, i) => i !== conditionIndex);
-        await updateCharacter({ conditions: newConditions });
-        toast.success(`Removed: ${condition.name}`);
+        if (await updateCharacter({ conditions: newConditions })) toast.success(`Removed: ${condition.name}`);
     };
 
 

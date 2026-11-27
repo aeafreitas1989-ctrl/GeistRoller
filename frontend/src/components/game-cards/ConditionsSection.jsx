@@ -1053,7 +1053,8 @@ export const ConditionsSection = ({
                                             activeCharacter?.name ||
                                             "Character"
                                         }
-                                        onRemove={condition.weather_auto || isAbyssalTaint(condition) ? undefined : onRemoveCondition}
+                                        onRemove={condition.weather_auto ? undefined : onRemoveCondition}
+                                        removeAsCorrection={isAbyssalTaint(condition)}
                                         onResolve={condition.weather_auto || isAbyssalTaint(condition) ? undefined : onResolveCondition}
                                         onScour={activeCharacter?.character_type === 'mage' && (isAbyssalCondition(condition)||isAbyssalTaint(condition)) && onScourAbyssal ? ()=>onScourAbyssal(condition) : undefined}
                                         scourDisabled={remainingScourings(activeCharacter?.pattern_scouring,activeCharacter?.gnosis,activeCharacter?.scene_tracker) <= 0}

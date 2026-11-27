@@ -51,6 +51,8 @@ export const CombatTrackerCard = ({
     const [incomingDamage, setIncomingDamage] = useState("1");
     const [incomingType, setIncomingType] = useState("bashing");
     const [incomingSource, setIncomingSource] = useState("general");
+    const [incomingResistant, setIncomingResistant] = useState(false);
+    useEffect(() => setIncomingResistant(false), [activeCharacter?.id]);
 
     const formatLabel = (value) => value.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
     const getValue = (parent, field) => activeCharacter?.[parent]?.[field] || 0;
@@ -789,6 +791,14 @@ export const CombatTrackerCard = ({
                         </Select>
                     </div>
 
+                    <label className="flex items-center gap-2 text-xs text-zinc-300 cursor-pointer">
+                        <input type="checkbox" checked={incomingResistant}
+                            onChange={event => setIncomingResistant(event.target.checked)}
+                            className="h-3.5 w-3.5 accent-violet-500"
+                            data-testid="combat-card-incoming-resistant" />
+                        Resistant
+                    </label>
+
                     <Button
                         size="sm"
                         className="w-full btn-secondary text-xs h-7"
@@ -796,6 +806,7 @@ export const CombatTrackerCard = ({
                             amount: Math.max(0, parseInt(incomingDamage, 10) || 0),
                             damageType: incomingType,
                             sourceProfile: incomingSource,
+                            resistant: incomingResistant,
                         })}
                         data-testid="combat-card-apply-damage-btn"
                     >

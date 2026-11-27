@@ -19,6 +19,7 @@ export const ConditionCard = ({
     origin,
     targetName,
     onRemove,
+    removeAsCorrection = false,
     onResolve,
     onScour,
     scourDisabled = false,
@@ -207,7 +208,9 @@ export const ConditionCard = ({
                                 conditionIndex
                             )
                         }
-                        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-zinc-500 hover:text-red-400 self-end"
+                        title={removeAsCorrection ? "Remove (ST correction, no damage or Mana)" : "Remove Condition"}
+                        aria-label={removeAsCorrection ? "Remove Abyssal Taint (ST correction)" : "Remove Condition"}
+                        className={"h-6 w-6 transition-opacity text-zinc-500 hover:text-red-400 self-end " + (removeAsCorrection ? "opacity-100" : "opacity-0 group-hover:opacity-100 focus:opacity-100")}
                         data-testid={`remove-condition-${safeName
                             .toLowerCase()
                             .replace(/\s+/g, "-")}`}
