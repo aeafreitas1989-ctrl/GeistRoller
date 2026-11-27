@@ -6,7 +6,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
     parseSceneDate, parseSceneTime,
-    toSceneISODate, toSceneTime, maskSceneTimeInput,
+    toSceneISODate, toSceneTime,
+    splitSceneTimeDraft, replaceSceneTimeSegment, parseSceneTimePaste,
     splitSceneDateDraft, replaceSceneDateSegment, parseSceneDateDraft, parseSceneDatePaste, toSceneCalendarDate,
 } from "@/utils/sceneDateTimeValues";
 
@@ -247,17 +248,31 @@ const ClockFace = ({ hour, minute, phase, chooseHour, chooseMinute }) => {
 
 export const SceneTimeField = ({ value = "", onChange }) => {
     const [open, setOpen] = useState(false);
-    const [draft, setDraft] = useState(value || "");
+    const [draft, setDraftState] = useState(value || "");
+    const draftRef = useRef(value || "");
+    const timeSegments = useRef([]);
+    const parts = splitSceneTimeDraft(draft);
+    const setDraft = next => {
+        const resolved = typeof next === 'function' ? next(draftRef.current) : next;
+        draftRef.current = resolved;
+        setDraftState(resolved);
+    };
     const [phase, setPhase] = useState("hour");
     const [hour, setHour] = useState(12);
     const [minute, setMinute] = useState(0);
 
-    useEffect(() => setDraft(value || ""), [value]);
+    useEffect(() => {
+        draftRef.current = value || "";
+        setDraftState(value || "");
+    }, [value]);
 
     const commitDraft = () => {
-        const parsed = parseSceneTime(draft);
-        if (!draft.trim()) {
-            if (value) onChange?.("");
+        const latest = draftRef.current;
+        const parsed = parseSceneTime(latest);
+        if (!latest.trim()) {
+            if (value && onChange?.("") === false) { setDraft(value || ""); return; }
+            setDraft("");
+            return;
         } else if (parsed) {
             const nextTime = toSceneTime(parsed.hours, parsed.minutes);
             if (nextTime !== value && onChange?.(nextTime) === false) { setDraft(value || ""); return; }
@@ -274,29 +289,49 @@ export const SceneTimeField = ({ value = "", onChange }) => {
 
     return (
         <div className="relative min-w-0">
-            <Input
-                type="text"
-                inputMode="numeric"
-                placeholder="HH:MM"
-                maxLength={5}
-                value={draft}
-                onChange={(event) => setDraft(maskSceneTimeInput(event.target.value))}
-                onBlur={commitDraft}
-                onKeyDown={(event) => {
-                    if (event.key === "Backspace" && event.currentTarget.selectionStart === draft.length &&
-                        event.currentTarget.selectionEnd === draft.length && draft.endsWith(":")) {
-                        event.preventDefault();
-                        setDraft(maskSceneTimeInput(draft.replace(/\D/g, "").slice(0, -1)));
-                    }
-                    if (event.key === "Enter") {
-                        event.preventDefault();
-                        event.currentTarget.blur();
-                    }
-                }}
-                className="input-geist h-8 w-full min-w-0 pr-9 text-sm tabular-nums"
-                aria-label="In-game time in 24-hour format"
-                data-testid="scene-time-input"
-            />
+            <div role="group" aria-label="In-game time in 24-hour format" data-testid="scene-time-input"
+                className="input-geist h-8 w-full min-w-0 px-2 sm:px-3 pr-9 text-sm tabular-nums flex items-center focus-within:ring-1 focus-within:ring-violet-400"
+                onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) commitDraft(); }}>
+                {['Hours', 'Minutes'].map((label, index) => {
+                    const focusMinutes = () => timeSegments.current[1]?.focus();
+                    return <div key={label} className="flex items-center min-w-0">
+                        {index === 1 && <span aria-hidden="true" className="shrink-0">:</span>}
+                        <input ref={node => { timeSegments.current[index] = node; }} type="text" inputMode="numeric" autoComplete="off"
+                            value={parts[index]} maxLength={2} placeholder={index === 0 ? 'HH' : 'MM'}
+                            aria-label={'In-game ' + label.toLowerCase()} data-testid={'scene-time-' + label.toLowerCase()}
+                            className="w-[2.2ch] min-w-0 bg-transparent border-0 p-0 outline-none text-center font-inherit tabular-nums selection:bg-violet-700"
+                            onFocus={event => event.currentTarget.select()}
+                            onDoubleClick={event => event.currentTarget.select()}
+                            onChange={event => {
+                                const digits = event.target.value.replace(/\D/g, '').slice(0, 2);
+                                setDraft(previous => replaceSceneTimeSegment(previous, index, digits));
+                                if (index === 0 && digits.length === 2 && Number(digits) <= 23) focusMinutes();
+                            }}
+                            onPaste={event => {
+                                const text = event.clipboardData.getData('text').trim();
+                                event.preventDefault();
+                                const full = parseSceneTimePaste(text);
+                                if (full) { setDraft(full); return; }
+                                if (/^\d{1,2}$/.test(text)) {
+                                    setDraft(previous => replaceSceneTimeSegment(previous, index, text));
+                                    if (index === 0 && text.length === 2 && Number(text) <= 23) focusMinutes();
+                                }
+                            }}
+                            onKeyDown={event => {
+                                const input = event.currentTarget;
+                                if (event.key === 'Enter') { event.preventDefault(); input.blur(); }
+                                else if (event.key === 'Escape') { event.preventDefault(); setDraft(value || ""); input.blur(); }
+                                else if (event.key === ':') { event.preventDefault(); if (index === 0) focusMinutes(); }
+                                else if (event.key === 'ArrowLeft' && index === 1 && input.selectionStart === 0 && input.selectionEnd === 0) {
+                                    event.preventDefault(); timeSegments.current[0]?.focus();
+                                }
+                                else if (event.key === 'ArrowRight' && index === 0 && input.selectionStart === input.value.length && input.selectionEnd === input.value.length) {
+                                    event.preventDefault(); focusMinutes();
+                                }
+                            }}/>
+                    </div>;
+                })}
+            </div>
             <Popover
                 open={open}
                 onOpenChange={(nextOpen) => {

@@ -85,3 +85,20 @@ export const parseSceneDatePaste = (value) => {
     if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(text)) return toSceneCalendarDate(parseSceneDate(text)) || null;
     return null;
 };
+
+export const splitSceneTimeDraft = value => {
+    const parts = String(value || '').split(':');
+    return [parts[0] || '', parts[1] || ''];
+};
+export const replaceSceneTimeSegment = (value, index, replacement) => {
+    if (index !== 0 && index !== 1) return value;
+    const parts = splitSceneTimeDraft(value);
+    parts[index] = String(replacement ?? '').replace(/\D/g, '').slice(0, 2);
+    return parts.some(Boolean) ? parts.join(':') : '';
+};
+export const parseSceneTimePaste = value => {
+    const text = String(value || '').trim();
+    const candidate = /^\d{4}$/.test(text) ? text.slice(0, 2) + ':' + text.slice(2) : text;
+    const parsed = parseSceneTime(candidate);
+    return parsed ? toSceneTime(parsed.hours, parsed.minutes) : null;
+};
