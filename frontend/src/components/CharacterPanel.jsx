@@ -1,3 +1,7 @@
+import { XPTrackerContent } from './character/XPTrackerContent';
+import { buildCharacterExportText, escapeHtml } from './character/characterExport';
+import { XP_TRACKER_RESOURCES, getXPTransactionTotals, isValidXPTrackerBalance, buildXPTrackerEntries, formatLedgerDate } from '../utils/xpTrackerRules';
+import { getDiceChatOutcome } from '../utils/diceConsequences';
 import { isCurrentXPHistory } from "../utils/xpHistoryLoading";
 import { lazyPanel } from "./LazyPanel";
 import { requestDiceRoll } from '../services/diceService';
@@ -440,18 +444,7 @@ export const CharacterPanel = ({
             if (onDiceRollResult) {
                 const r = res.data;
                 const diceStr = (r.dice || []).join(", ");
-                let resultEmoji = "✅";
-                let resultType = `**Success** (${r.successes})`;
-                if (r.is_dramatic_failure) {
-                    resultEmoji = "💀";
-                    resultType = "**DRAMATIC FAILURE**";
-                } else if ((r.successes || 0) === 0) {
-                    resultEmoji = "❌";
-                    resultType = "**Failure**";
-                } else if (r.is_exceptional) {
-                    resultEmoji = "✨";
-                    resultType = "**EXCEPTIONAL SUCCESS!**";
-                }
+                const {resultType, resultEmoji} = getDiceChatOutcome(r);
                 const chatMessage =
                     `${resultEmoji} **Ceremony Roll:** **${ceremonyName}**\n` +
                     `*Pool:* ${isChance ? 1 : computedPool} dice → [${diceStr}]\n` +
@@ -1158,125 +1151,10 @@ export const CharacterPanel = ({
         toast.success("Character locked. Future permanent increases require XP.");
     };
 
-    const escapeHtml = (value = "") => String(value)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#39;");
-
     const getCharacterForExport = () => ({
         ...(activeCharacter || {}),
         ...pendingChanges,
     });
-
-    const buildCharacterExportText = (character) => {
-        if (!character) return "";
-
-        const lines = [];
-        const addLine = (label, value = "") => {
-            if (value === undefined || value === null || value === "") {
-                lines.push(`${label}: -`);
-                return;
-            }
-            lines.push(`${label}: ${value}`);
-        };
-        const addSection = (title) => {
-            if (lines.length > 0) lines.push("");
-            lines.push(title);
-            lines.push("-".repeat(title.length));
-        };
-
-        const typeLabel = character.character_type === "mage" ? "Mage" : "Sin-Eater";
-
-        lines.push(`${character.name || "Unnamed Character"}`);
-        lines.push(`${typeLabel} Character Sheet`);
-
-        addSection("Core");
-        addLine("Concept", character.concept);
-        addLine("Virtue", character.virtue);
-        addLine("Vice", character.vice);
-        addLine("Archetype", character.archetype);
-        addLine("Krewe", character.krewe);
-        addLine("Notes", character.notes);
-
-        if (character.character_type === "mage") {
-            addSection("Mage");
-            addLine("Path", character.path);
-            addLine("Order", character.order);
-            addLine("Legacy", character.legacy);
-            addLine("Legacy Ruling Arcanum", character.legacy_ruling_arcanum);
-            addLine("Gnosis", character.gnosis);
-            addLine("Wisdom", character.wisdom);
-            addLine("Mana", character.mana);
-            const exportObsessions = Array.isArray(character.obsessions) && character.obsessions.length > 0
-                ? character.obsessions.filter(Boolean).join("; ")
-                : character.obsession;
-            addLine("Obsessions", exportObsessions);
-            addLine("Arcane Beats", character.arcane_beats);
-            addLine("Arcane Experience", character.arcane_experience);
-        } else {
-            addSection("Geist");
-            addLine("Geist Name", character.geist_name);
-            addLine("Burden", character.burden);
-            addLine("Synergy", `${character.synergy ?? 0} / ${character.synergy_max ?? 10}`);
-            addLine("Plasm", character.plasm);
-            addLine("Geist Rank", character.geist_rank);
-        }
-
-        addSection("Attributes");
-        Object.entries(character.attributes || {}).forEach(([key, value]) => {
-            addLine(formatLabel(key), value);
-        });
-
-        addSection("Skills");
-        Object.entries(character.skills || {}).forEach(([key, value]) => {
-            addLine(formatLabel(key), value);
-        });
-
-        addSection("Skill Specialties");
-        const exportSpecialties = character.specialties || [];
-        if (exportSpecialties.length === 0) {
-            lines.push("-");
-        } else {
-            exportSpecialties.forEach((entry) => lines.push(`- ${formatSkillSpecialty(entry)}`));
-        }
-
-        addSection("Merits");
-        const merits = character.merits_list || [];
-        if (merits.length === 0) {
-            lines.push("-");
-        } else {
-            merits.forEach((merit) => {
-                const dots = merit?.dots ? ` (${merit.dots})` : "";
-                const specialty = merit?.specialty ? ` - ${merit.specialty}` : "";
-                lines.push(`- ${merit?.name || "Unnamed Merit"}${dots}${specialty}`);
-            });
-        }
-
-        addSection("Inventory");
-        addLine("Funds", character.funds);
-        const inventory = character.inventory_items || [];
-        if (inventory.length === 0) {
-            lines.push("-");
-        } else {
-            inventory.forEach((item) => {
-                lines.push(`- ${item?.name || "Unnamed Item"} [${item?.type || "item"}]`);
-            });
-        }
-
-        addSection("Conditions");
-        const conditions = character.conditions || [];
-        if (conditions.length === 0) {
-            lines.push("-");
-        } else {
-            conditions.forEach((condition) => {
-                lines.push(`- ${condition?.name || "Unnamed Condition"}`);
-            });
-        }
-
-        return lines.join("\n");
-    };
 
     const exportCharacterToJson = async () => {
         if (!activeCharacter) return;
@@ -1462,40 +1340,6 @@ export const CharacterPanel = ({
             }
         };
 
-    const XP_TRACKER_RESOURCES = [
-        "experience",
-        "arcane_experience",
-        "beats",
-        "arcane_beats",
-    ];
-
-    const getXPTransactionTotals = (entry) => {
-        const totals = Object.fromEntries(
-            XP_TRACKER_RESOURCES.map((resource) => [resource, 0])
-        );
-
-        for (const movement of entry.movements || []) {
-            const { resource } = movement;
-            const amount = Number(movement.amount);
-
-            if (
-                !XP_TRACKER_RESOURCES.includes(resource) ||
-                !Number.isInteger(amount)
-            ) {
-                throw new Error("The transaction contains invalid XP movements.");
-            }
-
-            totals[resource] += amount;
-        }
-
-        return totals;
-    };
-
-    const isValidXPTrackerBalance = (resource, balance) =>
-        Number.isInteger(balance) &&
-        balance >= 0 &&
-        (!resource.endsWith("beats") || balance <= 4);
-
     // Apply an edit or deletion as one character update. Supplying xp_history
     // prevents the backend from recording this correction as a new transaction.
     const applyXPTrackerCorrection = async (transactionId, editedEntry = null) => {
@@ -1664,70 +1508,7 @@ export const CharacterPanel = ({
         if (!xpDeleteEntry || savingXPChange) return;
         await applyXPTrackerCorrection(xpDeleteEntry.id, null);
     };
-    const getXPTrackerEntries = () => {
-        if (!historyReady) return [];
-        const history = historySnapshot.xp_history;
-        const ledger = getValue("advancement_ledger") || [];
-
-        const trackedIds = new Set(
-            history.map(entry => entry.source_ledger_id).filter(Boolean)
-        );
-
-        const historical = ledger
-            .filter(entry => !trackedIds.has(entry.id))
-            .map(entry => {
-                const movements = [];
-
-                for (const resource of ["experience", "arcane_experience"]) {
-                    const cost = Number(entry.cost?.[resource]) || 0;
-                    if (cost !== 0) {
-                        movements.push({
-                            resource,
-                            amount: -cost,
-                        });
-                    }
-                }
-
-                return {
-                    ...entry,
-                    historical: true,
-                    movements,
-                };
-            });
-
-        return [...history, ...historical].sort(
-            (a, b) =>
-                (Date.parse(b.date) || 0) -
-                (Date.parse(a.date) || 0)
-        );
-    };
-
-    const formatLedgerDate = (value) => {
-        if (!value) return "—";
-        const parsed = new Date(value);
-        if (Number.isNaN(parsed.getTime())) return "—";
-        return new Intl.DateTimeFormat("en-GB", {
-            day: "2-digit",
-            month: "2-digit",
-            year: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit",
-        }).format(parsed);
-    };
-
-    const formatXPTrackerMovement = (movement) => {
-        const names = {
-            experience: "XP",
-            arcane_experience: "Arcane XP",
-            beats: "Beats",
-            arcane_beats: "Arcane Beats",
-        };
-
-        const amount = Number(movement.amount) || 0;
-        const sign = amount > 0 ? "+" : "";
-
-        return `${sign}${amount} ${names[movement.resource] || movement.resource}`;
-    };
+    const getXPTrackerEntries = () => historyReady ? buildXPTrackerEntries(historySnapshot.xp_history, getValue("advancement_ledger") || []) : [];
 
     // Inventory helpers
     const inventoryItems = getValue("inventory_items") || [];
@@ -3623,282 +3404,26 @@ export const CharacterPanel = ({
                         </CollapsibleTrigger>
 
                         <CollapsibleContent className="mt-2">
-                            {isMage ? (
-                                <div className="space-y-3">
-                                    <div className="grid grid-cols-2 gap-2">
-                                        <div className="p-2 bg-zinc-950/50 border border-zinc-800 rounded-sm">
-                                            <div className="text-[10px] text-zinc-500 uppercase tracking-wider">Available</div>
-                                            <div className="font-mono text-xs text-emerald-300 mt-1">
-                                                XP {getValue("experience") || 0} / Arcane {getValue("arcane_experience") || 0}
-                                            </div>
-                                        </div>
-                                        <div className="p-2 bg-zinc-950/50 border border-zinc-800 rounded-sm">
-                                            <div className="text-[10px] text-zinc-500 uppercase tracking-wider">Spent</div>
-                                            <div className="font-mono text-xs text-amber-300 mt-1">
-                                                XP {getValue("spent_experience") || 0} / Arcane {getValue("spent_arcane_experience") || 0}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="p-3 bg-zinc-950/50 border border-zinc-800 rounded-sm space-y-3">
-                                        <div className="text-xs font-semibold text-zinc-300">
-                                            Record XP Transaction
-                                        </div>
-
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <select
-                                                value={manualXPType}
-                                                onChange={(e) => setManualXPType(e.target.value)}
-                                                className="h-8 bg-zinc-900 border border-zinc-700 rounded-sm px-2 text-xs text-zinc-200"
-                                            >
-                                                <option value="experience">XP</option>
-                                                <option value="arcane_experience">Arcane XP</option>
-                                            </select>
-
-                                            <Input
-                                                type="number"
-                                                step="1"
-                                                value={manualXPAmount}
-                                                onChange={(e) => setManualXPAmount(e.target.value)}
-                                                placeholder="+5 or -2"
-                                                className="h-8 input-geist text-xs"
-                                            />
-                                        </div>
-
-                                        <Input
-                                            value={manualXPReason}
-                                            onChange={(e) => setManualXPReason(e.target.value)}
-                                            placeholder="Reason for XP gain or expenditure"
-                                            className="h-8 input-geist text-xs"
-                                        />
-
-                                        <Button
-                                            size="sm"
-                                            className="w-full bg-emerald-800 hover:bg-emerald-700 text-white"
-                                            onClick={recordManualXPTransaction}
-                                            disabled={
-                                                recordingManualXP ||
-                                                !manualXPReason.trim() ||
-                                                !Number.isInteger(Number(manualXPAmount)) ||
-                                                Number(manualXPAmount) === 0
-                                            }
-                                        >
-                                            {recordingManualXP ? "Recording..." : "Record Transaction"}
-                                        </Button>
-
-                                        <div className="text-[10px] text-zinc-500">
-                                            Use positive numbers to gain XP and negative numbers to spend XP.
-                                        </div>
-                                    </div>
-
-                                    {!historyReady ? (
-                                        <div className="text-xs text-zinc-400" data-testid="xp-history-loading">
-                                            {historyError ? 'Could not load XP history.' : 'Loading XP history…'}
-                                            <Button type="button" size="sm" variant="ghost" onClick={()=>setHistoryRetry(n=>n+1)}>Retry</Button>
-                                        </div>
-                                    ) : getXPTrackerEntries().length === 0 ? (
-                                        <div className="p-3 bg-zinc-950/40 border border-zinc-800 rounded-sm text-xs text-zinc-500">
-                                            No XP transactions recorded yet.
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-2">
-                                            {getXPTrackerEntries().map((entry, index) => (
-                                                <div
-                                                    key={entry.id || index}
-                                                    className="p-3 bg-zinc-950/50 border border-zinc-800 rounded-sm"
-                                                    data-testid="xp-tracker-entry"
-                                                >
-                                                    <div className="flex items-start justify-between gap-2">
-                                                        <div className="min-w-0">
-                                                            <div className="text-xs text-zinc-200">
-                                                                {entry.label || "XP Transaction"}
-                                                            </div>
-                                                            <div className="mt-1 text-[10px] text-zinc-500">
-                                                                {formatLedgerDate(entry.date)}
-                                                                {entry.historical && " · Historical advancement"}
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="flex items-center gap-1 shrink-0">
-                                                            <Button
-                                                                type="button"
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                className="h-6 w-6 text-zinc-400 hover:text-amber-300"
-                                                                title="Edit transaction"
-                                                                disabled={
-                                                                    savingXPChange ||
-                                                                    !entry.id ||
-                                                                    entry.historical ||
-                                                                    Boolean(entry.source_ledger_id)
-                                                                }
-                                                                onClick={() =>
-                                                                    setXpEditDraft({
-                                                                        ...entry,
-                                                                        _history_revision: historySnapshot.updated_at,
-                                                                        label: entry.label || "",
-                                                                        note: entry.note || "",
-                                                                    })
-                                                                }
-                                                            >
-                                                                <Pencil className="w-3.5 h-3.5" />
-                                                            </Button>
-
-                                                            <Button
-                                                                type="button"
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                className="h-6 w-6 text-zinc-400 hover:text-red-400"
-                                                                title="Delete transaction"
-                                                                disabled={
-                                                                    savingXPChange ||
-                                                                    !entry.id ||
-                                                                    entry.historical ||
-                                                                    Boolean(entry.source_ledger_id)
-                                                                }
-                                                                onClick={() => setXpDeleteEntry({...entry, _history_revision: historySnapshot.updated_at})}
-                                                            >
-                                                                <X className="w-3.5 h-3.5" />
-                                                            </Button>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="flex flex-wrap gap-2 mt-2">
-                                                        {(entry.movements || [])
-                                                            .filter(m => Number(m.amount) !== 0)
-                                                            .map((movement, movementIndex) => (
-                                                                <span
-                                                                    key={movementIndex}
-                                                                    className={`text-xs font-mono ${
-                                                                        Number(movement.amount) > 0
-                                                                            ? "text-emerald-300"
-                                                                            : "text-rose-300"
-                                                                    }`}
-                                                                >
-                                                                    {formatXPTrackerMovement(movement)}
-                                                                </span>
-                                                            ))}
-
-                                                        {(entry.movements || []).every(
-                                                            m => Number(m.amount) === 0
-                                                        ) && (
-                                                            <span className="text-xs text-zinc-500">
-                                                                No XP change
-                                                            </span>
-                                                        )}
-                                                    </div>
-
-                                                    {entry.balances && (
-                                                        <div className="mt-2 text-[10px] text-zinc-500">
-                                                            Balance: {entry.balances.experience} XP
-                                                            {" / "}
-                                                            {entry.balances.arcane_experience} Arcane XP
-                                                            {" · "}
-                                                            {entry.balances.beats} Beats
-                                                            {" / "}
-                                                            {entry.balances.arcane_beats} Arcane Beats
-                                                        </div>
-                                                    )}
-
-                                                    {entry.note && (
-                                                        <div className="mt-2 pt-2 border-t border-zinc-800 text-xs text-zinc-400 whitespace-pre-wrap">
-                                                            {entry.note}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            ) : (
-                                <div className="space-y-3" data-testid="geist-xp-tracker">
-                                    <div className="grid grid-cols-3 gap-2">
-                                        {[
-                                            ["Available XP", getValue("experience") || 0],
-                                            ["Beats", getValue("beats") || 0],
-                                            ["Spent XP", getValue("spent_experience") || 0],
-                                        ].map(([label, value]) => (
-                                            <div key={label} className="rounded-sm border border-zinc-800 bg-zinc-950/50 p-2">
-                                                <div className="text-[10px] text-zinc-500">{label}</div>
-                                                <div className="mt-1 font-mono text-sm text-emerald-300">{value}</div>
-                                            </div>
-                                        ))}
-                                    </div>
-
-                                    <div className="space-y-2 rounded-sm border border-zinc-800 bg-zinc-950/50 p-3">
-                                        <div className="text-xs font-semibold text-zinc-300">
-                                            Record XP Transaction
-                                        </div>
-                                        <Input
-                                            type="number"
-                                            step="1"
-                                            value={manualXPAmount}
-                                            onChange={(e) => setManualXPAmount(e.target.value)}
-                                            placeholder="+5 or -2"
-                                            className="h-8 input-geist text-xs"
-                                        />
-                                        <Input
-                                            value={manualXPReason}
-                                            onChange={(e) => setManualXPReason(e.target.value)}
-                                            placeholder="Reason for XP gain or expenditure"
-                                            className="h-8 input-geist text-xs"
-                                        />
-                                        <Button
-                                            size="sm"
-                                            className="w-full bg-emerald-800 hover:bg-emerald-700 text-white"
-                                            onClick={recordManualXPTransaction}
-                                            disabled={
-                                                recordingManualXP ||
-                                                !manualXPReason.trim() ||
-                                                !Number.isInteger(Number(manualXPAmount)) ||
-                                                Number(manualXPAmount) === 0
-                                            }
-                                        >
-                                            {recordingManualXP ? "Recording..." : "Record Transaction"}
-                                        </Button>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        {!historyReady ? (
-                                        <div className="text-xs text-zinc-400" data-testid="xp-history-loading">
-                                            {historyError ? 'Could not load XP history.' : 'Loading XP history…'}
-                                            <Button type="button" size="sm" variant="ghost" onClick={()=>setHistoryRetry(n=>n+1)}>Retry</Button>
-                                        </div>
-                                    ) : getXPTrackerEntries().length === 0 ? (
-                                            <div className="rounded-sm border border-zinc-800 p-3 text-xs text-zinc-500">
-                                                No XP transactions recorded yet.
-                                            </div>
-                                        ) : (
-                                            getXPTrackerEntries().map((entry, index) => (
-                                                <div
-                                                    key={entry.id || index}
-                                                    className="rounded-sm border border-zinc-800 bg-zinc-950/50 p-3"
-                                                    data-testid="xp-tracker-entry"
-                                                >
-                                                    <div className="text-xs text-zinc-200">
-                                                        {entry.label || "XP Transaction"}
-                                                    </div>
-                                                    <div className="mt-1 text-[10px] text-zinc-500">
-                                                        {formatLedgerDate(entry.date)}
-                                                    </div>
-                                                    <div className="mt-2 flex flex-wrap gap-2">
-                                                        {(entry.movements || [])
-                                                            .filter(m => ["experience", "beats"].includes(m.resource) && Number(m.amount) !== 0)
-                                                            .map((movement, i) => (
-                                                                <span key={i} className="font-mono text-xs text-emerald-300">
-                                                                    {formatXPTrackerMovement(movement)}
-                                                                </span>
-                                                            ))}
-                                                    </div>
-                                                    {entry.note && (
-                                                        <p className="mt-2 text-xs text-zinc-400">{entry.note}</p>
-                                                    )}
-                                                </div>
-                                            ))
-                                        )}
-                                    </div>
-                                </div>
-                            )}
+                            <XPTrackerContent
+                                isMage={isMage}
+                                getValue={getValue}
+                                manualXPType={manualXPType}
+                                setManualXPType={setManualXPType}
+                                manualXPAmount={manualXPAmount}
+                                setManualXPAmount={setManualXPAmount}
+                                manualXPReason={manualXPReason}
+                                setManualXPReason={setManualXPReason}
+                                recordingManualXP={recordingManualXP}
+                                recordManualXPTransaction={recordManualXPTransaction}
+                                historyReady={historyReady}
+                                historyError={historyError}
+                                setHistoryRetry={setHistoryRetry}
+                                getXPTrackerEntries={getXPTrackerEntries}
+                                savingXPChange={savingXPChange}
+                                setXpEditDraft={setXpEditDraft}
+                                setXpDeleteEntry={setXpDeleteEntry}
+                                historySnapshot={historySnapshot}
+                            />
                         </CollapsibleContent>
                     </Collapsible>
                 </div>

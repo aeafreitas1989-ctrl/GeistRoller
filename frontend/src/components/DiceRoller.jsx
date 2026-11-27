@@ -1,3 +1,4 @@
+import { canConvertVoluntaryFailure, shouldAwardDramaticFailureBeat } from '../utils/diceConsequences';
 import { formatDiceOutcome } from '../utils/diceOutcome';
 import { requestDiceRoll } from '../services/diceService';
 import { useState, forwardRef, useImperativeHandle, useRef, useEffect, useCallback, useMemo } from "react";
@@ -127,15 +128,12 @@ export const DiceRoller = forwardRef(({
             // before being recorded in Recent Rolls.
             if (
                 typeof onAwardDramaticFailure === "function" &&
-                response.data.successes === 0 &&
-                !response.data.is_dramatic_failure &&
-                completedPayload.config?.summaryKey !== "paradox" &&
-                !completedPayload.config?.countOnly
+                canConvertVoluntaryFailure(response.data, completedPayload.config || {})
             ) {
                 setPendingDramaticFailure(completedPayload);
                 return;
             }
-            
+
             if (
                 response.data?.is_exceptional &&
                 completedPayload.config?.requiresSpellExceptionalChoice &&
@@ -174,9 +172,7 @@ export const DiceRoller = forwardRef(({
             }
 
             if (
-                response.data.beat_awarded &&
-                !completedPayload.config?.countOnly &&
-                completedPayload.config?.summaryKey !== "paradox" &&
+                shouldAwardDramaticFailureBeat(response.data, completedPayload.config || {}) &&
                 typeof onAwardDramaticFailure === "function"
             ) {
                 await onAwardDramaticFailure({
@@ -184,7 +180,7 @@ export const DiceRoller = forwardRef(({
                     automatic: true,
                 });
             }
-            
+
             if (!completedPayload.config?.countOnly && response.data.is_dramatic_failure) {
                 toast.error("Dramatic Failure!", {
                     description: "The spirits turn against you...",
@@ -643,7 +639,7 @@ export const DiceRoller = forwardRef(({
             choice.transcript || "",
         ].join("\n");
     };
-    
+
     const formatTranscriptFromConfig = (rollResult, config = {}) => {
         if (!rollResult) return "";
 
@@ -783,7 +779,7 @@ export const DiceRoller = forwardRef(({
             await pending.onResult(finalResult);
         }
     };
-    
+
     const resolveSpellExceptionalChoice = (choice) => {
         if (!pendingSpellExceptionalChoice) return;
 
@@ -944,7 +940,7 @@ export const DiceRoller = forwardRef(({
                         </Button>
                     </div>
                 </DialogContent>
-            </Dialog>            
+            </Dialog>
             <Dialog open={!!pendingSpellExceptionalChoice}>
                 <DialogContent className="bg-zinc-950 border-zinc-800 text-zinc-100">
                     <DialogHeader>
@@ -968,7 +964,7 @@ export const DiceRoller = forwardRef(({
                         ))}
                     </div>
                 </DialogContent>
-            </Dialog>        
+            </Dialog>
             {/* Header */}
             <div className="flex items-center justify-between p-3 border-b border-zinc-800/50">
                 <div className="flex items-center gap-2">

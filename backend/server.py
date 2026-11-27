@@ -20,6 +20,7 @@ from time_effect_retention import retain_unexpired_effects
 from rules_validation import validate_rule_bounded_fields
 from character_sync import CharacterSummary, CHARACTER_SUMMARY_PROJECTION
 from character_history import without_xp_history, xp_history_snapshot
+from character_delta import character_delta, history_projection, next_revision
 from models import (
     Campaign,
     CampaignCreate,
@@ -49,9 +50,10 @@ api_router = APIRouter(prefix="/api")
 _character_subscribers: Dict[str, Set[asyncio.Queue]] = {}
 
 
-def _subscribe_to_character(character_id: str, include_xp_history: bool = True) -> asyncio.Queue:
+def _subscribe_to_character(character_id: str, include_xp_history: bool = True, delta_updates: bool = False) -> asyncio.Queue:
     queue: asyncio.Queue = asyncio.Queue(maxsize=1)
     queue.include_xp_history = include_xp_history
+    queue.delta_updates = delta_updates and not include_xp_history
     _character_subscribers.setdefault(character_id, set()).add(queue)
     return queue
 
@@ -67,32 +69,36 @@ def _unsubscribe_from_character(character_id: str, queue: asyncio.Queue) -> None
         _character_subscribers.pop(character_id, None)
 
 
-def _publish_character_update(character: dict) -> None:
+def _has_history_subscriber(character_id):
+    return any(getattr(q, "include_xp_history", True) for q in _character_subscribers.get(character_id, set()))
+
+
+def _compact_character(character):
+    return Character.model_validate(character).model_dump(mode="json", exclude={"xp_history"})
+
+
+def _publish_character_update(character: dict, delta=None) -> None:
     character_id = character.get("id")
     if not character_id:
         return
-
     subscribers = list(_character_subscribers.get(character_id, set()))
-    if not subscribers:
-        return
-
     payloads = {}
     for queue in subscribers:
         include_history = getattr(queue, "include_xp_history", True)
-        if include_history not in payloads:
-            payloads[include_history] = json.dumps(
-                {"type": "character_updated", "character": character if include_history else without_xp_history(character)},
-                default=str, separators=(",", ":"),
-            )
-        payload = payloads[include_history]
+        # If a queued delta was not consumed, replace it with a complete snapshot.
+        # A reconnect also always begins with a snapshot.
+        use_delta = bool(delta and getattr(queue, "delta_updates", False) and not queue.full())
+        kind = "delta" if use_delta else "full" if include_history else "compact"
+        if kind not in payloads:
+            data = delta if use_delta else {"type":"character_updated", "character": character if include_history else _compact_character(character)}
+            payloads[kind] = json.dumps(data, default=str, separators=(",", ":"))
         if queue.full():
             try:
                 queue.get_nowait()
             except asyncio.QueueEmpty:
                 pass
-
         try:
-            queue.put_nowait(payload)
+            queue.put_nowait(payloads[kind])
         except asyncio.QueueFull:
             pass
 
@@ -143,14 +149,14 @@ async def get_xp_history(character_id: str):
 
 
 @api_router.get("/characters/{character_id}/events")
-async def character_events(character_id: str, include_xp_history: bool = True):
-    queue = _subscribe_to_character(character_id, include_xp_history)
+async def character_events(character_id: str, include_xp_history: bool = True, delta_updates: bool = False):
+    queue = _subscribe_to_character(character_id, include_xp_history, delta_updates)
     try:
         projection = {"_id": 0} if include_xp_history else {"_id": 0, "xp_history": 0}
         character = await db.characters.find_one({"id": character_id}, projection)
         if not character:
             raise HTTPException(status_code=404, detail="Character not found")
-        initial_payload = json.dumps({"type": "character_updated", "character": character},
+        initial_payload = json.dumps({"type": "character_updated", "character": character if include_xp_history else _compact_character(character)},
                                      default=str, separators=(",", ":"))
     except BaseException:
         _unsubscribe_from_character(character_id, queue)
@@ -329,15 +335,12 @@ def build_xp_history_entry(previous, updates, reason=""):
     }
 
 @api_router.put("/characters/{character_id}", response_model=Character)
-async def update_character(character_id: str, input: CharacterUpdate, include_xp_history: bool = True, expected_updated_at: str = None):
+async def update_character(character_id: str, input: CharacterUpdate, include_xp_history: bool = True, expected_updated_at: str = None, delta_updates: bool = False):
     update_data = input.model_dump(exclude_unset=True)
     allow_override = bool(update_data.pop("allow_rules_override", False))
     reason = (update_data.pop("xp_reason", "") or "").strip()
 
-    previous = await db.characters.find_one(
-        {"id": character_id},
-        {"_id": 0},
-    )
+    previous = await db.characters.find_one({"id": character_id}, history_projection(False))
 
     if not previous:
         raise HTTPException(
@@ -374,9 +377,7 @@ async def update_character(character_id: str, input: CharacterUpdate, include_xp
             )
         )
 
-        update_data["updated_at"] = (
-            datetime.now(timezone.utc).isoformat()
-        )
+        update_data["updated_at"] = next_revision(previous.get("updated_at"))
 
         operations = {"$set": update_data}
 
@@ -385,26 +386,41 @@ async def update_character(character_id: str, input: CharacterUpdate, include_xp
                 "xp_history": transaction,
             }
 
-        selector = {"id": character_id}
-        if expected_updated_at is not None:
-            selector["updated_at"] = expected_updated_at
+        # Protect the exact revision used for rule validation and XP accounting.
+        # A conflicting write is rejected rather than applying a stale computed patch.
+        selector = {"id": character_id, "updated_at": previous.get("updated_at") if "updated_at" in previous else {"$exists": False}}
+        wants_history = include_xp_history or _has_history_subscriber(character_id)
         character = await db.characters.find_one_and_update(
             selector, operations,
-            projection={"_id": 0}, return_document=ReturnDocument.AFTER,
+            projection=history_projection(wants_history), return_document=ReturnDocument.AFTER,
         )
     else:
-        character = previous
+        character = await db.characters.find_one({"id": character_id}, history_projection(True)) if include_xp_history else previous
 
     if not character:
-        if expected_updated_at is not None:
-            raise HTTPException(status_code=409, detail="Character changed; reload XP history before editing")
+        if update_data or expected_updated_at is not None:
+            raise HTTPException(status_code=409, detail="Character changed; reload and retry the action")
         raise HTTPException(status_code=404, detail="Character not found")
 
+    compact = _compact_character(character)
+    delta = character_delta(_compact_character(previous), compact) if update_data and previous.get("updated_at") else None
     if update_data:
-        _publish_character_update(character)
+        publish_character, publish_delta = character, delta
+        # A legacy full-history client may subscribe during the awaited Mongo write.
+        # Refresh only in that uncommon case, and never publish an old delta for a newer snapshot.
+        if not wants_history and _has_history_subscriber(character_id):
+            full = await db.characters.find_one({"id": character_id}, history_projection(True))
+            if full is not None:
+                publish_character = full
+                if full.get("updated_at") != character.get("updated_at"):
+                    publish_delta = None
+            else:
+                publish_character = None
+        if publish_character is not None:
+            _publish_character_update(publish_character, publish_delta)
 
     if not include_xp_history:
-        return JSONResponse(Character.model_validate(character).model_dump(mode="json", exclude={"xp_history"}))
+        return JSONResponse(delta if delta_updates and delta else compact)
     return character
 
 

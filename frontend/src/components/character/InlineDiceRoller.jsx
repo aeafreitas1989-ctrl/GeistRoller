@@ -1,3 +1,4 @@
+import { getDiceChatOutcome, applyVoluntaryFailureWithBeat, shouldApplyKeyDoom, shouldAwardDramaticFailureBeat, dramaticFailureBeatReason } from '../../utils/diceConsequences';
 import { formatDiceOutcome } from '../../utils/diceOutcome';
 import { requestDiceRoll } from '../../services/diceService';
 import { useState, useMemo, useEffect } from "react";
@@ -242,7 +243,7 @@ export const InlineDiceRoller = ({
             setDiceModifier(0);
         }
     }, [preset, getNestedValue]);
-    
+
     // Haunt-specific options
     const [plasmSpent, setPlasmSpent] = useState(1);
     const [selectedEnhancements, setSelectedEnhancements] = useState([]);
@@ -293,7 +294,7 @@ export const InlineDiceRoller = ({
         professionalTrainingDots >= 3 &&
         professionalTrainingAssetSkills.includes(skill);
     const inventoryItems = getValue("inventory_items") || [];
-    
+
     const equippedEquipmentOptions = inventoryItems
         .map((it, idx) => ({ it, idx }))
         .filter(({ it }) => it?.type === "equipment" && !!it?.equipped)
@@ -449,7 +450,7 @@ export const InlineDiceRoller = ({
 
     const effectivePool = isComputedChanceDie ? 1 : poolTotal;
 
-    const formatOutcomeLine = (rollResult, countOnly = false) => formatDiceOutcome(rollResult, {countOnly});
+    const formatOutcomeLine = (rollResult, countOnly = false) => formatDiceOutcome(rollResult, {countOnly, voluntary:!countOnly});
 
         const formatPoolPart = (label, value, forceSign = true) => {
         const numericValue = Number(value) || 0;
@@ -518,12 +519,12 @@ export const InlineDiceRoller = ({
 
     const resolveFailureChoice = (convert) => {
         if (!pendingFailureChoice) return;
-    
+
         const { resolve } = pendingFailureChoice;
         setPendingFailureChoice(null);
         resolve(convert);
     };
-    
+
     const rollDice = async () => {
         if (rollType === "haunt") {
             if (!onOpenHauntRoll) {
@@ -557,7 +558,7 @@ export const InlineDiceRoller = ({
         const needsWillpowerForBonus = spendWillpower;
         const needsWillpowerForDoom = rollType === "haunt" && key !== "__none__" && avoidDoom && !spendWillpower;
         const totalWillpowerNeeded = (needsWillpowerForBonus ? 1 : 0) + (needsWillpowerForDoom ? 1 : 0);
-        
+
         if (totalWillpowerNeeded > 0) {
             if (currentWillpower < totalWillpowerNeeded) {
                 toast.error(`Not enough Willpower (need ${totalWillpowerNeeded}, have ${currentWillpower})`);
@@ -653,18 +654,12 @@ export const InlineDiceRoller = ({
                 const convert = await new Promise((resolve) => {
                     setPendingFailureChoice({ resolve });
                 });
-            
+
                 if (convert) {
-                    response.data = {
-                        ...response.data,
-                        is_dramatic_failure: true,
-                        beat_awarded: true,
-                        voluntary_dramatic_failure: true,
-                        description: "Voluntary Dramatic Failure",
-                    };
+                    response.data = applyVoluntaryFailureWithBeat(response.data);
                 }
             }
-            
+
             const conditionPresentation = getConditionRollPresentation(
                 conditionUsed, originalConditionResult, response.data, { chanceDieReplaced }
             );
@@ -678,7 +673,7 @@ export const InlineDiceRoller = ({
                         resolution: 'Stand up or otherwise regain footing.', origin: 'Ice' });
                 }
             }
-            if (rollType === "haunt" && key !== "__none__" && !avoidDoom && !spendWillpower && !response.data.is_exceptional) {
+            if (rollType === "haunt" && shouldApplyKeyDoom({key, avoidDoom, spendWillpower, result:response.data})) {
                 await onAddCondition?.({
                     name: "Doomed", type: "geist", origin: key,
                     description: "The Key's Doom is active until resolved.",
@@ -710,24 +705,7 @@ export const InlineDiceRoller = ({
                 rollDescription += ` (mod ${modifierBonus > 0 ? "+" : ""}${modifierBonus})`;
             }
 
-            // Determine result type
-            let resultType = "";
-            let resultEmoji = "";
-            const successes = response.data.successes;
-            
-            if (response.data.is_dramatic_failure) {
-                resultType = "**DRAMATIC FAILURE**";
-                resultEmoji = "💀";
-            } else if (successes === 0) {
-                resultType = "**Failure**";
-                resultEmoji = "❌";
-            } else if (response.data.is_exceptional) {
-                resultType = "**EXCEPTIONAL SUCCESS!**";
-                resultEmoji = "✨";
-            } else {
-                resultType = `**Success** (${successes})`;
-                resultEmoji = "✅";
-            }
+            const {resultType, resultEmoji} = getDiceChatOutcome(response.data);
 
             // Send to chat
             const diceStr = response.data.dice.join(", ");
@@ -765,12 +743,8 @@ export const InlineDiceRoller = ({
 
             onRollComplete?.();
 
-            if (response.data.beat_awarded) {
-                await onAwardBeat(
-                    response.data.voluntary_dramatic_failure
-                        ? "Voluntary Dramatic Failure"
-                        : "Chance Die Dramatic Failure"
-                );
+            if (shouldAwardDramaticFailureBeat(response.data)) {
+                await onAwardBeat(dramaticFailureBeatReason(response.data));
                 toast.warning("Dramatic Failure: Beat gained");
             } else if (response.data.is_dramatic_failure) {
                 toast.error("Dramatic Failure!");
@@ -795,7 +769,7 @@ export const InlineDiceRoller = ({
 
     return (
         <div className="bg-zinc-900/50 border border-zinc-800 rounded-sm" data-testid="inline-dice-roller">
-            
+
             <Dialog open={!!pendingConditionChoice} onOpenChange={(open) => { if (!open) resolveConditionChoice(null); }}>
                 <DialogContent className="w-[calc(100vw-2rem)] max-w-md min-w-0 max-h-[calc(100dvh-2rem)] overflow-y-auto border-zinc-700 bg-zinc-950 p-5 text-zinc-100 sm:p-6" data-testid="condition-choice-dialog">
                     <DialogHeader className="min-w-0 space-y-2 text-left">
@@ -847,7 +821,7 @@ export const InlineDiceRoller = ({
                             into a Dramatic Failure?
                         </DialogDescription>
                     </DialogHeader>
-    
+
                     <div className="space-y-2">
                         <Button
                             type="button"
@@ -857,7 +831,7 @@ export const InlineDiceRoller = ({
                         >
                             Accept Failure
                         </Button>
-    
+
                         <Button
                             type="button"
                             className="w-full bg-rose-900 hover:bg-rose-800 text-white"
@@ -1071,7 +1045,7 @@ export const InlineDiceRoller = ({
                                                         label = `${memento.name} (${k})`;
                                                     }
                                                 }
-                                            
+
                                                 return (
                                                     <SelectItem key={k} value={k} className="text-xs">
                                                         {label}
@@ -1088,7 +1062,7 @@ export const InlineDiceRoller = ({
                                     )}
                                 </div>
                             </div>
-                            
+
                             {/* Plasm and Enhancements */}
                             <div className="pt-2 border-t border-zinc-800 space-y-3">
                                 <div>
@@ -1111,7 +1085,7 @@ export const InlineDiceRoller = ({
                                         <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Enhancements</label>
                                         <div className="mt-1 space-y-1 max-h-32 overflow-y-auto">
                                             {availableEnhancements.map((enh) => (
-                                                <label 
+                                                <label
                                                     key={enh.name}
                                                     className={`flex items-center gap-2 p-1.5 rounded text-xs cursor-pointer transition-colors ${
                                                         selectedEnhancements.includes(enh.name)

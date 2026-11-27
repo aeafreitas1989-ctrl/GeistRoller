@@ -1,3 +1,4 @@
+import { reconcileCharacterDelta } from "@/utils/characterDelta";
 import { withoutXPHistory } from "@/utils/xpHistoryLoading";
 import { toCharacterSummary, updateCharacterSummary } from "@/utils/characterSummaries";
 import { TimeElapsedDialog } from "@/components/TimeElapsedDialog";
@@ -67,6 +68,27 @@ export const CharacterSheetPage = () => {
         setActiveCharacter(next);
         refreshSummary(next);
     };
+    const acceptCharacterMessage = async (message) => {
+        if (message?.type !== 'character_delta') { acceptCharacterSnapshot(message); return true; }
+        if (latestCharacterRef.current?.id !== message.id) {
+            if (message.summary?.id === message.id) refreshSummary(message.summary);
+            return true;
+        }
+        const result = reconcileCharacterDelta(confirmedCharacterRef.current, message);
+        if (result.snapshot) {
+            // Reapply pending writes even for a duplicate acknowledgement.
+            acceptCharacterSnapshot(result.snapshot);
+            return true;
+        }
+        try {
+            const response = await axios.get(`${API}/characters/${message.id}?include_xp_history=false`);
+            acceptCharacterSnapshot(response.data);
+            return true;
+        } catch (error) {
+            toast.error('Character synchronisation could not recover a missing revision. Reload before continuing.');
+            return false;
+        }
+    };
     const selectCharacter = async (summary) => {
         const request = ++selectionRequestRef.current;
         if (!summary?.id || deletingCharactersRef.current.has(summary.id)) return false;
@@ -91,7 +113,7 @@ export const CharacterSheetPage = () => {
     const lastCharacterStorageKey = "geistroller-last-active-character-id";
 
     useCharacterSync(activeCharacter?.id, (updatedCharacter) => {
-        if (latestCharacterRef.current?.id === updatedCharacter.id) acceptCharacterSnapshot(updatedCharacter);
+        if (latestCharacterRef.current?.id === updatedCharacter.id) void acceptCharacterMessage(updatedCharacter);
     });
 
     const triggerDiceRoll = (config) => {
@@ -591,12 +613,12 @@ export const CharacterSheetPage = () => {
         const task = previousWrite.catch(() => false).then(async () => {
             try {
                 const response = await axios.put(`${API}/characters/${characterId}`, patch, { params: {
-                    include_xp_history: false, ...(summaryOptions.expectedHistoryRevision ? {expected_updated_at: summaryOptions.expectedHistoryRevision} : {})
+                    include_xp_history: false, delta_updates: true, ...(summaryOptions.expectedHistoryRevision ? {expected_updated_at: summaryOptions.expectedHistoryRevision} : {})
                 }});
                 const remaining = (pendingCharacterPatchesRef.current.get(characterId) || []).filter((entry) => entry.token !== token);
                 if (remaining.length) pendingCharacterPatchesRef.current.set(characterId, remaining);
                 else pendingCharacterPatchesRef.current.delete(characterId);
-                acceptCharacterSnapshot(response.data);
+                await acceptCharacterMessage(response.data);
                 if (summary) setTimeSummaries(queue => [...queue, summary]);
                 return true;
             } catch (error) {
@@ -609,7 +631,7 @@ export const CharacterSheetPage = () => {
                 } catch (refreshError) {
                     toast.error('Character save failed; server refresh also failed. Reload before continuing.');
                 }
-                toast.error(error.response?.status === 409 ? 'XP history changed. Reload and retry the correction.' : 'Failed to update character');
+                toast.error(error.response?.status === 409 ? (summaryOptions.expectedHistoryRevision ? 'XP history changed. Reload and retry the correction.' : 'Character changed in another update. Retry the action.') : 'Failed to update character');
                 return false;
             }
         });

@@ -1,3 +1,4 @@
+import { getDiceChatOutcome, applyResonantExceptional, shouldApplyKeyDoom, shouldAwardDramaticFailureBeat } from '../utils/diceConsequences';
 import { formatDiceOutcome as formatOutcomeLine } from '../utils/diceOutcome';
 import { requestDiceRoll } from '../services/diceService';
 import { useState, useEffect, useMemo } from "react";
@@ -244,7 +245,7 @@ export const DiceRollPopup = ({
             : null;
     const keyAttr = actualKey ? KEY_UNLOCK_ATTRIBUTES[actualKey] : null;
     const keyBonus = (actualKey && keyAttr)
-        ? (character?.attributes?.[keyAttr] || 0) 
+        ? (character?.attributes?.[keyAttr] || 0)
         : 0;
     const doomOrigin =
         key?.startsWith("memento::")
@@ -369,22 +370,15 @@ export const DiceRollPopup = ({
 
             await new Promise(resolve => setTimeout(resolve, 300));
             const base = response.data;
-            const resonantExceptional =
-                key !== "__none__" &&
-                keyResonant &&
-                !base.is_dramatic_failure &&
-                base.successes >= 3;
-            const patchedResult = {
-                ...base,
-                is_exceptional: base.is_exceptional || resonantExceptional,
-            };
+            const patchedResult = applyResonantExceptional(base, key, keyResonant);
+            const gainsDoom = shouldApplyKeyDoom({key, avoidDoom, spendWillpower, result:patchedResult});
 
             if (matchingPreparation && await onFinishPreparation?.('haunt') !== true) {
                 toast.error('Haunt rolled, but preparation completion was not saved. Check your character before rolling again.');
             }
             setResult(patchedResult);
             const generatedConditions = [];
-            if (key !== "__none__" && !avoidDoom && !spendWillpower && !patchedResult.is_exceptional) {
+            if (gainsDoom) {
                 generatedConditions.push({
                     name: "Doomed", type: "geist", origin: doomOrigin, key_name: actualKey, key_source_id: key,
                     description: "The Key's Doom is active until resolved.",
@@ -432,23 +426,7 @@ export const DiceRollPopup = ({
                 rollDescription += `\nEnhancements: ${selectedEnhancements.join(", ")}`;
             }
 
-            let resultType = "";
-            let resultEmoji = "";
-            const successes = patchedResult.successes;
-
-            if (patchedResult.is_dramatic_failure) {
-                resultType = "**DRAMATIC FAILURE**";
-                resultEmoji = "💀";
-            } else if (successes === 0) {
-                resultType = "**Failure**";
-                resultEmoji = "❌";
-            } else if (patchedResult.is_exceptional) {
-                resultType = "**EXCEPTIONAL SUCCESS!**";
-                resultEmoji = "✨";
-            } else {
-                resultType = `**Success** (${successes})`;
-                resultEmoji = "✅";
-            }
+            const {resultType, resultEmoji} = getDiceChatOutcome(patchedResult);
 
             const diceStr = patchedResult.dice.join(", ");
             const plasmLine =
@@ -478,7 +456,7 @@ export const DiceRollPopup = ({
                 ...(willpowerNeeded > 0
                     ? [`Willpower: spent 1 ${spendWillpower ? "(+3 dice)" : "(avoided Key's Doom)"}`]
                     : []),
-                ...(key !== "__none__" && !avoidDoom && !spendWillpower ? [`Condition: Doomed (${doomOrigin})`] : []),
+                ...(gainsDoom ? [`Condition: Doomed (${doomOrigin})`] : []),
                 plasmLine.replace(/\*/g, ""),
                 ...(turnsToResolve > 1 ? [`Activation time: ${turnsToResolve} turns${inCombat ? ' (Actions recorded)' : ' (outside combat)'}`] : []),
                 formatOutcomeLine(patchedResult),
@@ -491,7 +469,7 @@ export const DiceRollPopup = ({
                 outcome: formatOutcomeLine(patchedResult),
             });
 
-            if (patchedResult.beat_awarded) {
+            if (shouldAwardDramaticFailureBeat(patchedResult)) {
                 await onAwardBeat();
                 toast.warning("Dramatic Failure: Beat gained");
             } else if (patchedResult.is_dramatic_failure) {
@@ -635,7 +613,7 @@ export const DiceRollPopup = ({
                             <div className="mt-1 space-y-1 max-h-40 overflow-y-auto bg-zinc-800/50 rounded p-2">
                                 {availableEnhancements.map((enh) => (
                                     <div key={enh.name} className="space-y-1">
-                                        <label 
+                                        <label
                                             className={`flex items-center gap-2 p-2 rounded text-sm cursor-pointer transition-colors ${
                                                 selectedEnhancements.includes(enh.name)
                                                     ? "bg-teal-900/40 border border-teal-500/40"
@@ -660,8 +638,8 @@ export const DiceRollPopup = ({
                                         {enh.isVariable && selectedEnhancements.includes(enh.name) && (
                                             <div className="ml-6 flex items-center gap-2">
                                                 <span className="text-[10px] text-zinc-500">Plasm:</span>
-                                                <Select 
-                                                    value={(enhancementCosts[enh.name] || enh.costMin).toString()} 
+                                                <Select
+                                                    value={(enhancementCosts[enh.name] || enh.costMin).toString()}
                                                     onValueChange={(v) => handleVariableCostChange(enh.name, parseInt(v))}
                                                 >
                                                     <SelectTrigger className="h-6 w-20 bg-zinc-800 border-zinc-700 text-xs">

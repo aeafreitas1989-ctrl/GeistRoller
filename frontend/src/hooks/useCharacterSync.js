@@ -15,12 +15,16 @@ export const useCharacterSync = (characterId, onCharacterUpdate) => {
         }
 
         const source = new EventSource(
-            `${API}/characters/${characterId}/events?include_xp_history=false`
+            `${API}/characters/${characterId}/events?include_xp_history=false&delta_updates=true`
         );
 
         const handleCharacterUpdated = (event) => {
             try {
                 const payload = JSON.parse(event.data);
+                if (payload?.type === 'character_delta') {
+                    if (payload.id === characterId) onCharacterUpdateRef.current?.(payload);
+                    return;
+                }
                 const updatedCharacter = payload?.character;
 
                 if (
