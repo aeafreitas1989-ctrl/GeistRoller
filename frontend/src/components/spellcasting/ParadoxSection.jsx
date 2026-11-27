@@ -11,6 +11,7 @@ import { Minus, Plus, Zap, Shield, Eye } from "lucide-react";
 export const ParadoxSection = ({
     selectedPractice,
     paradoxTriggered,
+    abyssalTaint = false,
     reachBeyondFree,
     paradoxDiePerReach,
     gnosis,
@@ -66,7 +67,7 @@ export const ParadoxSection = ({
                         {" = "}<span className="text-red-400 font-mono font-bold">{baseParadoxDice}</span> base dice
                     </span>
                 ) : (
-                    <span className="text-zinc-500">No Reach beyond free - no Paradox risk</span>
+                    <span className="text-zinc-500">{paradoxTriggered ? "No excess Reach; other Paradox risks apply" : "No Reach beyond free - no Paradox risk"}</span>
                 )}
             </div>
 
@@ -75,6 +76,7 @@ export const ParadoxSection = ({
                 <>
                     <div className="space-y-1.5">
                         <p className="text-[10px] text-zinc-500 uppercase">Modifiers</p>
+                        {abyssalTaint && <div className="text-xs text-red-300" data-testid="abyssal-taint-paradox">Abyssal Taint: +1 Paradox die</div>}
                         <div className="grid grid-cols-2 gap-1.5">
                             <label className="flex items-center gap-2 text-xs cursor-pointer" data-testid="paradox-inured">
                                 <Checkbox

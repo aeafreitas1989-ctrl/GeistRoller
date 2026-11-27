@@ -1,3 +1,4 @@
+import { isAbyssalCondition, ensureAbyssalTimer, lapseAbyssalConditions } from "./abyssalConditions";
 import { getGameTimestamp, getEffectTimer, isEffectExpired } from './effectDuration';
 import { isSceneDurationEffect } from './sceneLifecycle';
 import { getRemainingWoundGroups } from './naturalHealing';
@@ -32,12 +33,16 @@ export const prepareTimeTransition = (current, patch, options = {}) => {
     const forward = from !== null && to !== null && to > from;
     const expired = [], active = [], cleaned = {};
     for (const field of ['active_spells','conditions']) {
-        const previous = entries(current[field]), incoming = entries(patch[field] ?? previous);
+        const previous = entries(current[field]);
+        const raw = entries(patch[field] ?? previous);
+        const incoming = field === 'conditions' && current.character_type === 'mage' ? raw.map(e=>ensureAbyssalTimer(e,patch.wisdom ?? current.wisdom,before,after)) : raw;
+        const lapsed = [];
         const previousActive = new Set(previous.filter(e => !isEffectExpired(e,before)).map(identity));
         const seenExpired = new Set();
-        const retained = incoming.filter(e => {
+        let retained = incoming.filter(e => {
             if (!isEffectExpired(e,after)) return true;
             const key = identity(e);
+            if (field === 'conditions' && isAbyssalCondition(e)) lapsed.push(e);
             if (previousActive.has(key) && !seenExpired.has(key)) {
                 expired.push({name:nameOf(e),type:effectType(e,field)}); seenExpired.add(key);
             }
@@ -52,7 +57,12 @@ export const prepareTimeTransition = (current, patch, options = {}) => {
                 }
             }
         }
-        if (retained.length !== incoming.length || Object.hasOwn(patch,field)) cleaned[field] = retained.length === incoming.length ? incoming : retained;
+        if (field === 'conditions' && current.character_type === 'mage' && lapsed.length) {
+            const transition = lapseAbyssalConditions(retained,lapsed,current,patch);
+            Object.assign(cleaned,transition);
+            retained = transition.conditions;
+        }
+        if (retained.length !== incoming.length || Object.hasOwn(patch,field) || incoming.some((e,i)=>e!==raw[i])) cleaned[field] = retained;
         for (const e of retained) active.push({name:nameOf(e),type:effectType(e,field),remaining:remainingEffectLabel(e,after)});
     }
     const healing = options.healing || {};

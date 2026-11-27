@@ -17,6 +17,7 @@ from fastapi.staticfiles import StaticFiles
 from database import client, db
 from dice_engine import resolve_dice_roll
 from time_effect_retention import retain_unexpired_effects
+from abyssal_conditions import retain_conditions_with_lapse
 from rules_validation import validate_rule_bounded_fields
 from character_sync import CharacterSummary, CHARACTER_SUMMARY_PROJECTION
 from character_history import without_xp_history, xp_history_snapshot
@@ -354,7 +355,14 @@ async def update_character(character_id: str, input: CharacterUpdate, include_xp
     for field in ('active_spells', 'conditions'):
         if field in update_data or 'scene_tracker' in update_data:
             source = update_data.get(field, previous.get(field, []))
-            retained = retain_unexpired_effects(source, update_data.get('scene_tracker', previous.get('scene_tracker')))
+            tracker = update_data.get('scene_tracker', previous.get('scene_tracker'))
+            if field == 'conditions':
+                retained, gained, lapse_reason = retain_conditions_with_lapse(source, tracker, previous, update_data)
+                update_data.update(gained)
+                if lapse_reason:
+                    reason = lapse_reason
+            else:
+                retained = retain_unexpired_effects(source, tracker)
             if retained != source or field in update_data:
                 update_data[field] = retained
 
@@ -514,13 +522,25 @@ async def remove_retired_character_data():
     await db.characters.update_many({"exploration_map": {"$exists": True}}, {"$unset": {"exploration_map": ""}})
     async for record in db.characters.find(
         {"$or": [{"active_spells.0": {"$exists": True}}, {"conditions.0": {"$exists": True}}]},
-        {"active_spells": 1, "conditions": 1, "scene_tracker": 1},
+        {"active_spells": 1, "conditions": 1, "scene_tracker": 1, "character_type": 1, "updated_at": 1, "experience": 1, "arcane_experience": 1, "beats": 1, "arcane_beats": 1},
     ):
         for field in ("active_spells", "conditions"):
             source = record.get(field, [])
-            retained = retain_unexpired_effects(source, record.get("scene_tracker"))
+            if field == "conditions":
+                retained, gained, reason = retain_conditions_with_lapse(source, record.get("scene_tracker"), record)
+            else:
+                retained, gained, reason = retain_unexpired_effects(source, record.get("scene_tracker")), {}, ""
             if retained != source:
-                await db.characters.update_one({"_id": record["_id"], field: source}, {"$set": {field: retained}})
+                changes = {field: retained, **gained}
+                operations = {"$set": changes}
+                selector = {"_id": record["_id"], field: source}
+                if gained:
+                    selector["updated_at"] = record.get("updated_at") if "updated_at" in record else {"$exists": False}
+                    changes["updated_at"] = next_revision(record.get("updated_at"))
+                    transaction = build_xp_history_entry(record, changes, reason)
+                    if transaction:
+                        operations["$push"] = {"xp_history": transaction}
+                await db.characters.update_one(selector, operations)
 
 
 @app.on_event("shutdown")

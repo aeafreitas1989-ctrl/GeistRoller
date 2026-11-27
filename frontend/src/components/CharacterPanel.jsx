@@ -1,3 +1,4 @@
+import { abyssalDuration, startAbyssalCondition, hasAbyssalTaint } from "../utils/abyssalConditions";
 import { XPTrackerContent } from './character/XPTrackerContent';
 import { buildCharacterExportText, escapeHtml } from './character/characterExport';
 import { XP_TRACKER_RESOURCES, getXPTransactionTotals, isValidXPTrackerBalance, buildXPTrackerEntries, formatLedgerDate } from '../utils/xpTrackerRules';
@@ -2079,15 +2080,6 @@ export const CharacterPanel = ({
         });
     };
 
-    const getParadoxTaintDuration = (wisdom) => {
-        const safeWisdom = Number.isFinite(Number(wisdom)) ? Number(wisdom) : 0;
-
-        if (safeWisdom >= 8) return "1 Story / 1 Month";
-        if (safeWisdom >= 4) return "1 Chapter / 1 Day";
-        if (safeWisdom >= 2) return "1 Scene";
-        return "1 Turn";
-    };
-
     const geistRank = parseInt(getValue("geist_rank"), 10) || 1;
     const maxHealth = calculateHealthMax();
     const handleParadoxDramaticFailure = async () => {
@@ -2109,7 +2101,7 @@ export const CharacterPanel = ({
 
         const currentConditions = getValue("conditions") || [];
         const currentWisdom = Number(getValue("wisdom")) || 0;
-        const paradoxTaintDuration = getParadoxTaintDuration(currentWisdom);
+        const paradoxTaintDuration = abyssalDuration(currentWisdom);
         const shouldRecord = shouldRecordParadoxCondition({
             mode, remaining: safeRemaining, paradoxExceptional, spellDramaticFailure,
         });
@@ -2118,7 +2110,8 @@ export const CharacterPanel = ({
             : spellDramaticFailure ? "Paradox Condition (Dramatic Spellcasting Failure)"
             : "Paradox Condition (Pending ST)";
         const nextConditions = shouldRecord
-            ? [...currentConditions, {
+            ? [...currentConditions, startAbyssalCondition({
+                paradox_condition: true,
                 id: 'paradox-' + Date.now() + '-' + Math.random().toString(36).slice(2),
                 name: chosenName, type: "condition", origin: "Spellcasting",
                 description: conditionType === "taint"
@@ -2128,7 +2121,7 @@ export const CharacterPanel = ({
                         : "Storyteller assigns the Abyssal Condition and its effects. Do not automatically create anomalies.",
                 resolution: conditionType === "taint" ? `ST-defined resolution or expiry after ${paradoxTaintDuration}.` : "As determined by the Storyteller.",
                 beat_type: "arcane", paradox_successes: safeRemaining,
-            }] : currentConditions;
+            }, currentWisdom, getValue("scene_tracker"))] : currentConditions;
 
         await onUpdateCharacter({
             health_boxes: nextHealthBoxes,
@@ -3123,6 +3116,7 @@ export const CharacterPanel = ({
                                     onTriggerDiceRoll={onTriggerDiceRoll}
                                     onAdvanceTime={onAdvanceTime}
                                     onCommitCharacterUpdate={commitCharacterUpdate}
+                                    onScourAbyssal={onUpdateCharacter}
                                     onOpenChannelMana={openChannelManaSpell}
                                 />
                             ) : (
@@ -3834,7 +3828,8 @@ export const CharacterPanel = ({
                         legacy_ruling_arcanum: getValue("legacy_ruling_arcanum") || "",
                     }, spellcastingArcanum)}
                     currentMana={getValue("mana") || 0}
-                    currentWisdom={getValue("wisdom") || 7}
+                    currentWisdom={getValue("wisdom") ?? 7}
+                    abyssalTaint={hasAbyssalTaint(getValue("conditions"), getValue("scene_tracker"))}
                     athleticsDots={getNestedValue("skills", "athletics") || 0}
                     firearmsDots={getNestedValue("skills", "firearms") || 0}
                     inventoryItems={getValue("inventory_items") || []}

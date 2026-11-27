@@ -20,14 +20,14 @@ test('all 126 selectable Merits have distinct, explanatory catalogue description
   }
 });
 
-test('all 197 Conditions and Tilts display either enhanced rules or the full audited description', () => {
+test('all 198 Conditions and Tilts display either enhanced rules or the full audited description', () => {
   const known = Object.keys(CONDITION_DEFINITIONS).sort();
-  expect(known).toHaveLength(197);
-  expect(Object.keys(CONDITION_RULE_OVERRIDES)).toHaveLength(76);
+  expect(known).toHaveLength(198);
+  expect(Object.keys(CONDITION_RULE_OVERRIDES)).toHaveLength(77);
   expect(Object.keys(CONDITION_DESCRIPTION_REVISIONS)).toHaveLength(121);
   const overlayNames = Object.keys(CONDITION_RULE_OVERRIDES);
   const revisionNames = Object.keys(CONDITION_DESCRIPTION_REVISIONS);
-  expect(new Set([...overlayNames, ...revisionNames]).size).toBe(197);
+  expect(new Set([...overlayNames, ...revisionNames]).size).toBe(198);
   expect([...overlayNames, ...revisionNames].sort()).toEqual(known);
   for (const key of known) {
     const item = CONDITION_DEFINITIONS[key];

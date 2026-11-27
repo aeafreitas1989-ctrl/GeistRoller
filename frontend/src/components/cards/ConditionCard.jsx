@@ -21,7 +21,7 @@ export const ConditionCard = ({
 }) => {
     // Card colour identifies the Beat awarded on resolution.
     // Existing Conditions without beat_type award a normal Beat.
-    const isArcaneBeat = beatType === "arcane";
+    const isArcaneBeat = beatType === "arcane" || beatType === "arcane-lapse";
     const colors = isArcaneBeat
         ? { bg: "bg-violet-950/30", border: "border-violet-500/40", text: "text-violet-300", badge: "bg-violet-900/50" }
         : { bg: "bg-amber-950/30", border: "border-amber-500/40", text: "text-amber-300", badge: "bg-amber-900/50" };
@@ -100,7 +100,7 @@ export const ConditionCard = ({
                             }`}
                             data-testid={`condition-beat-${safeName.toLowerCase().replace(/\s+/g, "-")}`}
                         >
-                            {isArcaneBeat ? "Arcane Beat" : "Regular Beat"}
+                            {beatType === "none" ? "No Beat" : beatType === "arcane-lapse" ? "Arcane Beat on lapse" : isArcaneBeat ? "Arcane Beat" : "Regular Beat"}
                         </span>}
 
                         {persistent && (

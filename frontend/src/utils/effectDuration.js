@@ -121,6 +121,7 @@ export const getEffectTimer = (effect, tracker) => {
         const count = Math.max(0, Number(effect.turns_remaining) || 0);
         return { kind: "running", label: count + (count === 1 ? " turn remaining" : " turns remaining") };
     }
+    if (String(effect?.duration || "").toLowerCase() === "permanent") return { kind: "permanent", label: "Permanent" };
     if (!hasFiniteDuration(effect)) return { kind: "untimed", label: "" };
     const current = getGameTimestamp(tracker);
     const expiry = effect?.expires_at ? Date.parse(effect.expires_at) : NaN;

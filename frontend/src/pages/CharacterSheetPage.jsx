@@ -1,3 +1,4 @@
+import { isAbyssalCondition, isAbyssalTaint, startAbyssalCondition } from "@/utils/abyssalConditions";
 import { reconcileCharacterDelta } from "@/utils/characterDelta";
 import { withoutXPHistory } from "@/utils/xpHistoryLoading";
 import { toCharacterSummary, updateCharacterSummary } from "@/utils/characterSummaries";
@@ -688,7 +689,9 @@ export const CharacterSheetPage = () => {
             return;
         }
 
-        const startCondition = startTimedEffect(condition, activeCharacter.scene_tracker);
+        const startCondition = activeCharacter.character_type === "mage" && (isAbyssalCondition(condition) || isAbyssalTaint(condition))
+            ? startAbyssalCondition(condition, activeCharacter.wisdom, activeCharacter.scene_tracker)
+            : startTimedEffect(condition, activeCharacter.scene_tracker);
         await updateCharacter((latest) => ({ conditions: [...(latest.conditions || []), startCondition] }));
         toast.success(`Added: ${condition.name}`);
     };
@@ -698,6 +701,7 @@ export const CharacterSheetPage = () => {
         const conditions = activeCharacter.conditions || [];
         const condition = conditions[conditionIndex];
         if (!condition) return;
+        if (isAbyssalTaint(condition)) { toast.error("Abyssal Taint must be Scoured from the Pattern."); return; }
         const newConditions = conditions.filter((_, i) => i !== conditionIndex);
         await updateCharacter({ conditions: newConditions });
         toast.success(`Removed: ${condition.name}`);
@@ -718,6 +722,11 @@ export const CharacterSheetPage = () => {
         const condition = conditions[conditionIndex];
         if (!condition) return;
 
+        if (isAbyssalTaint(condition)) { toast.error("Abyssal Taint must be Scoured from the Pattern."); return; }
+        if (activeCharacter.character_type === "mage" && isAbyssalCondition(condition)) {
+            if (await updateCharacter({conditions:conditions.filter((_, i)=>i!==conditionIndex)})) toast.success("Paradox Condition resolved (no Arcane Beat).");
+            return;
+        }
         const isPersistent = Boolean(condition.persistent);
         const isArcane = condition.beat_type === "arcane";
 

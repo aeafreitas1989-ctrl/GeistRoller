@@ -18,6 +18,11 @@ export const CONDITION_RULE_OVERRIDES = {
     resolution: "An Abyssal entity uses the Condition to Manifest, the mage Scours it away, or it lapses (Arcane Beat; Abyssal Pattern taint).",
     source_citation: "Mage: The Awakening 2e, p. 116",
   },
+  "Abyssal Taint": {
+    "effect": "The Abyss has entered the mage’s Pattern and is detectable in her Nimbus. Every spell she casts adds one Paradox die, even without exceeding free Reach.",
+    "resolution": "Scour the taint from the Pattern: suffer one resistant lethal wound, gain no Mana and no additional Arcane Beat.",
+    "source_citation": "Mage: The Awakening 2e, p. 116"
+  },
   "Actor": {
     effect: "While a Memoria Mystery Play controls a scene, the subject is cast in a specific role and faces consequences for departing from the recalled script. Track the scene and its assigned role.",
     resolution: "Complete the role, escape the Memoria, or alter its script through the relevant enhancement.",

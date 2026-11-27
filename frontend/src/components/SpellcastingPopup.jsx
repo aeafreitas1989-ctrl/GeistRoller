@@ -229,6 +229,7 @@ export const SpellcastingPopup = ({
     legacyRulingArcanum = '',
     currentMana,
     currentWisdom = 7,
+    abyssalTaint = false,
     initialPractice,
     onSpendMana,
     onRecordPreparationTurn,
@@ -471,12 +472,13 @@ export const SpellcastingPopup = ({
     const highestPracticeDots = Math.max(practiceDots, ...selectedCombinedPractices.map((name) => PRACTICE_DOTS[name] || 0));
     const freeReach = selectedPractice ? Math.max(0, reachArcanumDots - highestPracticeDots + 1) : 0;
     const selectedPracticeIsLegal = !!selectedPractice && practiceDots > 0 && practiceDots <= Number(arcanumDots || 0);
-    const advancedReachUsed = Object.entries(factors).reduce((sum, [key, value]) => {
-        if (!value.advanced) return sum;
-        if (key === "duration" && lastingDuration) return sum;
-        if (key === "duration" && matterDurationMana && arcanum === "Matter") return sum;
-        return sum + 1;
-    }, 0);
+    const advancedReachFactors = Object.entries(factors).filter(([key,value]) => {
+        if (!value.advanced) return false;
+        if (key === "duration" && lastingDuration) return false;
+        if (key === "duration" && matterDurationMana && arcanum === "Matter") return false;
+        return true;
+    }).map(([key])=>key);
+    const advancedReachUsed = advancedReachFactors.length;
     const indefiniteReach = !lastingDuration && factors.duration.advanced && factors.duration.level === 6 ? 1 : 0;
     const activeSpellReachSurcharge = Math.max(0, activeSpellCount - gnosis + 1);
     const changePrimaryReach = overridePrimaryFactor && !!primaryFactor ? 1 : 0;
@@ -591,8 +593,8 @@ export const SpellcastingPopup = ({
     const manaCost = getManaCost();
     const reachBeyondFree = Math.max(0, totalReachUsed - freeReach);
     const baseParadoxDice = reachBeyondFree * paradoxDiePerReach;
-    const paradoxTriggered = baseParadoxDice > 0;
-    let paradoxModifiers = 0;
+    const paradoxTriggered = baseParadoxDice > 0 || abyssalTaint;
+    let paradoxModifiers = abyssalTaint ? 1 : 0;
     if (paradoxInured) paradoxModifiers += 2;
     if (sleeperWitnesses !== "none") paradoxModifiers += 1;
     if (hasDedicatedTool) paradoxModifiers -= 2;
@@ -861,7 +863,7 @@ export const SpellcastingPopup = ({
         const spentSpellManaSummary = committedSpellManaCost > 0
             ? `Spent Mana: ${committedSpellManaCost}${arcanaManaSurchargeSummary ? ` (${arcanaManaSurchargeSummary})` : ""}` : "";
         const reachCategories = [];
-        if (advancedReachUsed > 0) reachCategories.push(`Advanced Factors +${advancedReachUsed}`);
+        reachCategories.push(...advancedReachFactors.map(key=>"Advanced "+key[0].toUpperCase()+key.slice(1)));
         if (indefiniteReach > 0) reachCategories.push(`Indefinite Duration +${indefiniteReach}`);
         if (changePrimaryReach > 0) reachCategories.push(`Primary Factor Override → ${getPrimaryFactorLabel(primaryFactor)} +${changePrimaryReach}`);
         if (spellReach > 0) reachCategories.push(`Spell Options +${spellReach}`);
@@ -870,7 +872,7 @@ export const SpellcastingPopup = ({
         if (remoteRangeReach > 0) reachCategories.push(`Remote Range +${remoteRangeReach}`);
         if (specialRangeReach > 0) reachCategories.push(`Sympathetic Casting +${specialRangeReach}`);
         if (activeSpellReachSurcharge > 0) reachCategories.push(`Active Spell surcharge +${activeSpellReachSurcharge}`);
-        const reachBreakdownLine = reachCategories.length ? `Reach: ${reachCategories.join(", ")}` : "";
+        const reachBreakdownLine = reachCategories.length ? `Reach: ${reachCategories.join("; ")}` : "";
         const spellReachSummary = `Spell Reach: ${totalReachUsed} / ${freeReach} free${reachBeyondFree > 0 ? `; ${reachBeyondFree} over free` : ""}`;
         const withstandSummary = effectiveWithstand > 0
             ? `Withstand: ${effectiveWithstand} total; effective Potency ${effectivePotency}${effectivePotency <= 0 ? " (spell active, no effect)" : ""}` : "";
@@ -1364,6 +1366,7 @@ export const SpellcastingPopup = ({
                     <ParadoxSection
                         selectedPractice={selectedPractice}
                         paradoxTriggered={paradoxTriggered}
+                        abyssalTaint={abyssalTaint}
                         reachBeyondFree={reachBeyondFree}
                         paradoxDiePerReach={paradoxDiePerReach}
                         gnosis={gnosis}

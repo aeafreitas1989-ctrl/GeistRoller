@@ -1,3 +1,4 @@
+import { isAbyssalTaint, isAbyssalCondition } from "../../utils/abyssalConditions";
 import { useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,7 @@ export const MageGnosisContent = ({
     onAdvanceTime,
     onCommitCharacterUpdate,
     onOpenChannelMana,
+    onScourAbyssal,
 }) => {
     const [scourOpen, setScourOpen] = useState(false);
     const applyScourUpdates = (updates) => {
@@ -37,27 +39,35 @@ export const MageGnosisContent = ({
         });
     };
 
-    const doScour = (choice) => {
+    const [scouring, setScouring] = useState(false);
+    const scourable = (getValue("conditions") || []).map((condition,index)=>({condition,index})).filter(({condition})=>isAbyssalTaint(condition)||isAbyssalCondition(condition));
+    const doScour = async (choice, conditionIndex = null) => {
+        if (scouring) return;
         const gnosisLevel = getValue("gnosis") || 1;
         const gd = GNOSIS_TABLE[gnosisLevel] || GNOSIS_TABLE[1];
         const currentMana = getValue("mana") || 0;
         const tracker = getValue("scene_tracker") || {};
-        const attr = choice === "damage" ? null : choice;
+        const cleansing = choice === "abyssal";
+        const conditions = getValue("conditions") || [];
+        const target = cleansing ? conditions[conditionIndex] : null;
+        if (cleansing && !isAbyssalTaint(target) && !isAbyssalCondition(target)) return;
+        const attr = choice === "damage" || cleansing ? null : choice;
         const recorded = registerScouring(getValue("pattern_scouring"), gnosisLevel, tracker, attr);
         if (!recorded) { toast.error("Scouring unavailable: set the game clock or wait for the Gnosis-based 24-hour allowance."); return; }
         if (attr && (Number(getNestedValue("attributes", attr)) || 0) < 1) { toast.error("Cannot Scour an Attribute below zero."); return; }
         const updates = {
-            mana: Math.min(gd.maxMana, currentMana + 3),
+            ...(cleansing ? {} : {mana: Math.min(gd.maxMana, currentMana + 3)}),
             pattern_scouring: recorded,
         };
 
-        if (choice === "damage") {
+        if (choice === "damage" || cleansing) {
             const damage = addWoundDamage(healthBoxes, getValue("resistant_wounds"), "lethal", 1, true);
             if (damage.applied === 0) return;
             updates.health_boxes = damage.boxes;
             updates.resistant_wounds = damage.resistant_wounds;
             updates.health = damage.boxes.filter((state) => state !== "empty").length;
             updates.natural_healing = restartNaturalHealing(damage.boxes, getValue("scene_tracker"));
+            if (cleansing) updates.conditions = conditions.filter((_,i)=>i!==conditionIndex);
         } else {
             const scoured = getValue("scoured_attributes") || {};
             const attributes = getValue("attributes") || {};
@@ -73,8 +83,16 @@ export const MageGnosisContent = ({
             };
         }
 
-        applyScourUpdates(updates);
-        setScourOpen(false);
+        setScouring(true);
+        try {
+            if (cleansing) {
+                if (!onScourAbyssal || await onScourAbyssal(updates) !== true) { toast.error('Scouring could not be saved.'); return; }
+            } else if (onCommitCharacterUpdate) {
+                if (await onCommitCharacterUpdate(updates) !== true) { toast.error('Scouring could not be saved.'); return; }
+            } else applyScourUpdates(updates);
+            setScourOpen(false);
+            if (cleansing) toast.success('Abyssal corruption Scoured: 1 resistant lethal wound; no Mana gained.');
+        } finally { setScouring(false); }
     };
 
     return (
@@ -177,8 +195,9 @@ export const MageGnosisContent = ({
                                 <DialogHeader>
                                     <DialogTitle className="text-red-300 font-heading text-sm">Scour Pattern</DialogTitle>
                                 </DialogHeader>
-                                <p className="text-[10px] text-zinc-400 -mt-2">Choose what to sacrifice for 3 Mana. Attribute dots recover after 24 in-game hours.</p>
+                                <p className="text-[10px] text-zinc-400 -mt-2">Normal Scouring generates 3 Mana. Attribute dots recover after 24 in-game hours. Abyssal Scouring generates no Mana.</p>
                                 <p className="text-[10px] text-zinc-400">Remaining Scourings: {remainingScourings(getValue("pattern_scouring"), getValue("gnosis"), getValue("scene_tracker")) ?? "Set game clock"}</p>
+                                {scourable.map(({condition,index})=><Button key={condition.id || index} size="sm" className="h-auto py-2 bg-violet-950/40 border border-violet-500/40 text-violet-200 whitespace-normal" data-testid={"scour-abyssal-"+index} disabled={scouring || isDeadTrack} onClick={()=>doScour('abyssal',index)}>Scour {condition.name} — 1 resistant lethal, no Mana</Button>)}
                                 <div className="grid grid-cols-2 gap-2">
                                     {["strength", "dexterity", "stamina"].map((attr) => (
                                         <Button

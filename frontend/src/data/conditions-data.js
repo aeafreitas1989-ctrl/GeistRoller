@@ -56,6 +56,23 @@ export const CONDITION_DEFINITIONS = {
     "source_url": "https://pdfcoffee.com/mage-the-awakening-2e-pdf-free.html",
     "source_citation": "Mage: The Awakening 2e, p. 116"
   },
+  "Abyssal Taint": {
+    "name": "Abyssal Taint",
+    "type": "condition",
+    "group": "condition",
+    "splat": "Mage — Paradox",
+    "persistent": true,
+    "beat_type": "none",
+    "duration": "Permanent",
+    "origin": "Paradox",
+    "description": "The Abyss has entered the mage’s Pattern and is detectable in her Nimbus. Every spell she casts adds one Paradox die, even without exceeding free Reach.",
+    "effect": "The Abyss has entered the mage’s Pattern and is detectable in her Nimbus. Every spell she casts adds one Paradox die, even without exceeding free Reach.",
+    "resolution": "Scour the taint from the Pattern: suffer one resistant lethal wound, gain no Mana and no additional Arcane Beat.",
+    "source_citation": "Mage: The Awakening 2e, p. 116",
+    "filters": [
+      "Mage"
+    ]
+  },
   "Actor": {
     "name": "Actor",
     "type": "condition",

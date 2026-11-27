@@ -1,3 +1,4 @@
+import { isAbyssalTaint, isAbyssalCondition } from "../../utils/abyssalConditions";
 import { useEffect, useMemo, useState } from "react";
 import { Plus, ChevronDown, ChevronRight, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -1004,7 +1005,7 @@ export const ConditionsSection = ({
                                         timer={getEffectTimer(condition, activeCharacter?.scene_tracker)}
                                         expired={isEffectExpired(condition, activeCharacter?.scene_tracker)}
                                         name={condition.name}
-                                        beatType={condition.beat_type || "regular"}
+                                        beatType={isAbyssalTaint(condition) ? "none" : isAbyssalCondition(condition) ? "arcane-lapse" : condition.beat_type || "regular"}
                                         type={
                                             condition.type ||
                                             "custom"
@@ -1035,8 +1036,8 @@ export const ConditionsSection = ({
                                             activeCharacter?.name ||
                                             "Character"
                                         }
-                                        onRemove={condition.weather_auto ? undefined : onRemoveCondition}
-                                        onResolve={condition.weather_auto ? undefined : onResolveCondition}
+                                        onRemove={condition.weather_auto || isAbyssalTaint(condition) ? undefined : onRemoveCondition}
+                                        onResolve={condition.weather_auto || isAbyssalTaint(condition) ? undefined : onResolveCondition}
                                     />
                                 )
                             )}
