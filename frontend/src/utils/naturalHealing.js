@@ -158,3 +158,31 @@ export const getRemainingWoundGroups = (boxes, recovery, tracker) => {
         reason: blocked ? (boxes.every(box => box === 'aggravated') ? 'No natural recovery' : 'Medical treatment required') : now === null ? 'Clock unset' : null,
     }));
 };
+
+// Sequential natural recovery: a wound's deadline derives from the saved checkpoint,
+// not the editable display clock. Unknown historical wound dates remain unknown.
+export const getWoundHealingDeadlines = (boxes = [], recovery, tracker) => {
+    if (!Array.isArray(boxes)) return [];
+    const deadlines = boxes.map(()=>null);
+    const checkpoint = validCheckpoint(recovery);
+    const kind = rightmostWound(boxes);
+    if (!kind || checkpoint === null || recovery?.wound_type !== kind || naturalHealingBlocked(boxes) || getGameTimestamp(tracker) === null) return deadlines;
+    let due = checkpoint - Math.max(0,Number(recovery.progress_ms)||0);
+    for (let i=boxes.length-1;i>=0;i--) {
+        if (!Object.hasOwn(INTERVAL_MS,boxes[i])) continue;
+        due += INTERVAL_MS[boxes[i]];
+        if (Number.isFinite(due)) deadlines[i] = new Date(due).toISOString();
+    }
+    return deadlines;
+};
+
+// Display countdowns calculated from the unchanged absolute healing deadlines.
+export const getWoundHealingRemainingLabels = (boxes, recovery, tracker) => {
+    const now = getGameTimestamp(tracker);
+    return getWoundHealingDeadlines(boxes,recovery,tracker).map(deadline=>{
+        if (!deadline || now === null) return null;
+        const minutes=Math.max(0,Math.ceil((Date.parse(deadline)-now)/60000));
+        const parts=[[Math.floor(minutes/1440),'d'],[Math.floor(minutes%1440/60),'h'],[minutes%60,'min']];
+        return (parts.filter(([n])=>n>0).map(([n,unit])=>n+unit).join(' ')||'0min')+' remaining';
+    });
+};

@@ -1,3 +1,4 @@
+import { isPendingClockLapse } from "../../utils/conditionExpiryReview";
 import { needsParadoxSuccesses, validParadoxSuccesses } from "../../utils/abyssalSpellcasting";
 import { remainingScourings } from "../../utils/mageRecovery";
 import { toast } from "sonner";
@@ -556,7 +557,7 @@ export const ConditionsSection = ({
                     </span>
 
                     <span className="text-[10px] text-zinc-500">
-                        {activeConditions.length}
+                        {activeConditions.filter(condition=>!isEffectExpired(condition,activeCharacter?.scene_tracker)).length}
                     </span>
                 </div>
 
@@ -1018,6 +1019,7 @@ export const ConditionsSection = ({
                                         key={`${condition.name}-${idx}`}
                                         conditionIndex={idx}
                                         timer={getEffectTimer(condition, activeCharacter?.scene_tracker)}
+                                        pendingLapse={activeCharacter?.character_type==='mage' && isAbyssalCondition(condition) && isPendingClockLapse(condition,activeCharacter?.scene_tracker)}
                                         expired={isEffectExpired(condition, activeCharacter?.scene_tracker)}
                                         name={condition.name}
                                         beatType={isAbyssalTaint(condition) ? "none" : isAbyssalCondition(condition) ? "arcane-lapse" : condition.beat_type || "regular"}

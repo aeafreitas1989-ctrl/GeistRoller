@@ -62,7 +62,7 @@ export const StatDots = ({
         blue: "text-blue-500",
         red: "text-red-500"
     };
-    
+
     const sizeClasses = size === "small" ? "w-2.5 h-2.5" : "w-3 h-3";
     const safeValue = Math.max(0, Number(value) || 0);
     const safeScoured = Math.max(0, Number(scoured) || 0);
@@ -140,7 +140,7 @@ export const StatRow = ({ label, value, max, onChange, color, onLabelClick, sele
     </div>
 );
 
-export const HealthTrack = ({ boxes = [], max, onBoxClick, testIdPrefix = "health", resistant = [], onToggleResistance }) => {
+export const HealthTrack = ({ boxes = [], max, onBoxClick, testIdPrefix = "health", resistant = [], onToggleResistance, healingRemaining = [] }) => {
     return (
         <div className={`flex gap-0.5 flex-wrap ${resistant.some(Boolean) ? "pb-2" : ""}`}>
             {Array.from({ length: max }, (_, i) => {
@@ -160,7 +160,7 @@ export const HealthTrack = ({ boxes = [], max, onBoxClick, testIdPrefix = "healt
                         type="button"
                         onClick={() => onBoxClick?.(i, state)}
                         onContextMenu={(event) => { if (onToggleResistance && state !== "empty") { event.preventDefault(); onToggleResistance(i); } }}
-                        title={isResistant ? "Resistant wound: natural healing only. Right-click to toggle (ST)." : state !== "empty" && onToggleResistance ? "Right-click to mark Resistant wound (ST)." : undefined}
+                        title={state === 'empty' ? undefined : [isResistant ? 'Resistant wound: natural healing only. Right-click to toggle (ST).' : onToggleResistance ? 'Right-click to mark Resistant wound (ST).' : '',healingRemaining[i] ? 'Natural healing: '+healingRemaining[i] : 'Healing time not available'].filter(Boolean).join(' ')}
                         className={`relative w-5 h-5 rounded-sm border text-[10px] font-mono flex items-center justify-center transition-all ${stateClasses[state] || stateClasses.empty}`}
                         data-testid={`${testIdPrefix}-track-${i + 1}`}
                     >
@@ -179,9 +179,9 @@ export const ResourceTrack = ({ current, max, onChange, color = "teal", testIdPr
         amber: { active: "bg-amber-500/50 border-amber-500", inactive: "bg-zinc-900 border-zinc-700" },
         violet: { active: "bg-violet-500/50 border-violet-500", inactive: "bg-zinc-900 border-zinc-700" }
     };
-    
+
     const colorStyle = colorClasses[color] || colorClasses.teal;
-    
+
     return (
         <div className="flex gap-0.5 flex-wrap">
             {Array.from({ length: max }, (_, i) => (
@@ -210,7 +210,7 @@ export const SynergyTrack = ({ value, maxValue, onChangeValue, onChangeMax }) =>
                     const dotNum = 10 - i;
                     const isFilled = dotNum <= value;
                     const isAvailable = dotNum <= maxValue;
-                    
+
                     return (
                         <button
                             key={i}
@@ -241,4 +241,3 @@ export const SynergyTrack = ({ value, maxValue, onChangeValue, onChangeMax }) =>
         </div>
     );
 };
-

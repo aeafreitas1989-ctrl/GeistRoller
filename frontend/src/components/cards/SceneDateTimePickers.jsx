@@ -40,7 +40,7 @@ export const SceneDateField = ({ value = "", onChange }) => {
             if (value) onChange?.("");
         } else if (parsed) {
             const nextDate = toSceneISODate(parsed);
-            if (nextDate !== value) onChange?.(nextDate);
+            if (nextDate !== value && onChange?.(nextDate) === false) { setDraft(toSceneCalendarDate(parseSceneDate(value))); return; }
         }
         setDraft(toSceneCalendarDate(parsed || parseSceneDate(value)));
     };
@@ -174,7 +174,7 @@ export const SceneDateField = ({ value = "", onChange }) => {
                         onSelect={(date) => {
                             if (!date) return;
                             const nextDate = toSceneISODate(date);
-                            if (nextDate !== value) onChange?.(nextDate);
+                            if (nextDate !== value && onChange?.(nextDate) === false) { setDraft(toSceneCalendarDate(parseSceneDate(value))); setOpen(false); return; }
                             setDraft(toSceneCalendarDate(date));
                             setOpen(false);
                         }}
@@ -260,14 +260,14 @@ export const SceneTimeField = ({ value = "", onChange }) => {
             if (value) onChange?.("");
         } else if (parsed) {
             const nextTime = toSceneTime(parsed.hours, parsed.minutes);
-            if (nextTime !== value) onChange?.(nextTime);
+            if (nextTime !== value && onChange?.(nextTime) === false) { setDraft(value || ""); return; }
         }
         setDraft(parsed ? toSceneTime(parsed.hours, parsed.minutes) : (value || ""));
     };
 
     const applyClock = () => {
         const nextTime = toSceneTime(hour, minute);
-        if (nextTime !== value) onChange?.(nextTime);
+        if (nextTime !== value && onChange?.(nextTime) === false) { setDraft(value || ""); setOpen(false); return; }
         setDraft(nextTime);
         setOpen(false);
     };
@@ -289,7 +289,7 @@ export const SceneTimeField = ({ value = "", onChange }) => {
                         setDraft(maskSceneTimeInput(draft.replace(/\D/g, "").slice(0, -1)));
                     }
                     if (event.key === "Enter") {
-                        commitDraft();
+                        event.preventDefault();
                         event.currentTarget.blur();
                     }
                 }}

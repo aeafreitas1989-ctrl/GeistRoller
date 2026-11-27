@@ -16,7 +16,7 @@ import axios from "axios";
 import { toast } from "sonner";
 import { normalizeHealthBoxes, getHealthCounts, buildHealthBoxes } from "@/components/character/StatComponents";
 import { advanceSceneTime, sleepUntilMorning } from "@/utils/timeUtils";
-import { expireTimedEffects, startTimedEffect, getGameTimestamp, advanceTurnEffects, expireCombatEffects } from "@/utils/effectDuration";
+import { expireTimedEffects, startTimedEffect, getGameTimestamp, advanceTurnEffects, expireCombatEffects, withGameClockCheckpoint, isGameClockBehind, isEffectExpired } from "@/utils/effectDuration";
 import { resolveArmoredDamage } from "@/utils/combatRules";
 import { advanceNaturalHealing, restartNaturalHealing } from "@/utils/naturalHealing";
 import { advanceEnvironmentalExposure } from "@/utils/environmentalExposure";
@@ -396,8 +396,9 @@ export const CharacterSheetPage = () => {
             toast.error("Set an in-game date and time before sleeping.");
             return;
         }
+        if (isGameClockBehind(currentTracker)) { toast.error("Restore the processed game date and time before sleeping."); return; }
         const nextTime = sleepUntilMorning(currentTracker);
-        const nextTracker = { ...currentTracker, date: nextTime.date, time: nextTime.time };
+        const nextTracker = withGameClockCheckpoint(currentTracker,{ ...currentTracker, date: nextTime.date, time: nextTime.time });
         const healing = advanceEnvironmentalExposure(activeCharacter, nextTracker, combatHealthBoxes, combatResistantWounds);
         const updatedBoxes = healing.boxes;
         const filled = updatedBoxes.filter((state) => state !== "empty").length;
@@ -434,8 +435,9 @@ export const CharacterSheetPage = () => {
             toast.error("Set an in-game date and time before advancing time.");
             return;
         }
+        if (isGameClockBehind(currentTracker)) { toast.error("Restore the processed game date and time before advancing."); return false; }
         const next = advanceSceneTime(currentTracker, hours, minutes);
-        const nextTracker = { ...currentTracker, date: next.date, time: next.time };
+        const nextTracker = withGameClockCheckpoint(currentTracker,{ ...currentTracker, date: next.date, time: next.time });
         const healing = advanceEnvironmentalExposure(activeCharacter, nextTracker, combatHealthBoxes, combatResistantWounds);
         const restoredAttributes = restoreScouredAttributes(activeCharacter, nextTracker);
         const spells = activeCharacter?.active_spells || [];
@@ -590,6 +592,7 @@ export const CharacterSheetPage = () => {
         const computed = resolveCharacterUpdate(current,updates);
         if (!computed || typeof computed !== 'object' || Object.keys(computed).length === 0) return false;
         const patch = { ...computed };
+        if (patch.scene_tracker) patch.scene_tracker = withGameClockCheckpoint(current.scene_tracker,patch.scene_tracker);
         // An equipment change can begin or end exposure without advancing the
         // clock. Never let an old temperature cursor leak across an equip toggle.
         const beforeTemperature = temperatureExposure(current, current.scene_tracker || {});
@@ -616,7 +619,7 @@ export const CharacterSheetPage = () => {
         const task = previousWrite.catch(() => false).then(async () => {
             try {
                 const response = await axios.put(`${API}/characters/${characterId}`, patch, { params: {
-                    include_xp_history: false, delta_updates: true, ...(summaryOptions.expectedHistoryRevision ? {expected_updated_at: summaryOptions.expectedHistoryRevision} : {})
+                    include_xp_history: false, delta_updates: true, ...(summaryOptions.kind === "scene" ? {finalize_scene:true} : {}), ...(summaryOptions.expectedHistoryRevision ? {expected_updated_at: summaryOptions.expectedHistoryRevision} : {})
                 }});
                 const remaining = (pendingCharacterPatchesRef.current.get(characterId) || []).filter((entry) => entry.token !== token);
                 if (remaining.length) pendingCharacterPatchesRef.current.set(characterId, remaining);
@@ -646,7 +649,7 @@ export const CharacterSheetPage = () => {
 
     const handleEndScene = async () => {
         if (!activeCharacter) return false;
-        const changes = getEndScenePatch(activeCharacter);
+        const changes = getEndScenePatch(latestCharacterRef.current || activeCharacter);
         if (!changes) return false;
         const saved = await updateCharacter(changes, { kind: "scene" });
         if (saved) toast.success("Scene ended. Scene-duration effects and resources updated.");
@@ -719,7 +722,7 @@ export const CharacterSheetPage = () => {
             if (latest.id !== id || latest.character_type !== 'mage') return null;
             const conditions = latest.conditions || [];
             const index = findAbyssalIndex(conditions,target);
-            if (index < 0 || !isAbyssalCondition(conditions[index]) || !needsParadoxSuccesses(conditions[index])) return null;
+            if (index < 0 || isEffectExpired(conditions[index],latest.scene_tracker) || !isAbyssalCondition(conditions[index]) || !needsParadoxSuccesses(conditions[index])) return null;
             return {conditions:conditions.map((entry,i)=>i===index?{...entry,paradox_successes:Number(value)}:entry)};
         });
     };
@@ -727,7 +730,7 @@ export const CharacterSheetPage = () => {
         if (!activeCharacter) return;
         const conditions = activeCharacter.conditions || [];
         const condition = conditions[conditionIndex];
-        if (!condition) return;
+        if (!condition || isEffectExpired(condition,activeCharacter?.scene_tracker)) return;
         if (isAbyssalTaint(condition)) { toast.error("Abyssal Taint must be Scoured from the Pattern."); return; }
         const newConditions = conditions.filter((_, i) => i !== conditionIndex);
         await updateCharacter({ conditions: newConditions });
@@ -738,6 +741,7 @@ export const CharacterSheetPage = () => {
 
     const resolveCondition = async (conditionIndex) => {
         const target = (activeCharacter?.conditions || [])[conditionIndex];
+        if (!target || isEffectExpired(target,activeCharacter?.scene_tracker)) return;
         if (target?.type === 'tilt' || String(target?.group || '').startsWith('tilt-')) {
             await updateCharacter((latest) => ({ conditions: (latest.conditions || []).filter((_, i) => i !== conditionIndex) }));
             toast.info('Tilt ended: ' + target.name + ' (no Beat)');
@@ -804,7 +808,7 @@ export const CharacterSheetPage = () => {
         if (!activeCharacter) return;
         const conditions = activeCharacter.conditions || [];
         const condition = conditions[conditionIndex];
-        if (!condition) return;
+        if (!condition || isEffectExpired(condition,activeCharacter?.scene_tracker)) return;
         const newConditions = conditions.map((c, i) => (i === conditionIndex ? { ...c, ...partialUpdate } : c));
         await updateCharacter({ conditions: newConditions });
     };

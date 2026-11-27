@@ -529,7 +529,7 @@ export const GameCardsPanel = ({
     const cardNavigationItems = isMage
         ? [
             { id: "combat", label: "Combat" },
-            { id: "conditions", label: "Conditions", count: activeConditions.length },
+            { id: "conditions", label: "Conditions", count: activeConditions.filter(condition=>!isEffectExpired(condition,gameClock)).length },
             { id: "activeSpells", label: "Active Spells & Abilities", count: activeEffectsCount },
             { id: "merits", label: "Merits" },
             { id: "places", label: "Places & NPCs" },
@@ -537,7 +537,7 @@ export const GameCardsPanel = ({
         ]
         : [
             { id: "combat", label: "Combat" },
-            { id: "conditions", label: "Conditions", count: activeConditions.length },
+            { id: "conditions", label: "Conditions", count: activeConditions.filter(condition=>!isEffectExpired(condition,gameClock)).length },
             { id: "haunts", label: "Haunts" },
             { id: "keys", label: "Keys" },
             { id: "ceremonies", label: "Ceremonies" },
@@ -594,6 +594,7 @@ export const GameCardsPanel = ({
                         </DialogHeader>
                         <div className="space-y-2 text-xs text-zinc-300">
                             <p>Scene-duration spells and effects expiring: <strong>{sceneEffectsToExpire}</strong></p>
+                                    <p>Conditions to remove: <strong>{activeConditions.filter(condition=>isEffectExpired(condition,gameClock)||isSceneDurationEffect(condition)).length}</strong>. Pending Abyssal lapses are finalized.</p>
                             {isMage && <p>Paradox roll counter resetting: <strong>{sceneParadoxRolls}</strong> → 0</p>}
                             {!isMage && <p>Temporary Key Plasm expiring: <strong>{temporaryPlasmToLose}</strong></p>}
                             {activeCharacter?.combat_active && (

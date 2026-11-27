@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 
 export const ConditionCard = ({
     timer,
+    pendingLapse = false,
     expired = false,
     name,
     type,
@@ -145,6 +146,8 @@ export const ConditionCard = ({
                             {timer.label}
                         </p>
                     )}
+                    {expired && <p className="mb-2 text-[10px] text-zinc-500">Removed at End Scene</p>}
+                    {expired && pendingLapse && <p className="mb-2 text-[10px] text-violet-300">Abyssal Taint modifier active; permanent Taint and Arcane Beat pending End Scene.</p>}
                     {onSetParadoxSuccesses && !expired && <form className="flex flex-wrap items-center gap-2 mb-2" onSubmit={e=>{
                         e.preventDefault();
                         const value=Number(new FormData(e.currentTarget).get('paradoxSuccesses'));
@@ -196,7 +199,7 @@ export const ConditionCard = ({
                         </Button>
                     )}
 
-{onRemove &&                     <Button
+{onRemove && !expired &&                     <Button
                         variant="ghost"
                         size="icon"
                         onClick={() =>

@@ -11,17 +11,23 @@ test('Wisdom tiers include Wisdom one in Falling',()=>{
 });
 test('timed lapse awards an Arcane Beat, converts five and creates permanent taint',()=>{
     const c=mage([make('Abyssal Imago')]);
-    const {cleaned,summary}=prepareTimeTransition(c,{scene_tracker:tomorrow});
+    const pending=prepareTimeTransition(c,{scene_tracker:tomorrow});
+    expect(pending.cleaned.arcane_beats).toBeUndefined();
+    expect(pending.cleaned.conditions[0].status).toBe('expired');
+    const next={...c,...pending.cleaned};
+    const {cleaned,summary}=prepareTimeTransition(next,getEndScenePatch(next),{kind:'scene'});
     expect(cleaned.arcane_beats).toBe(0);
     expect(cleaned.arcane_experience).toBe(3);
-    expect(cleaned.conditions).toEqual([makeAbyssalTaint()]);
+    expect(cleaned.conditions).toEqual([{...makeAbyssalTaint(),started_at:"1607-01-25T10:00:00.000Z"}]);
     expect(summary.expired.map(e=>e.name)).toEqual(['Abyssal Imago']);
     expect(summary.active.find(e=>e.name==='Abyssal Taint').remaining).toBe('Permanent');
     expect(hasAbyssalTaint(cleaned.conditions,tomorrow)).toBe(true);
 });
 test('multiple lapses earn individual Beats but one taint; existing taint persists',()=>{
     const c=mage([make('Abyssal Nimbus'),make('Abyssal Backlash'),makeAbyssalTaint()]);
-    const {cleaned}=prepareTimeTransition(c,{scene_tracker:tomorrow});
+    const pending=prepareTimeTransition(c,{scene_tracker:tomorrow});
+    const next={...c,...pending.cleaned};
+    const {cleaned}=prepareTimeTransition(next,getEndScenePatch(next),{kind:'scene'});
     expect(cleaned.conditions).toHaveLength(1);
     expect(cleaned.arcane_beats).toBe(1);
     expect(cleaned.arcane_experience).toBe(3);
@@ -32,7 +38,11 @@ test('scene and turn lapse, unlike active resolution, produce taint',()=>{
     const scene=mage([make('Abyssal Nimbus',1)],{wisdom:1});
     expect(prepareTimeTransition(scene,getEndScenePatch(scene),{kind:'scene'}).cleaned.conditions[0].name).toBe('Abyssal Taint');
     const turn=mage([make('Abyssal Backlash',0)],{wisdom:0});
-    expect(prepareTimeTransition(turn,{conditions:advanceTurnEffects(turn.conditions)},{kind:'turn'}).cleaned.conditions[0].name).toBe('Abyssal Taint');
+    const turnResult=prepareTimeTransition(turn,{conditions:advanceTurnEffects(turn.conditions)},{kind:'turn'});
+    expect(turnResult.cleaned.conditions[0].lapse_finalized).toBe(true);
+    expect(turnResult.cleaned.conditions[1].name).toBe('Abyssal Taint');
+    const afterTurn={...turn,...turnResult.cleaned};
+    expect(prepareTimeTransition(afterTurn,getEndScenePatch(afterTurn),{kind:'scene'}).cleaned.arcane_beats).toBeUndefined();
     expect(prepareTimeTransition(scene,{conditions:[]}).cleaned).toEqual({conditions:[]});
 });
 test('non-mage or familiar conditions do not taint the mage',()=>{

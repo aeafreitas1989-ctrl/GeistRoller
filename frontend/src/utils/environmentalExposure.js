@@ -1,4 +1,4 @@
-import { getGameTimestamp } from './effectDuration';
+import { getGameTimestamp, withGameClockCheckpoint } from './effectDuration';
 import { advanceNaturalHealing, restartNaturalHealing } from './naturalHealing';
 import { addWoundDamage, normalizeResistance } from './resistantWounds';
 import { temperatureExposure } from './environmentalTilts';
@@ -18,6 +18,7 @@ const validTime = (text) => {
 // This helper is shared by manual scene-clock changes, Advance Time, and Sleep.
 export const advanceEnvironmentalExposure = (character = {}, nextTracker = {}, boxesInput = null, marksInput = null) => {
     const oldTracker = character?.scene_tracker || {};
+    nextTracker = withGameClockCheckpoint(oldTracker,nextTracker);
     const oldAt = getGameTimestamp(oldTracker);
     const newAt = getGameTimestamp(nextTracker);
     let boxes = Array.isArray(boxesInput) ? [...boxesInput] : [...(character?.health_boxes || [])];

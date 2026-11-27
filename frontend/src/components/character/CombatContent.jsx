@@ -26,7 +26,7 @@ import {
 import { useEffect, useState } from "react";
 import { isNonEdibleTass } from "../../utils/inventoryResources";
 import { HealthTrack, getHealthCounts, buildHealthBoxes, formatLabel } from "./StatComponents";
-import { getNaturalHealingLabel } from "../../utils/naturalHealing";
+import { getNaturalHealingLabel, getWoundHealingRemainingLabels } from "../../utils/naturalHealing";
 import { getEnvironmentalStats } from "../../utils/environmentalTilts";
 import { hasHealableWound, healWound } from "../../utils/resistantWounds";
 // Game-icons.net illustrations are distributed via react-icons/gi (CC BY 3.0).
@@ -560,7 +560,7 @@ export const CombatContent = ({
                                         DEAD
                                     </span>
                                 )}
-                                <HealthTrack boxes={healthBoxes} max={maxHealth} onBoxClick={handleHealthBoxClick} resistant={getValue("resistant_wounds") || []} onToggleResistance={onToggleResistance} />
+                                <HealthTrack boxes={healthBoxes} max={maxHealth} onBoxClick={handleHealthBoxClick} resistant={getValue("resistant_wounds") || []} onToggleResistance={onToggleResistance} healingRemaining={getWoundHealingRemainingLabels(healthBoxes,getValue("natural_healing"),getValue("scene_tracker"))} />
                             </div>
 
                             <div className="flex items-center gap-2 flex-wrap justify-end">
@@ -1761,7 +1761,7 @@ export const CombatContent = ({
                                     </div>
                                 ) : (
                                     <>
-                                        
+
                                         {it.type === "weapon" && (
                                             <div className="mt-3 grid grid-cols-2 gap-1.5 border-t border-zinc-700/60 pt-3 text-xs text-zinc-300 sm:grid-cols-4">
                                                 <span>

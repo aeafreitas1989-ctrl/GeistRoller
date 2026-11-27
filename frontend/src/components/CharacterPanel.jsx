@@ -1766,7 +1766,7 @@ export const CharacterPanel = ({
     const resolveCondition = async (conditionIndex) => {
         const conditions = getValue("conditions") || [];
         const condition = conditions[conditionIndex];
-        if (!condition) return;
+        if (!condition || isEffectExpired(condition,getValue("scene_tracker"))) return;
 
         // Remove the condition
         const updatedConditions = conditions.filter((_, i) => i !== conditionIndex);

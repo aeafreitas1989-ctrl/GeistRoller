@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { HealthTrack } from "../character/StatComponents";
-import { getNaturalHealingLabel } from "../../utils/naturalHealing";
+import { getNaturalHealingLabel, getWoundHealingRemainingLabels } from "../../utils/naturalHealing";
 import { hasHealableWound } from "../../utils/resistantWounds";
 import { normalizeSkillSpecialty } from "../../utils/skillSpecialties";
 import { isEffectExpired, expireCombatEffects } from "../../utils/effectDuration";
@@ -359,6 +359,7 @@ export const CombatTrackerCard = ({
                         max={maxHealth}
                         onBoxClick={() => {}}
                         testIdPrefix="combat-health"
+                        healingRemaining={getWoundHealingRemainingLabels(healthBoxes,activeCharacter?.natural_healing,activeCharacter?.scene_tracker)}
                         resistant={activeCharacter?.resistant_wounds || []}
                         onToggleResistance={onToggleResistantWound}
                     />

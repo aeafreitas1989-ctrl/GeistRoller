@@ -1,0 +1,32 @@
+import { startTimedEffect, getEffectTimer } from './effectDuration';
+import { prepareTimeTransition } from './timeTransitionSummary';
+import { getEndScenePatch } from './sceneLifecycle';
+import { getAbyssalCastingEffects } from './abyssalSpellcasting';
+const t=(day,time='10:00')=>({date:'1607-01-'+day,time});
+const condition=startTimedEffect({id:'i',name:'Abyssal Imago',paradox_successes:2,duration:'1 day'},t('24'));
+const mage={id:'m',character_type:'mage',wisdom:7,scene_tracker:t('24'),conditions:[condition],arcane_beats:4,arcane_experience:1};
+const advance=(c,next)=>({...c,...prepareTimeTransition(c,{scene_tracker:next}).cleaned});
+test('expired timed Condition is retained and reactivated on correction; no provisional XP transaction',()=>{
+    const after=advance(mage,t('25'));
+    expect(after.conditions[0].status).toBe('expired');
+    expect(after.arcane_beats).toBe(4);
+    expect(getAbyssalCastingEffects(after.conditions,after.scene_tracker).taint).toBe(true);
+    const corrected=advance(after,t('24','11:00'));
+    expect(corrected.conditions[0].status).toBe('active');
+    expect(corrected.conditions[0].expires_at).toBe(condition.expires_at);
+    expect(getAbyssalCastingEffects(corrected.conditions,corrected.scene_tracker).imagoReach).toBe(2);
+    expect(getAbyssalCastingEffects(corrected.conditions,corrected.scene_tracker).taint).toBe(false);
+    expect(getEffectTimer(corrected.conditions[0],corrected.scene_tracker).label).toBe('23h remaining');
+    expect(corrected.arcane_beats).toBe(4);
+    const ended=prepareTimeTransition(corrected,getEndScenePatch(corrected),{kind:'scene'}).cleaned;
+    expect(ended.conditions[0].name).toBe('Abyssal Imago');
+    expect(ended.arcane_beats).toBeUndefined();
+});
+test('End Scene finalizes one lapse; repeated closure does not award again',()=>{
+    const after=advance(mage,t('25'));
+    const end=prepareTimeTransition(after,getEndScenePatch(after),{kind:'scene'}).cleaned;
+    expect(end.conditions.map(e=>e.name)).toEqual(['Abyssal Taint']);
+    expect(end.arcane_beats).toBe(0);expect(end.arcane_experience).toBe(2);
+    const saved={...after,...end};
+    expect(prepareTimeTransition(saved,getEndScenePatch(saved),{kind:'scene'}).cleaned.arcane_beats).toBeUndefined();
+});

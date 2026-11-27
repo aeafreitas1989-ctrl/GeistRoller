@@ -11,7 +11,7 @@ const parseDuration = (duration) => {
     return { amount: Number(match[1]), unit: match[2].toLowerCase() };
 };
 
-export const getGameTimestamp = (tracker) => {
+export const getRawGameTimestamp = (tracker) => {
     const date = tracker?.date;
     const time = tracker?.time;
     if (typeof date !== "string" || typeof time !== "string" ||
@@ -20,6 +20,33 @@ export const getGameTimestamp = (tracker) => {
     return Number.isFinite(stamp) && new Date(stamp).toISOString().slice(0, 16) === `${date}T${time}`
         ? stamp : null;
 };
+
+const parseGameStamp = value => {
+    const stamp = typeof value === 'string' ? Date.parse(value) : NaN;
+    return Number.isFinite(stamp) ? stamp : null;
+};
+export const getGameTimestamp = tracker => {
+    const raw = getRawGameTimestamp(tracker), processed = parseGameStamp(tracker?.processed_at);
+    return raw === null ? processed : processed === null ? raw : Math.max(raw,processed);
+};
+export const withGameClockCheckpoint = (previous, requested) => {
+    const old = getGameTimestamp(previous), next = getGameTimestamp(requested);
+    const stamp = old === null ? next : next === null ? old : Math.max(old,next);
+    if (stamp === null) return requested || {};
+    const processed_at = new Date(stamp).toISOString();
+    return requested?.processed_at === processed_at ? requested : {...requested,processed_at};
+};
+export const isGameClockBehind = tracker => {
+    const raw = getRawGameTimestamp(tracker), effective = getGameTimestamp(tracker);
+    return effective !== null && (raw === null || raw < effective);
+};
+export const formatGameDateTime = value => {
+    const stamp = typeof value === 'number' ? value : parseGameStamp(value);
+    return stamp === null || !Number.isFinite(stamp) ? '' : new Date(stamp).toISOString().slice(0,16).replace('T',' ').replace(/-/g,'/');
+};
+export const getEffectDateLabels = effect => ({
+    started:formatGameDateTime(effect?.started_at), expires:formatGameDateTime(effect?.expires_at),
+});
 
 const addDuration = (start, { amount, unit }) => {
     if (["minute", "hour", "day", "week"].includes(unit)) {
@@ -63,28 +90,35 @@ export const expireCombatEffects = (effects) => {
     return changed ? result : effects;
 };
 export const startTimedEffect = (effect, tracker) => {
-    if (isSceneDurationEffect(effect) && effect?.status !== "expired") {
-        return { ...effect, tracking_mode: "scene", status: "active" };
+    if (!effect || typeof effect !== 'object' || effect.status === 'expired') return effect;
+    const now = getGameTimestamp(tracker);
+    const originalStart = parseGameStamp(effect.started_at);
+    // Preserve existing timestamps and never reset a partially consumed turn timer.
+    const start = originalStart ?? now;
+    const stamped = originalStart === null && now !== null && !effect.expires_at
+        ? {...effect, started_at:new Date(now).toISOString()} : effect;
+    if (isSceneDurationEffect(effect)) {
+        return stamped.tracking_mode === 'scene' && stamped.status === 'active' ? stamped : {...stamped,tracking_mode:'scene',status:'active'};
     }
-    const turnMatch = String(effect?.duration || "").trim().match(TURN_DURATION);
-    if (turnMatch && effect?.status !== "expired") {
-        return { ...effect, tracking_mode: "turn", turns_remaining: Number(turnMatch[1]), status: "active" };
+    const turnMatch = String(effect.duration || '').trim().match(TURN_DURATION);
+    if (turnMatch) {
+        if (stamped.tracking_mode === 'turn') return stamped;
+        return {...stamped,tracking_mode:'turn',turns_remaining:Number(turnMatch[1]),status:'active'};
     }
-    const duration = parseDuration(effect?.duration);
-    const start = getGameTimestamp(tracker);
-    // Do not invent an activation time when the in-game clock is unset.
-    if (!effect || !duration || start === null || effect.expires_at || effect.status === "expired") return effect;
-    const expires = addDuration(start, duration);
-    if (!Number.isFinite(expires)) return effect;
-    return {
-        ...effect,
-        started_at: new Date(start).toISOString(),
-        expires_at: new Date(expires).toISOString(),
-        status: "active",
-    };
+    const duration = parseDuration(effect.duration);
+    if (!duration || start === null || effect.expires_at) return stamped;
+    const expires = addDuration(start,duration);
+    return Number.isFinite(expires) ? {...stamped,expires_at:new Date(expires).toISOString(),status:'active'} : stamped;
 };
 
+export const getEffectTimestamp = (effect,tracker) => effect?.clock_review === true
+    ? (getRawGameTimestamp(tracker) ?? getGameTimestamp(tracker)) : getGameTimestamp(tracker);
 export const isEffectExpired = (effect, tracker) => {
+    // Only clock-based Conditions are reversible. Turn/scene expiry stays explicit.
+    if (effect?.clock_review === true && !effect.lapse_finalized) {
+        const now=getEffectTimestamp(effect,tracker), end=parseGameStamp(effect.expires_at);
+        if(now!==null && end!==null) return now>=end;
+    }
     if (effect?.status === "expired") return true;
     if (effect?.tracking_mode === "turn" && (Number(effect.turns_remaining) || 0) <= 0) return true;
     const current = getGameTimestamp(tracker);
@@ -123,7 +157,7 @@ export const getEffectTimer = (effect, tracker) => {
     }
     if (String(effect?.duration || "").toLowerCase() === "permanent") return { kind: "permanent", label: "Permanent" };
     if (!hasFiniteDuration(effect)) return { kind: "untimed", label: "" };
-    const current = getGameTimestamp(tracker);
+    const current = getEffectTimestamp(effect,tracker);
     const expiry = effect?.expires_at ? Date.parse(effect.expires_at) : NaN;
     if (!Number.isFinite(expiry)) return {
         kind: "untracked",

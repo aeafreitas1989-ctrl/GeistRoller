@@ -1,3 +1,4 @@
+import { getGameTimestamp, getRawGameTimestamp, isGameClockBehind, formatGameDateTime } from "../../utils/effectDuration";
 import { Clock3, Cloud, Thermometer, Leaf, Wind, Gauge, Droplets, MapPin, Building2, ShieldCheck, } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,8 +58,16 @@ export const SceneTrackerCard = ({
     getTemperatureIconClass,
     getTemperatureColorClass,
     getTemperatureCondition,
-}) => (
+}) => {
+    const commitClock = updates => {
+        const old=getGameTimestamp(sceneTracker), next=getRawGameTimestamp({...sceneTracker,...updates});
+        if (old!==null && next!==null && next>old && !window.confirm('Advance game time from '+formatGameDateTime(old)+' to '+formatGameDateTime(next)+'? Healing, damage, and spell expiration will be processed and cannot be undone by changing the clock. Expired Conditions remain reviewable until End Scene.')) return false;
+        void updateSceneTracker(updates);
+        return true;
+    };
+    return (
         <div className="bg-zinc-900/40 border border-zinc-800 rounded-sm px-3 py-2.5 space-y-3">
+            {isGameClockBehind(sceneTracker) && <div className="rounded border border-amber-700/60 bg-amber-950/30 px-2 py-1 text-[10px] text-amber-200" data-testid="clock-rewind-warning">Clock is earlier than the last processed game time ({formatGameDateTime(getGameTimestamp(sceneTracker))}). Healing and committed effects are frozen at that timestamp; retained clock-based Conditions follow the displayed date. Restore the clock before advancing time.</div>}
 
             {/* Location */}
             <div className="grid grid-cols-1 md:grid-cols-[minmax(0,2fr)_minmax(150px,1fr)_110px] items-end gap-2">
@@ -156,7 +165,7 @@ export const SceneTrackerCard = ({
             <div className="space-y-1">
                 <SceneDateField
                     value={sceneTracker.date || ""}
-                    onChange={(date) => updateSceneTracker({ date })}
+                    onChange={(date) => commitClock({ date })}
                 />
             </div>
 
@@ -166,7 +175,7 @@ export const SceneTrackerCard = ({
                 </label>
                 <SceneTimeField
                     value={sceneTracker.time || ""}
-                    onChange={(time) => updateSceneTracker({ time })}
+                    onChange={(time) => commitClock({ time })}
                 />
             </div>
 
@@ -390,3 +399,4 @@ export const SceneTrackerCard = ({
         </details>
     </div>
 );
+};

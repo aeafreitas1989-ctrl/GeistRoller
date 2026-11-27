@@ -1,3 +1,4 @@
+import { isPendingClockLapse } from './conditionExpiryReview';
 import { isAbyssalCondition, isAbyssalTaint } from './abyssalConditions';
 import { isEffectExpired } from './effectDuration';
 
@@ -19,7 +20,7 @@ export const getAbyssalCastingEffects = (conditions,tracker) => {
     const missing = [...imago,...unspent].filter(entry=>!validParadoxSuccesses(entry.paradox_successes));
     // Distinct active Conditions each retain their recorded severity. Taint itself is non-stacking.
     const total = entries => entries.reduce((sum,entry)=>sum+(validParadoxSuccesses(entry.paradox_successes)?Number(entry.paradox_successes):0),0);
-    return {active,imago,backlash,unspent,missing,imagoReach:total(imago),backlashDice:total(unspent),taint:active.some(isAbyssalTaint)};
+    return {active,imago,backlash,unspent,missing,imagoReach:total(imago),backlashDice:total(unspent),taint:active.some(isAbyssalTaint) || (conditions || []).some(e=>isAbyssalCondition(e)&&isPendingClockLapse(e,tracker))};
 };
 export const abyssalParadoxModifiers = (effects,baseParadoxDice,spellPool,spendImagoReach=true) => {
     const imagoFailure = effects.imagoReach > 0 && !spendImagoReach;

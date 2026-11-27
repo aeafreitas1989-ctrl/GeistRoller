@@ -1,4 +1,5 @@
-from time_effect_retention import retain_unexpired_effects
+from time_effect_retention import retain_unexpired_effects, game_timestamp, _timestamp
+from datetime import timezone
 
 _NAMES = {'abyssal backlash', 'abyssal imago', 'abyssal nimbus', 'paradox taint',
           'paradox condition (pending st)', 'paradox condition (dramatic spellcasting failure)'}
@@ -30,6 +31,11 @@ def retain_conditions_with_lapse(conditions, tracker, previous, updates=None):
         return retained, {}, ''
     if not any(is_abyssal_taint(entry) for entry in retained):
         retained.append({**{"name":"Abyssal Taint","type":"condition","group":"condition","splat":"Mage — Paradox","persistent":True,"beat_type":"none","duration":"Permanent","origin":"Paradox","description":"The Abyss has entered the mage’s Pattern and is detectable in her Nimbus. Every spell she casts adds one Paradox die, even without exceeding free Reach.","effect":"The Abyss has entered the mage’s Pattern and is detectable in her Nimbus. Every spell she casts adds one Paradox die, even without exceeding free Reach.","resolution":"Scour the taint from the Pattern: suffer one resistant lethal wound, gain no Mana and no additional Arcane Beat.","source_citation":"Mage: The Awakening 2e, p. 116"}, 'status': 'active'})
+        now = game_timestamp(tracker)
+        if now is not None:
+            expiry = [_timestamp(e.get('expires_at')) for e in lapsed]
+            start = min([now] + [value for value in expiry if value is not None and value <= now])
+            retained[-1]['started_at'] = start.astimezone(timezone.utc).isoformat(timespec='milliseconds').replace('+00:00','Z')
     updates = updates or {}
     beats = max(0, int(updates.get('arcane_beats', previous.get('arcane_beats', 0)) or 0)) + len(lapsed)
     xp = max(0, int(updates.get('arcane_experience', previous.get('arcane_experience', 0)) or 0))

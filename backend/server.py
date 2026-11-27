@@ -16,8 +16,8 @@ from fastapi.staticfiles import StaticFiles
 
 from database import client, db
 from dice_engine import resolve_dice_roll
-from time_effect_retention import retain_unexpired_effects
-from abyssal_conditions import retain_conditions_with_lapse
+from time_effect_retention import retain_unexpired_effects, preserve_clock_checkpoint, stamp_new_effects
+from condition_expiry_review import review_scene_conditions
 from rules_validation import validate_rule_bounded_fields
 from character_sync import CharacterSummary, CHARACTER_SUMMARY_PROJECTION
 from character_history import without_xp_history, xp_history_snapshot
@@ -336,7 +336,7 @@ def build_xp_history_entry(previous, updates, reason=""):
     }
 
 @api_router.put("/characters/{character_id}", response_model=Character)
-async def update_character(character_id: str, input: CharacterUpdate, include_xp_history: bool = True, expected_updated_at: str = None, delta_updates: bool = False):
+async def update_character(character_id: str, input: CharacterUpdate, include_xp_history: bool = True, expected_updated_at: str = None, delta_updates: bool = False, finalize_scene: bool = False):
     update_data = input.model_dump(exclude_unset=True)
     allow_override = bool(update_data.pop("allow_rules_override", False))
     reason = (update_data.pop("xp_reason", "") or "").strip()
@@ -352,18 +352,22 @@ async def update_character(character_id: str, input: CharacterUpdate, include_xp
     if expected_updated_at is not None and previous.get("updated_at") != expected_updated_at:
         raise HTTPException(status_code=409, detail="Character changed; reload XP history before editing")
 
+    if 'scene_tracker' in update_data:
+        update_data['scene_tracker'] = preserve_clock_checkpoint(previous.get('scene_tracker'), update_data['scene_tracker'])
+
     for field in ('active_spells', 'conditions'):
-        if field in update_data or 'scene_tracker' in update_data:
+        if field in update_data or 'scene_tracker' in update_data or (field == 'conditions' and finalize_scene):
             source = update_data.get(field, previous.get(field, []))
             tracker = update_data.get('scene_tracker', previous.get('scene_tracker'))
+            source = stamp_new_effects(source, previous.get(field, []), tracker)
             if field == 'conditions':
-                retained, gained, lapse_reason = retain_conditions_with_lapse(source, tracker, previous, update_data)
+                retained, gained, lapse_reason = review_scene_conditions(source, tracker, previous, update_data, finalize_scene=finalize_scene)
                 update_data.update(gained)
                 if lapse_reason:
                     reason = lapse_reason
             else:
                 retained = retain_unexpired_effects(source, tracker)
-            if retained != source or field in update_data:
+            if retained != previous.get(field, []) or field in update_data:
                 update_data[field] = retained
 
     try:
@@ -527,7 +531,7 @@ async def remove_retired_character_data():
         for field in ("active_spells", "conditions"):
             source = record.get(field, [])
             if field == "conditions":
-                retained, gained, reason = retain_conditions_with_lapse(source, record.get("scene_tracker"), record)
+                retained, gained, reason = review_scene_conditions(source, record.get("scene_tracker"), record)
             else:
                 retained, gained, reason = retain_unexpired_effects(source, record.get("scene_tracker")), {}, ""
             if retained != source:

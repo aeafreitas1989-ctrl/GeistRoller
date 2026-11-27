@@ -392,7 +392,7 @@ export const DiceRollPopup = ({
             if (rollType === "haunt" && patchedResult.successes > 0 && (onAddConditions || onAddCondition)) {
                 const meta = HAUNT_CONDITION_BY_HAUNT[haunt];
                 if (meta?.name) {
-                    const existing = (character?.conditions || []).some((c) => (c?.name || "") === meta.name);
+                    const existing = (character?.conditions || []).some((c) => (c?.name || "") === meta.name && c?.status !== "expired");
                     if (!existing) {
                         const basePurpose = HAUNT_BASE_PLASM_LABELS[haunt]?.label;
                         const baseSelectLabel = getBasePlasmOptionLabel(haunt, plasmSpent, hauntRating);

@@ -10,7 +10,7 @@ test('clock transition shows expired, remaining days/hours/minutes and separate 
     expect(r.summary.active[0].remaining).toBe('5d 13h 28min remaining');
     expect(r.summary.healed).toEqual([{name:'2 Bashing damage'}]);
     expect(r.summary.damage).toEqual([{name:'1 Bashing damage'}]);
-    expect(r.cleaned.conditions).toEqual([]); expect(r.cleaned.active_spells).toHaveLength(1);
+    expect(r.cleaned.conditions).toHaveLength(1); expect(r.cleaned.conditions[0].status).toBe('expired'); expect(r.cleaned.active_spells).toHaveLength(1);
 });
 test('same-clock scene and turn expiration, and previous patch already removed scene spell',()=>{
     const c={scene_tracker:clock('12:00'),active_spells:[{id:1,name:'Scene spell',kind:'spell',duration:'Scene'},{id:2,name:'Turn effect',tracking_mode:'turn',turns_remaining:1}],conditions:[{id:3,name:'Persistent',persistent:true}]};
@@ -22,11 +22,11 @@ test('same-clock scene and turn expiration, and previous patch already removed s
 test('manual resolution and already expired legacy entries are not newly expired',()=>{
     const c={scene_tracker:clock('12:00'),conditions:[{id:1,name:'Old',status:'expired'},{id:2,name:'Resolved'}]};
     const r=prepareTimeTransition(c,{conditions:[c.conditions[0]]});
-    expect(r.summary).toBeNull(); expect(r.cleaned.conditions).toEqual([]);
+    expect(r.summary).toBeNull(); expect(r.cleaned.conditions).toEqual([c.conditions[0]]);
 });
 test('clock crossing midnight includes dates; clock rewind does not report elapsed time',()=>{
     const c={scene_tracker:clock('23:30')}; const next=clock('01:00','1607-01-25');
-    const r=prepareTimeTransition(c,{scene_tracker:next}); expect(r.summary.from).toBe('1607-01-24 23:30'); expect(r.summary.to).toBe('1607-01-25 01:00'); expect(r.summary.elapsed).toBe('1h 30min');
+    const r=prepareTimeTransition(c,{scene_tracker:next}); expect(r.summary.from).toBe('1607/01/24 23:30'); expect(r.summary.to).toBe('1607/01/25 01:00'); expect(r.summary.elapsed).toBe('1h 30min');
     expect(prepareTimeTransition(c,{scene_tracker:clock('22:00')}).summary).toBeNull();
 });
 test('active durations include all nonzero units and unresolved effects',()=>{
