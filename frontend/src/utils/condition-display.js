@@ -1,3 +1,4 @@
+import { LEGACY_CONDITION_TEXT } from "../data/condition-legacy-text";
 // On-screen Condition rules come from the verified catalogue. Preserve any
 // per-activation notes (Haunt charges, named source, ST customizations).
 export const getDisplayedConditionRules = (condition, catalogue) => {
@@ -11,7 +12,8 @@ export const getDisplayedConditionRules = (condition, catalogue) => {
   }
   const rule = String(definition.effect || definition.description || '');
   const initial = String(definition.description || '');
-  const detail = savedText && savedText !== initial && savedText !== rule
+  const retired = (LEGACY_CONDITION_TEXT[key] || []).some(text => text === savedText);
+  const detail = savedText && savedText !== initial && savedText !== rule && !retired
     ? savedText : '';
   return {
     effect: detail ? `${rule}\n\nCurrent instance: ${detail}` : rule,

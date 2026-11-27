@@ -20,8 +20,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Mage"
     ],
-    "description": "When you next cast a spell that risks Paradox, add Paradox dice equal to the successes on the Paradox roll that created this Condition. Record that number when applying it; do not use a fixed modifier.",
-    "effect": "When you next cast a spell that risks Paradox, add Paradox dice equal to the successes on the Paradox roll that created this Condition. Record that number when applying it; do not use a fixed modifier.",
+    "description": "On your next spell that risks Paradox, add Paradox dice equal to the successes that imposed this Condition.",
+    "effect": "On your next spell that risks Paradox, add Paradox dice equal to the successes that imposed this Condition.",
     "resolution": "Fully contain a later Paradox, Scour the Condition from the Pattern, or allow it to lapse (the latter grants an Arcane Beat and taints the Pattern).",
     "source_url": "https://pdfcoffee.com/mage-the-awakening-2e-pdf-free.html",
     "source_citation": "Mage: The Awakening 2e, p. 116"
@@ -35,8 +35,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Mage"
     ],
-    "description": "For every subsequent spell, spend additional Reach equal to the successes on the Paradox roll that imposed this Condition. Without this Reach, the spell automatically fails and its spellcasting dice pool is added to its Paradox dice.",
-    "effect": "For every subsequent spell, spend additional Reach equal to the successes on the Paradox roll that imposed this Condition. Without this Reach, the spell automatically fails and its spellcasting dice pool is added to its Paradox dice.",
+    "description": "Each spell requires additional Reach equal to the Paradox successes that imposed this Condition. Without it, the spell automatically fails and its spellcasting pool is added to the Paradox pool.",
+    "effect": "Each spell requires additional Reach equal to the Paradox successes that imposed this Condition. Without it, the spell automatically fails and its spellcasting pool is added to the Paradox pool.",
     "resolution": "Successfully cast a spell that does not risk Paradox, Scour the Condition, or allow it to lapse (Arcane Beat; Abyssal Pattern taint).",
     "source_url": "https://pdfcoffee.com/mage-the-awakening-2e-pdf-free.html",
     "source_citation": "Mage: The Awakening 2e, p. 116"
@@ -50,8 +50,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Mage"
     ],
-    "description": "The mage and subjects affected by her Nimbus become Resonant to Abyssal entities; if the originating Paradox roll was exceptional, they become Open instead. Signature and Long-Term Nimbus carry detectable Abyssal corruption.",
-    "effect": "The mage and subjects affected by her Nimbus become Resonant to Abyssal entities; if the originating Paradox roll was exceptional, they become Open instead. Signature and Long-Term Nimbus carry detectable Abyssal corruption.",
+    "description": "The mage and subjects affected by her Nimbus become Resonant to Abyssal entities (Open on exceptional Paradox success). Signature and Long-Term Nimbus reveal Abyssal corruption.",
+    "effect": "The mage and subjects affected by her Nimbus become Resonant to Abyssal entities (Open on exceptional Paradox success). Signature and Long-Term Nimbus reveal Abyssal corruption.",
     "resolution": "An Abyssal entity uses the Condition to Manifest, the mage Scours it away, or it lapses (Arcane Beat; Abyssal Pattern taint).",
     "source_url": "https://pdfcoffee.com/mage-the-awakening-2e-pdf-free.html",
     "source_citation": "Mage: The Awakening 2e, p. 116"
@@ -65,9 +65,9 @@ export const CONDITION_DEFINITIONS = {
     "beat_type": "none",
     "duration": "Permanent",
     "origin": "Paradox",
-    "description": "The Abyss has entered the mage’s Pattern and is detectable in her Nimbus. Every spell she casts adds one Paradox die, even without exceeding free Reach.",
-    "effect": "The Abyss has entered the mage’s Pattern and is detectable in her Nimbus. Every spell she casts adds one Paradox die, even without exceeding free Reach.",
-    "resolution": "Scour the taint from the Pattern: suffer one resistant lethal wound, gain no Mana and no additional Arcane Beat.",
+    "description": "Abyssal corruption is detectable in the mage’s Nimbus. Every spell adds 1 Paradox die, even within free Reach.",
+    "effect": "Abyssal corruption is detectable in the mage’s Nimbus. Every spell adds 1 Paradox die, even within free Reach.",
+    "resolution": "Scour: suffer 1 resistant lethal wound; gain no Mana or Arcane Beat.",
     "source_citation": "Mage: The Awakening 2e, p. 116",
     "filters": [
       "Mage"
@@ -82,8 +82,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Geist"
     ],
-    "description": "While a Memoria Mystery Play controls a scene, the subject is cast in a specific role and faces consequences for departing from the recalled script. Track the scene and its assigned role.",
-    "effect": "While a Memoria Mystery Play controls a scene, the subject is cast in a specific role and faces consequences for departing from the recalled script. Track the scene and its assigned role.",
+    "description": "The subject must play their assigned role in a Memoria Mystery Play or suffer the consequences of departing from its script.",
+    "effect": "The subject must play their assigned role in a Memoria Mystery Play or suffer the consequences of departing from its script.",
     "resolution": "Complete the role, escape the Memoria, or alter its script through the relevant enhancement.",
     "source_url": "https://anyflip.com/yckom/urox/basic",
     "source_citation": "Geist: The Sin-Eaters 2e, Haunt Conditions"
@@ -99,8 +99,8 @@ export const CONDITION_DEFINITIONS = {
       "Mage",
       "Changeling"
     ],
-    "description": "A persistent dependence on a named substance or behavior. If deprived, apply Deprived and its −1 penalty to Stamina-, Resolve- and Composure-based pools.",
-    "effect": "A persistent dependence on a named substance or behavior. If deprived, apply Deprived and its −1 penalty to Stamina-, Resolve- and Composure-based pools.",
+    "description": "Dependence on a substance or behavior. When deprived, gain Deprived (−1 to Stamina-, Resolve- and Composure-based rolls).",
+    "effect": "Dependence on a substance or behavior. When deprived, gain Deprived (−1 to Stamina-, Resolve- and Composure-based rolls).",
     "resolution": "Meaningful recovery through treatment, a character-defining change or a supernatural cure.",
     "source_url": "https://pdfcoffee.com/mage-the-awakening-2e-pdf-free.html",
     "source_citation": "CoD 2e / Mage 2e"
@@ -114,8 +114,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Geist"
     ],
-    "description": "The Bound’s memories become unreliable or confused because of interference with the Geist’s Remembrance. The specific forgotten or substituted details are determined by the source.",
-    "effect": "The Bound’s memories become unreliable or confused because of interference with the Geist’s Remembrance. The specific forgotten or substituted details are determined by the source.",
+    "description": "Interference with the Geist’s Remembrance alters or obscures the Bound’s memories as specified by the source.",
+    "effect": "Interference with the Geist’s Remembrance alters or obscures the Bound’s memories as specified by the source.",
     "resolution": "Re-establish reliable memory or remove the supernatural disturbance.",
     "source_url": "https://anyflip.com/yckom/urox/basic",
     "source_citation": "Geist: The Sin-Eaters 2e, Conditions"
@@ -134,8 +134,8 @@ export const CONDITION_DEFINITIONS = {
       "Changeling",
       "Geist"
     ],
-    "description": "A substantial part of the character’s memories is inaccessible. The Storyteller determines which information cannot be recalled and when it becomes accessible; no universal dice-pool penalty applies.",
-    "effect": "A substantial part of the character’s memories is inaccessible. The Storyteller determines which information cannot be recalled and when it becomes accessible; no universal dice-pool penalty applies.",
+    "description": "The Storyteller determines which memories are inaccessible and when they can be recalled.",
+    "effect": "The Storyteller determines which memories are inaccessible and when they can be recalled.",
     "resolution": "Recover the missing memory, discover its significance, or resolve the associated story.",
     "source_url": "https://anyflip.com/usqxr/yybn/basic/",
     "source_citation": "CoD 2e, Conditions"
@@ -149,8 +149,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Changeling"
     ],
-    "description": "Recurring dreams connect you to a particular missing or promise-bound changeling. They can provide clues or direction about that person; record whose fate the dreams concern.",
-    "effect": "Recurring dreams connect you to a particular missing or promise-bound changeling. They can provide clues or direction about that person; record whose fate the dreams concern.",
+    "description": "Recurring dreams provide clues about a specific missing or promise-bound changeling.",
+    "effect": "Recurring dreams provide clues about a specific missing or promise-bound changeling.",
     "resolution": "Reunite with or definitively resolve the fate of the linked changeling.",
     "source_url": "https://anyflip.com/pamxl/onlx/basic"
   },
@@ -163,8 +163,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Werewolf"
     ],
-    "description": "Lunacy drives the subject toward primitive aggression and violence. Their choices become dominated by instinct instead of reason until the originating Lunacy effect passes.",
-    "effect": "Lunacy drives the subject toward primitive aggression and violence. Their choices become dominated by instinct instead of reason until the originating Lunacy effect passes.",
+    "description": "Lunacy drives the subject toward instinctive aggression and violence.",
+    "effect": "Lunacy drives the subject toward instinctive aggression and violence.",
     "resolution": "Destroy or escape the stimulus, or ride out the episode.",
     "source_url": "https://whitewolf.fandom.com/wiki/Werewolf%3A_The_Forsaken_2nd_Edition_Condition_Cards"
   },
@@ -177,8 +177,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Werewolf"
     ],
-    "description": "Intense Lunacy leaves the subject terrified and deferential toward the werewolf. Attempts to resist or oppose that werewolf must account for the supernatural fear.",
-    "effect": "Intense Lunacy leaves the subject terrified and deferential toward the werewolf. Attempts to resist or oppose that werewolf must account for the supernatural fear.",
+    "description": "Lunacy makes the subject terrified of and deferential to the werewolf, hindering opposition.",
+    "effect": "Lunacy makes the subject terrified of and deferential to the werewolf, hindering opposition.",
     "resolution": "Meaningful confrontation with the fear or source, or supernatural recovery.",
     "source_url": "https://whitewolf.fandom.com/wiki/Werewolf%3A_The_Forsaken_2nd_Edition_Condition_Cards"
   },
@@ -191,8 +191,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Werewolf"
     ],
-    "description": "A specific supernatural taboo constrains what the subject may do. Record the forbidden act; violating it has the consequences imposed by the entity or power that created the Ban.",
-    "effect": "A specific supernatural taboo constrains what the subject may do. Record the forbidden act; violating it has the consequences imposed by the entity or power that created the Ban.",
+    "description": "The subject must observe a supernatural taboo. Violations incur the consequences specified by its source.",
+    "effect": "The subject must observe a supernatural taboo. Violations incur the consequences specified by its source.",
     "resolution": "Violate or fulfil the imposed Ban as defined by its source.",
     "source_url": "https://whitewolf.fandom.com/wiki/Werewolf%3A_The_Forsaken_2nd_Edition_Condition_Cards"
   },
@@ -206,8 +206,8 @@ export const CONDITION_DEFINITIONS = {
       "Werewolf",
       "Changeling"
     ],
-    "description": "The subject loses self-restraint and lashes out violently, generally favoring direct attacks over negotiation or defense. Use the controlling source to determine permitted actions and duration.",
-    "effect": "The subject loses self-restraint and lashes out violently, generally favoring direct attacks over negotiation or defense. Use the controlling source to determine permitted actions and duration.",
+    "description": "The subject loses self-restraint and favors direct attacks over negotiation or defense, within the source’s action and duration restrictions.",
+    "effect": "The subject loses self-restraint and favors direct attacks over negotiation or defense, within the source’s action and duration restrictions.",
     "resolution": "Remove or defeat the trigger, or regain control.",
     "source_url": "https://whitewolf.fandom.com/wiki/Werewolf%3A_The_Forsaken_2nd_Edition_Condition_Cards"
   },
@@ -221,8 +221,8 @@ export const CONDITION_DEFINITIONS = {
       "Vampire",
       "Changeling"
     ],
-    "description": "Predatory instincts overwhelm thoughtful choices. The subject is pushed toward immediate hunting, feeding or aggressive behavior; the exact trigger comes from the supernatural source.",
-    "effect": "Predatory instincts overwhelm thoughtful choices. The subject is pushed toward immediate hunting, feeding or aggressive behavior; the exact trigger comes from the supernatural source.",
+    "description": "Predatory instincts compel hunting, feeding or aggression according to the triggering effect.",
+    "effect": "Predatory instincts compel hunting, feeding or aggression according to the triggering effect.",
     "resolution": "Act decisively according to the Beast or instinct, or otherwise satisfy the trigger.",
     "source_url": "https://github.com/Limpbark/vampire-the-requiem-2e/tree/main/packs-src/conditions"
   },
@@ -240,8 +240,8 @@ export const CONDITION_DEFINITIONS = {
       "Changeling",
       "Geist"
     ],
-    "description": "The character cannot perceive visually. Sight-dependent tasks are impossible without another means of perception; other actions suffer circumstances appropriate to blindness, as adjudicated by the Storyteller.",
-    "effect": "The character cannot perceive visually. Sight-dependent tasks are impossible without another means of perception; other actions suffer circumstances appropriate to blindness, as adjudicated by the Storyteller.",
+    "description": "Sight-dependent tasks are impossible without alternative perception. The Storyteller adjudicates other penalties.",
+    "effect": "Sight-dependent tasks are impossible without alternative perception. The Storyteller adjudicates other penalties.",
     "resolution": "The character regains sight or removes the cause of blindness.",
     "source_url": "https://anyflip.com/usqxr/yybn/basic/",
     "source_citation": "CoD 2e, Conditions"
@@ -255,8 +255,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Mage"
     ],
-    "description": "The character has no functional sight. Treat visual tasks as impossible without an alternate sense, and apply appropriate circumstances to other actions; Mage Sight does not automatically restore mundane vision.",
-    "effect": "The character has no functional sight. Treat visual tasks as impossible without an alternate sense, and apply appropriate circumstances to other actions; Mage Sight does not automatically restore mundane vision.",
+    "description": "Sight-dependent tasks are impossible without alternative perception. The Storyteller adjudicates other penalties; Mage Sight does not restore mundane vision.",
+    "effect": "Sight-dependent tasks are impossible without alternative perception. The Storyteller adjudicates other penalties; Mage Sight does not restore mundane vision.",
     "resolution": "Restore sight or remove the spell/condition that caused blindness.",
     "source_url": "https://pdfcoffee.com/mage-the-awakening-2e-pdf-free.html",
     "source_citation": "Mage: The Awakening 2e, Conditions"
@@ -290,8 +290,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Geist"
     ],
-    "description": "The character and Geist have undergone a relationship-strengthening experience. Follow the associated Synergy/Bond rules; do not grant an unearned die bonus merely for having the Condition.",
-    "effect": "The character and Geist have undergone a relationship-strengthening experience. Follow the associated Synergy/Bond rules; do not grant an unearned die bonus merely for having the Condition.",
+    "description": "Apply the Synergy or Bond improvement specified by the relationship-strengthening experience.",
+    "effect": "Apply the Synergy or Bond improvement specified by the relationship-strengthening experience.",
     "resolution": "Complete the prescribed relationship or Synergy improvement.",
     "source_url": "https://anyflip.com/yckom/urox/basic",
     "source_citation": "Geist: The Sin-Eaters 2e, Conditions"
@@ -305,8 +305,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Geist"
     ],
-    "description": "The Sin-Eater has defined a haunted area and gains awareness throughout it; special movement, environmental Tilts and Rules depend on purchased Boneyard enhancements. Record the affected area and activator.",
-    "effect": "The Sin-Eater has defined a haunted area and gains awareness throughout it; special movement, environmental Tilts and Rules depend on purchased Boneyard enhancements. Record the affected area and activator.",
+    "description": "The Sin-Eater gains awareness throughout the haunted area. Movement, Tilts and Rules depend on purchased Boneyard enhancements.",
+    "effect": "The Sin-Eater gains awareness throughout the haunted area. Movement, Tilts and Rules depend on purchased Boneyard enhancements.",
     "resolution": "The Boneyard expires, is relinquished or is displaced according to its activation.",
     "source_url": "https://anyflip.com/yckom/urox/basic",
     "source_citation": "Geist: The Sin-Eaters 2e, Haunt Conditions"
@@ -340,8 +340,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Geist"
     ],
-    "description": "The Sin-Eater merges bodily with the Geist. Record Plasm-derived charges and each purchased transformation; charge-based powers expend their specified charges rather than providing permanent bonuses.",
-    "effect": "The Sin-Eater merges bodily with the Geist. Record Plasm-derived charges and each purchased transformation; charge-based powers expend their specified charges rather than providing permanent bonuses.",
+    "description": "The Sin-Eater merges with the Geist. Purchased transformations consume their specified Plasm-derived charges.",
+    "effect": "The Sin-Eater merges with the Geist. Purchased transformations consume their specified Plasm-derived charges.",
     "resolution": "The transformation ends, the charges expire or the Haunt’s specified trigger resolves it.",
     "source_url": "https://anyflip.com/yckom/urox/basic",
     "source_citation": "Geist: The Sin-Eaters 2e, Haunt Conditions"
@@ -355,8 +355,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Mage"
     ],
-    "description": "A supernatural blessing of fortune may be discharged for the specific favorable coincidence or damage mitigation allowed by the granting effect. Track its origin and any stored uses; there is no universal passive bonus.",
-    "effect": "A supernatural blessing of fortune may be discharged for the specific favorable coincidence or damage mitigation allowed by the granting effect. Track its origin and any stored uses; there is no universal passive bonus.",
+    "description": "Expend stored uses for the favorable coincidence or damage mitigation specified by the granting effect.",
+    "effect": "Expend stored uses for the favorable coincidence or damage mitigation specified by the granting effect.",
     "resolution": "Expend the charm or end the originating magic.",
     "source_url": "https://pdfcoffee.com/mage-the-awakening-2e-pdf-free.html",
     "source_citation": "Mage: The Awakening 2e, Conditions"
@@ -370,8 +370,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Vampire"
     ],
-    "description": "The target experiences magically induced affection toward the vampire using Majesty, making cooperation and pleasing that vampire unusually compelling until the influence ends.",
-    "effect": "The target experiences magically induced affection toward the vampire using Majesty, making cooperation and pleasing that vampire unusually compelling until the influence ends.",
+    "description": "Majesty compels affection, cooperation and a desire to please the vampire.",
+    "effect": "Majesty compels affection, cooperation and a desire to please the vampire.",
     "resolution": "Meaningful betrayal or rejection of the vampire, or supernatural influence ends.",
     "source_url": "https://github.com/Limpbark/vampire-the-requiem-2e/tree/main/packs-src/conditions"
   },
@@ -384,8 +384,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Changeling"
     ],
-    "description": "A changeling's Clarity has collapsed severely enough to trap them in an involuntary dream or withdrawn state. They cannot engage with ordinary waking circumstances until recovery or intervention.",
-    "effect": "A changeling's Clarity has collapsed severely enough to trap them in an involuntary dream or withdrawn state. They cannot engage with ordinary waking circumstances until recovery or intervention.",
+    "description": "Severe Clarity loss traps the changeling in an involuntary dream or withdrawn state, preventing ordinary waking activity.",
+    "effect": "Severe Clarity loss traps the changeling in an involuntary dream or withdrawn state, preventing ordinary waking activity.",
     "resolution": "Recover sufficient Clarity or wake through appropriate aid.",
     "source_url": "https://anyflip.com/pamxl/onlx/basic"
   },
@@ -399,8 +399,8 @@ export const CONDITION_DEFINITIONS = {
       "Vampire",
       "Changeling"
     ],
-    "description": "The character feels compelled to prove superiority over a named rival or in a specific contest. Their priorities shift toward winning even when cooperation would be more sensible.",
-    "effect": "The character feels compelled to prove superiority over a named rival or in a specific contest. Their priorities shift toward winning even when cooperation would be more sensible.",
+    "description": "The character prioritizes winning against a specific rival or in a particular contest, even at the expense of cooperation.",
+    "effect": "The character prioritizes winning against a specific rival or in a particular contest, even at the expense of cooperation.",
     "resolution": "Win or lose an important contest, or accept another’s superiority.",
     "source_url": "https://github.com/Limpbark/vampire-the-requiem-2e/tree/main/packs-src/conditions"
   },
@@ -415,8 +415,8 @@ export const CONDITION_DEFINITIONS = {
       "Werewolf",
       "Changeling"
     ],
-    "description": "The character has trouble distinguishing priorities, instructions and complicated situations. Tasks demanding sustained clear thought become unreliable until the confusion is removed.",
-    "effect": "The character has trouble distinguishing priorities, instructions and complicated situations. Tasks demanding sustained clear thought become unreliable until the confusion is removed.",
+    "description": "Difficulty interpreting instructions, priorities and complex situations impairs sustained mental effort.",
+    "effect": "Difficulty interpreting instructions, priorities and complex situations impairs sustained mental effort.",
     "resolution": "Reorient through a meaningful successful action or the source ends.",
     "source_url": "https://github.com/Limpbark/vampire-the-requiem-2e/tree/main/packs-src/conditions"
   },
@@ -449,8 +449,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Mage"
     ],
-    "description": "Gain +2 dice on applicable rolls involving the named social group; may resolve for a one-time +3 interaction bonus, sacrificing the relationship. Follow the Core Connected rule.",
-    "effect": "Gain +2 dice on applicable rolls involving the named social group; may resolve for a one-time +3 interaction bonus, sacrificing the relationship. Follow the Core Connected rule.",
+    "description": "Gain +2 dice on relevant rolls involving the named group. Resolve for a one-time +3 interaction bonus, sacrificing the connection.",
+    "effect": "Gain +2 dice on relevant rolls involving the named group. Resolve for a one-time +3 interaction bonus, sacrificing the connection.",
     "resolution": "Use and lose the contact or sever the relationship.",
     "source_url": "https://pdfcoffee.com/mage-the-awakening-2e-pdf-free.html",
     "source_citation": "Mage: The Awakening 2e / CoD 2e"
@@ -465,8 +465,8 @@ export const CONDITION_DEFINITIONS = {
       "Werewolf",
       "Changeling"
     ],
-    "description": "An overwhelming display of dominance leaves the subject reluctant to oppose the aggressor. Record whom they fear; defiance requires overcoming that imposed submission.",
-    "effect": "An overwhelming display of dominance leaves the subject reluctant to oppose the aggressor. Record whom they fear; defiance requires overcoming that imposed submission.",
+    "description": "The subject is reluctant to oppose the dominant figure and must overcome their imposed submission to defy them.",
+    "effect": "The subject is reluctant to oppose the dominant figure and must overcome their imposed submission to defy them.",
     "resolution": "Successfully stand against the dominant figure.",
     "source_url": "https://whitewolf.fandom.com/wiki/Werewolf%3A_The_Forsaken_2nd_Edition_Condition_Cards"
   },
@@ -484,8 +484,8 @@ export const CONDITION_DEFINITIONS = {
       "Changeling",
       "Geist"
     ],
-    "description": "The character cannot use the legs normally; walking Speed becomes 1. Mobility aids may change effective movement. The associated persistent impairment remains until properly addressed.",
-    "effect": "The character cannot use the legs normally; walking Speed becomes 1. Mobility aids may change effective movement. The associated persistent impairment remains until properly addressed.",
+    "description": "Walking Speed is 1. Mobility aids may alter effective movement.",
+    "effect": "Walking Speed is 1. Mobility aids may alter effective movement.",
     "resolution": "Recover mobility, or reach a significant story event where the impairment creates genuine danger or severe hindrance.",
     "source_url": "https://anyflip.com/usqxr/yybn/basic/",
     "source_citation": "CoD 2e, Conditions"
@@ -499,8 +499,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Werewolf"
     ],
-    "description": "A temporary Renown-related state rewards clever, deceptive or subtle conduct. Its relevance is to the source's defined Cunning behavior, not an unconditional bonus to every Subterfuge roll.",
-    "effect": "A temporary Renown-related state rewards clever, deceptive or subtle conduct. Its relevance is to the source's defined Cunning behavior, not an unconditional bonus to every Subterfuge roll.",
+    "description": "Gain the source’s Renown-related benefit on qualifying acts of cunning, deception or subtlety.",
+    "effect": "Gain the source’s Renown-related benefit on qualifying acts of cunning, deception or subtlety.",
     "resolution": "Perform an appropriate Cunning act or use the benefit.",
     "source_url": "https://whitewolf.fandom.com/wiki/Werewolf%3A_The_Forsaken_2nd_Edition_Condition_Cards"
   },
@@ -513,8 +513,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Geist"
     ],
-    "description": "The subject carries a supernatural curse with charges determined by the activation. The Sin-Eater may expend charges reflexively to impose only the effects purchased through Curse enhancements. Track source and charges.",
-    "effect": "The subject carries a supernatural curse with charges determined by the activation. The Sin-Eater may expend charges reflexively to impose only the effects purchased through Curse enhancements. Track source and charges.",
+    "description": "The Sin-Eater may reflexively expend stored charges for effects granted by purchased Curse enhancements.",
+    "effect": "The Sin-Eater may reflexively expend stored charges for effects granted by purchased Curse enhancements.",
     "resolution": "The charges are used, the curse is broken, or its mark is cleansed as specified by the Haunt.",
     "source_url": "https://anyflip.com/yckom/urox/basic",
     "source_citation": "Geist: The Sin-Eaters 2e, Haunt Conditions"
@@ -528,8 +528,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Geist"
     ],
-    "description": "The Bound’s living body is dead while the Geist acts under the special death/Bargain rules. Ordinary natural healing does not restore life; apply the appropriate Geist separation consequences.",
-    "effect": "The Bound’s living body is dead while the Geist acts under the special death/Bargain rules. Ordinary natural healing does not restore life; apply the appropriate Geist separation consequences.",
+    "description": "The Bound’s body is dead; the Geist acts under the death and Bargain rules. Natural healing cannot restore life.",
+    "effect": "The Bound’s body is dead; the Geist acts under the death and Bargain rules. Natural healing cannot restore life.",
     "resolution": "Return to life under the Bargain or an appropriate supernatural restoration.",
     "source_url": "https://anyflip.com/yckom/urox/basic",
     "source_citation": "Geist: The Sin-Eaters 2e, Conditions"
@@ -558,8 +558,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Geist"
     ],
-    "description": "The subject broke a Rule established by Boneyard and may suffer its associated punishment. The exact imposed Rule, penalty and creator’s Synergy must be recorded.",
-    "effect": "The subject broke a Rule established by Boneyard and may suffer its associated punishment. The exact imposed Rule, penalty and creator’s Synergy must be recorded.",
+    "description": "Breaking a Boneyard Rule exposes the subject to its specified punishment, including any effect of the creator’s Synergy.",
+    "effect": "Breaking a Boneyard Rule exposes the subject to its specified punishment, including any effect of the creator’s Synergy.",
     "resolution": "Submit to an appropriate punishment or make meaningful restitution for the breach.",
     "source_url": "https://anyflip.com/yckom/urox/basic",
     "source_citation": "Geist: The Sin-Eaters 2e, Conditions"
@@ -573,8 +573,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Werewolf"
     ],
-    "description": "Lunacy distorts how the victim interprets what they see and hear, provoking fear or mistaken beliefs about events. Their reactions follow the delusion until they recover reliable perception.",
-    "effect": "Lunacy distorts how the victim interprets what they see and hear, provoking fear or mistaken beliefs about events. Their reactions follow the delusion until they recover reliable perception.",
+    "description": "Lunacy distorts perception, provoking fear or mistaken interpretations of events.",
+    "effect": "Lunacy distorts perception, provoking fear or mistaken interpretations of events.",
     "resolution": "Escape the Lunacy and regain a reliable grasp of events.",
     "source_url": "https://whitewolf.fandom.com/wiki/Werewolf%3A_The_Forsaken_2nd_Edition_Condition_Cards"
   },
@@ -588,8 +588,8 @@ export const CONDITION_DEFINITIONS = {
       "Vampire",
       "Changeling"
     ],
-    "description": "The character believes a significant false proposition despite contrary evidence. Decisions and social responses are shaped by that belief until it is confronted or dispelled.",
-    "effect": "The character believes a significant false proposition despite contrary evidence. Decisions and social responses are shaped by that belief until it is confronted or dispelled.",
+    "description": "A false belief persists despite contrary evidence and shapes decisions and social responses.",
+    "effect": "A false belief persists despite contrary evidence and shapes decisions and social responses.",
     "resolution": "Strong evidence and meaningful confrontation with the delusion.",
     "source_url": "https://github.com/Limpbark/vampire-the-requiem-2e/tree/main/packs-src/conditions"
   },
@@ -603,8 +603,8 @@ export const CONDITION_DEFINITIONS = {
       "Werewolf",
       "Changeling"
     ],
-    "description": "Failure damages the character's willingness to press onward. Their confidence and initiative suffer in actions tied to the defeat until success or effective support restores them.",
-    "effect": "Failure damages the character's willingness to press onward. Their confidence and initiative suffer in actions tied to the defeat until success or effective support restores them.",
+    "description": "Defeat undermines confidence and initiative in related actions.",
+    "effect": "Defeat undermines confidence and initiative in related actions.",
     "resolution": "Achieve a meaningful success or receive effective support.",
     "source_url": "https://whitewolf.fandom.com/wiki/Werewolf%3A_The_Forsaken_2nd_Edition_Condition_Cards"
   },
@@ -617,8 +617,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Vampire"
     ],
-    "description": "A feeding relationship creates an obsessive attachment to the vampire. The mortal's choices and willingness to separate are compromised; track the vampire who created the dependence.",
-    "effect": "A feeding relationship creates an obsessive attachment to the vampire. The mortal's choices and willingness to separate are compromised; track the vampire who created the dependence.",
+    "description": "A feeding relationship creates obsessive attachment to the vampire and compromises the mortal’s willingness to separate.",
+    "effect": "A feeding relationship creates obsessive attachment to the vampire and compromises the mortal’s willingness to separate.",
     "resolution": "Break the attachment through prolonged separation or another decisive rupture.",
     "source_url": "https://github.com/Limpbark/vampire-the-requiem-2e/tree/main/packs-src/conditions"
   },
@@ -667,8 +667,8 @@ export const CONDITION_DEFINITIONS = {
       "Mage",
       "Changeling"
     ],
-    "description": "Movement and use of the affected part are seriously restricted. Apply the specific restriction imposed by the creating spell or injury, not an invented universal dice modifier.",
-    "effect": "Movement and use of the affected part are seriously restricted. Apply the specific restriction imposed by the creating spell or injury, not an invented universal dice modifier.",
+    "description": "Movement or use of the affected body part is restricted as specified by the injury or spell.",
+    "effect": "Movement or use of the affected body part is restricted as specified by the injury or spell.",
     "resolution": "Regain function or end the supernatural cause.",
     "source_url": "https://pdfcoffee.com/mage-the-awakening-2e-pdf-free.html",
     "source_citation": "Mage: The Awakening 2e, Conditions"
@@ -682,8 +682,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Changeling"
     ],
-    "description": "The character cannot reliably place themselves in their surroundings or understand their immediate situation. Direction-finding and purposeful movement are hampered until they regain bearings.",
-    "effect": "The character cannot reliably place themselves in their surroundings or understand their immediate situation. Direction-finding and purposeful movement are hampered until they regain bearings.",
+    "description": "Unreliable spatial awareness hampers navigation and purposeful movement.",
+    "effect": "Unreliable spatial awareness hampers navigation and purposeful movement.",
     "resolution": "Recenter in a safe or stable situation.",
     "source_url": "https://anyflip.com/pamxl/onlx/basic"
   },
@@ -696,8 +696,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Changeling"
     ],
-    "description": "The character becomes emotionally detached and uncertain whether their experiences are real. Engagement with people and evaluation of immediate events are impaired until grounded again.",
-    "effect": "The character becomes emotionally detached and uncertain whether their experiences are real. Engagement with people and evaluation of immediate events are impaired until grounded again.",
+    "description": "Emotional detachment and uncertainty about reality impair social engagement and assessment of events.",
+    "effect": "Emotional detachment and uncertainty about reality impair social engagement and assessment of events.",
     "resolution": "Ground oneself through undeniable reality or meaningful connection.",
     "source_url": "https://anyflip.com/pamxl/onlx/basic"
   },
@@ -711,8 +711,8 @@ export const CONDITION_DEFINITIONS = {
       "Vampire",
       "Changeling"
     ],
-    "description": "Competing stimuli break sustained attention. Tasks involving careful concentration, extended effort or precision are harder while the specified distraction remains.",
-    "effect": "Competing stimuli break sustained attention. Tasks involving careful concentration, extended effort or precision are harder while the specified distraction remains.",
+    "description": "The distraction impairs concentration, extended effort and precision.",
+    "effect": "The distraction impairs concentration, extended effort and precision.",
     "resolution": "Escape or remove the source of distraction.",
     "source_url": "https://github.com/Limpbark/vampire-the-requiem-2e/tree/main/packs-src/conditions"
   },
@@ -725,8 +725,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Vampire"
     ],
-    "description": "A vampire's Dominate power compels compliance with a recorded command. Apply the scope and duration of that command, rather than treating Dominated as general obedience to every request.",
-    "effect": "A vampire's Dominate power compels compliance with a recorded command. Apply the scope and duration of that command, rather than treating Dominated as general obedience to every request.",
+    "description": "The victim must obey the specific Dominate command within its defined scope and duration.",
+    "effect": "The victim must obey the specific Dominate command within its defined scope and duration.",
     "resolution": "Fulfil the command or the supernatural command expires or is broken.",
     "source_url": "https://github.com/Limpbark/vampire-the-requiem-2e/tree/main/packs-src/conditions"
   },
@@ -739,8 +739,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Vampire"
     ],
-    "description": "Blood loss makes the subject physically weak and less able to sustain strenuous activity. The precise impairment and recovery depend on the source and degree of loss.",
-    "effect": "Blood loss makes the subject physically weak and less able to sustain strenuous activity. The precise impairment and recovery depend on the source and degree of loss.",
+    "description": "Blood loss impairs strenuous activity according to its severity and source.",
+    "effect": "Blood loss impairs strenuous activity according to its severity and source.",
     "resolution": "Recover sufficient blood or rest.",
     "source_url": "https://github.com/Limpbark/vampire-the-requiem-2e/tree/main/packs-src/conditions"
   },
@@ -753,8 +753,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Changeling"
     ],
-    "description": "A hostile dream actively attacks the intruder or otherwise inflicts the consequences of dream combat. The dream interaction, not ordinary waking combat, determines what harm carries across.",
-    "effect": "A hostile dream actively attacks the intruder or otherwise inflicts the consequences of dream combat. The dream interaction, not ordinary waking combat, determines what harm carries across.",
+    "description": "A hostile dream attacks the intruder; harm carries over according to the dream-combat rules.",
+    "effect": "A hostile dream attacks the intruder; harm carries over according to the dream-combat rules.",
     "resolution": "Escape or end the hostile dream interaction.",
     "source_url": "https://anyflip.com/pamxl/onlx/basic"
   },
@@ -767,8 +767,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Changeling"
     ],
-    "description": "Entities within a dream notice the intruder as alien or unwelcome. Deception and unobtrusive travel through that dream become more difficult until the dream accepts them again.",
-    "effect": "Entities within a dream notice the intruder as alien or unwelcome. Deception and unobtrusive travel through that dream become more difficult until the dream accepts them again.",
+    "description": "Dream inhabitants recognize the intruder as unwelcome, hindering deception and unobtrusive travel.",
+    "effect": "Dream inhabitants recognize the intruder as unwelcome, hindering deception and unobtrusive travel.",
     "resolution": "Restore the dream’s acceptance or leave it.",
     "source_url": "https://anyflip.com/pamxl/onlx/basic"
   },
@@ -781,8 +781,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Changeling"
     ],
-    "description": "The dream environment as a whole reacts against the character's interference. Its inhabitants and events work against their presence until they depart or restore the dream.",
-    "effect": "The dream environment as a whole reacts against the character's interference. Its inhabitants and events work against their presence until they depart or restore the dream.",
+    "description": "The dream’s inhabitants and events oppose the intruder’s interference.",
+    "effect": "The dream’s inhabitants and events oppose the intruder’s interference.",
     "resolution": "Leave the dream or restore its stability.",
     "source_url": "https://anyflip.com/pamxl/onlx/basic"
   },
@@ -795,8 +795,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Werewolf"
     ],
-    "description": "The marked quarry leaves clues that a supernatural hunter can exploit. Record the hunter or hunting power; it assists pursuit rather than giving every bystander a tracking bonus.",
-    "effect": "The marked quarry leaves clues that a supernatural hunter can exploit. Record the hunter or hunting power; it assists pursuit rather than giving every bystander a tracking bonus.",
+    "description": "The marked quarry leaves clues that aid the specified hunter or hunting power.",
+    "effect": "The marked quarry leaves clues that aid the specified hunter or hunting power.",
     "resolution": "Successfully obscure or break the trail.",
     "source_url": "https://whitewolf.fandom.com/wiki/Werewolf%3A_The_Forsaken_2nd_Edition_Condition_Cards"
   },
@@ -809,8 +809,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Geist"
     ],
-    "description": "The Geist’s intrusive memories or traits impose a particular remembered impulse or conflict. Record its trigger and how it affects the Bound; the effect is not a generic universal dice penalty.",
-    "effect": "The Geist’s intrusive memories or traits impose a particular remembered impulse or conflict. Record its trigger and how it affects the Bound; the effect is not a generic universal dice penalty.",
+    "description": "Intrusive memories or traits of the Geist impose the recorded impulse or conflict on the Bound.",
+    "effect": "Intrusive memories or traits of the Geist impose the recorded impulse or conflict on the Bound.",
     "resolution": "Process the intrusive memory or resolve its associated Remembrance.",
     "source_url": "https://anyflip.com/yckom/urox/basic",
     "source_citation": "Geist: The Sin-Eaters 2e, Conditions"
@@ -824,8 +824,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Vampire"
     ],
-    "description": "Blood sorcery has satisfied or stimulated the Beast, reinforcing the vampire's predatory or sorcerous drive. Its advantages apply only in the setting and actions of the triggering power.",
-    "effect": "Blood sorcery has satisfied or stimulated the Beast, reinforcing the vampire's predatory or sorcerous drive. Its advantages apply only in the setting and actions of the triggering power.",
+    "description": "Blood sorcery stimulates the Beast; apply the triggering power’s situational benefits.",
+    "effect": "Blood sorcery stimulates the Beast; apply the triggering power’s situational benefits.",
     "resolution": "Expend the benefit or circumstances change.",
     "source_url": "https://github.com/Limpbark/vampire-the-requiem-2e/tree/main/packs-src/conditions"
   },
@@ -859,8 +859,8 @@ export const CONDITION_DEFINITIONS = {
       "Vampire",
       "Mage"
     ],
-    "description": "Advanced soul deprivation reduces the character’s available Willpower and interferes with certain supernatural or moral actions. Use the soul-loss stage from the initiating effect; penalties depend on how long the soul is missing.",
-    "effect": "Advanced soul deprivation reduces the character’s available Willpower and interferes with certain supernatural or moral actions. Use the soul-loss stage from the initiating effect; penalties depend on how long the soul is missing.",
+    "description": "Advanced soul loss reduces available Willpower and impairs supernatural or moral actions according to the stage of deprivation.",
+    "effect": "Advanced soul loss reduces available Willpower and impairs supernatural or moral actions according to the stage of deprivation.",
     "resolution": "Recover the soul before deprivation progresses.",
     "source_url": "https://pdfcoffee.com/mage-the-awakening-2e-pdf-free.html",
     "source_citation": "Mage: The Awakening 2e, soul-loss rules"
@@ -874,8 +874,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Vampire"
     ],
-    "description": "Repeated or deep Dominate influence has removed substantial independent choice. The victim is bound to the controlling vampire's established instructions until the conditioning breaks.",
-    "effect": "Repeated or deep Dominate influence has removed substantial independent choice. The victim is bound to the controlling vampire's established instructions until the conditioning breaks.",
+    "description": "Dominate conditioning binds the victim to the controlling vampire’s established instructions.",
+    "effect": "Dominate conditioning binds the victim to the controlling vampire’s established instructions.",
     "resolution": "Break the conditioning through supernatural means or its defined escape condition.",
     "source_url": "https://github.com/Limpbark/vampire-the-requiem-2e/tree/main/packs-src/conditions"
   },
@@ -888,8 +888,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Vampire"
     ],
-    "description": "Majesty causes intense supernatural devotion. The subject prioritizes the vampire's wishes and approval, and may neglect other loyalties while the effect is active.",
-    "effect": "Majesty causes intense supernatural devotion. The subject prioritizes the vampire's wishes and approval, and may neglect other loyalties while the effect is active.",
+    "description": "Majesty compels devotion to the vampire, prioritizing their wishes and approval over other loyalties.",
+    "effect": "Majesty compels devotion to the vampire, prioritizing their wishes and approval over other loyalties.",
     "resolution": "Break the supernatural attachment.",
     "source_url": "https://github.com/Limpbark/vampire-the-requiem-2e/tree/main/packs-src/conditions"
   },
@@ -902,8 +902,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Werewolf"
     ],
-    "description": "Taking in more Essence than can be safely held destabilizes the werewolf. Losing excess Essence can have linked physical consequences; track the actual overload and governing rule.",
-    "effect": "Taking in more Essence than can be safely held destabilizes the werewolf. Losing excess Essence can have linked physical consequences; track the actual overload and governing rule.",
+    "description": "Excess Essence destabilizes the werewolf; apply the specified physical consequences when losing the excess.",
+    "effect": "Excess Essence destabilizes the werewolf; apply the specified physical consequences when losing the excess.",
     "resolution": "Reduce Essence to safe levels.",
     "source_url": "https://whitewolf.fandom.com/wiki/Werewolf%3A_The_Forsaken_2nd_Edition_Condition_Cards"
   },
@@ -916,8 +916,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Werewolf"
     ],
-    "description": "Severe exhaustion reduces the character's ability to exert themselves or remain alert. Demanding physical actions and resisting unconsciousness are affected until effective rest.",
-    "effect": "Severe exhaustion reduces the character's ability to exert themselves or remain alert. Demanding physical actions and resisting unconsciousness are affected until effective rest.",
+    "description": "Severe exhaustion impairs strenuous physical actions and resistance to unconsciousness.",
+    "effect": "Severe exhaustion impairs strenuous physical actions and resistance to unconsciousness.",
     "resolution": "Obtain genuinely restful sleep.",
     "source_url": "https://whitewolf.fandom.com/wiki/Werewolf%3A_The_Forsaken_2nd_Edition_Condition_Cards"
   },
@@ -930,8 +930,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Vampire"
     ],
-    "description": "Supernatural interference has inserted or replaced memories. The character treats the substituted recollections as true until inconsistencies are exposed or the supernatural change is undone.",
-    "effect": "Supernatural interference has inserted or replaced memories. The character treats the substituted recollections as true until inconsistencies are exposed or the supernatural change is undone.",
+    "description": "The character accepts implanted or altered memories as true.",
+    "effect": "The character accepts implanted or altered memories as true.",
     "resolution": "Recover the truth or original memories.",
     "source_url": "https://github.com/Limpbark/vampire-the-requiem-2e/tree/main/packs-src/conditions"
   },
@@ -944,8 +944,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Changeling"
     ],
-    "description": "Insufficient rest compromises concentration and stamina. Continued exertion can worsen the condition, while meaningful recovery reduces its consequences.",
-    "effect": "Insufficient rest compromises concentration and stamina. Continued exertion can worsen the condition, while meaningful recovery reduces its consequences.",
+    "description": "Insufficient rest impairs concentration and stamina; continued exertion can worsen fatigue.",
+    "effect": "Insufficient rest impairs concentration and stamina; continued exertion can worsen fatigue.",
     "resolution": "Proper restorative sleep.",
     "source_url": "https://anyflip.com/pamxl/onlx/basic"
   },
@@ -958,8 +958,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Geist"
     ],
-    "description": "The Bound is authorized to ferry travelers through Underworld rivers but must demand or pay the specified price. Record the route, passengers and obligation.",
-    "effect": "The Bound is authorized to ferry travelers through Underworld rivers but must demand or pay the specified price. Record the route, passengers and obligation.",
+    "description": "The Bound may ferry travelers through Underworld rivers in exchange for the specified price.",
+    "effect": "The Bound may ferry travelers through Underworld rivers in exchange for the specified price.",
     "resolution": "Complete the passage and pay/collect its price, or end the duty according to the effect.",
     "source_url": "https://anyflip.com/yckom/urox/basic",
     "source_citation": "Geist: The Sin-Eaters 2e, Conditions"
@@ -973,8 +973,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Geist"
     ],
-    "description": "The relationship between Bound and Geist has broken down at low Synergy; cooperation and access to benefits may be restricted until reconciled. Record the source of the conflict.",
-    "effect": "The relationship between Bound and Geist has broken down at low Synergy; cooperation and access to benefits may be restricted until reconciled. Record the source of the conflict.",
+    "description": "Low Synergy disrupts cooperation between Bound and Geist and may restrict their shared benefits.",
+    "effect": "Low Synergy disrupts cooperation between Bound and Geist and may restrict their shared benefits.",
     "resolution": "Repair the relationship and restore the required Synergy threshold.",
     "source_url": "https://anyflip.com/yckom/urox/basic",
     "source_citation": "Geist: The Sin-Eaters 2e, Conditions"
@@ -988,8 +988,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Changeling"
     ],
-    "description": "A changeling's damaged Clarity leaves them unusually vulnerable to further psychological disturbance. A later Clarity-breaking event can produce greater disruption than it otherwise would.",
-    "effect": "A changeling's damaged Clarity leaves them unusually vulnerable to further psychological disturbance. A later Clarity-breaking event can produce greater disruption than it otherwise would.",
+    "description": "Damaged Clarity increases vulnerability to further Clarity-breaking events.",
+    "effect": "Damaged Clarity increases vulnerability to further Clarity-breaking events.",
     "resolution": "Stabilize Clarity or remove the source of fragility.",
     "source_url": "https://anyflip.com/pamxl/onlx/basic"
   },
@@ -1003,8 +1003,8 @@ export const CONDITION_DEFINITIONS = {
       "Vampire",
       "Changeling"
     ],
-    "description": "The subject experiences immediate overwhelming fear of a specific threat. Flight, avoidance and difficulty confronting that threat dominate behavior until the fear subsides.",
-    "effect": "The subject experiences immediate overwhelming fear of a specific threat. Flight, avoidance and difficulty confronting that threat dominate behavior until the fear subsides.",
+    "description": "Overwhelming fear of a specific threat compels flight or avoidance and hinders confrontation.",
+    "effect": "Overwhelming fear of a specific threat compels flight or avoidance and hinders confrontation.",
     "resolution": "Reach safety or directly overcome the source of fear.",
     "source_url": "https://github.com/Limpbark/vampire-the-requiem-2e/tree/main/packs-src/conditions"
   },
@@ -1037,8 +1037,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Geist"
     ],
-    "description": "A ghostly influence has left a persistent physical or supernatural mark. Its nature, whether it functions as an Anchor and any related restriction are established by the causing effect.",
-    "effect": "A ghostly influence has left a persistent physical or supernatural mark. Its nature, whether it functions as an Anchor and any related restriction are established by the causing effect.",
+    "description": "A ghost leaves a persistent mark whose Anchor status and restrictions depend on the causing effect.",
+    "effect": "A ghost leaves a persistent mark whose Anchor status and restrictions depend on the causing effect.",
     "resolution": "Remove the mark with appropriate supernatural intervention.",
     "source_url": "https://anyflip.com/yckom/urox/basic",
     "source_citation": "Geist: The Sin-Eaters 2e, Conditions"
@@ -1052,8 +1052,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Changeling"
     ],
-    "description": "The character is dependent on repeated exposure to Glamour. Going without it causes withdrawal or compulsive pursuit of another source of Glamour.",
-    "effect": "The character is dependent on repeated exposure to Glamour. Going without it causes withdrawal or compulsive pursuit of another source of Glamour.",
+    "description": "Glamour dependence causes withdrawal or compulsive pursuit of Glamour when deprived.",
+    "effect": "Glamour dependence causes withdrawal or compulsive pursuit of Glamour when deprived.",
     "resolution": "Meaningfully overcome the addiction or satisfy its specified recovery requirements.",
     "source_url": "https://anyflip.com/pamxl/onlx/basic"
   },
@@ -1066,8 +1066,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Werewolf"
     ],
-    "description": "A Renown-linked heightened state reinforces courageous, impressive or publicly noteworthy actions. Only acts meeting the power's Glorious criteria receive its benefit.",
-    "effect": "A Renown-linked heightened state reinforces courageous, impressive or publicly noteworthy actions. Only acts meeting the power's Glorious criteria receive its benefit.",
+    "description": "Gain the source’s Renown-related benefit on qualifying courageous, impressive or publicly noteworthy acts.",
+    "effect": "Gain the source’s Renown-related benefit on qualifying courageous, impressive or publicly noteworthy acts.",
     "resolution": "Perform or use an appropriate act of Glory.",
     "source_url": "https://whitewolf.fandom.com/wiki/Werewolf%3A_The_Forsaken_2nd_Edition_Condition_Cards"
   },
@@ -1080,8 +1080,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Changeling"
     ],
-    "description": "Goblin influence changes the character's relationship to the Hedge, its creatures and obligations. The character increasingly behaves or is treated as part of goblin society.",
-    "effect": "Goblin influence changes the character's relationship to the Hedge, its creatures and obligations. The character increasingly behaves or is treated as part of goblin society.",
+    "description": "Goblin influence alters the character’s Hedge relationships, obligations and behavior toward goblin society.",
+    "effect": "Goblin influence alters the character’s Hedge relationships, obligations and behavior toward goblin society.",
     "resolution": "Reverse the transformation through the specific supernatural remedy.",
     "source_url": "https://anyflip.com/pamxl/onlx/basic"
   },
@@ -1099,8 +1099,8 @@ export const CONDITION_DEFINITIONS = {
       "Changeling",
       "Geist"
     ],
-    "description": "Subtract 2 dice from Resolve- or Composure-based rolls made to DEFEND against a manipulator using Subterfuge, Empathy or Intimidation. This is not a penalty to your own Subterfuge rolls.",
-    "effect": "Subtract 2 dice from Resolve- or Composure-based rolls made to DEFEND against a manipulator using Subterfuge, Empathy or Intimidation. This is not a penalty to your own Subterfuge rolls.",
+    "description": "−2 dice to Resolve- or Composure-based rolls defending against Subterfuge, Empathy or Intimidation.",
+    "effect": "−2 dice to Resolve- or Composure-based rolls defending against Subterfuge, Empathy or Intimidation.",
     "resolution": "Confess the wrongdoing, make restitution, or otherwise genuinely atone.",
     "source_url": "https://anyflip.com/usqxr/yybn/basic/",
     "source_citation": "CoD 2e, Conditions"
@@ -1114,8 +1114,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Changeling"
     ],
-    "description": "Exposure to the Hedge creates a recurring compulsion to return. The desire can interfere with ordinary priorities and relationships until the dependence is addressed.",
-    "effect": "Exposure to the Hedge creates a recurring compulsion to return. The desire can interfere with ordinary priorities and relationships until the dependence is addressed.",
+    "description": "Compulsive desire to return to the Hedge interferes with other priorities and relationships.",
+    "effect": "Compulsive desire to return to the Hedge interferes with other priorities and relationships.",
     "resolution": "Break the supernatural addiction through prolonged recovery or appropriate resolution.",
     "source_url": "https://anyflip.com/pamxl/onlx/basic"
   },
@@ -1128,8 +1128,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Changeling"
     ],
-    "description": "The character becomes progressively tied to Hedge existence and goblin behavior. Normal mortal or changeling attachments may lose priority as the transformation advances.",
-    "effect": "The character becomes progressively tied to Hedge existence and goblin behavior. Normal mortal or changeling attachments may lose priority as the transformation advances.",
+    "description": "Progressive attachment to Hedge existence and goblin behavior displaces mortal or changeling ties.",
+    "effect": "Progressive attachment to Hedge existence and goblin behavior displaces mortal or changeling ties.",
     "resolution": "Reverse the transformation or satisfy its special escape requirement.",
     "source_url": "https://anyflip.com/pamxl/onlx/basic"
   },
@@ -1142,8 +1142,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Werewolf"
     ],
-    "description": "A Renown-related state rewards keeping one's word, acting fairly and meeting a personal code. The benefit depends on honor-consistent actions rather than every Social roll.",
-    "effect": "A Renown-related state rewards keeping one's word, acting fairly and meeting a personal code. The benefit depends on honor-consistent actions rather than every Social roll.",
+    "description": "Gain the source’s Renown-related benefit on qualifying acts of honor, fairness or keeping one’s word.",
+    "effect": "Gain the source’s Renown-related benefit on qualifying acts of honor, fairness or keeping one’s word.",
     "resolution": "Demonstrate or use the associated Honor.",
     "source_url": "https://whitewolf.fandom.com/wiki/Werewolf%3A_The_Forsaken_2nd_Edition_Condition_Cards"
   },
@@ -1156,8 +1156,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Mage"
     ],
-    "description": "The mage is profoundly affected by a demonstration of humanity and cannot willingly harm the particular person or ideal that inspired the Condition. Record that subject explicitly.",
-    "effect": "The mage is profoundly affected by a demonstration of humanity and cannot willingly harm the particular person or ideal that inspired the Condition. Record that subject explicitly.",
+    "description": "The mage cannot willingly harm the specific person or ideal that inspired this Condition.",
+    "effect": "The mage cannot willingly harm the specific person or ideal that inspired this Condition.",
     "resolution": "Defend the subject at significant cost or confront the imposed ideal in a meaningful way.",
     "source_url": "https://pdfcoffee.com/mage-the-awakening-2e-pdf-free.html",
     "source_citation": "Mage: The Awakening 2e, Conditions"
@@ -1171,8 +1171,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Vampire"
     ],
-    "description": "A profound confrontation with guilt, faith or judgment weakens the vampire's usual pride and monstrous certainty. Choices that rely on the Beast may be suppressed until the experience is resolved.",
-    "effect": "A profound confrontation with guilt, faith or judgment weakens the vampire's usual pride and monstrous certainty. Choices that rely on the Beast may be suppressed until the experience is resolved.",
+    "description": "Guilt, faith or judgment undermines the vampire’s pride and may suppress Beast-driven choices.",
+    "effect": "Guilt, faith or judgment undermines the vampire’s pride and may suppress Beast-driven choices.",
     "resolution": "Act in accordance with the humbling lesson or the effect expires.",
     "source_url": "https://github.com/Limpbark/vampire-the-requiem-2e/tree/main/packs-src/conditions"
   },
@@ -1185,8 +1185,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Changeling"
     ],
-    "description": "A named predator or supernatural pursuer is actively tracking the character. The danger persists beyond a single immediate attack; record the hunter and the reason the character is marked.",
-    "effect": "A named predator or supernatural pursuer is actively tracking the character. The danger persists beyond a single immediate attack; record the hunter and the reason the character is marked.",
+    "description": "The named hunter is actively tracking the character beyond the immediate encounter.",
+    "effect": "The named hunter is actively tracking the character beyond the immediate encounter.",
     "resolution": "Defeat, permanently evade, or otherwise neutralize the hunter.",
     "source_url": "https://anyflip.com/pamxl/onlx/basic"
   },
@@ -1199,8 +1199,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Geist"
     ],
-    "description": "Failure to attend to a Touchstone incurs an outstanding spiritual debt or obligation. Record the Touchstone and the action required to discharge the debt.",
-    "effect": "Failure to attend to a Touchstone incurs an outstanding spiritual debt or obligation. Record the Touchstone and the action required to discharge the debt.",
+    "description": "Neglecting a Touchstone incurs a spiritual debt or obligation to that Touchstone.",
+    "effect": "Neglecting a Touchstone incurs a spiritual debt or obligation to that Touchstone.",
     "resolution": "Make meaningful amends and fulfill the neglected relationship.",
     "source_url": "https://anyflip.com/yckom/urox/basic",
     "source_citation": "Geist: The Sin-Eaters 2e, Conditions"
@@ -1219,9 +1219,9 @@ export const CONDITION_DEFINITIONS = {
       "Changeling",
       "Geist"
     ],
-    "description": "After making a relevant, non-combat Skill roll, resolve Informed to upgrade a failure to one success, or an ordinary success to an exceptional success. It does not alter an existing dramatic failure.",
-    "effect": "After making a relevant, non-combat Skill roll, resolve Informed to upgrade a failure to one success, or an ordinary success to an exceptional success. It does not alter an existing dramatic failure.",
-    "resolution": "Use this result-upgrade benefit on an eligible Skill roll.",
+    "description": "After a relevant non-combat Skill roll, upgrade a failure to one success or an ordinary success to exceptional success. Dramatic failures are ineligible.",
+    "effect": "After a relevant non-combat Skill roll, upgrade a failure to one success or an ordinary success to exceptional success. Dramatic failures are ineligible.",
+    "resolution": "Use the result upgrade.",
     "source_url": "https://anyflip.com/usqxr/yybn/basic/",
     "source_citation": "CoD 2e, Conditions, p. 289"
   },
@@ -1239,9 +1239,9 @@ export const CONDITION_DEFINITIONS = {
       "Changeling",
       "Geist"
     ],
-    "description": "Before a roll relating to the inspiration, resolve Inspired. Regain 1 Willpower and reduce the threshold for exceptional success on that roll from 5 successes to 3. Failure remains failure.",
-    "effect": "Before a roll relating to the inspiration, resolve Inspired. Regain 1 Willpower and reduce the threshold for exceptional success on that roll from 5 successes to 3. Failure remains failure.",
-    "resolution": "Invoke the inspiration for a relevant roll.",
+    "description": "Before a relevant roll, regain 1 Willpower and reduce the exceptional-success threshold from 5 successes to 3.",
+    "effect": "Before a relevant roll, regain 1 Willpower and reduce the exceptional-success threshold from 5 successes to 3.",
+    "resolution": "Invoke this benefit before rolling.",
     "source_url": "https://anyflip.com/usqxr/yybn/basic/",
     "source_citation": "CoD 2e, Conditions, p. 289"
   },
@@ -1254,8 +1254,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Vampire"
     ],
-    "description": "Drugs or alcohol entering through consumed blood impair the vampire's judgment, perception or coordination. Treat the specific substance and its duration as the source of the effect.",
-    "effect": "Drugs or alcohol entering through consumed blood impair the vampire's judgment, perception or coordination. Treat the specific substance and its duration as the source of the effect.",
+    "description": "Substances in consumed blood impair judgment, perception or coordination according to the substance and its duration.",
+    "effect": "Substances in consumed blood impair judgment, perception or coordination according to the substance and its duration.",
     "resolution": "The substance leaves the system.",
     "source_url": "https://github.com/Limpbark/vampire-the-requiem-2e/tree/main/packs-src/conditions"
   },
@@ -1268,8 +1268,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Werewolf"
     ],
-    "description": "An empowered hunter becomes difficult for prey to notice or follow. The concealment benefits hunting actions specified by the ability and is not blanket invisibility in every situation.",
-    "effect": "An empowered hunter becomes difficult for prey to notice or follow. The concealment benefits hunting actions specified by the ability and is not blanket invisibility in every situation.",
+    "description": "The hunter is harder for prey to detect or follow during the hunting actions specified by the ability.",
+    "effect": "The hunter is harder for prey to detect or follow during the hunting actions specified by the ability.",
     "resolution": "Reveal oneself, lose concealment, or the hunt ends.",
     "source_url": "https://whitewolf.fandom.com/wiki/Werewolf%3A_The_Forsaken_2nd_Edition_Condition_Cards"
   },
@@ -1282,8 +1282,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Werewolf"
     ],
-    "description": "A Hunter's Aspect disrupts the quarry's reliance on allies. The victim is pushed into behaving or fighting alone, and cooperation may be compromised while the Aspect persists.",
-    "effect": "A Hunter's Aspect disrupts the quarry's reliance on allies. The victim is pushed into behaving or fighting alone, and cooperation may be compromised while the Aspect persists.",
+    "description": "The Hunter’s Aspect discourages relying on allies and impairs cooperation.",
+    "effect": "The Hunter’s Aspect discourages relying on allies and impairs cooperation.",
     "resolution": "Rejoin or meaningfully rely on allies.",
     "source_url": "https://whitewolf.fandom.com/wiki/Werewolf%3A_The_Forsaken_2nd_Edition_Condition_Cards"
   },
@@ -1296,8 +1296,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Vampire"
     ],
-    "description": "The vampire's connection to ordinary humanity weakens. The Beast's priorities feel easier to accept and human emotional ties exert less influence.",
-    "effect": "The vampire's connection to ordinary humanity weakens. The Beast's priorities feel easier to accept and human emotional ties exert less influence.",
+    "description": "The Beast’s priorities take precedence over human emotional ties.",
+    "effect": "The Beast’s priorities take precedence over human emotional ties.",
     "resolution": "Meaningfully reconnect with Humanity or Touchstones.",
     "source_url": "https://github.com/Limpbark/vampire-the-requiem-2e/tree/main/packs-src/conditions"
   },
@@ -1310,8 +1310,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Vampire"
     ],
-    "description": "Detachment from living concerns encourages apathy, inactivity and surrender to torpor. Decisive actions not connected to the Beast's immediate needs lose urgency.",
-    "effect": "Detachment from living concerns encourages apathy, inactivity and surrender to torpor. Decisive actions not connected to the Beast's immediate needs lose urgency.",
+    "description": "Apathy and detachment reduce the urgency of actions unrelated to the Beast’s immediate needs.",
+    "effect": "Apathy and detachment reduce the urgency of actions unrelated to the Beast’s immediate needs.",
     "resolution": "Re-establish a meaningful Touchstone or human connection.",
     "source_url": "https://github.com/Limpbark/vampire-the-requiem-2e/tree/main/packs-src/conditions"
   },
@@ -1324,8 +1324,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Geist"
     ],
-    "description": "Violation of a Dominion’s Old Law attracts supernatural judgment. Record the Law, the adjudicating Dominion and the actual punishment; the Condition is not a universal penalty.",
-    "effect": "Violation of a Dominion’s Old Law attracts supernatural judgment. Record the Law, the adjudicating Dominion and the actual punishment; the Condition is not a universal penalty.",
+    "description": "Violating a Dominion’s Old Law incurs its specified supernatural judgment and punishment.",
+    "effect": "Violating a Dominion’s Old Law incurs its specified supernatural judgment and punishment.",
     "resolution": "Accept the specified judgment, make restitution, or escape or overturn the Dominion’s authority.",
     "source_url": "https://anyflip.com/yckom/urox/basic",
     "source_citation": "Geist: The Sin-Eaters 2e, Conditions"
@@ -1340,8 +1340,8 @@ export const CONDITION_DEFINITIONS = {
       "Vampire",
       "Changeling"
     ],
-    "description": "Debilitating lack of energy interferes with taking initiative and acting decisively. The character struggles with sustained physical or mental effort until the lethargy ends.",
-    "effect": "Debilitating lack of energy interferes with taking initiative and acting decisively. The character struggles with sustained physical or mental effort until the lethargy ends.",
+    "description": "Lack of energy impairs initiative, decisive action and sustained physical or mental effort.",
+    "effect": "Lack of energy impairs initiative, decisive action and sustained physical or mental effort.",
     "resolution": "Rest, stimulation, or the source ends.",
     "source_url": "https://github.com/Limpbark/vampire-the-requiem-2e/tree/main/packs-src/conditions"
   },
@@ -1359,8 +1359,8 @@ export const CONDITION_DEFINITIONS = {
       "Changeling",
       "Geist"
     ],
-    "description": "A named character holds convincing leverage over you. The leverage affects attempts to resist that character’s demands; record the specific threat or obligation. Multiple distinct sources may coexist.",
-    "effect": "A named character holds convincing leverage over you. The leverage affects attempts to resist that character’s demands; record the specific threat or obligation. Multiple distinct sources may coexist.",
+    "description": "The specified threat or obligation makes resisting its holder’s demands harder. Distinct sources may coexist.",
+    "effect": "The specified threat or obligation makes resisting its holder’s demands harder. Distinct sources may coexist.",
     "resolution": "Refuse a demand despite the leverage, escape the pressure, or turn the tables on the source.",
     "source_url": "https://anyflip.com/usqxr/yybn/basic/",
     "source_citation": "CoD 2e, Conditions"
@@ -1379,8 +1379,8 @@ export const CONDITION_DEFINITIONS = {
       "Changeling",
       "Geist"
     ],
-    "description": "Until you become reoriented, you cannot make reliable progress toward your destination. Navigation usually requires Wits + Streetwise in an urban area or Wits + Survival outdoors.",
-    "effect": "Until you become reoriented, you cannot make reliable progress toward your destination. Navigation usually requires Wits + Streetwise in an urban area or Wits + Survival outdoors.",
+    "description": "No reliable progress toward the destination until reoriented. Navigate with Wits + Streetwise (urban) or Wits + Survival (outdoors), as appropriate.",
+    "effect": "No reliable progress toward the destination until reoriented. Navigate with Wits + Streetwise (urban) or Wits + Survival (outdoors), as appropriate.",
     "resolution": "Navigate successfully, find a guide, or abandon the original destination.",
     "source_url": "https://anyflip.com/usqxr/yybn/basic/",
     "source_citation": "CoD 2e, Conditions"
@@ -1394,8 +1394,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Werewolf"
     ],
-    "description": "A failed hunt shakes the character's confidence in following prey. Attempts to resume the same pursuit are compromised until they regain the trail or overcome the setback.",
-    "effect": "A failed hunt shakes the character's confidence in following prey. Attempts to resume the same pursuit are compromised until they regain the trail or overcome the setback.",
+    "description": "A failed hunt impairs attempts to resume pursuit of the same prey.",
+    "effect": "A failed hunt impairs attempts to resume pursuit of the same prey.",
     "resolution": "Successfully relocate or track meaningful prey.",
     "source_url": "https://whitewolf.fandom.com/wiki/Werewolf%3A_The_Forsaken_2nd_Edition_Condition_Cards"
   },
@@ -1408,8 +1408,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Werewolf"
     ],
-    "description": "A supernatural lure makes a specific person or place unusually compelling. The victim is motivated to approach or seek that target, even when other concerns argue against it.",
-    "effect": "A supernatural lure makes a specific person or place unusually compelling. The victim is motivated to approach or seek that target, even when other concerns argue against it.",
+    "description": "Supernatural attraction compels the subject to approach the specified person or place.",
+    "effect": "Supernatural attraction compels the subject to approach the specified person or place.",
     "resolution": "Reach or confront the lure, or break its supernatural influence.",
     "source_url": "https://whitewolf.fandom.com/wiki/Werewolf%3A_The_Forsaken_2nd_Edition_Condition_Cards"
   },
@@ -1427,8 +1427,8 @@ export const CONDITION_DEFINITIONS = {
       "Changeling",
       "Geist"
     ],
-    "description": "Supernaturally induced instability. Once per chapter, the Storyteller may impose an appropriate penalty of up to 10 − Integrity dice on a Mental or Social roll. Apply only when triggered.",
-    "effect": "Supernaturally induced instability. Once per chapter, the Storyteller may impose an appropriate penalty of up to 10 − Integrity dice on a Mental or Social roll. Apply only when triggered.",
+    "description": "Once per chapter, the Storyteller may impose a situational penalty of up to 10 − Integrity dice on a Mental or Social roll.",
+    "effect": "Once per chapter, the Storyteller may impose a situational penalty of up to 10 − Integrity dice on a Mental or Social roll.",
     "resolution": "Fail a roll because of the Condition, or meet the specified Integrity/breaking-point recovery criterion.",
     "source_url": "https://anyflip.com/usqxr/yybn/basic/",
     "source_citation": "CoD 2e, Conditions"
@@ -1442,8 +1442,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Geist"
     ],
-    "description": "The subject or object is animated by the Bound’s Plasm. The Sin-Eater must use an instant action to direct a puppeteered subject for a turn; control is resisted as specified by the Haunt.",
-    "effect": "The subject or object is animated by the Bound’s Plasm. The Sin-Eater must use an instant action to direct a puppeteered subject for a turn; control is resisted as specified by the Haunt.",
+    "description": "The Bound animates the subject or object with Plasm. Directing it for a turn requires an instant action; resistance follows the Haunt rules.",
+    "effect": "The Bound animates the subject or object with Plasm. Directing it for a turn requires an instant action; resistance follows the Haunt rules.",
     "resolution": "Break the control or end the Haunt; Servant enhancement can replace this Condition.",
     "source_url": "https://anyflip.com/yckom/urox/basic",
     "source_citation": "Geist: The Sin-Eaters 2e, Haunt Conditions"
@@ -1457,8 +1457,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Mage"
     ],
-    "description": "Hubris distorts the mage’s judgment. Follow the Wisdom-breakpoint consequence and the listed behavioral restrictions; do not treat this as a generic +/−2 modifier.",
-    "effect": "Hubris distorts the mage’s judgment. Follow the Wisdom-breakpoint consequence and the listed behavioral restrictions; do not treat this as a generic +/−2 modifier.",
+    "description": "Hubris imposes the behavioral restrictions and consequences of the originating Wisdom breaking point.",
+    "effect": "Hubris imposes the behavioral restrictions and consequences of the originating Wisdom breaking point.",
     "resolution": "Suffer the stated consequence of your hubris or resolve it through appropriate personal realization.",
     "source_url": "https://pdfcoffee.com/mage-the-awakening-2e-pdf-free.html",
     "source_citation": "Mage: The Awakening 2e, Wisdom conditions"
@@ -1472,8 +1472,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Geist"
     ],
-    "description": "The Sin-Eater’s collection of Mementos establishes a reputation among other Bound. It confers the specific social standing described by the source; no blanket equipment bonus is implied.",
-    "effect": "The Sin-Eater’s collection of Mementos establishes a reputation among other Bound. It confers the specific social standing described by the source; no blanket equipment bonus is implied.",
+    "description": "A collection of Mementos grants the source’s specified social standing among other Bound.",
+    "effect": "A collection of Mementos grants the source’s specified social standing among other Bound.",
     "resolution": "Lose the collection’s significance or fulfill its associated story condition.",
     "source_url": "https://anyflip.com/yckom/urox/basic",
     "source_citation": "Geist: The Sin-Eaters 2e, Conditions"
@@ -1487,8 +1487,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Geist"
     ],
-    "description": "The subject perceives or enters a manifestation of memories of the dead. Track the memory, its consequences and any roles or extra participants from enhancements.",
-    "effect": "The subject perceives or enters a manifestation of memories of the dead. Track the memory, its consequences and any roles or extra participants from enhancements.",
+    "description": "The subject perceives or enters a memory of the dead; roles, participants and consequences depend on the Haunt’s enhancements.",
+    "effect": "The subject perceives or enters a memory of the dead; roles, participants and consequences depend on the Haunt’s enhancements.",
     "resolution": "Complete the recollection, leave the scene or resolve the specific Haunt effect.",
     "source_url": "https://anyflip.com/yckom/urox/basic",
     "source_citation": "Geist: The Sin-Eaters 2e, Haunt Conditions"
@@ -1502,8 +1502,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Geist"
     ],
-    "description": "The character experiences another identity’s memories as their own. Record which memories or motivations intrude; apply any specific loss of clarity from the source.",
-    "effect": "The character experiences another identity’s memories as their own. Record which memories or motivations intrude; apply any specific loss of clarity from the source.",
+    "description": "Another identity’s memories or motivations intrude; apply any source-specific loss of Clarity.",
+    "effect": "Another identity’s memories or motivations intrude; apply any source-specific loss of Clarity.",
     "resolution": "Disentangle the memories or confront the identity producing them.",
     "source_url": "https://anyflip.com/yckom/urox/basic",
     "source_citation": "Geist: The Sin-Eaters 2e, Conditions"
@@ -1517,8 +1517,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Vampire"
     ],
-    "description": "A vampire has made the target receptive to a particular Dominate instruction. The effect sets up or strengthens that command; it is not permission to control all future actions.",
-    "effect": "A vampire has made the target receptive to a particular Dominate instruction. The effect sets up or strengthens that command; it is not permission to control all future actions.",
+    "description": "The target is receptive to the specific Dominate instruction established by the vampire.",
+    "effect": "The target is receptive to the specific Dominate instruction established by the vampire.",
     "resolution": "The Dominate interaction ends or supernatural influence is broken.",
     "source_url": "https://github.com/Limpbark/vampire-the-requiem-2e/tree/main/packs-src/conditions"
   },
@@ -1531,8 +1531,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Werewolf"
     ],
-    "description": "A human exposed to a werewolf's bite carries Luna's influence. This may affect later supernatural change or reactions; track the bite and its established consequences.",
-    "effect": "A human exposed to a werewolf's bite carries Luna's influence. This may affect later supernatural change or reactions; track the bite and its established consequences.",
+    "description": "A werewolf’s bite imparts Luna’s influence, with subsequent supernatural consequences determined by the bite’s effect.",
+    "effect": "A werewolf’s bite imparts Luna’s influence, with subsequent supernatural consequences determined by the bite’s effect.",
     "resolution": "Transformation resolves or the supernatural taint is removed.",
     "source_url": "https://whitewolf.fandom.com/wiki/Werewolf%3A_The_Forsaken_2nd_Edition_Condition_Cards"
   },
@@ -1550,8 +1550,8 @@ export const CONDITION_DEFINITIONS = {
       "Changeling",
       "Geist"
     ],
-    "description": "The character cannot communicate through speech; verbal persuasion, spoken commands, incantations and similar acts may be impossible without an alternative communication method.",
-    "effect": "The character cannot communicate through speech; verbal persuasion, spoken commands, incantations and similar acts may be impossible without an alternative communication method.",
+    "description": "Speech is unavailable; verbal commands, persuasion and incantations require an alternative method where possible.",
+    "effect": "Speech is unavailable; verbal commands, persuasion and incantations require an alternative method where possible.",
     "resolution": "Regain the ability to speak or remove the underlying cause.",
     "source_url": "https://anyflip.com/usqxr/yybn/basic/",
     "source_citation": "CoD 2e, Conditions"
@@ -1565,8 +1565,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Mage"
     ],
-    "description": "The mage is compelled by an Exarchal or other Mystery-derived directive. The actual command, its strength and consequences must be recorded on the specific Condition; no universal roll modifier can replace it.",
-    "effect": "The mage is compelled by an Exarchal or other Mystery-derived directive. The actual command, its strength and consequences must be recorded on the specific Condition; no universal roll modifier can replace it.",
+    "description": "The mage is compelled by the specified Mystery-derived command, with its recorded strength and consequences.",
+    "effect": "The mage is compelled by the specified Mystery-derived command, with its recorded strength and consequences.",
     "resolution": "Obey, meaningfully resist, or otherwise resolve the originating Mystery’s directive.",
     "source_url": "https://pdfcoffee.com/mage-the-awakening-2e-pdf-free.html",
     "source_citation": "Mage: The Awakening 2e, Conditions"
@@ -1580,8 +1580,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Werewolf"
     ],
-    "description": "A Hunter's Aspect instills supernatural fear of the Shadow or what lies beyond the Gauntlet. Crossing or engaging with that realm becomes psychologically threatening.",
-    "effect": "A Hunter's Aspect instills supernatural fear of the Shadow or what lies beyond the Gauntlet. Crossing or engaging with that realm becomes psychologically threatening.",
+    "description": "The Hunter’s Aspect makes the Shadow or crossing the Gauntlet psychologically threatening.",
+    "effect": "The Hunter’s Aspect makes the Shadow or crossing the Gauntlet psychologically threatening.",
     "resolution": "Meaningfully cross or confront the feared boundary.",
     "source_url": "https://whitewolf.fandom.com/wiki/Werewolf%3A_The_Forsaken_2nd_Edition_Condition_Cards"
   },
@@ -1614,8 +1614,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Changeling"
     ],
-    "description": "Severe Clarity damage suppresses the changeling's emotional responses. They have difficulty forming or expressing ordinary emotional connections until recovery.",
-    "effect": "Severe Clarity damage suppresses the changeling's emotional responses. They have difficulty forming or expressing ordinary emotional connections until recovery.",
+    "description": "Severe Clarity damage suppresses emotion and impairs emotional connection or expression.",
+    "effect": "Severe Clarity damage suppresses emotion and impairs emotional connection or expression.",
     "resolution": "Meaningfully reconnect with emotion or people, or recover through Clarity.",
     "source_url": "https://anyflip.com/pamxl/onlx/basic"
   },
@@ -1628,8 +1628,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Changeling"
     ],
-    "description": "Breaking a Wyrd-backed promise brands the character as unreliable in future pledges or bargains. Other beings can recognize or exploit the breach according to the oath's rules.",
-    "effect": "Breaking a Wyrd-backed promise brands the character as unreliable in future pledges or bargains. Other beings can recognize or exploit the breach according to the oath's rules.",
+    "description": "A broken Wyrd-backed promise makes the character recognizable as unreliable under the oath’s rules.",
+    "effect": "A broken Wyrd-backed promise makes the character recognizable as unreliable under the oath’s rules.",
     "resolution": "Make restitution and satisfy the supernatural consequences of the broken oath.",
     "source_url": "https://anyflip.com/pamxl/onlx/basic"
   },
@@ -1642,8 +1642,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Changeling"
     ],
-    "description": "A promise or supernatural bargain binds the character to a defined duty, often in exchange for protection. Record both the obligation and the benefit that depends on honoring it.",
-    "effect": "A promise or supernatural bargain binds the character to a defined duty, often in exchange for protection. Record both the obligation and the benefit that depends on honoring it.",
+    "description": "A promise or supernatural bargain imposes a specified duty and conditions any associated benefit on its fulfillment.",
+    "effect": "A promise or supernatural bargain imposes a specified duty and conditions any associated benefit on its fulfillment.",
     "resolution": "Fulfil the promised service or the bargain is otherwise ended.",
     "source_url": "https://anyflip.com/pamxl/onlx/basic"
   },
@@ -1661,8 +1661,8 @@ export const CONDITION_DEFINITIONS = {
       "Changeling",
       "Geist"
     ],
-    "description": "Rolls directly pursuing, investigating or acting in accordance with the obsession receive 9-again. This quality does not apply to unrelated actions; mark applicability explicitly for each roll.",
-    "effect": "Rolls directly pursuing, investigating or acting in accordance with the obsession receive 9-again. This quality does not apply to unrelated actions; mark applicability explicitly for each roll.",
+    "description": "Gain 9-again on rolls directly pursuing the obsession.",
+    "effect": "Gain 9-again on rolls directly pursuing the obsession.",
     "resolution": "Fulfil the obsession, renounce it meaningfully, or overcome it through treatment.",
     "source_url": "https://anyflip.com/usqxr/yybn/basic/",
     "source_citation": "CoD 2e, Conditions"
@@ -1676,8 +1676,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Mage"
     ],
-    "description": "Core Obsession’s 9-again applies only to relevant actions; distinguish this Condition from the mage’s character-sheet Obsessions, which award Arcane Beats through their own rules.",
-    "effect": "Core Obsession’s 9-again applies only to relevant actions; distinguish this Condition from the mage’s character-sheet Obsessions, which award Arcane Beats through their own rules.",
+    "description": "Gain 9-again on rolls directly pursuing this fixation. Character-sheet Obsessions award Arcane Beats separately.",
+    "effect": "Gain 9-again on rolls directly pursuing this fixation. Character-sheet Obsessions award Arcane Beats separately.",
     "resolution": "Fulfil or overcome this particular fixation.",
     "source_url": "https://pdfcoffee.com/mage-the-awakening-2e-pdf-free.html",
     "source_citation": "Mage: The Awakening 2e / CoD 2e"
@@ -1691,8 +1691,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Geist"
     ],
-    "description": "The Sin-Eater is using death-sight or travel to consult the Underworld about a Mystery. Each question available and its supernatural limits depend on Oracle dots and purchased enhancements.",
-    "effect": "The Sin-Eater is using death-sight or travel to consult the Underworld about a Mystery. Each question available and its supernatural limits depend on Oracle dots and purchased enhancements.",
+    "description": "Use death-sight or Underworld travel to consult a Mystery. Questions and limits depend on Oracle dots and purchased enhancements.",
+    "effect": "Use death-sight or Underworld travel to consult a Mystery. Questions and limits depend on Oracle dots and purchased enhancements.",
     "resolution": "Return to ordinary awareness or complete the consultation.",
     "source_url": "https://anyflip.com/yckom/urox/basic",
     "source_citation": "Geist: The Sin-Eaters 2e, Haunt Conditions"
@@ -1707,8 +1707,8 @@ export const CONDITION_DEFINITIONS = {
       "Werewolf",
       "Changeling"
     ],
-    "description": "The character interprets others as potential threats and struggles to trust allies. Cooperation and Social interactions can be hindered by the specific suspicion.",
-    "effect": "The character interprets others as potential threats and struggles to trust allies. Cooperation and Social interactions can be hindered by the specific suspicion.",
+    "description": "Suspicion of others impairs trust, cooperation and relevant Social interactions.",
+    "effect": "Suspicion of others impairs trust, cooperation and relevant Social interactions.",
     "resolution": "Trust another at meaningful personal risk.",
     "source_url": "https://whitewolf.fandom.com/wiki/Werewolf%3A_The_Forsaken_2nd_Edition_Condition_Cards"
   },
@@ -1721,8 +1721,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Werewolf"
     ],
-    "description": "This Renown-related state favors an unambiguous, instinct-driven commitment to purpose. The benefit applies only to actions aligned with that Pure ideal.",
-    "effect": "This Renown-related state favors an unambiguous, instinct-driven commitment to purpose. The benefit applies only to actions aligned with that Pure ideal.",
+    "description": "Gain the source’s Renown-related benefit on actions aligned with its Pure ideal.",
+    "effect": "Gain the source’s Renown-related benefit on actions aligned with its Pure ideal.",
     "resolution": "Demonstrate or use the associated Purity.",
     "source_url": "https://whitewolf.fandom.com/wiki/Werewolf%3A_The_Forsaken_2nd_Edition_Condition_Cards"
   },
@@ -1735,8 +1735,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Geist"
     ],
-    "description": "The Bound channels ghostly rage into offensive power. Apply damage type, weapon rating, range and extra Tilts only as permitted by the Rage Haunt and purchased enhancements.",
-    "effect": "The Bound channels ghostly rage into offensive power. Apply damage type, weapon rating, range and extra Tilts only as permitted by the Rage Haunt and purchased enhancements.",
+    "description": "Ghostly rage grants the damage type, weapon rating, range and Tilts permitted by Rage and its purchased enhancements.",
+    "effect": "Ghostly rage grants the damage type, weapon rating, range and Tilts permitted by Rage and its purchased enhancements.",
     "resolution": "The Haunt ends or its effects are expended.",
     "source_url": "https://anyflip.com/yckom/urox/basic",
     "source_citation": "Geist: The Sin-Eaters 2e, Haunt Conditions"
@@ -1750,8 +1750,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Mage"
     ],
-    "description": "The mage is driven to employ magic even for simple everyday problems. Depending on the triggering context, resisting this impulse requires an appropriate Willpower expenditure or Storyteller adjudication.",
-    "effect": "The mage is driven to employ magic even for simple everyday problems. Depending on the triggering context, resisting this impulse requires an appropriate Willpower expenditure or Storyteller adjudication.",
+    "description": "Compelled to use magic even for everyday problems; resisting requires Willpower or Storyteller adjudication according to the trigger.",
+    "effect": "Compelled to use magic even for everyday problems; resisting requires Willpower or Storyteller adjudication according to the trigger.",
     "resolution": "Let magic create significant complications, or overcome the compulsion.",
     "source_url": "https://pdfcoffee.com/mage-the-awakening-2e-pdf-free.html",
     "source_citation": "Mage: The Awakening 2e, Wisdom conditions"
@@ -1765,8 +1765,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Vampire"
     ],
-    "description": "A state of religious or mystical ecstasy makes the vampire more willing to identify with the Beast. Their priorities shift toward surrender, reverence or reconciliation with predatory impulses.",
-    "effect": "A state of religious or mystical ecstasy makes the vampire more willing to identify with the Beast. Their priorities shift toward surrender, reverence or reconciliation with predatory impulses.",
+    "description": "Mystical ecstasy encourages identification with the Beast, reverence and surrender to predatory impulses.",
+    "effect": "Mystical ecstasy encourages identification with the Beast, reverence and surrender to predatory impulses.",
     "resolution": "Act on the fervour or it fades.",
     "source_url": "https://github.com/Limpbark/vampire-the-requiem-2e/tree/main/packs-src/conditions"
   },
@@ -1779,8 +1779,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Changeling"
     ],
-    "description": "Predation by a fae force leaves the victim psychologically depleted. Emotional engagement, confidence and self-directed choices are damaged until the trauma is addressed.",
-    "effect": "Predation by a fae force leaves the victim psychologically depleted. Emotional engagement, confidence and self-directed choices are damaged until the trauma is addressed.",
+    "description": "Fae predation impairs emotional engagement, confidence and self-directed choices.",
+    "effect": "Fae predation impairs emotional engagement, confidence and self-directed choices.",
     "resolution": "Recover through meaningful restoration of identity or agency.",
     "source_url": "https://anyflip.com/pamxl/onlx/basic"
   },
@@ -1793,8 +1793,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Werewolf"
     ],
-    "description": "A mortal affected by Lunacy becomes unusually receptive to spirits or Shadow phenomena. Record the supernatural source and its particular mode of influence.",
-    "effect": "A mortal affected by Lunacy becomes unusually receptive to spirits or Shadow phenomena. Record the supernatural source and its particular mode of influence.",
+    "description": "Lunacy makes the mortal receptive to spirits or Shadow phenomena according to the source’s mode of influence.",
+    "effect": "Lunacy makes the mortal receptive to spirits or Shadow phenomena according to the source’s mode of influence.",
     "resolution": "Exposure ends or spiritual influence is resolved.",
     "source_url": "https://whitewolf.fandom.com/wiki/Werewolf%3A_The_Forsaken_2nd_Edition_Condition_Cards"
   },
@@ -1807,8 +1807,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Changeling"
     ],
-    "description": "The character ignores ordinary caution and is driven toward risky decisions. Avoiding danger or planning carefully becomes less likely while the Condition controls choices.",
-    "effect": "The character ignores ordinary caution and is driven toward risky decisions. Avoiding danger or planning carefully becomes less likely while the Condition controls choices.",
+    "description": "Compelled toward risky decisions at the expense of caution and planning.",
+    "effect": "Compelled toward risky decisions at the expense of caution and planning.",
     "resolution": "Suffer meaningful consequences or consciously pull back from the danger.",
     "source_url": "https://anyflip.com/pamxl/onlx/basic"
   },
@@ -1821,8 +1821,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Geist"
     ],
-    "description": "A krewe grants its member a special investiture of authority or protection. Record the particular regalia and dot-rated benefit; merely owning the Condition does not grant a standard bonus.",
-    "effect": "A krewe grants its member a special investiture of authority or protection. Record the particular regalia and dot-rated benefit; merely owning the Condition does not grant a standard bonus.",
+    "description": "The krewe’s investiture grants the specified authority, protection or dot-rated benefit.",
+    "effect": "The krewe’s investiture grants the specified authority, protection or dot-rated benefit.",
     "resolution": "The blessing ends or is taken back by the krewe.",
     "source_url": "https://anyflip.com/yckom/urox/basic",
     "source_citation": "Geist: The Sin-Eaters 2e, Conditions"
@@ -1836,8 +1836,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Werewolf"
     ],
-    "description": "A Hunter's Aspect instills acceptance of an apparently inevitable death. The quarry may stop protecting themselves or take fatal risks because resistance feels meaningless.",
-    "effect": "A Hunter's Aspect instills acceptance of an apparently inevitable death. The quarry may stop protecting themselves or take fatal risks because resistance feels meaningless.",
+    "description": "The Hunter’s Aspect fosters acceptance of inevitable death, discouraging self-preservation.",
+    "effect": "The Hunter’s Aspect fosters acceptance of inevitable death, discouraging self-preservation.",
     "resolution": "Demonstrate survival or self-preservation despite the fatalism.",
     "source_url": "https://whitewolf.fandom.com/wiki/Werewolf%3A_The_Forsaken_2nd_Edition_Condition_Cards"
   },
@@ -1850,8 +1850,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Vampire"
     ],
-    "description": "The vampire's Beast is temporarily satisfied. Immediate hunger-driven aggression or frenzy pressure eases, subject to the originating feeding or supernatural effect.",
-    "effect": "The vampire's Beast is temporarily satisfied. Immediate hunger-driven aggression or frenzy pressure eases, subject to the originating feeding or supernatural effect.",
+    "description": "The Beast’s hunger-driven aggression or frenzy pressure eases according to the originating effect.",
+    "effect": "The Beast’s hunger-driven aggression or frenzy pressure eases according to the originating effect.",
     "resolution": "Hunger or predatory pressure returns.",
     "source_url": "https://github.com/Limpbark/vampire-the-requiem-2e/tree/main/packs-src/conditions"
   },
@@ -1864,8 +1864,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Vampire"
     ],
-    "description": "An experience of moral or psychological injury changes how the vampire relates to Humanity. Later Humanity-related decisions may be shaped by that lasting scar.",
-    "effect": "An experience of moral or psychological injury changes how the vampire relates to Humanity. Later Humanity-related decisions may be shaped by that lasting scar.",
+    "description": "A lasting moral or psychological injury influences subsequent Humanity-related decisions.",
+    "effect": "A lasting moral or psychological injury influences subsequent Humanity-related decisions.",
     "resolution": "An appropriate act of recovery or redemption.",
     "source_url": "https://github.com/Limpbark/vampire-the-requiem-2e/tree/main/packs-src/conditions"
   },
@@ -1878,8 +1878,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Geist"
     ],
-    "description": "A stronger form of Marionette control makes the target obey ongoing instructions without the same turn-by-turn direction. Track the number of targets and any durations imposed by enhancements.",
-    "effect": "A stronger form of Marionette control makes the target obey ongoing instructions without the same turn-by-turn direction. Track the number of targets and any durations imposed by enhancements.",
+    "description": "Enhanced Marionette control permits ongoing commands without turn-by-turn direction; target limits and duration follow the enhancements.",
+    "effect": "Enhanced Marionette control permits ongoing commands without turn-by-turn direction; target limits and duration follow the enhancements.",
     "resolution": "Break the supernatural subservience or let its Haunt duration expire.",
     "source_url": "https://anyflip.com/yckom/urox/basic",
     "source_citation": "Geist: The Sin-Eaters 2e, Haunt Conditions"
@@ -1893,8 +1893,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Werewolf"
     ],
-    "description": "Fear of the spirit world develops into defensive suspicion and aggression. The character may interpret Shadow-related events or even allies as immediate threats.",
-    "effect": "Fear of the spirit world develops into defensive suspicion and aggression. The character may interpret Shadow-related events or even allies as immediate threats.",
+    "description": "Fear of the Shadow provokes suspicion and aggression toward Shadow-related threats or allies.",
+    "effect": "Fear of the Shadow provokes suspicion and aggression toward Shadow-related threats or allies.",
     "resolution": "Reach safety or confront and overcome the Shadow threat.",
     "source_url": "https://whitewolf.fandom.com/wiki/Werewolf%3A_The_Forsaken_2nd_Edition_Condition_Cards"
   },
@@ -1907,8 +1907,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Werewolf"
     ],
-    "description": "Failure in a Rite leaves a werewolf spiritually compromised. Their relationship with the Shadow, or relevant further Rites, suffers until the supernatural rebuke ends.",
-    "effect": "Failure in a Rite leaves a werewolf spiritually compromised. Their relationship with the Shadow, or relevant further Rites, suffers until the supernatural rebuke ends.",
+    "description": "A failed Rite compromises the werewolf’s relationship with the Shadow or subsequent relevant Rites.",
+    "effect": "A failed Rite compromises the werewolf’s relationship with the Shadow or subsequent relevant Rites.",
     "resolution": "Make restitution or perform an appropriate spiritual action.",
     "source_url": "https://whitewolf.fandom.com/wiki/Werewolf%3A_The_Forsaken_2nd_Edition_Condition_Cards"
   },
@@ -1926,9 +1926,9 @@ export const CONDITION_DEFINITIONS = {
       "Changeling",
       "Geist"
     ],
-    "description": "There is NO automatic −2 dice penalty. Before a roll where the fear could interfere, you may elect to fail the roll outright; doing so resolves Shaken and earns its normal resolution Beat.",
-    "effect": "There is NO automatic −2 dice penalty. Before a roll where the fear could interfere, you may elect to fail the roll outright; doing so resolves Shaken and earns its normal resolution Beat.",
-    "resolution": "Voluntarily fail a relevant action because of the fear.",
+    "description": "Before a roll affected by fear, you may choose to fail it outright. No passive dice penalty.",
+    "effect": "Before a roll affected by fear, you may choose to fail it outright. No passive dice penalty.",
+    "resolution": "Choose the voluntary failure; gain the normal resolution Beat.",
     "source_url": "https://anyflip.com/usqxr/yybn/basic/",
     "source_citation": "CoD 2e, Conditions"
   },
@@ -1941,8 +1941,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Geist"
     ],
-    "description": "The Bound takes on ghostlike qualities and may interact with Twilight. Specific protections, movement modes and Numina depend on Shroud enhancement purchases; record what is active.",
-    "effect": "The Bound takes on ghostlike qualities and may interact with Twilight. Specific protections, movement modes and Numina depend on Shroud enhancement purchases; record what is active.",
+    "description": "The Bound gains ghostlike qualities and interaction with Twilight. Protections, movement and Numina depend on purchased Shroud enhancements.",
+    "effect": "The Bound gains ghostlike qualities and interaction with Twilight. Protections, movement and Numina depend on purchased Shroud enhancements.",
     "resolution": "Dismiss the Shroud, expend the permitted effect or end the Haunt.",
     "source_url": "https://anyflip.com/yckom/urox/basic",
     "source_citation": "Geist: The Sin-Eaters 2e, Haunt Conditions"
@@ -1956,8 +1956,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Werewolf"
     ],
-    "description": "The Sacred Hunt has marked a specific quarry for the pack. Tracking, coordination or supernatural benefits derive from the Hunt rite and its intended prey, not every unrelated target.",
-    "effect": "The Sacred Hunt has marked a specific quarry for the pack. Tracking, coordination or supernatural benefits derive from the Hunt rite and its intended prey, not every unrelated target.",
+    "description": "The Sacred Hunt grants the rite’s tracking, coordination and supernatural benefits against its specified quarry.",
+    "effect": "The Sacred Hunt grants the rite’s tracking, coordination and supernatural benefits against its specified quarry.",
     "resolution": "The prey is brought down, the hunt is abandoned, or the rite otherwise concludes.",
     "source_url": "https://whitewolf.fandom.com/wiki/Werewolf%3A_The_Forsaken_2nd_Edition_Condition_Cards"
   },
@@ -1970,8 +1970,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Changeling"
     ],
-    "description": "The boundary between sleeping and waking is disturbed. The subject may act without reliable awareness and later lose memory of their actions.",
-    "effect": "The boundary between sleeping and waking is disturbed. The subject may act without reliable awareness and later lose memory of their actions.",
+    "description": "The subject may act while not fully aware and later forget those actions.",
+    "effect": "The subject may act while not fully aware and later forget those actions.",
     "resolution": "Restore stable sleep and resolve the supernatural cause.",
     "source_url": "https://anyflip.com/pamxl/onlx/basic"
   },
@@ -2001,8 +2001,8 @@ export const CONDITION_DEFINITIONS = {
       "Vampire",
       "Mage"
     ],
-    "description": "Without the soul the character cannot recover Willpower normally, experiences escalating moral and psychological deterioration, and becomes vulnerable to possession. Track the duration of the loss.",
-    "effect": "Without the soul the character cannot recover Willpower normally, experiences escalating moral and psychological deterioration, and becomes vulnerable to possession. Track the duration of the loss.",
+    "description": "Soul loss impairs Willpower recovery, causes escalating moral and psychological deterioration, and increases vulnerability to possession.",
+    "effect": "Soul loss impairs Willpower recovery, causes escalating moral and psychological deterioration, and increases vulnerability to possession.",
     "resolution": "Recover the soul or halt the process before irreversible loss.",
     "source_url": "https://pdfcoffee.com/mage-the-awakening-2e-pdf-free.html",
     "source_citation": "Mage: The Awakening 2e, soul-loss rules"
@@ -2021,8 +2021,8 @@ export const CONDITION_DEFINITIONS = {
       "Changeling",
       "Geist"
     ],
-    "description": "Fear and fascination with a supernatural experience compel risky investigation. No fixed dice modifier applies; the effect is the consequential behavior it provokes.",
-    "effect": "Fear and fascination with a supernatural experience compel risky investigation. No fixed dice modifier applies; the effect is the consequential behavior it provokes.",
+    "description": "Fear and fascination with a supernatural experience compel risky investigation.",
+    "effect": "Fear and fascination with a supernatural experience compel risky investigation.",
     "resolution": "Act on the fascination in a way that hinders the group or causes a significant complication.",
     "source_url": "https://anyflip.com/usqxr/yybn/basic/",
     "source_citation": "CoD 2e, Conditions"
@@ -2041,9 +2041,9 @@ export const CONDITION_DEFINITIONS = {
       "Changeling",
       "Geist"
     ],
-    "description": "After an ordinary failed roll, resolve Steadfast to treat it as one success. If the original roll is a chance die, resolving instead permits one REGULAR die to be rolled (8+ success, normal 10-again); it does not guarantee a success.",
-    "effect": "After an ordinary failed roll, resolve Steadfast to treat it as one success. If the original roll is a chance die, resolving instead permits one REGULAR die to be rolled (8+ success, normal 10-again); it does not guarantee a success.",
-    "resolution": "Invoke Steadfast to improve an eligible failed action.",
+    "description": "After an ordinary failed roll, gain one success. If the original roll was a chance die, roll one regular die instead (8+ success, 10-again).",
+    "effect": "After an ordinary failed roll, gain one success. If the original roll was a chance die, roll one regular die instead (8+ success, 10-again).",
+    "resolution": "Use this benefit on an eligible failed roll.",
     "source_url": "https://anyflip.com/usqxr/yybn/basic/",
     "source_citation": "CoD 2e, Conditions"
   },
@@ -2056,8 +2056,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Changeling"
     ],
-    "description": "A changeling suppresses emotional display, potentially aiding composure while weakening empathy and passion. The exact advantage or limitation applies only where the source specifies.",
-    "effect": "A changeling suppresses emotional display, potentially aiding composure while weakening empathy and passion. The exact advantage or limitation applies only where the source specifies.",
+    "description": "Emotional restraint may aid composure and impair empathy or passion where specified by the source.",
+    "effect": "Emotional restraint may aid composure and impair empathy or passion where specified by the source.",
     "resolution": "Meaningfully express vulnerability or emotion.",
     "source_url": "https://anyflip.com/pamxl/onlx/basic"
   },
@@ -2086,8 +2086,8 @@ export const CONDITION_DEFINITIONS = {
       "Vampire",
       "Werewolf"
     ],
-    "description": "A complication disrupts progress on an ongoing project or extended action. The setback must be resolved or its consequences absorbed before normal progress resumes.",
-    "effect": "A complication disrupts progress on an ongoing project or extended action. The setback must be resolved or its consequences absorbed before normal progress resumes.",
+    "description": "A complication blocks further progress on a project or extended action until addressed.",
+    "effect": "A complication blocks further progress on a project or extended action until addressed.",
     "resolution": "Address the complication or abandon the project.",
     "source_url": "https://github.com/Limpbark/vampire-the-requiem-2e/tree/main/packs-src/conditions"
   },
@@ -2100,8 +2100,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Vampire"
     ],
-    "description": "Supernatural vampiric dominance makes disobeying a named master unusually difficult. Record the controlling vampire and any limits established by the power.",
-    "effect": "Supernatural vampiric dominance makes disobeying a named master unusually difficult. Record the controlling vampire and any limits established by the power.",
+    "description": "Supernatural dominance hinders disobedience to the named vampire within the power’s limits.",
+    "effect": "Supernatural dominance hinders disobedience to the named vampire within the power’s limits.",
     "resolution": "Break the supernatural dominance.",
     "source_url": "https://github.com/Limpbark/vampire-the-requiem-2e/tree/main/packs-src/conditions"
   },
@@ -2114,8 +2114,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Werewolf"
     ],
-    "description": "A Hunter's Aspect produces exaggerated self-confidence. The marked prey is discouraged from caution, preparation and seeking allies, creating exploitable vulnerability.",
-    "effect": "A Hunter's Aspect produces exaggerated self-confidence. The marked prey is discouraged from caution, preparation and seeking allies, creating exploitable vulnerability.",
+    "description": "The Hunter’s Aspect causes overconfidence, discouraging caution, preparation and help from allies.",
+    "effect": "The Hunter’s Aspect causes overconfidence, discouraging caution, preparation and help from allies.",
     "resolution": "Failure caused by overconfidence or humbling reliance on aid.",
     "source_url": "https://whitewolf.fandom.com/wiki/Werewolf%3A_The_Forsaken_2nd_Edition_Condition_Cards"
   },
@@ -2149,8 +2149,8 @@ export const CONDITION_DEFINITIONS = {
       "Vampire",
       "Werewolf"
     ],
-    "description": "The subject feels unnatural attraction toward a particular person and is eager to please them. Their judgment and willingness to resist that person are compromised while fascination persists.",
-    "effect": "The subject feels unnatural attraction toward a particular person and is eager to please them. Their judgment and willingness to resist that person are compromised while fascination persists.",
+    "description": "Unnatural attraction to a specific person impairs judgment and resistance to that person.",
+    "effect": "Unnatural attraction to a specific person impairs judgment and resistance to that person.",
     "resolution": "The infatuation creates a meaningful problem or is rejected or broken.",
     "source_url": "https://github.com/Limpbark/vampire-the-requiem-2e/tree/main/packs-src/conditions"
   },
@@ -2163,8 +2163,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Werewolf"
     ],
-    "description": "A werewolf's Rite leaves lingering symbolic power associated with a particular spirit-facing act. The benefit concerns the focus defined by that Rite, not all supernatural actions.",
-    "effect": "A werewolf's Rite leaves lingering symbolic power associated with a particular spirit-facing act. The benefit concerns the focus defined by that Rite, not all supernatural actions.",
+    "description": "A Rite grants its specified benefit for the associated spirit-facing act.",
+    "effect": "A Rite grants its specified benefit for the associated spirit-facing act.",
     "resolution": "Expend the ritual benefit.",
     "source_url": "https://whitewolf.fandom.com/wiki/Werewolf%3A_The_Forsaken_2nd_Edition_Condition_Cards"
   },
@@ -2177,8 +2177,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Vampire"
     ],
-    "description": "A vampire contains a remnant of a diablerized soul that still affects their inner life. Record the swallowed soul and how it manifests through memories, urges or supernatural consequences.",
-    "effect": "A vampire contains a remnant of a diablerized soul that still affects their inner life. Record the swallowed soul and how it manifests through memories, urges or supernatural consequences.",
+    "description": "A diablerized soul influences the vampire through its memories, urges or supernatural consequences.",
+    "effect": "A diablerized soul influences the vampire through its memories, urges or supernatural consequences.",
     "resolution": "Resolve the internal spiritual conflict.",
     "source_url": "https://github.com/Limpbark/vampire-the-requiem-2e/tree/main/packs-src/conditions"
   },
@@ -2191,8 +2191,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Vampire"
     ],
-    "description": "A significant command or duty binds the character's choices. Record the task, who imposed it and what happens if it is fulfilled, neglected or defied.",
-    "effect": "A significant command or duty binds the character's choices. Record the task, who imposed it and what happens if it is fulfilled, neglected or defied.",
+    "description": "A specified command or duty binds the character, with consequences for fulfillment, neglect or defiance.",
+    "effect": "A specified command or duty binds the character, with consequences for fulfillment, neglect or defiance.",
     "resolution": "Complete or definitively fail the task.",
     "source_url": "https://github.com/Limpbark/vampire-the-requiem-2e/tree/main/packs-src/conditions"
   },
@@ -2205,8 +2205,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Vampire"
     ],
-    "description": "After resisting frenzy, the Beast remains poised to exploit another provocation. Later temptation or frenzy checks are more precarious until the effect is resolved.",
-    "effect": "After resisting frenzy, the Beast remains poised to exploit another provocation. Later temptation or frenzy checks are more precarious until the effect is resolved.",
+    "description": "After resisting frenzy, the Beast makes subsequent relevant temptation or frenzy checks more precarious.",
+    "effect": "After resisting frenzy, the Beast makes subsequent relevant temptation or frenzy checks more precarious.",
     "resolution": "Succumb to or definitively overcome the next relevant frenzy trigger.",
     "source_url": "https://github.com/Limpbark/vampire-the-requiem-2e/tree/main/packs-src/conditions"
   },
@@ -2219,8 +2219,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Geist"
     ],
-    "description": "A major krewe achievement grants an intense period of spiritual certainty. Apply only its specified temporary benefit; the Condition is not general-purpose success enhancement.",
-    "effect": "A major krewe achievement grants an intense period of spiritual certainty. Apply only its specified temporary benefit; the Condition is not general-purpose success enhancement.",
+    "description": "A krewe achievement grants the source’s specified temporary spiritual benefit.",
+    "effect": "A krewe achievement grants the source’s specified temporary spiritual benefit.",
     "resolution": "Its revelation produces a meaningful consequence or the relevant story completes.",
     "source_url": "https://anyflip.com/yckom/urox/basic",
     "source_citation": "Geist: The Sin-Eaters 2e, Conditions"
@@ -2235,8 +2235,8 @@ export const CONDITION_DEFINITIONS = {
       "Vampire",
       "Mage"
     ],
-    "description": "A completely soulless Thrall cannot spend Willpower, use Defense in combat, spend Experiences or cast spells, and suffers the effects of Broken. Only restoration of the soul ends this advanced state.",
-    "effect": "A completely soulless Thrall cannot spend Willpower, use Defense in combat, spend Experiences or cast spells, and suffers the effects of Broken. Only restoration of the soul ends this advanced state.",
+    "description": "Cannot spend Willpower or Experience, use Defense or cast spells. Also suffers Broken.",
+    "effect": "Cannot spend Willpower or Experience, use Defense or cast spells. Also suffers Broken.",
     "resolution": "Restore the soul through the relevant supernatural intervention.",
     "source_url": "https://pdfcoffee.com/mage-the-awakening-2e-pdf-free.html",
     "source_citation": "Mage: The Awakening 2e, soul-loss rules"
@@ -2250,8 +2250,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Geist"
     ],
-    "description": "The Bound has recreated an object or person from deathly memory. Its traits and limitations depend on the specific object and purchased Tomb enhancements, not an automatic general bonus.",
-    "effect": "The Bound has recreated an object or person from deathly memory. Its traits and limitations depend on the specific object and purchased Tomb enhancements, not an automatic general bonus.",
+    "description": "The Bound recreates an object or person from deathly memory; traits and limitations depend on the replica and purchased Tomb enhancements.",
+    "effect": "The Bound recreates an object or person from deathly memory; traits and limitations depend on the replica and purchased Tomb enhancements.",
     "resolution": "The created replica is destroyed, dismissed or expires.",
     "source_url": "https://anyflip.com/yckom/urox/basic",
     "source_citation": "Geist: The Sin-Eaters 2e, Haunt Conditions"
@@ -2265,8 +2265,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Mage"
     ],
-    "description": "When interacting socially with Awakened aware of the Duel Arcane victory, achieve exceptional success with 3 successes instead of 5. The benefit applies only to those Social rolls, not ordinary spellcasting.",
-    "effect": "When interacting socially with Awakened aware of the Duel Arcane victory, achieve exceptional success with 3 successes instead of 5. The benefit applies only to those Social rolls, not ordinary spellcasting.",
+    "description": "Exceptional success requires 3 successes instead of 5 on Social rolls with Awakened who know of the Duel Arcane victory.",
+    "effect": "Exceptional success requires 3 successes instead of 5 on Social rolls with Awakened who know of the Duel Arcane victory.",
     "resolution": "The victory ceases to matter socially, or another consequential duel supersedes it.",
     "source_url": "https://pdfcoffee.com/mage-the-awakening-2e-pdf-free.html",
     "source_citation": "Mage: The Awakening 2e, Conditions"
@@ -2280,8 +2280,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Werewolf"
     ],
-    "description": "A Hunter's Aspect narrows the victim's situational attention. They miss relevant dangers or signs around them, especially while focused on the hunter's apparent bait.",
-    "effect": "A Hunter's Aspect narrows the victim's situational attention. They miss relevant dangers or signs around them, especially while focused on the hunter's apparent bait.",
+    "description": "The Hunter’s Aspect narrows attention, concealing relevant dangers or signs, particularly around the hunter’s bait.",
+    "effect": "The Hunter’s Aspect narrows attention, concealing relevant dangers or signs, particularly around the hunter’s bait.",
     "resolution": "Notice or confront the hidden threat.",
     "source_url": "https://whitewolf.fandom.com/wiki/Werewolf%3A_The_Forsaken_2nd_Edition_Condition_Cards"
   },
@@ -2294,8 +2294,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Geist"
     ],
-    "description": "The Geist manifests independently of its Sin-Eater. Treat its actions and Traits separately; apply the consequences for leaving the Bargain and any weakening of the Bond.",
-    "effect": "The Geist manifests independently of its Sin-Eater. Treat its actions and Traits separately; apply the consequences for leaving the Bargain and any weakening of the Bond.",
+    "description": "The Geist manifests independently, using its own actions and Traits. Apply Bargain separation and Bond consequences.",
+    "effect": "The Geist manifests independently, using its own actions and Traits. Apply Bargain separation and Bond consequences.",
     "resolution": "The Geist returns to the Bound or the separation ends.",
     "source_url": "https://anyflip.com/yckom/urox/basic",
     "source_citation": "Geist: The Sin-Eaters 2e, Conditions"
@@ -2309,8 +2309,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Werewolf"
     ],
-    "description": "The character's trail has been deliberately concealed by exceptional skill or supernatural means. Tracking them is restricted by that concealment until a suitable clue or countermeasure defeats it.",
-    "effect": "The character's trail has been deliberately concealed by exceptional skill or supernatural means. Tracking them is restricted by that concealment until a suitable clue or countermeasure defeats it.",
+    "description": "Concealment restricts tracking until a suitable clue or countermeasure defeats it.",
+    "effect": "Concealment restricts tracking until a suitable clue or countermeasure defeats it.",
     "resolution": "A tracker successfully re-establishes the trail.",
     "source_url": "https://whitewolf.fandom.com/wiki/Werewolf%3A_The_Forsaken_2nd_Edition_Condition_Cards"
   },
@@ -2323,8 +2323,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Changeling"
     ],
-    "description": "A supernatural effect or item is unstable and liable to discharge unpredictably. Track the effect's trigger and backlash instead of assuming a standard penalty on unrelated rolls.",
-    "effect": "A supernatural effect or item is unstable and liable to discharge unpredictably. Track the effect's trigger and backlash instead of assuming a standard penalty on unrelated rolls.",
+    "description": "An unstable supernatural effect or item may discharge according to its specified trigger and backlash.",
+    "effect": "An unstable supernatural effect or item may discharge according to its specified trigger and backlash.",
     "resolution": "Stabilize or remove the unstable source.",
     "source_url": "https://anyflip.com/pamxl/onlx/basic"
   },
@@ -2338,8 +2338,8 @@ export const CONDITION_DEFINITIONS = {
       "Vampire",
       "Changeling"
     ],
-    "description": "A supernatural urge magnifies impulsive gratification, lust or appetite. The character favors immediate indulgence despite likely consequences.",
-    "effect": "A supernatural urge magnifies impulsive gratification, lust or appetite. The character favors immediate indulgence despite likely consequences.",
+    "description": "Supernatural appetite compels immediate indulgence despite consequences.",
+    "effect": "Supernatural appetite compels immediate indulgence despite consequences.",
     "resolution": "Meaningfully indulge the desire or break its hold.",
     "source_url": "https://github.com/Limpbark/vampire-the-requiem-2e/tree/main/packs-src/conditions"
   },
@@ -2352,8 +2352,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Geist"
     ],
-    "description": "The Geist is offended and refuses complete cooperation. The specific demand or restriction should be attached to the Condition, rather than inventing a fixed modifier.",
-    "effect": "The Geist is offended and refuses complete cooperation. The specific demand or restriction should be attached to the Condition, rather than inventing a fixed modifier.",
+    "description": "The offended Geist withholds cooperation according to its specified demand or restriction.",
+    "effect": "The offended Geist withholds cooperation according to its specified demand or restriction.",
     "resolution": "Meet the Geist’s demand, make amends or restore trust.",
     "source_url": "https://anyflip.com/yckom/urox/basic",
     "source_citation": "Geist: The Sin-Eaters 2e, Conditions"
@@ -2367,8 +2367,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Geist"
     ],
-    "description": "Recent Unleashing or separation weakens the working Bargain. Track the loss of the relevant Geist/Sin-Eater benefits until the bond is restored.",
-    "effect": "Recent Unleashing or separation weakens the working Bargain. Track the loss of the relevant Geist/Sin-Eater benefits until the bond is restored.",
+    "description": "Unleashing or separation weakens the Bargain, with loss of the specified benefits until the Bond is restored.",
+    "effect": "Unleashing or separation weakens the Bargain, with loss of the specified benefits until the Bond is restored.",
     "resolution": "Reunite and complete the requisite reconciliation or recovery.",
     "source_url": "https://anyflip.com/yckom/urox/basic",
     "source_citation": "Geist: The Sin-Eaters 2e, Conditions"
@@ -2382,8 +2382,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Werewolf"
     ],
-    "description": "A Renown-driven state rewards sound judgment, spiritual perception or hard-won insight. Only actions genuinely expressing the source's Wise ideal qualify.",
-    "effect": "A Renown-driven state rewards sound judgment, spiritual perception or hard-won insight. Only actions genuinely expressing the source's Wise ideal qualify.",
+    "description": "Gain the source’s Renown-related benefit on qualifying acts of judgment, spiritual perception or insight.",
+    "effect": "Gain the source’s Renown-related benefit on qualifying acts of judgment, spiritual perception or insight.",
     "resolution": "Demonstrate or use the associated Wisdom.",
     "source_url": "https://whitewolf.fandom.com/wiki/Werewolf%3A_The_Forsaken_2nd_Edition_Condition_Cards"
   },
@@ -2396,8 +2396,8 @@ export const CONDITION_DEFINITIONS = {
     "filters": [
       "Changeling"
     ],
-    "description": "The character retreats from relationships or active participation because of fear or uncertainty. Initiating contact and committing to action become difficult until confidence is restored.",
-    "effect": "The character retreats from relationships or active participation because of fear or uncertainty. Initiating contact and committing to action become difficult until confidence is restored.",
+    "description": "Fear or uncertainty impairs initiating contact, maintaining relationships and committing to action.",
+    "effect": "Fear or uncertainty impairs initiating contact, maintaining relationships and committing to action.",
     "resolution": "Take meaningful action or engage despite the insecurity.",
     "source_url": "https://anyflip.com/pamxl/onlx/basic"
   },
@@ -2411,8 +2411,8 @@ export const CONDITION_DEFINITIONS = {
       "Geist"
     ],
     "origin": "Key Doom",
-    "description": "The named Key SOURCE is Doomed and cannot be used to unlock another Haunt until the Doom is resolved. Identical Keys belonging to other independent sources remain usable.",
-    "effect": "The named Key SOURCE is Doomed and cannot be used to unlock another Haunt until the Doom is resolved. Identical Keys belonging to other independent sources remain usable.",
+    "description": "The affected Key source cannot unlock another Haunt until its Doom is resolved. Independent sources of the same Key remain usable.",
+    "effect": "The affected Key source cannot unlock another Haunt until its Doom is resolved. Independent sources of the same Key remain usable.",
     "resolution": "Undergo the specific Doom attached to that Key source.",
     "source_citation": "Geist: The Sin-Eaters 2e, Keys"
   },
@@ -2426,8 +2426,8 @@ export const CONDITION_DEFINITIONS = {
       "Ephemeral",
       "Core"
     ],
-    "description": "A ghost is connected to a named person, place or object that ties it to the living world. Record the Anchor: damage, relocation or severing it can change the ghost's options.",
-    "effect": "A ghost is connected to a named person, place or object that ties it to the living world. Record the Anchor: damage, relocation or severing it can change the ghost's options.",
+    "description": "The specified person, place or object ties the ghost to the living world; damage, relocation or severance affects the ghost’s options.",
+    "effect": "The specified person, place or object ties the ghost to the living world; damage, relocation or severance affects the ghost’s options.",
     "resolution": "Destroy or remove the Anchor, or resolve the ghost's unfinished business."
   },
   "Infrastructure [Ephemeral]": {
@@ -2440,8 +2440,8 @@ export const CONDITION_DEFINITIONS = {
       "Ephemeral",
       "Core"
     ],
-    "description": "God-Machine Infrastructure sustains an associated angel in the material world, including protection from normal Essence loss. Its functions are limited to the particular Installation and mission.",
-    "effect": "God-Machine Infrastructure sustains an associated angel in the material world, including protection from normal Essence loss. Its functions are limited to the particular Installation and mission.",
+    "description": "The associated Installation sustains its angel in the material world, including protection from normal Essence loss.",
+    "effect": "The associated Installation sustains its angel in the material world, including protection from normal Essence loss.",
     "resolution": "Destroy, disable, or sever the relevant Infrastructure."
   },
   "Resonant [Ephemeral]": {
@@ -2454,8 +2454,8 @@ export const CONDITION_DEFINITIONS = {
       "Ephemeral",
       "Core"
     ],
-    "description": "A subject shares the nature or emotional resonance of a particular spirit or Goetia, making the subject suitable for certain influences or Manifestations. Record the relevant entity.",
-    "effect": "A subject shares the nature or emotional resonance of a particular spirit or Goetia, making the subject suitable for certain influences or Manifestations. Record the relevant entity.",
+    "description": "The subject’s nature or emotional resonance enables the specified spirit or Goetia’s Influences or Manifestations.",
+    "effect": "The subject’s nature or emotional resonance enables the specified spirit or Goetia’s Influences or Manifestations.",
     "resolution": "Remove or fundamentally change the relevant resonance."
   },
   "Open [Ephemeral]": {
@@ -2468,8 +2468,8 @@ export const CONDITION_DEFINITIONS = {
       "Ephemeral",
       "Core"
     ],
-    "description": "A subject has become a receptive vessel for a named ephemeral entity. That entity can use Manifestations requiring Open, but other unrelated entities do not automatically gain the same access.",
-    "effect": "A subject has become a receptive vessel for a named ephemeral entity. That entity can use Manifestations requiring Open, but other unrelated entities do not automatically gain the same access.",
+    "description": "The specified ephemeral entity can use Manifestations requiring Open on the subject.",
+    "effect": "The specified ephemeral entity can use Manifestations requiring Open on the subject.",
     "resolution": "Remove the prerequisite influence Condition or successfully break the entity's access."
   },
   "Fettered [Ephemeral]": {
@@ -2482,8 +2482,8 @@ export const CONDITION_DEFINITIONS = {
       "Ephemeral",
       "Core"
     ],
-    "description": "An ephemeral being is bound to a physical creature or object while remaining in Twilight. It can interact with that host as allowed by its powers, without automatically possessing it.",
-    "effect": "An ephemeral being is bound to a physical creature or object while remaining in Twilight. It can interact with that host as allowed by its powers, without automatically possessing it.",
+    "description": "An ephemeral entity remains in Twilight, bound to a physical host it can interact with through its powers.",
+    "effect": "An ephemeral entity remains in Twilight, bound to a physical host it can interact with through its powers.",
     "resolution": "Break the fetter, destroy the fetter, or successfully exorcise the entity."
   },
   "Urged [Ephemeral]": {
@@ -2496,8 +2496,8 @@ export const CONDITION_DEFINITIONS = {
       "Ephemeral",
       "Core"
     ],
-    "description": "A Fettered entity subtly pushes a living host toward behaviors or impulses of its choosing. The host retains some agency; Urged is not full Possessed control.",
-    "effect": "A Fettered entity subtly pushes a living host toward behaviors or impulses of its choosing. The host retains some agency; Urged is not full Possessed control.",
+    "description": "A Fettered entity influences the living host’s behavior and impulses without assuming full control.",
+    "effect": "A Fettered entity influences the living host’s behavior and impulses without assuming full control.",
     "resolution": "End the Fettered Condition or successfully break the entity's influence."
   },
   "Possessed [Ephemeral]": {
@@ -2510,8 +2510,8 @@ export const CONDITION_DEFINITIONS = {
       "Ephemeral",
       "Core"
     ],
-    "description": "An ephemeral entity has taken direct control of a material host's actions. Apply the Possession Manifestation and the host's remaining resistance rules.",
-    "effect": "An ephemeral entity has taken direct control of a material host's actions. Apply the Possession Manifestation and the host's remaining resistance rules.",
+    "description": "The entity controls the material host’s actions under the Possession Manifestation and its resistance rules.",
+    "effect": "The entity controls the material host’s actions under the Possession Manifestation and its resistance rules.",
     "resolution": "The entity leaves, is driven out, or the host is destroyed."
   },
   "Controlled [Ephemeral]": {
@@ -2524,8 +2524,8 @@ export const CONDITION_DEFINITIONS = {
       "Ephemeral",
       "Core"
     ],
-    "description": "An entity has prepared a host for permanent Claiming. The victim is vulnerable to being merged with the entity but has not yet become fully Claimed.",
-    "effect": "An entity has prepared a host for permanent Claiming. The victim is vulnerable to being merged with the entity but has not yet become fully Claimed.",
+    "description": "The subject is prepared for permanent Claiming but has not yet merged with the entity.",
+    "effect": "The subject is prepared for permanent Claiming but has not yet merged with the entity.",
     "resolution": "Break the conditioning or end the underlying Open access."
   },
   "Claimed [Ephemeral]": {
@@ -2538,8 +2538,8 @@ export const CONDITION_DEFINITIONS = {
       "Ephemeral",
       "Core"
     ],
-    "description": "An ephemeral entity has fused with a material host, producing a lasting supernatural hybrid. The host's body and available powers change according to the entity's Claiming rules.",
-    "effect": "An ephemeral entity has fused with a material host, producing a lasting supernatural hybrid. The host's body and available powers change according to the entity's Claiming rules.",
+    "description": "The entity and host form a lasting supernatural hybrid; bodily traits and powers follow Claiming rules.",
+    "effect": "The entity and host form a lasting supernatural hybrid; bodily traits and powers follow Claiming rules.",
     "resolution": "Requires extraordinary supernatural intervention, destruction of the merged being, or a specific exorcism."
   },
   "Materialized [Ephemeral]": {
@@ -2552,8 +2552,8 @@ export const CONDITION_DEFINITIONS = {
       "Ephemeral",
       "Core"
     ],
-    "description": "An ephemeral entity has assumed a tangible body. It can be perceived and physically interacted with in the material world for as long as Materialization lasts.",
-    "effect": "An ephemeral entity has assumed a tangible body. It can be perceived and physically interacted with in the material world for as long as Materialization lasts.",
+    "description": "The entity has a tangible body in the material world and can be perceived and physically interacted with.",
+    "effect": "The entity has a tangible body in the material world and can be perceived and physically interacted with.",
     "resolution": "The Manifestation ends, the entity dismisses it, or it is forced back into Twilight."
   },
   "Reaching [Ephemeral]": {
@@ -2566,8 +2566,8 @@ export const CONDITION_DEFINITIONS = {
       "Ephemeral",
       "Core"
     ],
-    "description": "A spirit extends senses or powers across the Gauntlet into the material world without fully crossing into it. The entity remains in its home realm.",
-    "effect": "A spirit extends senses or powers across the Gauntlet into the material world without fully crossing into it. The entity remains in its home realm.",
+    "description": "A spirit extends senses or powers across the Gauntlet while remaining in the Shadow.",
+    "effect": "A spirit extends senses or powers across the Gauntlet while remaining in the Shadow.",
     "resolution": "The channel closes, the spirit ends it, or the effect is disrupted."
   },
   "Shadow Gate [Ephemeral]": {
@@ -2580,8 +2580,8 @@ export const CONDITION_DEFINITIONS = {
       "Ephemeral",
       "Core"
     ],
-    "description": "A portal allows passage between the material world and the Shadow where a suitable Manifestation permits. Record where the Gate is, who can use it and when it closes.",
-    "effect": "A portal allows passage between the material world and the Shadow where a suitable Manifestation permits. Record where the Gate is, who can use it and when it closes.",
+    "description": "A portal connects the material world and the Shadow, with access governed by its Manifestation.",
+    "effect": "A portal connects the material world and the Shadow, with access governed by its Manifestation.",
     "resolution": "The gate closes, its duration ends, or it is disrupted."
   },
   "Underworld Gate [Ephemeral]": {
@@ -2595,8 +2595,8 @@ export const CONDITION_DEFINITIONS = {
       "Core",
       "Geist"
     ],
-    "description": "A temporary passage joins the living world to the Underworld. Its position, permitted travelers and duration follow the power that opened the Gate.",
-    "effect": "A temporary passage joins the living world to the Underworld. Its position, permitted travelers and duration follow the power that opened the Gate.",
+    "description": "A temporary portal connects the living world and Underworld; location, access and duration follow the opening power.",
+    "effect": "A temporary portal connects the living world and Underworld; location, access and duration follow the opening power.",
     "resolution": "The gate closes, its duration ends, or it is disrupted."
   },
   "Bound Geist [Ephemeral]": {
@@ -2609,8 +2609,8 @@ export const CONDITION_DEFINITIONS = {
       "Ephemeral",
       "Geist"
     ],
-    "description": "The Geist is bound to the Sin-Eater and is not an independently manifested ghost until Unleashed. Treat its Rank, Ban, Bane and Manifestations by the Bargain rules.",
-    "effect": "The Geist is bound to the Sin-Eater and is not an independently manifested ghost until Unleashed. Treat its Rank, Ban, Bane and Manifestations by the Bargain rules.",
+    "description": "The Geist remains bound to the Sin-Eater until Unleashed. Rank, Ban, Bane and Manifestations follow the Bargain rules.",
+    "effect": "The Geist remains bound to the Sin-Eater until Unleashed. Rank, Ban, Bane and Manifestations follow the Bargain rules.",
     "resolution": "The Bargain ends or the Geist becomes independently Unleashed.",
     "source_citation": "Geist: The Sin-Eaters 2e, ephemeral Conditions"
   },
@@ -2624,8 +2624,8 @@ export const CONDITION_DEFINITIONS = {
       "Ephemeral",
       "Geist"
     ],
-    "description": "A ghost is subsumed into another ghost and must remain in vulnerable hibernation. The victim cannot act independently while Engulfed.",
-    "effect": "A ghost is subsumed into another ghost and must remain in vulnerable hibernation. The victim cannot act independently while Engulfed.",
+    "description": "A ghost is subsumed into another ghost in vulnerable hibernation and cannot act independently.",
+    "effect": "A ghost is subsumed into another ghost in vulnerable hibernation and cannot act independently.",
     "resolution": "Be freed from the engulfing entity or end the controlling supernatural effect.",
     "source_citation": "Geist: The Sin-Eaters 2e, ephemeral Conditions"
   },
@@ -2639,8 +2639,8 @@ export const CONDITION_DEFINITIONS = {
       "Ephemeral",
       "Mage"
     ],
-    "description": "An ephemeral being is bound as a Familiar. Its Rank, Manifestations, Essence, Ban/Bane and the binding Merit determine its usable powers; it does not automatically gain extra Numina.",
-    "effect": "An ephemeral being is bound as a Familiar. Its Rank, Manifestations, Essence, Ban/Bane and the binding Merit determine its usable powers; it does not automatically gain extra Numina.",
+    "description": "The bound familiar’s powers depend on its Rank, Manifestations, Essence, Ban, Bane and binding Merit.",
+    "effect": "The bound familiar’s powers depend on its Rank, Manifestations, Essence, Ban, Bane and binding Merit.",
     "resolution": "The bond is ended or the familiar is released.",
     "source_citation": "Mage: The Awakening 2e, familiars"
   },
@@ -2697,9 +2697,9 @@ export const CONDITION_DEFINITIONS = {
       "Changeling",
       "Geist"
     ],
-    "description": "Below 0 C: each 15 minutes, ordinary Bashing heals normally and is replaced by 1 non-Resistant Bashing. Accelerated supernatural healing rate is halved. -1 to all rolls per hour (max -5); once capped, subsequent hours also inflict 1 Lethal. Adequate warmth or clothing ends exposure.",
-    "effect": "Below 0 C: each 15 minutes, ordinary Bashing heals normally and is replaced by 1 non-Resistant Bashing. Accelerated supernatural healing rate is halved. -1 to all rolls per hour (max -5); once capped, subsequent hours also inflict 1 Lethal. Adequate warmth or clothing ends exposure.",
-    "resolution": "Gain adequate warmth or shelter, or the cold ends."
+    "description": "Below 0 °C: every 15 minutes, recover Bashing normally and suffer 1 non-Resistant Bashing. Accelerated supernatural healing is halved. −1 to all rolls per hour (max −5); subsequent hours also inflict 1 Lethal.",
+    "effect": "Below 0 °C: every 15 minutes, recover Bashing normally and suffer 1 non-Resistant Bashing. Accelerated supernatural healing is halved. −1 to all rolls per hour (max −5); subsequent hours also inflict 1 Lethal.",
+    "resolution": "Gain adequate warmth, protective clothing or shelter, or the cold ends."
   },
   "Extreme Heat [Environmental Tilt]": {
     "name": "Extreme Heat",
@@ -2716,8 +2716,8 @@ export const CONDITION_DEFINITIONS = {
       "Changeling",
       "Geist"
     ],
-    "description": "Above 40 C: each 15 minutes, ordinary Bashing heals normally and is replaced by 1 non-Resistant Bashing. Accelerated supernatural healing rate is halved. -1 to all rolls per hour (max -5); once capped, subsequent hours also inflict 1 Lethal. Cooling ends exposure.",
-    "effect": "Above 40 C: each 15 minutes, ordinary Bashing heals normally and is replaced by 1 non-Resistant Bashing. Accelerated supernatural healing rate is halved. -1 to all rolls per hour (max -5); once capped, subsequent hours also inflict 1 Lethal. Cooling ends exposure.",
+    "description": "Above 40 °C: every 15 minutes, recover Bashing normally and suffer 1 non-Resistant Bashing. Accelerated supernatural healing is halved. −1 to all rolls per hour (max −5); subsequent hours also inflict 1 Lethal.",
+    "effect": "Above 40 °C: every 15 minutes, recover Bashing normally and suffer 1 non-Resistant Bashing. Accelerated supernatural healing is halved. −1 to all rolls per hour (max −5); subsequent hours also inflict 1 Lethal.",
     "resolution": "Cool down, gain shelter, or the heat ends."
   },
   "Flooded [Environmental Tilt]": {
@@ -2754,8 +2754,8 @@ export const CONDITION_DEFINITIONS = {
       "Changeling",
       "Geist"
     ],
-    "description": "-3 to visual and auditory Perception. Prolonged heavy rain can lead to flooding, but flood depth and onset are independent scene conditions.",
-    "effect": "-3 to visual and auditory Perception. Prolonged heavy rain can lead to flooding, but flood depth and onset are independent scene conditions.",
+    "description": "−3 to visual and auditory Perception. Prolonged rain may cause flooding; track flood depth separately.",
+    "effect": "−3 to visual and auditory Perception. Prolonged rain may cause flooding; track flood depth separately.",
     "resolution": "Gain shelter, leave the area, or the rain ends."
   },
   "Heavy Winds [Environmental Tilt]": {
@@ -2806,8 +2806,8 @@ export const CONDITION_DEFINITIONS = {
       "Tilts",
       "Mage"
     ],
-    "description": "Dim lighting impairs tasks requiring clear vision and can conceal details or threats. Restore illumination or use another appropriate sense to avoid the limitation.",
-    "effect": "Dim lighting impairs tasks requiring clear vision and can conceal details or threats. Restore illumination or use another appropriate sense to avoid the limitation.",
+    "description": "Dim lighting impairs visual tasks and conceals details or threats; alternative senses may compensate.",
+    "effect": "Dim lighting impairs visual tasks and conceals details or threats; alternative senses may compensate.",
     "resolution": "Restore adequate light or leave the affected area."
   },
   "Boneyard [Environmental Tilt]": {
@@ -2820,8 +2820,8 @@ export const CONDITION_DEFINITIONS = {
       "Tilts",
       "Geist"
     ],
-    "description": "The haunted area is aware and responsive to its creator. Apply the Boneyard area, supernatural rules and purchased enhancements; it is not merely a generic environmental penalty.",
-    "effect": "The haunted area is aware and responsive to its creator. Apply the Boneyard area, supernatural rules and purchased enhancements; it is not merely a generic environmental penalty.",
+    "description": "The haunted area is aware and responsive to its creator under the Boneyard Rules and purchased enhancements.",
+    "effect": "The haunted area is aware and responsive to its creator under the Boneyard Rules and purchased enhancements.",
     "resolution": "The underlying Boneyard Haunt ends or this location leaves its area.",
     "source_citation": "Geist: The Sin-Eaters 2e, environmental Tilts"
   },
@@ -2840,8 +2840,8 @@ export const CONDITION_DEFINITIONS = {
       "Changeling",
       "Geist"
     ],
-    "description": "A damaged arm cannot be used normally for gripping, aiming or manipulating objects. Actions requiring the affected limb are hindered until the injury is healed.",
-    "effect": "A damaged arm cannot be used normally for gripping, aiming or manipulating objects. Actions requiring the affected limb are hindered until the injury is healed.",
+    "description": "The damaged arm is impaired for gripping, aiming and manipulation.",
+    "effect": "The damaged arm is impaired for gripping, aiming and manipulation.",
     "resolution": "The injury is healed or the effect causing it ends."
   },
   "Beaten Down [Personal Tilt]": {
@@ -2859,8 +2859,8 @@ export const CONDITION_DEFINITIONS = {
       "Changeling",
       "Geist"
     ],
-    "description": "The character is unwilling or unable to continue fighting aggressively. They may surrender, flee or defend themselves rather than persist in ordinary attacks until the Tilt ends.",
-    "effect": "The character is unwilling or unable to continue fighting aggressively. They may surrender, flee or defend themselves rather than persist in ordinary attacks until the Tilt ends.",
+    "description": "The character may surrender, flee or defend themselves rather than continue ordinary aggressive attacks.",
+    "effect": "The character may surrender, flee or defend themselves rather than continue ordinary aggressive attacks.",
     "resolution": "Combat ends, you surrender, or the effect specifically ends."
   },
   "Blind [Personal Tilt]": {
@@ -2878,8 +2878,8 @@ export const CONDITION_DEFINITIONS = {
       "Changeling",
       "Geist"
     ],
-    "description": "The character cannot see. Activities requiring visual information may be impossible without another sense, while other actions face appropriate circumstances.",
-    "effect": "The character cannot see. Activities requiring visual information may be impossible without another sense, while other actions face appropriate circumstances.",
+    "description": "Visual tasks may be impossible without alternative perception; other penalties depend on circumstances.",
+    "effect": "Visual tasks may be impossible without alternative perception; other penalties depend on circumstances.",
     "resolution": "Sight returns or the effect causing the blindness ends."
   },
   "Deafened [Personal Tilt]": {
@@ -2897,8 +2897,8 @@ export const CONDITION_DEFINITIONS = {
       "Changeling",
       "Geist"
     ],
-    "description": "The character cannot hear well enough to use ordinary auditory information. They may miss speech, alarms and other sound-based warnings, though vision remains available.",
-    "effect": "The character cannot hear well enough to use ordinary auditory information. They may miss speech, alarms and other sound-based warnings, though vision remains available.",
+    "description": "The character cannot reliably perceive speech, alarms or other auditory information.",
+    "effect": "The character cannot reliably perceive speech, alarms or other auditory information.",
     "resolution": "Hearing returns or the effect causing the deafness ends."
   },
   "Drugged [Personal Tilt]": {
@@ -2916,8 +2916,8 @@ export const CONDITION_DEFINITIONS = {
       "Changeling",
       "Geist"
     ],
-    "description": "A drug changes perception, coordination or judgment. Apply the substance-specific impairment and duration; intoxication alone is not a universal identical penalty for all drugs.",
-    "effect": "A drug changes perception, coordination or judgment. Apply the substance-specific impairment and duration; intoxication alone is not a universal identical penalty for all drugs.",
+    "description": "Apply the substance’s specific penalties to perception, coordination or judgment and its duration.",
+    "effect": "Apply the substance’s specific penalties to perception, coordination or judgment and its duration.",
     "resolution": "The drug leaves your system or treatment removes its effects."
   },
   "Immobilized [Personal Tilt]": {
@@ -2935,8 +2935,8 @@ export const CONDITION_DEFINITIONS = {
       "Changeling",
       "Geist"
     ],
-    "description": "The character is physically restrained and cannot reposition freely. Escape, resistance and combat options depend on the source and type of restraint.",
-    "effect": "The character is physically restrained and cannot reposition freely. Escape, resistance and combat options depend on the source and type of restraint.",
+    "description": "Physical restraint prevents free movement; escape and combat options depend on the restraint.",
+    "effect": "Physical restraint prevents free movement; escape and combat options depend on the restraint.",
     "resolution": "Break free, are released, or the effect ends."
   },
   "Insane [Personal Tilt]": {
@@ -2954,8 +2954,8 @@ export const CONDITION_DEFINITIONS = {
       "Changeling",
       "Geist"
     ],
-    "description": "An acute panic or delusional episode overwhelms ordinary judgment, potentially causing uncontrollable responses. Use the source-specific behavior restrictions rather than a generic flat penalty.",
-    "effect": "An acute panic or delusional episode overwhelms ordinary judgment, potentially causing uncontrollable responses. Use the source-specific behavior restrictions rather than a generic flat penalty.",
+    "description": "Acute panic or delusion impairs judgment and imposes the source’s behavioral restrictions.",
+    "effect": "Acute panic or delusion impairs judgment and imposes the source’s behavioral restrictions.",
     "resolution": "Regain control or the provoking effect ends."
   },
   "Insensate [Personal Tilt]": {
@@ -2973,8 +2973,8 @@ export const CONDITION_DEFINITIONS = {
       "Changeling",
       "Geist"
     ],
-    "description": "The character's awareness is suppressed and they cannot respond normally to their surroundings. Meaningful actions must wait until consciousness or sensation returns.",
-    "effect": "The character's awareness is suppressed and they cannot respond normally to their surroundings. Meaningful actions must wait until consciousness or sensation returns.",
+    "description": "Suppressed consciousness or sensation prevents meaningful action.",
+    "effect": "Suppressed consciousness or sensation prevents meaningful action.",
     "resolution": "Recover awareness or the effect ends."
   },
   "Knocked Down [Personal Tilt]": {
@@ -2992,8 +2992,8 @@ export const CONDITION_DEFINITIONS = {
       "Changeling",
       "Geist"
     ],
-    "description": "The character is prone on the ground and may suffer the associated combat limitations until standing up. Remaining prone can sometimes provide cover from ranged attacks.",
-    "effect": "The character is prone on the ground and may suffer the associated combat limitations until standing up. Remaining prone can sometimes provide cover from ranged attacks.",
+    "description": "Prone: apply the associated combat limitations; remaining prone may provide cover from ranged attacks.",
+    "effect": "Prone: apply the associated combat limitations; remaining prone may provide cover from ranged attacks.",
     "resolution": "Stand up."
   },
   "Leg Wrack [Personal Tilt]": {
@@ -3011,8 +3011,8 @@ export const CONDITION_DEFINITIONS = {
       "Changeling",
       "Geist"
     ],
-    "description": "A damaged leg severely limits walking, running and stable movement. Actions depending on the affected limb are hindered until it recovers.",
-    "effect": "A damaged leg severely limits walking, running and stable movement. Actions depending on the affected limb are hindered until it recovers.",
+    "description": "A damaged leg impairs walking, running, balance and other actions requiring that limb.",
+    "effect": "A damaged leg impairs walking, running, balance and other actions requiring that limb.",
     "resolution": "The injury is healed or the effect causing it ends."
   },
   "Poisoned [Personal Tilt]": {
@@ -3030,8 +3030,8 @@ export const CONDITION_DEFINITIONS = {
       "Changeling",
       "Geist"
     ],
-    "description": "An active toxin harms the character over time, with interval, damage and resistance determined by the specific poison. Treatment or the end of exposure can stop further harm.",
-    "effect": "An active toxin harms the character over time, with interval, damage and resistance determined by the specific poison. Treatment or the end of exposure can stop further harm.",
+    "description": "Inflicts damage at the poison’s specified intervals, severity and resistance rules.",
+    "effect": "Inflicts damage at the poison’s specified intervals, severity and resistance rules.",
     "resolution": "The toxin runs its course or is successfully treated."
   },
   "Sick [Personal Tilt]": {
@@ -3049,8 +3049,8 @@ export const CONDITION_DEFINITIONS = {
       "Changeling",
       "Geist"
     ],
-    "description": "Illness weakens the character and may impose continuing penalties or damage. Use the disease's severity, progression and treatment rules rather than one universal modifier.",
-    "effect": "Illness weakens the character and may impose continuing penalties or damage. Use the disease's severity, progression and treatment rules rather than one universal modifier.",
+    "description": "Apply the illness’s severity-based penalties, damage and progression.",
+    "effect": "Apply the illness’s severity-based penalties, damage and progression.",
     "resolution": "Recover from or successfully treat the illness."
   },
   "Stunned [Personal Tilt]": {
@@ -3068,8 +3068,8 @@ export const CONDITION_DEFINITIONS = {
       "Changeling",
       "Geist"
     ],
-    "description": "A blow or shock briefly prevents effective action. The character loses the required action or must recover as specified by the source before resuming normal activity.",
-    "effect": "A blow or shock briefly prevents effective action. The character loses the required action or must recover as specified by the source before resuming normal activity.",
+    "description": "Lose the specified action or remain unable to act until the source’s recovery requirement is met.",
+    "effect": "Lose the specified action or remain unable to act until the source’s recovery requirement is met.",
     "resolution": "Lose the required action or recover as specified by the effect."
   },
   "Nimbus [Personal Tilt]": {
@@ -3082,8 +3082,8 @@ export const CONDITION_DEFINITIONS = {
       "Tilts",
       "Mage"
     ],
-    "description": "A mage's Immediate Nimbus has imposed its distinctive supernatural Tilt on the character. Record whose Nimbus caused it and apply that mage's exact Tilt rather than a universal Nimbus penalty.",
-    "effect": "A mage's Immediate Nimbus has imposed its distinctive supernatural Tilt on the character. Record whose Nimbus caused it and apply that mage's exact Tilt rather than a universal Nimbus penalty.",
+    "description": "Apply the specific Tilt imposed by the originating mage’s Immediate Nimbus.",
+    "effect": "Apply the specific Tilt imposed by the originating mage’s Immediate Nimbus.",
     "resolution": "Leave the Nimbus, the Nimbus ends, or the effect otherwise expires."
   },
   "Flesh Too Solid [Personal Tilt]": {
@@ -3096,8 +3096,8 @@ export const CONDITION_DEFINITIONS = {
       "Tilts",
       "Changeling"
     ],
-    "description": "Hedge or dream immersion makes wounds from a dream affect the character's body. The consequences are tied to the supernatural dream state and end or persist under that effect's rules.",
-    "effect": "Hedge or dream immersion makes wounds from a dream affect the character's body. The consequences are tied to the supernatural dream state and end or persist under that effect's rules.",
+    "description": "Wounds suffered in the dream affect the body according to the supernatural dream-state rules.",
+    "effect": "Wounds suffered in the dream affect the body according to the supernatural dream-state rules.",
     "resolution": "Leave the relevant dream state or the supernatural effect ends."
   }
 };

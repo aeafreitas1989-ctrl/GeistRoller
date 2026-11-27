@@ -34,7 +34,8 @@ test('all 198 Conditions and Tilts display either enhanced rules or the full aud
     const text = CONDITION_DESCRIPTION_REVISIONS[key] || CONDITION_RULE_OVERRIDES[key]?.effect;
     expect(item.effect).toBe(text);
     expect(item.description).toBe(text);
-    expect(item.effect.length).toBeGreaterThan(70);
+    expect(item.effect.trim().length).toBeGreaterThan(0);
+    expect(item.effect).not.toMatch(/Failure remains failure\./i);
     // Some complete resolution instructions are legitimately brief (e.g. 'Stand up.').
     // Validate presence, not arbitrary character count.
     expect(typeof item.resolution).toBe('string');
