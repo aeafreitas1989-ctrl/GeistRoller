@@ -366,23 +366,36 @@ export const CombatTrackerCard = ({
                         onToggleResistance={onToggleResistantWound}
                     />
                 </div>
-                <Button type="button" size="sm" variant="outline" className="h-7 text-xs border-zinc-700" data-testid="combat-toggle-active"
-                    onClick={async () => {
-                        if (!onUpdateCharacter || !activeCharacter) return;
-                        const starting = !activeCharacter.combat_active;
-                        await onUpdateCharacter({
-                            combat_active: starting,
-                            ...(!starting ? {
-                                active_spells: expireCombatEffects(activeCharacter.active_spells || []),
-                                conditions: expireCombatEffects(activeCharacter.conditions || []),
-                            } : {}),
-                        }, starting ? {} : { kind: "combat" });
-                    }}>
-                    {activeCharacter?.combat_active ? "End Combat" : "Start Combat"}
-                </Button>
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                    <button
+                        type="button"
+                        onClick={() => setInitiativeRoll(null)}
+                        className="h-7 rounded-sm border px-2 text-xs text-left transition-all bg-zinc-900/30 border-zinc-800 hover:border-zinc-600" title="Click to clear current initiative"
+                        data-testid="combat-card-current-initiative-btn"
+                    >
+                        <div className="flex items-center gap-2 whitespace-nowrap">
+                            <span className="text-zinc-500">Current Initiative</span>
+                            <span className="font-mono text-teal-400">{initiativeRoll?.total ?? "—"}</span>
+                        </div>
+                    </button>
+                    <Button type="button" size="sm" variant="outline" className="h-7 text-xs border-zinc-700" data-testid="combat-toggle-active"
+                        onClick={async () => {
+                            if (!onUpdateCharacter || !activeCharacter) return;
+                            const starting = !activeCharacter.combat_active;
+                            await onUpdateCharacter({
+                                combat_active: starting,
+                                ...(!starting ? {
+                                    active_spells: expireCombatEffects(activeCharacter.active_spells || []),
+                                    conditions: expireCombatEffects(activeCharacter.conditions || []),
+                                } : {}),
+                            }, starting ? {} : { kind: "combat" });
+                        }}>
+                        {activeCharacter?.combat_active ? "End Combat" : "Start Combat"}
+                    </Button>
+                </div>
             </div>
-            <div className="space-y-2">
-                <div className="grid grid-cols-3 gap-2 text-xs">
+            <div className="space-y-2 combat-stats-container">
+                <div className="grid grid-cols-2 gap-2 text-xs combat-stat-grid">
                     <button
                         type="button"
                         onClick={() => setCurrentDefense((prev) => Math.max(0, prev - 1))}
@@ -440,9 +453,7 @@ export const CombatTrackerCard = ({
                             <span className="font-mono text-teal-400">{effectiveInitiativeModifier}</span>
                         </div>
                     </button>
-                </div>
 
-                <div className="grid grid-cols-3 gap-2 text-xs">
                     <div className="rounded-sm border px-2 py-1.5 bg-zinc-900/30 border-zinc-800">
                         <div className="flex items-center justify-between">
                             <span className="text-zinc-500">Size</span>
@@ -457,20 +468,8 @@ export const CombatTrackerCard = ({
                         </div>
                     </div>
 
-                    <button
-                        type="button"
-                        onClick={() => setInitiativeRoll(null)}
-                        className="rounded-sm border px-2 py-1.5 text-left transition-all bg-zinc-900/30 border-zinc-800 hover:border-zinc-600"
-                        data-testid="combat-card-current-initiative-btn"
-                    >
-                        <div className="flex items-center justify-between">
-                            <span className="text-zinc-500">Current Initiative</span>
-                            <span className="font-mono text-teal-400">{initiativeRoll?.total ?? ""}</span>
-                        </div>
-                    </button>
-                </div>
 
-                <div className="grid grid-cols-3 gap-2 text-xs">
+
                     <div className="rounded-sm border px-2 py-1.5 bg-zinc-900/30 border-zinc-800">
                         <div className="flex items-center justify-between">
                             <span className="text-zinc-500">

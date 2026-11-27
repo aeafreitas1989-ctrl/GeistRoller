@@ -164,3 +164,12 @@
 [data-debug-wrapper="true"] {
     display: contents !important;
 }
+
+/* Use the actual width of the Combat card, rather than the browser viewport. */
+.combat-stats-container {
+    container-type: inline-size;
+    container-name: combat-stats;
+}
+@container combat-stats (min-width: 480px) {
+    .combat-stat-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
