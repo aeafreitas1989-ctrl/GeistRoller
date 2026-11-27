@@ -1,4 +1,6 @@
 import { X, Star } from "lucide-react";
+import { useState } from "react";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
 export const ConditionCard = ({
@@ -17,10 +19,16 @@ export const ConditionCard = ({
     targetName,
     onRemove,
     onResolve,
+    onScour,
+    scourDisabled = false,
+    onSetParadoxSuccesses,
+    paradoxSuccesses,
+    backlashSpent,
     conditionIndex,
 }) => {
     // Card colour identifies the Beat awarded on resolution.
     // Existing Conditions without beat_type award a normal Beat.
+    const [savingScour, setSavingScour] = useState(false);
     const isArcaneBeat = beatType === "arcane" || beatType === "arcane-lapse";
     const colors = isArcaneBeat
         ? { bg: "bg-violet-950/30", border: "border-violet-500/40", text: "text-violet-300", badge: "bg-violet-900/50" }
@@ -137,6 +145,16 @@ export const ConditionCard = ({
                             {timer.label}
                         </p>
                     )}
+                    {onSetParadoxSuccesses && !expired && <form className="flex flex-wrap items-center gap-2 mb-2" onSubmit={e=>{
+                        e.preventDefault();
+                        const value=Number(new FormData(e.currentTarget).get('paradoxSuccesses'));
+                        if (Number.isSafeInteger(value)&&value>0) void onSetParadoxSuccesses(value);
+                    }}>
+                        <label className="text-[10px] text-zinc-400">Paradox successes</label>
+                        <Input key={String(paradoxSuccesses ?? '')} name="paradoxSuccesses" type="number" min="1" step="1" required defaultValue={paradoxSuccesses || ''} className="h-7 w-16 text-xs" data-testid="condition-paradox-successes" />
+                        <Button type="submit" size="sm" variant="ghost" className="h-7 text-xs">Save</Button>
+                        {backlashSpent && <span className="text-[10px] text-zinc-500">Next-roll modifier already applied</span>}
+                    </form>}
                     {description && (
                         <p className="text-xs text-zinc-400 leading-relaxed whitespace-pre-line">
                             {description}
@@ -158,6 +176,7 @@ export const ConditionCard = ({
                 </div>
 
                 <div className="flex flex-col gap-1 flex-shrink-0">
+                    {onScour && !expired && <Button type="button" variant="outline" size="sm" className="h-auto min-h-6 py-1 text-xs border-violet-500/40 text-violet-300" disabled={savingScour || scourDisabled} title="1 resistant lethal damage; no Mana; uses one daily Scouring" data-testid="scour-abyssal-condition" onClick={async()=>{setSavingScour(true);try{await onScour();}finally{setSavingScour(false);}}}>Scour</Button>}
                     {onResolve && !expired && (
                         <Button
                             variant="ghost"

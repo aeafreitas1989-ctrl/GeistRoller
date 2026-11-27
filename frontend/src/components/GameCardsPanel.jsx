@@ -164,6 +164,8 @@ export const GameCardsPanel = ({
     onRemoveCondition,
     onResolveCondition,
     onUpdateCondition,
+    onScourAbyssal,
+    onSetAbyssalSuccesses,
     onUpdateHaunt,
     onToggleKey,
     onUpdatePlacesPeople,
@@ -729,6 +731,8 @@ export const GameCardsPanel = ({
                         onAddCondition={onAddCondition}
                         onRemoveCondition={onRemoveCondition}
                         onResolveCondition={onResolveCondition}
+                        onScourAbyssal={onScourAbyssal}
+                        onSetAbyssalSuccesses={onSetAbyssalSuccesses}
                     />
 
                     {!isMage && (

@@ -1,4 +1,6 @@
-import { abyssalDuration, startAbyssalCondition, hasAbyssalTaint } from "../utils/abyssalConditions";
+import { abyssalDuration, startAbyssalCondition } from "../utils/abyssalConditions";
+import { applyAbyssalOutcome } from "../utils/abyssalSpellcasting";
+import { CONDITION_DEFINITIONS } from "../data/conditions-data";
 import { XPTrackerContent } from './character/XPTrackerContent';
 import { buildCharacterExportText, escapeHtml } from './character/characterExport';
 import { XP_TRACKER_RESOURCES, getXPTransactionTotals, isValidXPTrackerBalance, buildXPTrackerEntries, formatLedgerDate } from '../utils/xpTrackerRules';
@@ -2086,49 +2088,61 @@ export const CharacterPanel = ({
         const willpower = Number(getValue("willpower")) || 0;
         await commitCharacterUpdate({ willpower: Math.min(calculateWillpowerMax(), willpower + 1) });
     };
+    const handleAbyssalOutcome = (original,event) => onUpdateCharacter(latest=>{
+        if (latest.id !== activeCharacter?.id) return null;
+        const previous=latest.conditions || [];
+        const conditions=applyAbyssalOutcome(previous,latest.scene_tracker,original,event);
+        return conditions===previous?null:{conditions};
+    });
     const resolveParadoxContainment = async ({ cancelled, remaining, paradoxExceptional = false, spellDramaticFailure = false, mode = "contain", conditionType = "pending", conditionName = "" }) => {
         const safeCancelled = Math.max(0, cancelled || 0);
         const safeRemaining = Math.max(0, remaining || 0);
 
-        const currentBoxes = normalizeHealthBoxes(
-            getValue("health_boxes"),
-            maxHealth,
-            getValue("health") || 0
-        );
-
-        const backlash = addWoundDamage(currentBoxes, getValue("resistant_wounds"), "bashing", mode === "contain" ? safeCancelled : 0, true);
+        return onUpdateCharacter(latest => {
+        if (latest.id !== activeCharacter?.id) return null;
+        const merits = latest.merits_list || [];
+        const stamina = (Number(latest.attributes?.stamina)||0) + (Number(latest.arcana?.Life)>=2 ? Number(latest.scoured_attributes?.stamina)||0 : 0);
+        const healthMax = stamina + 5 + (merits.some(m=>m?.name==='Giant')?1:0) - (merits.some(m=>m?.name==='Small-Framed')?1:0);
+        const currentBoxes = normalizeHealthBoxes(latest.health_boxes,healthMax,latest.health || 0);
+        const backlash = addWoundDamage(currentBoxes, latest.resistant_wounds, "bashing", mode === "contain" ? safeCancelled : 0, true);
         const nextHealthBoxes = backlash.boxes;
 
-        const currentConditions = getValue("conditions") || [];
-        const currentWisdom = Number(getValue("wisdom")) || 0;
+        const currentConditions = latest.conditions || [];
+        const currentWisdom = Number(latest.wisdom) || 0;
         const paradoxTaintDuration = abyssalDuration(currentWisdom);
         const shouldRecord = shouldRecordParadoxCondition({
             mode, remaining: safeRemaining, paradoxExceptional, spellDramaticFailure,
         });
-        const chosenName = conditionType === "taint" ? "Paradox Taint"
-            : conditionType === "custom" && String(conditionName).trim() ? String(conditionName).trim()
+        const named = {taint:'Abyssal Nimbus',nimbus:'Abyssal Nimbus',backlash:'Abyssal Backlash',imago:'Abyssal Imago'};
+        const chosenName = named[conditionType] || (conditionType === "custom" && String(conditionName).trim() ? String(conditionName).trim()
             : spellDramaticFailure ? "Paradox Condition (Dramatic Spellcasting Failure)"
-            : "Paradox Condition (Pending ST)";
+            : "Paradox Condition (Pending ST)");
+        const definition = CONDITION_DEFINITIONS[chosenName];
         const nextConditions = shouldRecord
             ? [...currentConditions, startAbyssalCondition({
                 paradox_condition: true,
                 id: 'paradox-' + Date.now() + '-' + Math.random().toString(36).slice(2),
                 name: chosenName, type: "condition", origin: "Spellcasting",
-                description: conditionType === "taint"
+                ...(definition ? {definition_key:chosenName,splat:definition.splat,group:definition.group} : {}),
+                description: chosenName === "Abyssal Nimbus"
+                    ? (paradoxExceptional ? "Open to Abyssal entities." : "Resonant to Abyssal entities.")
+                    : definition ? definition.description
+                    : conditionType === "taint"
                     ? (paradoxExceptional ? "Paradox Taint (exceptional Paradox); Open to Abyssal entities." : "Paradox Taint; Resonant to Abyssal entities.")
                     : spellDramaticFailure
                         ? "A released Paradox was incurred, then spellcasting ended in a dramatic failure. The Storyteller assigns this Paradox Condition."
                         : "Storyteller assigns the Abyssal Condition and its effects. Do not automatically create anomalies.",
-                resolution: conditionType === "taint" ? `ST-defined resolution or expiry after ${paradoxTaintDuration}.` : "As determined by the Storyteller.",
-                beat_type: "arcane", paradox_successes: safeRemaining,
-            }, currentWisdom, getValue("scene_tracker"))] : currentConditions;
+                resolution: definition?.resolution || (conditionType === "taint" ? `ST-defined resolution or expiry after ${paradoxTaintDuration}.` : "As determined by the Storyteller."),
+                beat_type: "arcane", paradox_successes: safeRemaining, paradox_exceptional:paradoxExceptional,
+            }, currentWisdom, latest.scene_tracker)] : currentConditions;
 
-        await onUpdateCharacter({
+        return {
             health_boxes: nextHealthBoxes,
             resistant_wounds: backlash.resistant_wounds,
             health: nextHealthBoxes.filter((box) => box !== "empty").length,
-            natural_healing: mode === "release" ? getValue("natural_healing") : restartNaturalHealing(nextHealthBoxes, getValue("scene_tracker")),
+            natural_healing: safeCancelled === 0 ? latest.natural_healing : restartNaturalHealing(nextHealthBoxes, latest.scene_tracker),
             conditions: nextConditions,
+        };
         });
     };
     const healthBoxes = normalizeHealthBoxes(getValue("health_boxes"), maxHealth, getValue("health") || 0);
@@ -3116,7 +3130,6 @@ export const CharacterPanel = ({
                                     onTriggerDiceRoll={onTriggerDiceRoll}
                                     onAdvanceTime={onAdvanceTime}
                                     onCommitCharacterUpdate={commitCharacterUpdate}
-                                    onScourAbyssal={onUpdateCharacter}
                                     onOpenChannelMana={openChannelManaSpell}
                                 />
                             ) : (
@@ -3829,7 +3842,9 @@ export const CharacterPanel = ({
                     }, spellcastingArcanum)}
                     currentMana={getValue("mana") || 0}
                     currentWisdom={getValue("wisdom") ?? 7}
-                    abyssalTaint={hasAbyssalTaint(getValue("conditions"), getValue("scene_tracker"))}
+                    abyssalConditions={getValue("conditions") || []}
+                    onAbyssalOutcome={handleAbyssalOutcome}
+                    onAddRecentRoll={onAddRecentRoll}
                     athleticsDots={getNestedValue("skills", "athletics") || 0}
                     firearmsDots={getNestedValue("skills", "firearms") || 0}
                     inventoryItems={getValue("inventory_items") || []}

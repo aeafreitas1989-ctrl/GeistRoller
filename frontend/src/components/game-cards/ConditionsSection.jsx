@@ -1,3 +1,6 @@
+import { needsParadoxSuccesses, validParadoxSuccesses } from "../../utils/abyssalSpellcasting";
+import { remainingScourings } from "../../utils/mageRecovery";
+import { toast } from "sonner";
 import { isAbyssalTaint, isAbyssalCondition } from "../../utils/abyssalConditions";
 import { useEffect, useMemo, useState } from "react";
 import { Plus, ChevronDown, ChevronRight, Search, X } from "lucide-react";
@@ -57,6 +60,8 @@ export const ConditionsSection = ({
     onAddCondition,
     onRemoveCondition,
     onResolveCondition,
+    onScourAbyssal,
+    onSetAbyssalSuccesses,
 }) => {
     const [showAddCondition, setShowAddCondition] = useState(false);
     const [customConditionName, setCustomConditionName] = useState("");
@@ -64,6 +69,7 @@ export const ConditionsSection = ({
     const [conditionOrigin, setConditionOrigin] = useState("");
     const [conditionBeatType, setConditionBeatType] = useState("regular");
     const [conditionDuration, setConditionDuration] = useState("none");
+    const [paradoxSuccesses, setParadoxSuccesses] = useState("");
     const [conditionTarget, setConditionTarget] = useState("character");
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedFilters, setSelectedFilters] = useState([]);
@@ -380,6 +386,7 @@ export const ConditionsSection = ({
         setConditionOrigin("");
         setConditionBeatType("regular");
         setConditionDuration("none");
+        setParadoxSuccesses("");
         setConditionTarget("character");
         setCustomConditionName("");
         setCustomConditionDesc("");
@@ -400,6 +407,9 @@ export const ConditionsSection = ({
                 condition.name ||
                 definitionKey;
 
+            if (needsParadoxSuccesses(condition) && !validParadoxSuccesses(paradoxSuccesses)) {
+                toast.error('Record the originating Paradox successes before adding this Condition.'); return;
+            }
             const originOverride =
                 conditionOrigin.trim();
 
@@ -433,6 +443,7 @@ export const ConditionsSection = ({
 
             onAddCondition({
                 name: displayName,
+                ...(needsParadoxSuccesses(condition) ? {paradox_successes:Number(paradoxSuccesses)} : {}),
                 definition_key:
                     definitionKey,
 
@@ -826,9 +837,13 @@ export const ConditionsSection = ({
                                             ))}
                                         </SelectContent>
                                     </Select>
-                                    <p className="text-[10px] text-zinc-500">Expiration retains a record without awarding a Beat. Turn durations advance only with End Turn.</p>
+                                    <p className="text-[10px] text-zinc-500">Normal expiry awards no Beat. Abyssal Conditions instead use Wisdom-based duration and award an Arcane Beat on lapse.</p>
                                 </div>
 
+                                {activeCharacter?.character_type === 'mage' && <div className="space-y-1">
+                                    <label className="text-[10px] uppercase tracking-wider text-zinc-400">Originating Paradox successes (Backlash / Imago)</label>
+                                    <Input type="number" min="1" step="1" value={paradoxSuccesses} onChange={e=>setParadoxSuccesses(e.target.value)} placeholder="Required for Backlash or Imago" data-testid="abyssal-successes-input" className="h-8 text-xs" />
+                                </div>}
                                 {/* Sorted catalogue */}
                                 <div className="max-h-[300px] overflow-y-auto pr-1">
                                     {groupedConditions.length === 0 ? (
@@ -1038,6 +1053,11 @@ export const ConditionsSection = ({
                                         }
                                         onRemove={condition.weather_auto || isAbyssalTaint(condition) ? undefined : onRemoveCondition}
                                         onResolve={condition.weather_auto || isAbyssalTaint(condition) ? undefined : onResolveCondition}
+                                        onScour={activeCharacter?.character_type === 'mage' && (isAbyssalCondition(condition)||isAbyssalTaint(condition)) && onScourAbyssal ? ()=>onScourAbyssal(condition) : undefined}
+                                        scourDisabled={remainingScourings(activeCharacter?.pattern_scouring,activeCharacter?.gnosis,activeCharacter?.scene_tracker) <= 0}
+                                        paradoxSuccesses={condition.paradox_successes}
+                                        backlashSpent={condition.backlash_spent}
+                                        onSetParadoxSuccesses={activeCharacter?.character_type === 'mage' && isAbyssalCondition(condition) && needsParadoxSuccesses(condition) && onSetAbyssalSuccesses ? value=>onSetAbyssalSuccesses(condition,value) : undefined}
                                     />
                                 )
                             )}

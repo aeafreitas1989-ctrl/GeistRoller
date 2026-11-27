@@ -1,3 +1,5 @@
+import { getAbyssalScouringPatch } from "@/utils/abyssalScouring";
+import { findAbyssalIndex, needsParadoxSuccesses, validParadoxSuccesses } from "@/utils/abyssalSpellcasting";
 import { isAbyssalCondition, isAbyssalTaint, startAbyssalCondition } from "@/utils/abyssalConditions";
 import { reconcileCharacterDelta } from "@/utils/characterDelta";
 import { withoutXPHistory } from "@/utils/xpHistoryLoading";
@@ -690,12 +692,37 @@ export const CharacterSheetPage = () => {
         }
 
         const startCondition = activeCharacter.character_type === "mage" && (isAbyssalCondition(condition) || isAbyssalTaint(condition))
-            ? startAbyssalCondition(condition, activeCharacter.wisdom, activeCharacter.scene_tracker)
+            ? startAbyssalCondition({...condition, id:condition.id || "paradox-"+Date.now()+"-"+Math.random().toString(36).slice(2)}, activeCharacter.wisdom, activeCharacter.scene_tracker)
             : startTimedEffect(condition, activeCharacter.scene_tracker);
         await updateCharacter((latest) => ({ conditions: [...(latest.conditions || []), startCondition] }));
         toast.success(`Added: ${condition.name}`);
     };
 
+    const scourAbyssalCondition = async (target) => {
+        const id = activeCharacter?.id;
+        const saved = await updateCharacter(latest => {
+            if (latest.id !== id || latest.character_type !== 'mage') return null;
+            const merits = latest.merits_list || [];
+            const size = 5 + (merits.some(m=>m?.name==='Giant')?1:0) - (merits.some(m=>m?.name==='Small-Framed')?1:0);
+            const max = getCharacterAttributeForDerivedTrait(latest,'stamina',0) + size;
+            const boxes = normalizeHealthBoxes(latest.health_boxes,max,latest.health||0);
+            return getAbyssalScouringPatch(latest,target,boxes);
+        });
+        if (saved) toast.success('Abyssal corruption Scoured: 1 resistant lethal wound; no Mana gained.');
+        else toast.error('Scouring unavailable or not saved. Check the game clock, daily allowance and Health.');
+        return saved;
+    };
+    const setAbyssalSuccesses = async (target,value) => {
+        if (!validParadoxSuccesses(value)) { toast.error('Enter the positive number of Paradox successes that imposed this Condition.'); return false; }
+        const id = activeCharacter?.id;
+        return updateCharacter(latest=>{
+            if (latest.id !== id || latest.character_type !== 'mage') return null;
+            const conditions = latest.conditions || [];
+            const index = findAbyssalIndex(conditions,target);
+            if (index < 0 || !isAbyssalCondition(conditions[index]) || !needsParadoxSuccesses(conditions[index])) return null;
+            return {conditions:conditions.map((entry,i)=>i===index?{...entry,paradox_successes:Number(value)}:entry)};
+        });
+    };
     const removeCondition = async (conditionIndex) => {
         if (!activeCharacter) return;
         const conditions = activeCharacter.conditions || [];
@@ -867,6 +894,8 @@ export const CharacterSheetPage = () => {
                                     onRemoveCondition={removeCondition}
                                     onResolveCondition={resolveCondition}
                                     onUpdateCondition={updateCondition}
+                                    onScourAbyssal={scourAbyssalCondition}
+                                    onSetAbyssalSuccesses={setAbyssalSuccesses}
                                     onUpdateHaunt={updateHaunt}
                                     onToggleKey={toggleKey}
                                     onUpdatePlacesPeople={updatePlacesPeople}

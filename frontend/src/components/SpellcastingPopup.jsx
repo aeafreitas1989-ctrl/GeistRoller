@@ -1,3 +1,4 @@
+import { getAbyssalCastingEffects, abyssalParadoxModifiers } from "../utils/abyssalSpellcasting";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { X, Minus, Plus, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -229,7 +230,9 @@ export const SpellcastingPopup = ({
     legacyRulingArcanum = '',
     currentMana,
     currentWisdom = 7,
-    abyssalTaint = false,
+    abyssalConditions = [],
+    onAbyssalOutcome,
+    onAddRecentRoll,
     initialPractice,
     onSpendMana,
     onRecordPreparationTurn,
@@ -278,6 +281,7 @@ export const SpellcastingPopup = ({
     });
     const [lastingDuration, setLastingDuration] = useState(false);
     const [paradoxInured, setParadoxInured] = useState(false);
+    const [spendImagoReach, setSpendImagoReach] = useState(true);
     const [sleeperWitnesses, setSleeperWitnesses] = useState("none");
     const [manaMitigation, setManaMitigation] = useState(0);
     const [paradoxMode, setParadoxMode] = useState("");
@@ -353,6 +357,7 @@ export const SpellcastingPopup = ({
         });
         setLastingDuration(false);
         setParadoxInured(false);
+        setSpendImagoReach(true);
         setSleeperWitnesses("none");
         setManaMitigation(0);
         setParadoxPreparationTurns(1);
@@ -484,7 +489,9 @@ export const SpellcastingPopup = ({
     const changePrimaryReach = overridePrimaryFactor && !!primaryFactor ? 1 : 0;
     const remoteRangeReach = remoteRange && factors.range.advanced && specialRangeMode === "none" ? 1 : 0;
     const specialRangeReach = specialRangeMode !== "none" ? 1 : 0;
-    const totalReachUsed = advancedReachUsed + indefiniteReach + changePrimaryReach + activeSpellReachSurcharge + spellReach + combinedExtraReach + remoteRangeReach + specialRangeReach + (channelManaRequest?.ignorePerTurn ? 1 : 0);
+    const abyssal = getAbyssalCastingEffects(abyssalConditions,sceneTracker);
+    const imagoReachUsed = spendImagoReach ? abyssal.imagoReach : 0;
+    const totalReachUsed = imagoReachUsed + advancedReachUsed + indefiniteReach + changePrimaryReach + activeSpellReachSurcharge + spellReach + combinedExtraReach + remoteRangeReach + specialRangeReach + (channelManaRequest?.ignorePerTurn ? 1 : 0);
     const reachRemaining = freeReach - totalReachUsed;
     const primaryArcanumDots = combinedSpellCount > 0 ? Math.max(Number(arcanumDots) || 1, ...selectedCombinedArcanaDots) : Number(arcanumDots) || 1;
     const primaryFreeLevels = Math.max(0, primaryArcanumDots - 1);
@@ -593,8 +600,9 @@ export const SpellcastingPopup = ({
     const manaCost = getManaCost();
     const reachBeyondFree = Math.max(0, totalReachUsed - freeReach);
     const baseParadoxDice = reachBeyondFree * paradoxDiePerReach;
-    const paradoxTriggered = baseParadoxDice > 0 || abyssalTaint;
-    let paradoxModifiers = abyssalTaint ? 1 : 0;
+    const abyssalRisk = abyssalParadoxModifiers(abyssal,baseParadoxDice,finalDicePool,spendImagoReach);
+    const paradoxTriggered = abyssalRisk.triggered;
+    let paradoxModifiers = abyssalRisk.taintDice + abyssalRisk.backlashDice + abyssalRisk.imagoDice;
     if (paradoxInured) paradoxModifiers += 2;
     if (sleeperWitnesses !== "none") paradoxModifiers += 1;
     if (hasDedicatedTool) paradoxModifiers -= 2;
@@ -602,7 +610,7 @@ export const SpellcastingPopup = ({
     const paradoxAfterModifiers = baseParadoxDice + paradoxModifiers;
     const committedSpellManaCost = manaCost + additionalMana;
     const prepaidMana = pendingActivation?.kind === 'spell' ? Math.max(0,Number(pendingActivation.paid) || 0) : 0;
-    const maxManaMitigation = Math.max(0, Math.min(
+    const maxManaMitigation = !paradoxTriggered ? 0 : Math.max(0, Math.min(
         manaPerTurn * Math.max(paradoxPreparationTurns, Math.ceil(committedSpellManaCost / Math.max(1,manaPerTurn)), 1 + nonHsTurns + (hasHighSpeechYantra ? 1 : 0)) - committedSpellManaCost,
         currentMana + prepaidMana - committedSpellManaCost,
         Math.max(0, paradoxAfterModifiers)
@@ -630,7 +638,8 @@ export const SpellcastingPopup = ({
         combined:selectedCombinedDetails,factors,selectedYantras,selectedInventoryYantras,
         additionalMana,manaMitigation,paradoxMode,lastingDuration,paradoxPreparationTurns,
         primaryFactor,overridePrimaryFactor,spellReach,fateDurationBonus,matterDurationMana,
-        specialRangeMode,remoteRange,ritualCastingBonus,sleeperWitnesses,paradoxInured,scaleMode});
+        specialRangeMode,remoteRange,ritualCastingBonus,sleeperWitnesses,paradoxInured,scaleMode,
+        ...(abyssal.active.length?{abyssalReach:imagoReachUsed,abyssalBacklash:abyssalRisk.backlashDice,abyssalTaint:abyssalRisk.taintDice,imagoFailure:abyssalRisk.imagoFailure}:{})});
     const matchingSpellPreparation = pendingActivation?.kind === 'spell' &&
         pendingActivation.signature === spellPreparationSignature && pendingActivation.total === totalManaCost;
     const otherPreparationExists = !!pendingActivation && !matchingSpellPreparation;
@@ -796,6 +805,7 @@ export const SpellcastingPopup = ({
             toast.error("Each constituent spell must be known at the selected Arcanum and Practice; Rotes cannot be combined.");
             return;
         }
+        if (abyssal.missing.length) { toast.error("Record the originating Paradox successes on the Abyssal Condition card before casting."); return; }
         if (spellIsImpossible) {
             toast.error("Spellcasting pool -6 or lower: spell is impossible.");
             return;
@@ -863,6 +873,7 @@ export const SpellcastingPopup = ({
         const spentSpellManaSummary = committedSpellManaCost > 0
             ? `Spent Mana: ${committedSpellManaCost}${arcanaManaSurchargeSummary ? ` (${arcanaManaSurchargeSummary})` : ""}` : "";
         const reachCategories = [];
+        if (imagoReachUsed) reachCategories.push("Abyssal Imago +"+imagoReachUsed);
         reachCategories.push(...advancedReachFactors.map(key=>"Advanced "+key[0].toUpperCase()+key.slice(1)));
         if (indefiniteReach > 0) reachCategories.push(`Indefinite Duration +${indefiniteReach}`);
         if (changePrimaryReach > 0) reachCategories.push(`Primary Factor Override → ${getPrimaryFactorLabel(primaryFactor)} +${changePrimaryReach}`);
@@ -879,6 +890,7 @@ export const SpellcastingPopup = ({
         const buildSpellSummary = (factorLine) => [
             spellReachSummary,
             ...(reachBreakdownLine ? [reachBreakdownLine] : []),
+            ...(abyssalRisk.imagoFailure ? ["Abyssal Imago: required Reach not spent; automatic failure"] : []),
             ...(spentSpellManaSummary ? [spentSpellManaSummary] : []),
             ...(preparationSummary ? [preparationSummary] : []),
             ...(selectedYantrasSummary ? [selectedYantrasSummary] : []),
@@ -930,6 +942,7 @@ export const SpellcastingPopup = ({
                 spellPrimaryFactorLabel: getPrimaryFactorLabel(effectivePrimaryFactor),
                 onResult: async (rollResult, exceptionalChoice = null) => {
                     const spellSucceeded = (rollResult?.successes || 0) >= 1;
+                    if (spellSucceeded && !paradoxTriggered && abyssal.imago.length) await onAbyssalOutcome?.(abyssal.imago,"safe-spell-success");
                     if (isReleasedParadoxSpellDramatic({
                         paradoxMode, paradoxSuccesses: -poolModifier, spellResult: rollResult,
                     })) {
@@ -954,6 +967,8 @@ export const SpellcastingPopup = ({
             };
         };
 
+        const abyssalParadoxSummary = [abyssalRisk.taintDice ? "Abyssal Taint +1" : "",abyssalRisk.backlashDice ? "Abyssal Backlash +"+abyssalRisk.backlashDice : "",abyssalRisk.imagoFailure ? "Abyssal Imago (automatic failure) +"+abyssalRisk.imagoDice : ""].filter(Boolean).join("; ");
+        const paradoxText = ["Spent Mana on Paradox: "+actualManaMitigation,abyssalParadoxSummary].filter(Boolean).join("\n");
         const paradoxConfig = paradoxTriggered ? {
             paradoxMode,
             pool: paradoxIsChanceDie ? 1 : finalParadoxPool,
@@ -961,17 +976,24 @@ export const SpellcastingPopup = ({
             again: paradoxRollQuality.again,
             rote: paradoxRollQuality.rote,
             label: `Paradox (${paradoxIsChanceDie ? "Chance Die" : `${finalParadoxPool} dice`})`,
-            paradoxSummary: `Spent Mana on Paradox: ${actualManaMitigation}`,
-            spellSummary: `Spent Mana on Paradox: ${actualManaMitigation}`,
+            paradoxSummary: paradoxText,
+            spellSummary: paradoxText,
         } : null;
 
-        const rollSpell = (poolModifier = 0, summaryOptions = null) => {
+        const rollSpell = async (poolModifier = 0, summaryOptions = null) => {
+            if (abyssalRisk.imagoFailure) {
+                const outcome = "0 Successes = Automatic Failure (Abyssal Imago)";
+                onAddRecentRoll?.({title:castLabel,transcript:[spellSummary,abyssalParadoxSummary,outcome].filter(Boolean).join("\n"),outcome});
+                if (channelManaRequest && onChannelManaResult) await onChannelManaResult({...channelManaRequest,succeeded:false,spellPotency:Math.max(0,Number(effectivePotency)||0),manaPerTurn,manaCost:spellManaStillDue});
+                toast.error("Abyssal Imago: spell automatically failed; no spellcasting dice rolled.");
+                return;
+            }
             const spellConfig = buildSpellRollConfig(poolModifier);
             if (!spellConfig) return;
             onRollDice(summaryOptions ? { ...spellConfig, ...summaryOptions } : spellConfig);
         };
         if (!paradoxConfig) {
-            rollSpell(0);
+            await rollSpell(0);
             onClose();
             return;
         }
@@ -979,10 +1001,11 @@ export const SpellcastingPopup = ({
             onRollDice({
                 ...paradoxConfig, resetSummary: true, summaryKey: "paradox", summaryLabel: "Paradox",
                 onResult: async (paradoxResult) => {
+                    if (abyssalRisk.backlashDice > 0) await onAbyssalOutcome?.(abyssal.unspent,"paradox-rolled");
                     registerParadoxRollForScene(paradoxResult);
                     if (paradoxResult?.is_dramatic_failure) {
                         await onParadoxDramaticFailure?.();
-                        rollSpell(0, { appendToSummary: true, summaryKey: "spell", summaryLabel: "Spell" });
+                        await rollSpell(0, { appendToSummary: true, summaryKey: "spell", summaryLabel: "Spell" });
                         return;
                     }
                     const penalty = paradoxResult?.successes || 0;
@@ -990,7 +1013,7 @@ export const SpellcastingPopup = ({
                         await onResolveParadoxContainment({ mode: "release", cancelled: 0, remaining: penalty, paradoxExceptional: true, conditionType: paradoxConditionType, conditionName: paradoxConditionName });
                     }
                     if (penalty > 0) toast.info(`Release: ${penalty} Paradox success${penalty === 1 ? "" : "es"} = -${penalty} die${penalty === 1 ? "" : "s"} to the spell.`);
-                    rollSpell(-penalty, { appendToSummary: true, summaryKey: "spell", summaryLabel: "Spell" });
+                    await rollSpell(-penalty, { appendToSummary: true, summaryKey: "spell", summaryLabel: "Spell" });
                 },
             });
             onClose();
@@ -1000,15 +1023,16 @@ export const SpellcastingPopup = ({
             onRollDice({
                 ...paradoxConfig, resetSummary: true, summaryKey: "paradox", summaryLabel: "Paradox",
                 onResult: async (paradoxResult) => {
+                    if (abyssalRisk.backlashDice > 0) await onAbyssalOutcome?.(abyssal.unspent,"paradox-rolled");
                     registerParadoxRollForScene(paradoxResult);
                     if (paradoxResult?.is_dramatic_failure) {
                         await onParadoxDramaticFailure?.();
-                        rollSpell(0, { appendToSummary: true, summaryKey: "spell", summaryLabel: "Spell" });
+                        await rollSpell(0, { appendToSummary: true, summaryKey: "spell", summaryLabel: "Spell" });
                         return;
                     }
                     const paradoxSuccesses = paradoxResult?.successes || 0;
                     if (paradoxSuccesses === 0) {
-                        rollSpell(0, { appendToSummary: true, summaryKey: "spell", summaryLabel: "Spell" });
+                        await rollSpell(0, { appendToSummary: true, summaryKey: "spell", summaryLabel: "Spell" });
                         return;
                     }
                     onRollDice({
@@ -1031,8 +1055,9 @@ export const SpellcastingPopup = ({
                                 conditionType: paradoxConditionType,
                                 conditionName: paradoxConditionName,
                             });
+                            if (cancelled > 0 && remaining === 0 && abyssal.backlash.length) await onAbyssalOutcome?.(abyssal.backlash,"fully-contained");
                             toast.info(`Contain: ${cancelled} cancelled, ${remaining} remaining${cancelled > 0 ? `, ${cancelled} Bashing dealt` : ""}.`);
-                            rollSpell(0, { appendToSummary: true, summaryKey: "spell", summaryLabel: "Spell" });
+                            await rollSpell(0, { appendToSummary: true, summaryKey: "spell", summaryLabel: "Spell" });
                         },
                     });
                 },
@@ -1190,8 +1215,11 @@ export const SpellcastingPopup = ({
                                 <span className="text-zinc-400">Free Reach: <span className="text-teal-400 font-mono">{freeReach}</span><span className="text-zinc-600 ml-1">({reachArcanumDots} - {practiceDots} + 1{effectiveSpellType === "rote" ? "; Rote uses 5" : ""})</span></span>
                                 <span className={`font-mono ${reachRemaining >= 0 ? "text-teal-400" : "text-red-400"}`}>{reachRemaining >= 0 ? `${reachRemaining} remaining` : `${Math.abs(reachRemaining)} over`}</span>
                             </div>
-                            {(advancedReachUsed > 0 || indefiniteReach > 0 || changePrimaryReach > 0 || activeSpellReachSurcharge > 0 || spellReach > 0 || remoteRangeReach > 0 || specialRangeReach > 0) && (
+                            {abyssal.missing.length > 0 && <p className="text-xs text-rose-300">Record Paradox successes on the Abyssal Condition card before casting.</p>}
+                            {abyssal.imagoReach > 0 && <label className="flex gap-2 items-start text-xs text-violet-300"><input type="checkbox" checked={spendImagoReach} onChange={e=>setSpendImagoReach(e.target.checked)} data-testid="abyssal-imago-spend-reach" /> <span>Spend {abyssal.imagoReach} additional Reach for Abyssal Imago. If unchecked, the spell automatically fails and its dice pool is added to Paradox.</span></label>}
+                            {(imagoReachUsed > 0 || advancedReachUsed > 0 || indefiniteReach > 0 || changePrimaryReach > 0 || activeSpellReachSurcharge > 0 || spellReach > 0 || remoteRangeReach > 0 || specialRangeReach > 0) && (
                                 <div className="pt-1 border-t border-zinc-700/50 space-y-1 text-xs">
+                                    {imagoReachUsed > 0 && <div className="flex justify-between"><span className="text-violet-300">Abyssal Imago</span><span className="font-mono text-amber-400">+{imagoReachUsed} Reach</span></div>}
                                     {advancedReachUsed > 0 && <div className="flex justify-between"><span className="text-zinc-500">Advanced Factors</span><span className="font-mono text-amber-400">+{advancedReachUsed} Reach</span></div>}
                                     {indefiniteReach > 0 && <div className="flex justify-between"><span className="text-zinc-500">Indefinite Duration</span><span className="font-mono text-amber-400">+{indefiniteReach} Reach</span></div>}
                                     {changePrimaryReach > 0 && <div className="flex justify-between"><span className="text-zinc-500">Override Primary Factor</span><span className="font-mono text-amber-400">+{changePrimaryReach} Reach</span></div>}
@@ -1366,7 +1394,10 @@ export const SpellcastingPopup = ({
                     <ParadoxSection
                         selectedPractice={selectedPractice}
                         paradoxTriggered={paradoxTriggered}
-                        abyssalTaint={abyssalTaint}
+                        abyssalTaint={abyssal.taint}
+                        abyssalBacklashDice={abyssalRisk.backlashDice}
+                        abyssalImagoDice={abyssalRisk.imagoDice}
+                        abyssalImagoFailure={abyssalRisk.imagoFailure}
                         reachBeyondFree={reachBeyondFree}
                         paradoxDiePerReach={paradoxDiePerReach}
                         gnosis={gnosis}
@@ -1435,11 +1466,11 @@ export const SpellcastingPopup = ({
                     <Button variant="outline" onClick={onClose} className="border-zinc-700 text-zinc-300" data-testid="spell-cancel-btn">Cancel</Button>
                     <Button
                         onClick={handleCastSpell}
-                        disabled={!selectedPractice || !effectivePrimaryFactor || spellManaStillDue > currentMana || !spellPreparationComplete || otherPreparationExists || (!lastingDuration && factors.duration.advanced && !spellName.trim()) || (paradoxTriggered && !paradoxMode)}
+                        disabled={abyssal.missing.length > 0 || !selectedPractice || !effectivePrimaryFactor || spellManaStillDue > currentMana || !spellPreparationComplete || otherPreparationExists || (!lastingDuration && factors.duration.advanced && !spellName.trim()) || (paradoxTriggered && !paradoxMode)}
                         className="bg-violet-600 hover:bg-violet-500 text-white"
                         data-testid="cast-spell-btn"
                     >
-                        <Sparkles className="w-4 h-4 mr-2" /> Cast Spell ({finalDicePool} dice)
+                        <Sparkles className="w-4 h-4 mr-2" /> {abyssalRisk.imagoFailure ? "Cast Spell (automatic failure)" : `Cast Spell (${finalDicePool} dice)`}
                     </Button>
                 </div>
             </div>

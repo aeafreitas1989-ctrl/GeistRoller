@@ -12,6 +12,9 @@ export const ParadoxSection = ({
     selectedPractice,
     paradoxTriggered,
     abyssalTaint = false,
+    abyssalBacklashDice = 0,
+    abyssalImagoDice = 0,
+    abyssalImagoFailure = false,
     reachBeyondFree,
     paradoxDiePerReach,
     gnosis,
@@ -77,6 +80,8 @@ export const ParadoxSection = ({
                     <div className="space-y-1.5">
                         <p className="text-[10px] text-zinc-500 uppercase">Modifiers</p>
                         {abyssalTaint && <div className="text-xs text-red-300" data-testid="abyssal-taint-paradox">Abyssal Taint: +1 Paradox die</div>}
+                        {abyssalBacklashDice > 0 && <div className="text-xs text-red-300" data-testid="abyssal-backlash-paradox">Abyssal Backlash: +{abyssalBacklashDice} Paradox dice</div>}
+                        {abyssalImagoFailure && <div className="text-xs text-red-300" data-testid="abyssal-imago-paradox">Abyssal Imago: +{abyssalImagoDice} Paradox dice; spell automatically fails</div>}
                         <div className="grid grid-cols-2 gap-1.5">
                             <label className="flex items-center gap-2 text-xs cursor-pointer" data-testid="paradox-inured">
                                 <Checkbox
@@ -241,7 +246,9 @@ export const ParadoxSection = ({
                             <SelectTrigger className="h-7 border-zinc-700 bg-zinc-950 text-xs" data-testid="paradox-condition-type"><SelectValue /></SelectTrigger>
                             <SelectContent className="bg-zinc-900 border-zinc-700 z-[200]">
                                 <SelectItem value="pending">Pending Storyteller decision</SelectItem>
-                                <SelectItem value="taint">Paradox Taint</SelectItem>
+                                <SelectItem value="backlash">Abyssal Backlash</SelectItem>
+                                <SelectItem value="imago">Abyssal Imago</SelectItem>
+                                <SelectItem value="nimbus">Abyssal Nimbus</SelectItem>
                                 <SelectItem value="custom">Other Condition (ST-selected)</SelectItem>
                             </SelectContent>
                         </Select>
@@ -284,7 +291,7 @@ export const ParadoxSection = ({
 
                         {paradoxMode === "contain" && (
                             <p className="text-[11px] text-zinc-500">
-                                Roll Paradox vs Wisdom. Each Wisdom success cancels one Paradox success and deals 1 Bashing. Any Paradox success left gives Paradox Taint.
+                                Roll Paradox vs Wisdom. Each Wisdom success cancels one Paradox success and deals 1 Bashing. Any remaining Paradox successes impose the selected Paradox Condition.
                             </p>
                         )}
                     </div>
