@@ -66,7 +66,7 @@ export const SceneTrackerCard = ({
         return true;
     };
     return (
-        <div className="bg-zinc-900/40 border border-zinc-800 rounded-sm px-3 py-2.5 space-y-3">
+        <div className="bg-zinc-900/40 border border-zinc-800 rounded-sm px-2.5 py-2 space-y-2">
             {isGameClockBehind(sceneTracker) && <div className="rounded border border-amber-700/60 bg-amber-950/30 px-2 py-1 text-[10px] text-amber-200" data-testid="clock-rewind-warning">Clock is earlier than the last processed game time ({formatGameDateTime(getGameTimestamp(sceneTracker))}). Healing and committed effects are frozen at that timestamp; retained clock-based Conditions follow the displayed date. Restore the clock before advancing time.</div>}
 
             {/* Location */}

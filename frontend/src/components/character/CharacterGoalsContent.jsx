@@ -21,12 +21,12 @@ export const CharacterGoalsContent = ({
 
     return (
         <>
-            <div className="mb-4">
-                <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2">
+            <div className="mb-2.5">
+                <div className="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-1">
                     Aspirations
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                     <div className="flex items-center gap-2 mt-1">
                         <Button
                             variant="ghost"

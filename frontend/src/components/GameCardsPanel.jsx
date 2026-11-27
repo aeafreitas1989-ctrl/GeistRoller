@@ -616,7 +616,7 @@ export const GameCardsPanel = ({
                 </Dialog>
             </div>
 
-            <div className="px-4 py-3 shrink-0" data-testid="cards-section-scene">
+            <div className="px-3 py-2 shrink-0" data-testid="cards-section-scene">
                 <SceneTrackerCard
                     sceneTracker={sceneTracker}
                     updateSceneTracker={updateSceneTracker}
@@ -635,7 +635,7 @@ export const GameCardsPanel = ({
 
             <nav
                 aria-label="Cards sections"
-                className="shrink-0 border-b border-zinc-800 bg-zinc-950/95 px-3 py-2"
+                className="shrink-0 border-b border-zinc-800 bg-zinc-950/95 px-3 py-1.5"
                 data-testid="cards-top-navigation"
             >
                 <div className="grid grid-cols-3 gap-1.5">
@@ -675,7 +675,7 @@ export const GameCardsPanel = ({
             </nav>
 
             <ScrollArea ref={cardsScrollAreaRef} className="flex-1 min-h-0">
-                <div className="p-4 space-y-4">
+                <div className="p-3 space-y-3">
 
                         <Collapsible
                             open={openSections.combat}
@@ -693,7 +693,7 @@ export const GameCardsPanel = ({
                                     <ChevronRight className="w-4 h-4 text-zinc-500" />
                                 )}
                             </CollapsibleTrigger>
-                            <CollapsibleContent className="px-3 pt-3 pb-3">
+                            <CollapsibleContent className="px-2.5 py-2.5">
                                 <CombatTrackerCard
                                     activeCharacter={activeCharacter}
                                     normalDefense={normalDefense}
@@ -756,7 +756,7 @@ export const GameCardsPanel = ({
                                         <ChevronRight className="w-4 h-4 text-zinc-500" />
                                     )}
                                 </CollapsibleTrigger>
-                                <CollapsibleContent className="px-3 pt-3 pb-3">
+                                <CollapsibleContent className="px-2.5 py-2.5">
                                     <div className="space-y-2" data-testid="haunts-list">
                                         {Object.entries(HAUNT_DEFINITIONS).map(([name, definition]) => (
                                             <HauntCard
@@ -793,7 +793,7 @@ export const GameCardsPanel = ({
                                         <ChevronRight className="w-4 h-4 text-zinc-500" />
                                     )}
                                 </CollapsibleTrigger>
-                                <CollapsibleContent className="px-3 pt-3 pb-3">
+                                <CollapsibleContent className="px-2.5 py-2.5">
                                     <div className="space-y-2" data-testid="keys-list">
                                         <div className="text-[11px] text-zinc-500 mb-2">
                                             Keys are unlocked from character creation, Geist, Mementos, and manual selection.
@@ -849,7 +849,7 @@ export const GameCardsPanel = ({
                                         <ChevronRight className="w-4 h-4 text-zinc-500" />
                                     )}
                                 </CollapsibleTrigger>
-                                <CollapsibleContent className="px-3 pt-3 pb-3">
+                                <CollapsibleContent className="px-2.5 py-2.5">
                                     <div className="space-y-2" data-testid="ceremonies-list">
                                         {learnedCeremonies.length === 0 ? <p className="text-xs text-zinc-500 text-center py-4">No ceremonies learned</p> : learnedCeremonies.map((ceremony,index) => (
                                             <CeremonyCard key={ceremony.id || ceremony.name+'-'+index} ceremony={ceremony} onActivate={onRollCeremony}/>
@@ -895,7 +895,7 @@ export const GameCardsPanel = ({
                                 <ChevronRight className="w-4 h-4 text-zinc-500" />
                             )}
                         </CollapsibleTrigger>
-                        <CollapsibleContent className="px-3 pt-3 pb-3">
+                        <CollapsibleContent className="px-2.5 py-2.5">
                             {characterMerits.length === 0 ? (
                                 <div className="text-center py-6">
                                     <p className="text-zinc-500 text-sm">No merits selected</p>
@@ -946,7 +946,7 @@ export const GameCardsPanel = ({
                             )}
                         </CollapsibleTrigger>
 
-                        <CollapsibleContent className="px-3 pt-3 pb-3">
+                        <CollapsibleContent className="px-2.5 py-2.5">
                             <div className="space-y-3">
 
                                 <Dialog

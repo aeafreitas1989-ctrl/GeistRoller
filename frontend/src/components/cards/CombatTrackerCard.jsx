@@ -347,7 +347,7 @@ export const CombatTrackerCard = ({
     );
 
     return (
-        <div className="space-y-3" data-testid="combat-tracker-card">
+        <div className="space-y-2" data-testid="combat-tracker-card">
             <div className="flex items-center justify-between gap-2 border-b border-zinc-800 pb-2">
                 <div className="min-w-0 flex-1 space-y-1" data-testid="combat-health-header">
                     <div className="flex items-center flex-wrap gap-x-2 gap-y-1 text-[10px]">
@@ -386,7 +386,7 @@ export const CombatTrackerCard = ({
                     <button
                         type="button"
                         onClick={() => setCurrentDefense((prev) => Math.max(0, prev - 1))}
-                        className="rounded-sm border p-2 text-left transition-all bg-zinc-900/50 border-zinc-800 hover:border-zinc-600"
+                        className="rounded-sm border px-2 py-1.5 text-left transition-all bg-zinc-900/50 border-zinc-800 hover:border-zinc-600"
                         data-testid="combat-card-defense-btn"
                     >
                         <div className="flex items-center justify-between">
@@ -420,7 +420,7 @@ export const CombatTrackerCard = ({
                             }
                         }}
                         disabled={currentDefense <= 0}
-                        className="rounded-sm border p-2 text-left transition-all bg-zinc-900/50 border-zinc-800 hover:border-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                        className="rounded-sm border px-2 py-1.5 text-left transition-all bg-zinc-900/50 border-zinc-800 hover:border-zinc-600 disabled:opacity-40 disabled:cursor-not-allowed"
                         data-testid="combat-card-dodge-btn"
                     >
                         <div className="flex items-center justify-between">
@@ -432,7 +432,7 @@ export const CombatTrackerCard = ({
                     <button
                         type="button"
                         onClick={rollInitiative}
-                        className="rounded-sm border p-2 text-left transition-all bg-zinc-900/50 border-zinc-800 hover:border-zinc-600"
+                        className="rounded-sm border px-2 py-1.5 text-left transition-all bg-zinc-900/50 border-zinc-800 hover:border-zinc-600"
                         data-testid="combat-card-initiative-btn"
                     >
                         <div className="flex items-center justify-between">
@@ -443,14 +443,14 @@ export const CombatTrackerCard = ({
                 </div>
 
                 <div className="grid grid-cols-3 gap-2 text-xs">
-                    <div className="rounded-sm border p-2 bg-zinc-900/30 border-zinc-800">
+                    <div className="rounded-sm border px-2 py-1.5 bg-zinc-900/30 border-zinc-800">
                         <div className="flex items-center justify-between">
                             <span className="text-zinc-500">Size</span>
                             <span className="font-mono text-teal-400">{size}</span>
                         </div>
                     </div>
 
-                    <div className="rounded-sm border p-2 bg-zinc-900/30 border-zinc-800">
+                    <div className="rounded-sm border px-2 py-1.5 bg-zinc-900/30 border-zinc-800">
                         <div className="flex items-center justify-between">
                             <span className="text-zinc-500">Speed</span>
                             <span className="font-mono text-teal-400">{speed}</span>
@@ -460,7 +460,7 @@ export const CombatTrackerCard = ({
                     <button
                         type="button"
                         onClick={() => setInitiativeRoll(null)}
-                        className="rounded-sm border p-2 text-left transition-all bg-zinc-900/30 border-zinc-800 hover:border-zinc-600"
+                        className="rounded-sm border px-2 py-1.5 text-left transition-all bg-zinc-900/30 border-zinc-800 hover:border-zinc-600"
                         data-testid="combat-card-current-initiative-btn"
                     >
                         <div className="flex items-center justify-between">
@@ -471,7 +471,7 @@ export const CombatTrackerCard = ({
                 </div>
 
                 <div className="grid grid-cols-3 gap-2 text-xs">
-                    <div className="rounded-sm border p-2 bg-zinc-900/30 border-zinc-800">
+                    <div className="rounded-sm border px-2 py-1.5 bg-zinc-900/30 border-zinc-800">
                         <div className="flex items-center justify-between">
                             <span className="text-zinc-500">
                                 {armorSourceLabel ? `Armor (${armorSourceLabel})` : "Armor"}
@@ -480,14 +480,14 @@ export const CombatTrackerCard = ({
                         </div>
                     </div>
 
-                    <div className="rounded-sm border p-2 bg-zinc-900/30 border-zinc-800">
+                    <div className="rounded-sm border px-2 py-1.5 bg-zinc-900/30 border-zinc-800">
                         <div className="flex items-center justify-between">
                             <span className="text-zinc-500">Willpower</span>
                             <span className="font-mono text-teal-400">{currentWillpower}</span>
                         </div>
                     </div>
 
-                    <div className="rounded-sm border p-2 bg-zinc-900/30 border-zinc-800">
+                    <div className="rounded-sm border px-2 py-1.5 bg-zinc-900/30 border-zinc-800">
                         <div className="flex items-center justify-between">
                             <span className="text-zinc-500">Mana</span>
                             <span className="font-mono text-teal-400">{currentMana}</span>
@@ -520,8 +520,8 @@ export const CombatTrackerCard = ({
                 )}
             </div>
 
-            <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
-                <div className="rounded-sm border p-3 bg-zinc-900/30 border-zinc-800 space-y-3">
+            <div className="grid grid-cols-1 gap-2 xl:grid-cols-2">
+                <div className="rounded-sm border p-2.5 bg-zinc-900/30 border-zinc-800 space-y-2">
                     <div className="flex items-center gap-2 text-sm font-medium text-amber-300">
                         <Zap className="w-4 h-4" />
                         Outgoing Attack
@@ -740,7 +740,7 @@ export const CombatTrackerCard = ({
                     </Button>
                 </div>
 
-                <div className="rounded-sm border p-3 bg-zinc-900/30 border-zinc-800 space-y-3">
+                <div className="rounded-sm border p-2.5 bg-zinc-900/30 border-zinc-800 space-y-2">
                     <div className="flex items-center gap-2 text-sm font-medium text-rose-300">
                         <Skull className="w-4 h-4" />
                         Incoming Damage

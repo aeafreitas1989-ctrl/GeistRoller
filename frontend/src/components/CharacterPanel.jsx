@@ -2730,7 +2730,7 @@ export const CharacterPanel = ({
                             aria-pressed={expandedSections[tab.id]}
                             onClick={() => toggleSection(tab.id)}
                             data-testid={`character-nav-${tab.id}`}
-                            className={`${isMage && !hasFamiliar && tab.id === "notes" ? "col-span-6" : "col-span-3"} min-h-10 min-w-0 rounded-sm border px-1.5 py-1 text-[10px] leading-tight font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400 disabled:cursor-not-allowed disabled:opacity-40 ${
+                            className={`${isMage && !hasFamiliar && tab.id === "notes" ? "col-span-6" : "col-span-3"} min-h-8 min-w-0 rounded-sm border px-1.5 py-1 text-[10px] leading-tight font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-400 disabled:cursor-not-allowed disabled:opacity-40 ${
                                 expandedSections[tab.id]
                                     ? "border-amber-500/70 bg-amber-900/30 text-amber-200"
                                     : "border-zinc-700/80 bg-zinc-900/60 text-zinc-400 hover:border-zinc-500 hover:text-zinc-100"
@@ -2743,7 +2743,7 @@ export const CharacterPanel = ({
             </nav>
 
             <ScrollArea ref={sheetScrollRef} className="min-h-0 flex-1" data-testid="character-sheet-content-scroll">
-                <div className="p-3 space-y-3">
+                <div className="p-3 space-y-2">
                     {isMage && isCreationMode && (
                         <CharacterCreationAuditPanel
                             character={{ ...(activeCharacter || {}), ...pendingChanges }}
@@ -2792,32 +2792,32 @@ export const CharacterPanel = ({
                             <span className="text-xs font-mono uppercase tracking-wider text-teal-400">Character Info</span>
                             {expandedSections.header ? <ChevronDown className="w-4 h-4 text-teal-500" /> : <ChevronRight className="w-4 h-4 text-teal-500" />}
                         </CollapsibleTrigger>
-                        <CollapsibleContent className="pt-2 space-y-2">
+                        <CollapsibleContent className="pt-1 space-y-1.5">
                             <div className="grid grid-cols-2 gap-2">
                                 <div>
-                                    <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Name</label>
-                                    <Input value={getValue("name") || ""} onChange={(e) => handleChange("name", e.target.value)} className="input-geist h-8 text-sm mt-0.5" data-testid="character-name-input" />
+                                    <label className="block text-[10px] leading-tight text-zinc-500 uppercase tracking-wider">Name</label>
+                                    <Input value={getValue("name") || ""} onChange={(e) => handleChange("name", e.target.value)} className="input-geist h-7 text-sm mt-1" data-testid="character-name-input" />
                                 </div>
                                 <div>
-                                    <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Concept</label>
-                                    <Input value={getValue("concept") || ""} onChange={(e) => handleChange("concept", e.target.value)} className="input-geist h-8 text-sm mt-0.5" placeholder="e.g., Haunted Detective" data-testid="character-concept-input" />
+                                    <label className="block text-[10px] leading-tight text-zinc-500 uppercase tracking-wider">Concept</label>
+                                    <Input value={getValue("concept") || ""} onChange={(e) => handleChange("concept", e.target.value)} className="input-geist h-7 text-sm mt-1" placeholder="e.g., Haunted Detective" data-testid="character-concept-input" />
                                 </div>
                             </div>
                             <div className="grid grid-cols-2 gap-2">
                                 <div>
-                                    <label className="text-[10px] text-zinc-500 uppercase tracking-wider">
+                                    <label className="block text-[10px] leading-tight text-zinc-500 uppercase tracking-wider">
                                         {isMage ? "Path" : "Burden"}
                                     </label>
                                     {isMage ? (
                                         <Select value={getValue("path") || ""} onValueChange={handlePathChange}>
-                                            <SelectTrigger className="bg-zinc-900/50 border-zinc-800 h-8 text-sm mt-0.5" data-testid="character-path-select"><SelectValue placeholder="Select..." /></SelectTrigger>
+                                            <SelectTrigger className="bg-zinc-900/50 border-zinc-800 h-7 text-sm mt-1" data-testid="character-path-select"><SelectValue placeholder="Select..." /></SelectTrigger>
                                             <SelectContent className="bg-zinc-900 border-zinc-800">
                                                 {MAGE_PATHS.map((p) => (<SelectItem key={p} value={p} className="text-zinc-200">{p}</SelectItem>))}
                                             </SelectContent>
                                         </Select>
                                     ) : (
                                         <Select value={getValue("burden") || ""} onValueChange={(v) => handleChange("burden", v)}>
-                                            <SelectTrigger className="bg-zinc-900/50 border-zinc-800 h-8 text-sm mt-0.5" data-testid="character-burden-select"><SelectValue placeholder="Select..." /></SelectTrigger>
+                                            <SelectTrigger className="bg-zinc-900/50 border-zinc-800 h-7 text-sm mt-1" data-testid="character-burden-select"><SelectValue placeholder="Select..." /></SelectTrigger>
                                             <SelectContent className="bg-zinc-900 border-zinc-800">
                                                 {BURDENS.map((b) => (<SelectItem key={b} value={b} className="text-zinc-200">{b}</SelectItem>))}
                                             </SelectContent>
@@ -2825,19 +2825,19 @@ export const CharacterPanel = ({
                                     )}
                                 </div>
                                 <div>
-                                    <label className="text-[10px] text-zinc-500 uppercase tracking-wider">
+                                    <label className="block text-[10px] leading-tight text-zinc-500 uppercase tracking-wider">
                                         {isMage ? "Order" : "Character's Innate Key"}
                                     </label>
                                     {isMage ? (
                                         <Select value={getValue("order") || ""} onValueChange={handleOrderChange}>
-                                            <SelectTrigger className="bg-zinc-900/50 border-zinc-800 h-8 text-sm mt-0.5" data-testid="character-order-select"><SelectValue placeholder="Select..." /></SelectTrigger>
+                                            <SelectTrigger className="bg-zinc-900/50 border-zinc-800 h-7 text-sm mt-1" data-testid="character-order-select"><SelectValue placeholder="Select..." /></SelectTrigger>
                                             <SelectContent className="bg-zinc-900 border-zinc-800">
                                                 {MAGE_ORDERS.map((o) => (<SelectItem key={o} value={o} className="text-zinc-200">{o}</SelectItem>))}
                                             </SelectContent>
                                         </Select>
                                     ) : (
                                         <Select value={getValue("innate_key") || ""} onValueChange={(v) => handleChange("innate_key", v)}>
-                                            <SelectTrigger className="bg-zinc-900/50 border-zinc-800 h-8 text-sm mt-0.5" data-testid="character-innate-key-select"><SelectValue placeholder="Select..." /></SelectTrigger>
+                                            <SelectTrigger className="bg-zinc-900/50 border-zinc-800 h-7 text-sm mt-1" data-testid="character-innate-key-select"><SelectValue placeholder="Select..." /></SelectTrigger>
                                             <SelectContent className="bg-zinc-900 border-zinc-800">
                                                 {KEYS.map((k) => (<SelectItem key={k} value={k} className="text-zinc-200">{k}</SelectItem>))}
                                             </SelectContent>
@@ -2848,20 +2848,20 @@ export const CharacterPanel = ({
                                                         {isMage && (
                                 <div className="grid grid-cols-2 gap-2">
                                     <div>
-                                        <label className="text-[10px] text-zinc-500 uppercase tracking-wider">
+                                        <label className="block text-[10px] leading-tight text-zinc-500 uppercase tracking-wider">
                                             Legacy
                                         </label>
                                         <Input
                                             value={getValue("legacy") || ""}
                                             onChange={(e) => handleChange("legacy", e.target.value)}
-                                            className="input-geist h-8 text-sm mt-0.5"
+                                            className="input-geist h-7 text-sm mt-1"
                                             placeholder="Legacy name"
                                             data-testid="character-legacy-input"
                                         />
                                     </div>
 
                                     <div>
-                                        <label className="text-[10px] text-zinc-500 uppercase tracking-wider">
+                                        <label className="block text-[10px] leading-tight text-zinc-500 uppercase tracking-wider">
                                             Ruling Arcanum
                                         </label>
                                         <Select
@@ -2874,7 +2874,7 @@ export const CharacterPanel = ({
                                             }
                                         >
                                             <SelectTrigger
-                                                className="bg-zinc-900/50 border-zinc-800 h-8 text-sm mt-0.5"
+                                                className="bg-zinc-900/50 border-zinc-800 h-7 text-sm mt-1"
                                                 data-testid="character-legacy-ruling-arcanum-select"
                                             >
                                                 <SelectValue placeholder="Select..." />
@@ -2901,12 +2901,12 @@ export const CharacterPanel = ({
                             )}
                             <div className="grid grid-cols-2 gap-2">
                                 <div>
-                                    <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Virtue</label>
-                                    <Input value={getValue("virtue") || ""} onChange={(e) => handleChange("virtue", e.target.value)} className="input-geist h-8 text-sm mt-0.5" placeholder="e.g., Charitable, Honest" data-testid="character-virtue-input" />
+                                    <label className="block text-[10px] leading-tight text-zinc-500 uppercase tracking-wider">Virtue</label>
+                                    <Input value={getValue("virtue") || ""} onChange={(e) => handleChange("virtue", e.target.value)} className="input-geist h-7 text-sm mt-1" placeholder="e.g., Charitable, Honest" data-testid="character-virtue-input" />
                                 </div>
                                 <div>
-                                    <label className="text-[10px] text-zinc-500 uppercase tracking-wider">Vice</label>
-                                    <Input value={getValue("vice") || ""} onChange={(e) => handleChange("vice", e.target.value)} className="input-geist h-8 text-sm mt-0.5" placeholder="e.g., Greedy, Violent" data-testid="character-vice-input" />
+                                    <label className="block text-[10px] leading-tight text-zinc-500 uppercase tracking-wider">Vice</label>
+                                    <Input value={getValue("vice") || ""} onChange={(e) => handleChange("vice", e.target.value)} className="input-geist h-7 text-sm mt-1" placeholder="e.g., Greedy, Violent" data-testid="character-vice-input" />
                                 </div>
                             </div>
 
