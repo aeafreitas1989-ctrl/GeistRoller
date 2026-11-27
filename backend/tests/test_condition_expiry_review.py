@@ -25,7 +25,8 @@ def test_finalization_only_once_and_turn_lapse_stays_visible():
     reviewed,gained,_=review_scene_conditions([CONDITION],TOMORROW,MAGE)
     assert gained=={} and len(reviewed)==1
     kept,gained,_=review_scene_conditions(reviewed,TOMORROW,MAGE,finalize_scene=True)
-    assert [e['name'] for e in kept]==['Abyssal Taint'] and gained=={'arcane_beats':0,'arcane_experience':2}
+    assert [e['name'] for e in kept]==['Abyssal Imago','Abyssal Taint'] and gained=={'arcane_beats':0,'arcane_experience':2}
+    assert kept[0]['clock_archived'] and kept[0]['lapse_finalized']
     turn={'name':'Abyssal Backlash','tracking_mode':'turn','turns_remaining':0,'status':'expired'}
     kept,gained,_=review_scene_conditions([turn],TODAY,MAGE)
     assert kept[0]['lapse_finalized'] and kept[1]['name']=='Abyssal Taint'

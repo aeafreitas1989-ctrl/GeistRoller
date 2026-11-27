@@ -437,7 +437,6 @@ export const CharacterSheetPage = () => {
             toast.error("Set an in-game date and time before advancing time.");
             return;
         }
-        if (isGameClockBehind(currentTracker)) { toast.error("Restore the processed game date and time before advancing."); return false; }
         const next = advanceSceneTime(currentTracker, hours, minutes);
         const nextTracker = withGameClockCheckpoint(currentTracker,{ ...currentTracker, date: next.date, time: next.time });
         const healing = advanceEnvironmentalExposure(activeCharacter, nextTracker, combatHealthBoxes, combatResistantWounds);

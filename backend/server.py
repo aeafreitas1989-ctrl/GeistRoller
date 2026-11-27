@@ -18,6 +18,7 @@ from database import client, db
 from dice_engine import resolve_dice_roll
 from time_effect_retention import retain_unexpired_effects, preserve_clock_checkpoint, stamp_new_effects
 from condition_expiry_review import review_scene_conditions
+from calendar_effect_history import retain_spell_history
 from rules_validation import validate_rule_bounded_fields
 from character_sync import CharacterSummary, CHARACTER_SUMMARY_PROJECTION
 from character_history import without_xp_history, xp_history_snapshot
@@ -366,7 +367,7 @@ async def update_character(character_id: str, input: CharacterUpdate, include_xp
                 if lapse_reason:
                     reason = lapse_reason
             else:
-                retained = retain_unexpired_effects(source, tracker)
+                retained = retain_spell_history(source, tracker)
             if retained != previous.get(field, []) or field in update_data:
                 update_data[field] = retained
 
@@ -533,7 +534,7 @@ async def remove_retired_character_data():
             if field == "conditions":
                 retained, gained, reason = review_scene_conditions(source, record.get("scene_tracker"), record)
             else:
-                retained, gained, reason = retain_unexpired_effects(source, record.get("scene_tracker")), {}, ""
+                retained, gained, reason = retain_spell_history(source, record.get("scene_tracker")), {}, ""
             if retained != source:
                 changes = {field: retained, **gained}
                 operations = {"$set": changes}

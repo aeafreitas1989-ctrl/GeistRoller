@@ -61,13 +61,13 @@ export const SceneTrackerCard = ({
 }) => {
     const commitClock = updates => {
         const old=getGameTimestamp(sceneTracker), next=getRawGameTimestamp({...sceneTracker,...updates});
-        if (old!==null && next!==null && next>old && !window.confirm('Advance game time from '+formatGameDateTime(old)+' to '+formatGameDateTime(next)+'? Healing, damage, and spell expiration will be processed and cannot be undone by changing the clock. Expired Conditions remain reviewable until End Scene.')) return false;
+        if (old!==null && next!==null && next>old && !window.confirm('Advance game time from '+formatGameDateTime(old)+' to '+formatGameDateTime(next)+'? Timed spells and Conditions follow the selected date and time (five recent expired records each). Healing, damage and resource changes are not reversed by changing the clock.')) return false;
         void updateSceneTracker(updates);
         return true;
     };
     return (
         <div className="bg-zinc-900/40 border border-zinc-800 rounded-sm px-2.5 py-2 space-y-2">
-            {isGameClockBehind(sceneTracker) && <div className="rounded border border-amber-700/60 bg-amber-950/30 px-2 py-1 text-[10px] text-amber-200" data-testid="clock-rewind-warning">Clock is earlier than the last processed game time ({formatGameDateTime(getGameTimestamp(sceneTracker))}). Healing and committed effects are frozen at that timestamp; retained clock-based Conditions follow the displayed date. Restore the clock before advancing time.</div>}
+            {isGameClockBehind(sceneTracker) && <div className="rounded border border-amber-700/60 bg-amber-950/30 px-2 py-1 text-[10px] text-amber-200" data-testid="clock-rewind-warning">Clock is earlier than the last processed game time ({formatGameDateTime(getGameTimestamp(sceneTracker))}). Retained calendar-based spells and Conditions follow the displayed date. Healing and resource recovery still use the last processed timestamp.</div>}
 
             {/* Location */}
             <div className="grid grid-cols-1 md:grid-cols-[minmax(0,2fr)_minmax(150px,1fr)_110px] items-end gap-2">

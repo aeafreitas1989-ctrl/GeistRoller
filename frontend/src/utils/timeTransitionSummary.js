@@ -1,6 +1,6 @@
 import { reviewConditionExpiry, isPendingClockLapse } from './conditionExpiryReview';
 import { isAbyssalCondition, ensureAbyssalTimer, lapseAbyssalConditions } from "./abyssalConditions";
-import { getGameTimestamp, getEffectTimer, isEffectExpired, withGameClockCheckpoint, startTimedEffect, getEffectDateLabels, formatGameDateTime, getEffectTimestamp, getRawGameTimestamp } from './effectDuration';
+import { getGameTimestamp, getEffectTimer, isEffectExpired, withGameClockCheckpoint, startTimedEffect, getEffectDateLabels, formatGameDateTime, getEffectTimestamp, getRawGameTimestamp, isCalendarEffect, isEffectNotStarted, isCalendarLapsed, reviewCalendarEffect, retainRecentCalendarEffects } from './effectDuration';
 import { isSceneDurationEffect } from './sceneLifecycle';
 import { getRemainingWoundGroups, getWoundHealingDeadlines } from './naturalHealing';
 
@@ -54,22 +54,26 @@ export const prepareTimeTransition = (current, patch, options = {}) => {
         const finalize = options.kind === 'scene';
         const timed = isCondition && current.character_type === 'mage' ? raw.map(e=>ensureAbyssalTimer(e,patch.wisdom ?? current.wisdom,before,after)) : raw;
         const stamped = stampIncoming(timed,previous,after);
-        const incoming = isCondition ? stamped.map(e=>reviewConditionExpiry(e,after)) : stamped;
+        const incoming = stamped.map(e=>reviewCalendarEffect(e,after));
         const lapsed = [], seenExpired = new Set();
         const previousActive = new Set(previous.filter(e=>!isEffectExpired(isCondition?reviewConditionExpiry(e,before):e,before)).map(identity));
         let retained = [];
         for (const e of incoming) {
             if (!isEffectExpired(e,after)) {retained.push(e);continue;}
+            // Future activations stay stored but cannot trigger expiration or lapse rewards.
+            if (isEffectNotStarted(e,after)) {retained.push(e);continue;}
             const key=identity(e);
-            if ((previousActive.has(key)||(isCondition&&finalize)) && !seenExpired.has(key)) {
+            if ((previousActive.has(key)||(isCondition&&finalize&&!e.clock_archived)) && !seenExpired.has(key)) {
                 expired.push({name:nameOf(e),type:effectType(e,field),...getEffectDateLabels(e)});seenExpired.add(key);
             }
             if (isCondition) {
                 // Timed lapse is provisional until End Scene. Turn-based lapse is final immediately.
                 const recordLapse=current.character_type==='mage' && isAbyssalCondition(e) && !e.lapse_finalized && (finalize || !isPendingClockLapse(e,after));
                 if(recordLapse)lapsed.push(e);
-                if(!finalize)retained.push(recordLapse?{...e,status:'expired',lapse_finalized:true}:e.status==='expired'?e:{...e,status:'expired'});
-            }
+                if(isCalendarEffect(e)) {
+                    retained.push(finalize?{...e,status:'expired',clock_archived:true,...(recordLapse?{lapse_finalized:true}:{})}:e);
+                } else if(!finalize)retained.push(recordLapse?{...e,status:'expired',lapse_finalized:true}:e.status==='expired'?e:{...e,status:'expired'});
+            } else if(isCalendarEffect(e)) retained.push(e);
         }
         if(finalize && !isCondition) {
             for(const e of previous) {
@@ -90,6 +94,7 @@ export const prepareTimeTransition = (current, patch, options = {}) => {
                 return {...e,started_at:new Date(Math.min(now,...times)).toISOString()};
             });
         }
+        retained=retainRecentCalendarEffects(retained,after,{pendingLapse:e=>isCondition&&current.character_type==='mage'&&isAbyssalCondition(e)&&isPendingClockLapse(e,after)});
         if(retained.length!==raw.length || Object.hasOwn(patch,field) || retained.some((e,i)=>e!==raw[i]))cleaned[field]=retained;
         for(const e of retained)if(!isEffectExpired(e,after))active.push({name:nameOf(e),type:effectType(e,field),remaining:remainingEffectLabel(e,after),...getEffectDateLabels(e)});
     }

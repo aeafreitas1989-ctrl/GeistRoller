@@ -29,7 +29,7 @@ describe("in-game effect timers", () => {
         const expired = expireTimedEffects(spells, tracker("2025-12-05", "17:00"));
         expect(expired).toHaveLength(2);
         expect(expired[0].status).toBe("expired");
-        expect(getEffectTimer(expired[0], tracker("2025-12-05", "15:35")).label).toBe("Expired");
+        expect(getEffectTimer(expired[0], tracker("2025-12-05", "15:35")).label).toBe("55m remaining");
         expect(expired[1]).toEqual(spells[1]);
         expect(expireTimedEffects(expired, tracker("2025-12-05", "18:00"))).toBe(expired);
     });

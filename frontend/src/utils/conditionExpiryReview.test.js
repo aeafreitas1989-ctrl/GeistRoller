@@ -25,7 +25,8 @@ test('expired timed Condition is retained and reactivated on correction; no prov
 test('End Scene finalizes one lapse; repeated closure does not award again',()=>{
     const after=advance(mage,t('25'));
     const end=prepareTimeTransition(after,getEndScenePatch(after),{kind:'scene'}).cleaned;
-    expect(end.conditions.map(e=>e.name)).toEqual(['Abyssal Taint']);
+    expect(end.conditions.map(e=>e.name)).toEqual(['Abyssal Imago','Abyssal Taint']);
+    expect(end.conditions[0]).toMatchObject({clock_archived:true,lapse_finalized:true});
     expect(end.arcane_beats).toBe(0);expect(end.arcane_experience).toBe(2);
     const saved={...after,...end};
     expect(prepareTimeTransition(saved,getEndScenePatch(saved),{kind:'scene'}).cleaned.arcane_beats).toBeUndefined();

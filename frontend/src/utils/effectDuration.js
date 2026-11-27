@@ -91,7 +91,7 @@ export const expireCombatEffects = (effects) => {
 };
 export const startTimedEffect = (effect, tracker) => {
     if (!effect || typeof effect !== 'object' || effect.status === 'expired') return effect;
-    const now = getGameTimestamp(tracker);
+    const now = getRawGameTimestamp(tracker) ?? getGameTimestamp(tracker);
     const originalStart = parseGameStamp(effect.started_at);
     // Preserve existing timestamps and never reset a partially consumed turn timer.
     const start = originalStart ?? now;
@@ -111,31 +111,54 @@ export const startTimedEffect = (effect, tracker) => {
     return Number.isFinite(expires) ? {...stamped,expires_at:new Date(expires).toISOString(),status:'active'} : stamped;
 };
 
-export const getEffectTimestamp = (effect,tracker) => effect?.clock_review === true
+// Calendar effects follow the displayed clock, not the irreversible healing checkpoint.
+export const isCalendarEffect = effect => parseGameStamp(effect?.expires_at) !== null &&
+    effect?.tracking_mode !== 'turn' && effect?.tracking_mode !== 'scene' && !isSceneDurationEffect(effect);
+export const getEffectTimestamp = (effect,tracker) => isCalendarEffect(effect)
     ? (getRawGameTimestamp(tracker) ?? getGameTimestamp(tracker)) : getGameTimestamp(tracker);
-export const isEffectExpired = (effect, tracker) => {
-    // Only clock-based Conditions are reversible. Turn/scene expiry stays explicit.
-    if (effect?.clock_review === true && !effect.lapse_finalized) {
-        const now=getEffectTimestamp(effect,tracker), end=parseGameStamp(effect.expires_at);
-        if(now!==null && end!==null) return now>=end;
-    }
-    if (effect?.status === "expired") return true;
-    if (effect?.tracking_mode === "turn" && (Number(effect.turns_remaining) || 0) <= 0) return true;
-    const current = getGameTimestamp(tracker);
-    const expiry = effect?.expires_at ? Date.parse(effect.expires_at) : NaN;
-    return current !== null && Number.isFinite(expiry) && current >= expiry;
+export const isEffectNotStarted = (effect,tracker) => {
+    if (!isCalendarEffect(effect)) return false;
+    const now=getEffectTimestamp(effect,tracker), start=parseGameStamp(effect.started_at);
+    return now!==null && start!==null && now<start;
 };
-
-// Persist expiration on game-time changes; retain entries as history.
+export const isCalendarLapsed = (effect,tracker) => {
+    const now=getEffectTimestamp(effect,tracker), end=parseGameStamp(effect?.expires_at);
+    return isCalendarEffect(effect) && now!==null && end!==null && now>=end;
+};
+export const isEffectExpired = (effect, tracker) => {
+    if (isCalendarEffect(effect) && getEffectTimestamp(effect,tracker)!==null) {
+        return isEffectNotStarted(effect,tracker) || isCalendarLapsed(effect,tracker);
+    }
+    if (effect?.status === 'expired') return true;
+    if (effect?.tracking_mode === 'turn' && (Number(effect.turns_remaining) || 0) <= 0) return true;
+    return false;
+};
+export const reviewCalendarEffect = (effect,tracker) => {
+    if (!isCalendarEffect(effect) || getEffectTimestamp(effect,tracker)===null) return effect;
+    const status=isEffectExpired(effect,tracker)?'expired':'active';
+    if (effect.clock_review===true && effect.status===status) return effect;
+    return {...effect,clock_review:true,status};
+};
+// Retain every current/future entry; only naturally expired calendar records count toward the limit.
+// Unfinalized Abyssal lapses remain until End Scene, so no earned Beat is silently lost.
+export const retainRecentCalendarEffects = (effects,tracker,{pendingLapse=()=>false,limit=5}={}) => {
+    const list=Array.isArray(effects)?effects:[];
+    const pendingCount=list.filter(e=>isCalendarLapsed(e,tracker)&&pendingLapse(e)).length;
+    const candidates=list.map((e,i)=>({e,i})).filter(({e})=>isCalendarLapsed(e,tracker)&&!pendingLapse(e));
+    candidates.sort((a,b)=>Date.parse(b.e.expires_at)-Date.parse(a.e.expires_at)||b.i-a.i);
+    const drop=new Set(candidates.slice(Math.max(0,limit-pendingCount)).map(x=>x.i));
+    return drop.size ? list.filter((_,i)=>!drop.has(i)) : list;
+};
 export const expireTimedEffects = (effects, tracker) => {
     if (!Array.isArray(effects)) return [];
-    let changed = false;
-    const result = effects.map((effect) => {
-        if (!effect || effect.status === "expired" || !isEffectExpired(effect, tracker)) return effect;
-        changed = true;
-        return { ...effect, status: "expired" };
+    let changed=false;
+    const result=effects.map(effect=>{
+        const next=isCalendarEffect(effect)?reviewCalendarEffect(effect,tracker):
+            effect && effect.status!=='expired' && isEffectExpired(effect,tracker)?{...effect,status:'expired'}:effect;
+        if(next!==effect)changed=true;
+        return next;
     });
-    return changed ? result : effects;
+    return changed?result:effects;
 };
 
 const remainingLabel = (ms) => {
@@ -156,7 +179,7 @@ export const getEffectTimer = (effect, tracker) => {
         return { kind: "running", label: count + (count === 1 ? " turn remaining" : " turns remaining") };
     }
     if (String(effect?.duration || "").toLowerCase() === "permanent") return { kind: "permanent", label: "Permanent" };
-    if (!hasFiniteDuration(effect)) return { kind: "untimed", label: "" };
+    if (!hasFiniteDuration(effect) && !isCalendarEffect(effect)) return { kind: "untimed", label: "" };
     const current = getEffectTimestamp(effect,tracker);
     const expiry = effect?.expires_at ? Date.parse(effect.expires_at) : NaN;
     if (!Number.isFinite(expiry)) return {

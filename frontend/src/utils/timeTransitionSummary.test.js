@@ -10,7 +10,7 @@ test('clock transition shows expired, remaining days/hours/minutes and separate 
     expect(r.summary.active[0].remaining).toBe('5d 13h 28min remaining');
     expect(r.summary.healed).toEqual([{name:'2 Bashing damage'}]);
     expect(r.summary.damage).toEqual([{name:'1 Bashing damage'}]);
-    expect(r.cleaned.conditions).toHaveLength(1); expect(r.cleaned.conditions[0].status).toBe('expired'); expect(r.cleaned.active_spells).toHaveLength(1);
+    expect(r.cleaned.conditions).toHaveLength(1); expect(r.cleaned.conditions[0].status).toBe('expired'); expect(r.cleaned.active_spells).toHaveLength(2);
 });
 test('same-clock scene and turn expiration, and previous patch already removed scene spell',()=>{
     const c={scene_tracker:clock('12:00'),active_spells:[{id:1,name:'Scene spell',kind:'spell',duration:'Scene'},{id:2,name:'Turn effect',tracking_mode:'turn',turns_remaining:1}],conditions:[{id:3,name:'Persistent',persistent:true}]};

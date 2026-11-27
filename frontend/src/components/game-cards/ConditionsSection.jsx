@@ -1,3 +1,4 @@
+import { isEffectNotStarted } from "../../utils/effectDuration";
 import { isPendingClockLapse } from "../../utils/conditionExpiryReview";
 import { needsParadoxSuccesses, validParadoxSuccesses } from "../../utils/abyssalSpellcasting";
 import { remainingScourings } from "../../utils/mageRecovery";
@@ -1001,7 +1002,7 @@ export const ConditionsSection = ({
                         </DialogContent>
                     </Dialog>
 
-                    {activeConditions.length === 0 ? (
+                    {!activeConditions.some(condition => !isEffectNotStarted(condition,activeCharacter?.scene_tracker) && !(condition.clock_archived && isEffectExpired(condition,activeCharacter?.scene_tracker))) ? (
                         <div className="text-center py-8">
                             <p className="text-zinc-500 text-sm">
                                 No active conditions
@@ -1014,7 +1015,7 @@ export const ConditionsSection = ({
                     ) : (
                         <div className="space-y-2">
                             {activeConditions.map(
-                                (condition, idx) => (
+                                (condition, idx) => isEffectNotStarted(condition,activeCharacter?.scene_tracker) || (condition.clock_archived && isEffectExpired(condition,activeCharacter?.scene_tracker)) ? null : (
                                     <ConditionCard
                                         key={`${condition.name}-${idx}`}
                                         conditionIndex={idx}

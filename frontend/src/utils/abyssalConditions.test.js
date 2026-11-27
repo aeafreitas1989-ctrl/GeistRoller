@@ -18,7 +18,8 @@ test('timed lapse awards an Arcane Beat, converts five and creates permanent tai
     const {cleaned,summary}=prepareTimeTransition(next,getEndScenePatch(next),{kind:'scene'});
     expect(cleaned.arcane_beats).toBe(0);
     expect(cleaned.arcane_experience).toBe(3);
-    expect(cleaned.conditions).toEqual([{...makeAbyssalTaint(),started_at:"1607-01-25T10:00:00.000Z"}]);
+    expect(cleaned.conditions.find(e=>e.name==='Abyssal Taint')).toEqual({...makeAbyssalTaint(),started_at:"1607-01-25T10:00:00.000Z"});
+    expect(cleaned.conditions[0]).toMatchObject({clock_archived:true,lapse_finalized:true});
     expect(summary.expired.map(e=>e.name)).toEqual(['Abyssal Imago']);
     expect(summary.active.find(e=>e.name==='Abyssal Taint').remaining).toBe('Permanent');
     expect(hasAbyssalTaint(cleaned.conditions,tomorrow)).toBe(true);
@@ -28,7 +29,7 @@ test('multiple lapses earn individual Beats but one taint; existing taint persis
     const pending=prepareTimeTransition(c,{scene_tracker:tomorrow});
     const next={...c,...pending.cleaned};
     const {cleaned}=prepareTimeTransition(next,getEndScenePatch(next),{kind:'scene'});
-    expect(cleaned.conditions).toHaveLength(1);
+    expect(cleaned.conditions).toHaveLength(3);
     expect(cleaned.arcane_beats).toBe(1);
     expect(cleaned.arcane_experience).toBe(3);
     const again=prepareTimeTransition({...c,...cleaned,scene_tracker:tomorrow},{scene_tracker:{...tomorrow,time:'11:00'}});

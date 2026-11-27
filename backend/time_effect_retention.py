@@ -30,7 +30,8 @@ def preserve_clock_checkpoint(previous, requested):
 def stamp_new_effects(effects, previous, tracker):
     if not isinstance(effects, list):
         return effects
-    stamp = game_timestamp(tracker)
+    raw = {k: v for k, v in (tracker or {}).items() if k != 'processed_at'} if isinstance(tracker, dict) else {}
+    stamp = game_timestamp(raw) or game_timestamp(tracker)
     if stamp is None:
         return effects
     def key(entry):
