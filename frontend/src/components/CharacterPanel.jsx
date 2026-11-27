@@ -1,3 +1,4 @@
+import { isCurrentXPHistory } from "../utils/xpHistoryLoading";
 import { lazyPanel } from "./LazyPanel";
 import { requestDiceRoll } from '../services/diceService';
 import { useState, useMemo, useEffect, useRef, useImperativeHandle } from "react";
@@ -128,6 +129,7 @@ export const CharacterPanel = ({
     characters,
     activeCharacter,
     onSelectCharacter,
+    onLoadCharacterForExport,
     onCreateCharacter,
     onUpdateCharacter,
     onDeleteCharacter,
@@ -262,6 +264,27 @@ export const CharacterPanel = ({
     const [xpEditDraft, setXpEditDraft] = useState(null);
     const [xpDeleteEntry, setXpDeleteEntry] = useState(null);
     const [savingXPChange, setSavingXPChange] = useState(false);
+    const [historySnapshot, setHistorySnapshot] = useState(null);
+    const [historyError, setHistoryError] = useState(false);
+    const [historyRetry, setHistoryRetry] = useState(0);
+    const historyReady = isCurrentXPHistory(historySnapshot, activeCharacter);
+    useEffect(() => {
+        if (activeSection !== 'notes' || !activeCharacter?.id) {
+            setHistorySnapshot(null);
+            setHistoryError(false);
+            return;
+        }
+        const controller = new AbortController();
+        setHistoryError(false);
+        axios.get(`${process.env.REACT_APP_BACKEND_URL || ''}/api/characters/${activeCharacter.id}/xp-history`,
+            {signal: controller.signal}).then(response => {
+            if (!controller.signal.aborted) setHistorySnapshot(response.data);
+        }).catch(error => {
+            if (!controller.signal.aborted) { setHistorySnapshot(null); setHistoryError(true); }
+        });
+        return () => controller.abort();
+    }, [activeSection, activeCharacter?.id, activeCharacter?.updated_at, historyRetry]);
+    useEffect(() => {setXpEditDraft(null); setXpDeleteEntry(null);}, [activeCharacter?.id]);
 
     const openSpellcastingPopup = (arcanum, practice = null, spellType = null, roteSkill = null, defaultName = "", primaryFactor = null, withstandType = null, roteSource = "memory") => {
         setSpellcastingArcanum(arcanum);
@@ -1255,10 +1278,17 @@ export const CharacterPanel = ({
         return lines.join("\n");
     };
 
-    const exportCharacterToJson = () => {
+    const exportCharacterToJson = async () => {
         if (!activeCharacter) return;
-
-        const characterToExport = getCharacterForExport();
+        let characterToExport;
+        try {
+            const saved = await onLoadCharacterForExport(activeCharacter.id);
+            if (!saved || !Array.isArray(saved.xp_history)) throw new Error('Incomplete character export');
+            characterToExport = {...saved, ...pendingChanges};
+        } catch (error) {
+            toast.error('Could not load full character history. JSON export cancelled.');
+            return;
+        }
         const fileName = `${(characterToExport.name || "character").replace(/[^a-z0-9-_]+/gi, "_")}.json`;
 
         const payload = {
@@ -1471,7 +1501,10 @@ export const CharacterPanel = ({
     const applyXPTrackerCorrection = async (transactionId, editedEntry = null) => {
         if (savingXPChange) return;
 
-        const history = activeCharacter?.xp_history || [];
+        if (!historyReady) { toast.error('Reload XP history before correcting a transaction.'); return; }
+        const expectedRevision = editedEntry ? xpEditDraft?._history_revision : xpDeleteEntry?._history_revision;
+        if (expectedRevision !== historySnapshot.updated_at) { toast.error('XP history changed. Reopen the transaction.'); return; }
+        const history = historySnapshot.xp_history;
         const index = history.findIndex((entry) => entry.id === transactionId);
 
         if (index < 0) {
@@ -1516,7 +1549,7 @@ export const CharacterPanel = ({
 
         const currentBalances = {};
         for (const resource of XP_TRACKER_RESOURCES) {
-            const existing = Number(activeCharacter?.[resource] ?? 0);
+            const existing = Number(historySnapshot?.[resource] ?? 0);
             const corrected = existing + delta[resource];
             if (!isValidXPTrackerBalance(resource, corrected)) {
                 toast.error(
@@ -1571,7 +1604,8 @@ export const CharacterPanel = ({
 
         setSavingXPChange(true);
         try {
-            await onUpdateCharacter(updates);
+            const saved = await onUpdateCharacter(updates, {expectedHistoryRevision: expectedRevision});
+            if (!saved) { setHistoryRetry(value=>value+1); return; }
             if (deleting) {
                 setXpDeleteEntry(null);
                 toast.success("Transaction deleted; balances updated.");
@@ -1595,7 +1629,7 @@ export const CharacterPanel = ({
             return;
         }
 
-        const original = (activeCharacter?.xp_history || []).find(
+        const original = (historyReady ? historySnapshot.xp_history : []).find(
             (entry) => entry.id === xpEditDraft.id
         );
         if (!original) {
@@ -1631,7 +1665,8 @@ export const CharacterPanel = ({
         await applyXPTrackerCorrection(xpDeleteEntry.id, null);
     };
     const getXPTrackerEntries = () => {
-        const history = getValue("xp_history") || [];
+        if (!historyReady) return [];
+        const history = historySnapshot.xp_history;
         const ledger = getValue("advancement_ledger") || [];
 
         const trackedIds = new Set(
@@ -3656,7 +3691,12 @@ export const CharacterPanel = ({
                                         </div>
                                     </div>
 
-                                    {getXPTrackerEntries().length === 0 ? (
+                                    {!historyReady ? (
+                                        <div className="text-xs text-zinc-400" data-testid="xp-history-loading">
+                                            {historyError ? 'Could not load XP history.' : 'Loading XP history…'}
+                                            <Button type="button" size="sm" variant="ghost" onClick={()=>setHistoryRetry(n=>n+1)}>Retry</Button>
+                                        </div>
+                                    ) : getXPTrackerEntries().length === 0 ? (
                                         <div className="p-3 bg-zinc-950/40 border border-zinc-800 rounded-sm text-xs text-zinc-500">
                                             No XP transactions recorded yet.
                                         </div>
@@ -3695,6 +3735,7 @@ export const CharacterPanel = ({
                                                                 onClick={() =>
                                                                     setXpEditDraft({
                                                                         ...entry,
+                                                                        _history_revision: historySnapshot.updated_at,
                                                                         label: entry.label || "",
                                                                         note: entry.note || "",
                                                                     })
@@ -3715,7 +3756,7 @@ export const CharacterPanel = ({
                                                                     entry.historical ||
                                                                     Boolean(entry.source_ledger_id)
                                                                 }
-                                                                onClick={() => setXpDeleteEntry(entry)}
+                                                                onClick={() => setXpDeleteEntry({...entry, _history_revision: historySnapshot.updated_at})}
                                                             >
                                                                 <X className="w-3.5 h-3.5" />
                                                             </Button>
@@ -3818,7 +3859,12 @@ export const CharacterPanel = ({
                                     </div>
 
                                     <div className="space-y-2">
-                                        {getXPTrackerEntries().length === 0 ? (
+                                        {!historyReady ? (
+                                        <div className="text-xs text-zinc-400" data-testid="xp-history-loading">
+                                            {historyError ? 'Could not load XP history.' : 'Loading XP history…'}
+                                            <Button type="button" size="sm" variant="ghost" onClick={()=>setHistoryRetry(n=>n+1)}>Retry</Button>
+                                        </div>
+                                    ) : getXPTrackerEntries().length === 0 ? (
                                             <div className="rounded-sm border border-zinc-800 p-3 text-xs text-zinc-500">
                                                 No XP transactions recorded yet.
                                             </div>

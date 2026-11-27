@@ -11,7 +11,7 @@ from pymongo import ReturnDocument
 from dotenv import load_dotenv
 from fastapi import APIRouter, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from database import client, db
@@ -19,6 +19,7 @@ from dice_engine import resolve_dice_roll
 from time_effect_retention import retain_unexpired_effects
 from rules_validation import validate_rule_bounded_fields
 from character_sync import CharacterSummary, CHARACTER_SUMMARY_PROJECTION
+from character_history import without_xp_history, xp_history_snapshot
 from models import (
     Campaign,
     CampaignCreate,
@@ -48,8 +49,9 @@ api_router = APIRouter(prefix="/api")
 _character_subscribers: Dict[str, Set[asyncio.Queue]] = {}
 
 
-def _subscribe_to_character(character_id: str) -> asyncio.Queue:
+def _subscribe_to_character(character_id: str, include_xp_history: bool = True) -> asyncio.Queue:
     queue: asyncio.Queue = asyncio.Queue(maxsize=1)
+    queue.include_xp_history = include_xp_history
     _character_subscribers.setdefault(character_id, set()).add(queue)
     return queue
 
@@ -74,16 +76,15 @@ def _publish_character_update(character: dict) -> None:
     if not subscribers:
         return
 
-    payload = json.dumps(
-        {
-            "type": "character_updated",
-            "character": character,
-        },
-        default=str,
-        separators=(",", ":"),
-    )
-
+    payloads = {}
     for queue in subscribers:
+        include_history = getattr(queue, "include_xp_history", True)
+        if include_history not in payloads:
+            payloads[include_history] = json.dumps(
+                {"type": "character_updated", "character": character if include_history else without_xp_history(character)},
+                default=str, separators=(",", ":"),
+            )
+        payload = payloads[include_history]
         if queue.full():
             try:
                 queue.get_nowait()
@@ -121,18 +122,32 @@ async def get_characters():
 
 
 @api_router.get("/characters/{character_id}", response_model=Character)
-async def get_character(character_id: str):
-    character = await db.characters.find_one({"id": character_id}, {"_id": 0})
+async def get_character(character_id: str, include_xp_history: bool = True):
+    projection = {"_id": 0} if include_xp_history else {"_id": 0, "xp_history": 0}
+    character = await db.characters.find_one({"id": character_id}, projection)
     if not character:
         raise HTTPException(status_code=404, detail="Character not found")
+    if not include_xp_history:
+        return JSONResponse(Character.model_validate(character).model_dump(mode="json", exclude={"xp_history"}))
     return character
 
 
+@api_router.get("/characters/{character_id}/xp-history")
+async def get_xp_history(character_id: str):
+    character = await db.characters.find_one({"id": character_id}, {"_id": 0, "id": 1,
+        "updated_at": 1, "xp_history": 1, "experience": 1, "arcane_experience": 1,
+        "beats": 1, "arcane_beats": 1})
+    if not character:
+        raise HTTPException(status_code=404, detail="Character not found")
+    return xp_history_snapshot(character)
+
+
 @api_router.get("/characters/{character_id}/events")
-async def character_events(character_id: str):
-    queue = _subscribe_to_character(character_id)
+async def character_events(character_id: str, include_xp_history: bool = True):
+    queue = _subscribe_to_character(character_id, include_xp_history)
     try:
-        character = await db.characters.find_one({"id": character_id}, {"_id": 0})
+        projection = {"_id": 0} if include_xp_history else {"_id": 0, "xp_history": 0}
+        character = await db.characters.find_one({"id": character_id}, projection)
         if not character:
             raise HTTPException(status_code=404, detail="Character not found")
         initial_payload = json.dumps({"type": "character_updated", "character": character},
@@ -314,7 +329,7 @@ def build_xp_history_entry(previous, updates, reason=""):
     }
 
 @api_router.put("/characters/{character_id}", response_model=Character)
-async def update_character(character_id: str, input: CharacterUpdate):
+async def update_character(character_id: str, input: CharacterUpdate, include_xp_history: bool = True, expected_updated_at: str = None):
     update_data = input.model_dump(exclude_unset=True)
     allow_override = bool(update_data.pop("allow_rules_override", False))
     reason = (update_data.pop("xp_reason", "") or "").strip()
@@ -329,6 +344,9 @@ async def update_character(character_id: str, input: CharacterUpdate):
             status_code=404,
             detail="Character not found",
         )
+
+    if expected_updated_at is not None and previous.get("updated_at") != expected_updated_at:
+        raise HTTPException(status_code=409, detail="Character changed; reload XP history before editing")
 
     for field in ('active_spells', 'conditions'):
         if field in update_data or 'scene_tracker' in update_data:
@@ -367,22 +385,26 @@ async def update_character(character_id: str, input: CharacterUpdate):
                 "xp_history": transaction,
             }
 
+        selector = {"id": character_id}
+        if expected_updated_at is not None:
+            selector["updated_at"] = expected_updated_at
         character = await db.characters.find_one_and_update(
-            {"id": character_id}, operations,
+            selector, operations,
             projection={"_id": 0}, return_document=ReturnDocument.AFTER,
         )
     else:
         character = previous
 
     if not character:
-        raise HTTPException(
-            status_code=404,
-            detail="Character not found",
-        )
+        if expected_updated_at is not None:
+            raise HTTPException(status_code=409, detail="Character changed; reload XP history before editing")
+        raise HTTPException(status_code=404, detail="Character not found")
 
     if update_data:
         _publish_character_update(character)
 
+    if not include_xp_history:
+        return JSONResponse(Character.model_validate(character).model_dump(mode="json", exclude={"xp_history"}))
     return character
 
 

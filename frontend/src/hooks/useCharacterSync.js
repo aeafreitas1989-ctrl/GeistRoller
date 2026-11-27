@@ -15,7 +15,7 @@ export const useCharacterSync = (characterId, onCharacterUpdate) => {
         }
 
         const source = new EventSource(
-            `${API}/characters/${characterId}/events`
+            `${API}/characters/${characterId}/events?include_xp_history=false`
         );
 
         const handleCharacterUpdated = (event) => {

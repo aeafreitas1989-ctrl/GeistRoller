@@ -1,3 +1,4 @@
+import { withoutXPHistory } from "@/utils/xpHistoryLoading";
 import { toCharacterSummary, updateCharacterSummary } from "@/utils/characterSummaries";
 import { TimeElapsedDialog } from "@/components/TimeElapsedDialog";
 import { prepareTimeTransition } from "@/utils/timeTransitionSummary";
@@ -41,12 +42,12 @@ export const CharacterSheetPage = () => {
 
     const overlayPending = (snapshot) => {
         const pending = pendingCharacterPatchesRef.current.get(snapshot.id) || [];
-        return pending.length ? applyPendingCharacterPatches(snapshot, pending) : snapshot;
+        return withoutXPHistory(pending.length ? applyPendingCharacterPatches(snapshot, pending) : snapshot);
     };
     const refreshSummary = (snapshot) => setCharacters(list => updateCharacterSummary(list, snapshot));
     const activateCharacter = (snapshot) => {
         selectionRequestRef.current += 1;
-        confirmedCharacterRef.current = snapshot;
+        confirmedCharacterRef.current = withoutXPHistory(snapshot);
         const next = snapshot ? overlayPending(snapshot) : null;
         latestCharacterRef.current = next;
         setActiveCharacter(next);
@@ -59,7 +60,7 @@ export const CharacterSheetPage = () => {
         }
         const confirmed = confirmedCharacterRef.current;
         if (confirmed?.id !== snapshot.id || !isStaleCharacterSnapshot(confirmed, snapshot)) {
-            confirmedCharacterRef.current = snapshot;
+            confirmedCharacterRef.current = withoutXPHistory(snapshot);
         }
         const next = overlayPending(confirmedCharacterRef.current);
         latestCharacterRef.current = next;
@@ -72,7 +73,7 @@ export const CharacterSheetPage = () => {
         if (latestCharacterRef.current?.id === summary.id) return true;
         try {
             await (characterWriteQueuesRef.current.get(summary.id) || Promise.resolve());
-            const response = await axios.get(`${API}/characters/${summary.id}`);
+            const response = await axios.get(`${API}/characters/${summary.id}?include_xp_history=false`);
             if (request !== selectionRequestRef.current || deletingCharactersRef.current.has(summary.id)) return false;
             activateCharacter(response.data);
             refreshSummary(response.data);
@@ -81,6 +82,11 @@ export const CharacterSheetPage = () => {
             if (request === selectionRequestRef.current) toast.error('Failed to load character');
             return false;
         }
+    };
+    const loadCharacterForExport = async (id) => {
+        await (characterWriteQueuesRef.current.get(id) || Promise.resolve());
+        const response = await axios.get(`${API}/characters/${id}`);
+        return response.data;
     };
     const lastCharacterStorageKey = "geistroller-last-active-character-id";
 
@@ -576,15 +582,17 @@ export const CharacterSheetPage = () => {
         const token = Symbol('character-update');
         const pending = pendingCharacterPatchesRef.current.get(characterId) || [];
         pendingCharacterPatchesRef.current.set(characterId, [...pending, { token, updates: patch }]);
-        const optimistic = { ...current, ...patch };
+        const optimistic = withoutXPHistory({ ...current, ...patch });
         latestCharacterRef.current = optimistic;
-        setActiveCharacter((previous) => previous?.id === characterId ? { ...previous, ...patch } : previous);
+        setActiveCharacter((previous) => previous?.id === characterId ? optimistic : previous);
         refreshSummary(optimistic);
 
         const previousWrite = characterWriteQueuesRef.current.get(characterId) || Promise.resolve();
         const task = previousWrite.catch(() => false).then(async () => {
             try {
-                const response = await axios.put(`${API}/characters/${characterId}`, patch);
+                const response = await axios.put(`${API}/characters/${characterId}`, patch, { params: {
+                    include_xp_history: false, ...(summaryOptions.expectedHistoryRevision ? {expected_updated_at: summaryOptions.expectedHistoryRevision} : {})
+                }});
                 const remaining = (pendingCharacterPatchesRef.current.get(characterId) || []).filter((entry) => entry.token !== token);
                 if (remaining.length) pendingCharacterPatchesRef.current.set(characterId, remaining);
                 else pendingCharacterPatchesRef.current.delete(characterId);
@@ -596,12 +604,12 @@ export const CharacterSheetPage = () => {
                 if (remaining.length) pendingCharacterPatchesRef.current.set(characterId, remaining);
                 else pendingCharacterPatchesRef.current.delete(characterId);
                 try {
-                    const response = await axios.get(`${API}/characters/${characterId}`);
+                    const response = await axios.get(`${API}/characters/${characterId}?include_xp_history=false`);
                     acceptCharacterSnapshot(response.data);
                 } catch (refreshError) {
                     toast.error('Character save failed; server refresh also failed. Reload before continuing.');
                 }
-                toast.error('Failed to update character');
+                toast.error(error.response?.status === 409 ? 'XP history changed. Reload and retry the correction.' : 'Failed to update character');
                 return false;
             }
         });
@@ -801,6 +809,7 @@ export const CharacterSheetPage = () => {
                                     characters={characters}
                                     activeCharacter={activeCharacter}
                                     onSelectCharacter={selectCharacter}
+                                    onLoadCharacterForExport={loadCharacterForExport}
                                     onCreateCharacter={createCharacter}
                                     onUpdateCharacter={updateCharacter}
                                     onDeleteCharacter={deleteCharacter}
